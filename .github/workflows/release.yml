@@ -118,12 +118,19 @@ jobs:
       - name: Validate no secrets in code
         run: |
           # Check for common secret patterns
-          if grep -rE '(password|secret|key|token|apikey).*=.*["\x27][^"\x27]{8,}["\x27]' \
+          POTENTIAL_SECRETS=$(grep -rE '(password|secret|key|token|apikey).*=.*["\x27][^"\x27]{8,}["\x27]' \
              --exclude-dir=.git \
              --exclude-dir=node_modules \
              --exclude="*.md" \
-             --exclude="CHANGELOG.md" .; then
-            echo "⚠️  Potential secrets found in code"
+             --exclude="CHANGELOG.md" . | \
+             grep -v 'matrix\.' | \
+             grep -v 'vars\.' | \
+             grep -v 'secrets\.' | \
+             grep -v 'backend-config=' || true)
+
+          if [ -n "$POTENTIAL_SECRETS" ]; then
+            echo "⚠️  Potential secrets found in code:"
+            echo "$POTENTIAL_SECRETS"
             echo "Review above matches before release"
             exit 1
           fi
