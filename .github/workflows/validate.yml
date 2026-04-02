@@ -237,7 +237,7 @@ jobs:
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@651471c36a6092792c552e8b1bef71e592b462d3  # v3.1.2
         with:
           terraform_version: 1.7.0
 
@@ -329,26 +329,42 @@ jobs:
 
       - name: Check for GitHub Actions security
         run: |
-          WORKFLOW_FILES=$(find .github/workflows examples/github-actions -type f \
+          REPO_WORKFLOWS=$(find .github/workflows -type f \
+            \( -name "*.yml" -o -name "*.yaml" \) 2>/dev/null)
+          EXAMPLE_WORKFLOWS=$(find examples/github-actions -type f \
             \( -name "*.yml" -o -name "*.yaml" \) 2>/dev/null)
 
-          if [ -n "$WORKFLOW_FILES" ]; then
-            # Check for unpinned actions
-            UNPINNED=$(grep -H "uses:.*@[vV][0-9]" $WORKFLOW_FILES || true)
-            if [ -n "$UNPINNED" ]; then
-              echo "⚠️  Found actions pinned to tags (should use SHA):"
-              echo "$UNPINNED"
-              echo ""
-              echo "Consider pinning to commit SHA for immutability"
+          if [ -n "$REPO_WORKFLOWS" ]; then
+            REPO_UNPINNED=$(grep -H "uses:.*@[vV][0-9]" $REPO_WORKFLOWS || true)
+            if [ -n "$REPO_UNPINNED" ]; then
+              echo "❌ Repository workflows must pin actions to SHAs:"
+              echo "$REPO_UNPINNED"
+              exit 1
             fi
 
-            # Check for pull_request_target
-            DANGEROUS=$(grep -H "pull_request_target" $WORKFLOW_FILES || true)
-            if [ -n "$DANGEROUS" ]; then
-              echo "⚠️  Found pull_request_target trigger:"
-              echo "$DANGEROUS"
+            REPO_DANGEROUS=$(grep -H "pull_request_target" $REPO_WORKFLOWS || true)
+            if [ -n "$REPO_DANGEROUS" ]; then
+              echo "❌ Repository workflows must not use pull_request_target without explicit review:"
+              echo "$REPO_DANGEROUS"
+              exit 1
+            fi
+          fi
+
+          if [ -n "$EXAMPLE_WORKFLOWS" ]; then
+            EXAMPLE_UNPINNED=$(grep -H "uses:.*@[vV][0-9]" $EXAMPLE_WORKFLOWS || true)
+            if [ -n "$EXAMPLE_UNPINNED" ]; then
+              echo "⚠️  Example workflows still contain tag-pinned actions:"
+              echo "$EXAMPLE_UNPINNED"
               echo ""
-              echo "Ensure this workflow doesn't execute untrusted code"
+              echo "Prefer SHA pinning in published examples as well"
+            fi
+
+            EXAMPLE_DANGEROUS=$(grep -H "pull_request_target" $EXAMPLE_WORKFLOWS || true)
+            if [ -n "$EXAMPLE_DANGEROUS" ]; then
+              echo "⚠️  Example workflows contain pull_request_target:"
+              echo "$EXAMPLE_DANGEROUS"
+              echo ""
+              echo "Document the risk clearly if this pattern is intentionally shown"
             fi
           fi
 

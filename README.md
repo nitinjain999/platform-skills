@@ -67,8 +67,8 @@ This repository uses GitHub Actions for quality assurance:
 - **Continuous Validation**: Every PR and push validates structure, syntax, and security
 - **Automated Releases**: Tag-based releases with automatic GitHub Release creation
 - **Quality Checks**: 
-  - **Blocking**: YAML syntax, Terraform validation, secret detection
-  - **Advisory**: Markdown structure, GitHub Actions pinning recommendations
+  - **Blocking**: YAML syntax, Terraform validation, secret detection, and repository workflow security
+  - **Advisory**: Markdown structure and example workflow pinning recommendations
 
 See [.github/workflows/](.github/workflows/) for workflow details.
 

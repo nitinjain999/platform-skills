@@ -33,6 +33,21 @@ jobs:
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
           echo "📦 Releasing version: ${VERSION}"
 
+      - name: Ensure tagged commit is on main
+        run: |
+          git fetch origin main --depth=1
+          TAG_COMMIT=$(git rev-parse HEAD)
+          MAIN_COMMIT=$(git rev-parse origin/main)
+
+          if ! git merge-base --is-ancestor "$TAG_COMMIT" "$MAIN_COMMIT"; then
+            echo "❌ Release tags must point to commits that are reachable from origin/main"
+            echo "Tagged commit: ${TAG_COMMIT}"
+            echo "origin/main: ${MAIN_COMMIT}"
+            exit 1
+          fi
+
+          echo "✅ Tagged commit is reachable from origin/main"
+
       - name: Validate version format
         run: |
           VERSION=${{ steps.version.outputs.version }}
