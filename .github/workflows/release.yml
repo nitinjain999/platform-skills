@@ -303,10 +303,14 @@ jobs:
           echo "\`\`\`bash" >> release-notes.md
           echo "git clone https://github.com/${{ github.repository }}.git" >> release-notes.md
           echo "cd platform-skills" >> release-notes.md
-          echo "claude-code skill install ." >> release-notes.md
+          echo "claude plugin install ." >> release-notes.md
           echo "\`\`\`" >> release-notes.md
           echo "" >> release-notes.md
-          echo "**Marketplace install:** available after marketplace publication is completed." >> release-notes.md
+          echo "**Marketplace install:**" >> release-notes.md
+          echo "\`\`\`bash" >> release-notes.md
+          echo "claude plugin marketplace add https://github.com/${{ github.repository }}" >> release-notes.md
+          echo "claude plugin install ${{ env.SKILL_NAME }}" >> release-notes.md
+          echo "\`\`\`" >> release-notes.md
 
       - name: Create GitHub Release
         env:
@@ -325,15 +329,20 @@ jobs:
           **Tag**: \`v${{ needs.validate.outputs.version }}\`
           **Release URL**: ${RELEASE_URL}
 
-          ### 📦 Installation From Local Clone
+          ### 📦 Installation
 
+          **From local clone:**
           \`\`\`bash
           git clone https://github.com/${{ github.repository }}.git
           cd platform-skills
-          claude-code skill install .
+          claude plugin install .
           \`\`\`
 
-          Marketplace installation by name is available only after the manual marketplace publication step completes.
+          **From marketplace:**
+          \`\`\`bash
+          claude plugin marketplace add https://github.com/${{ github.repository }}
+          claude plugin install ${{ env.SKILL_NAME }}
+          \`\`\`
 
           ### ✅ Validation Passed
 
@@ -369,8 +378,8 @@ jobs:
           echo "Repository: https://github.com/${{ github.repository }}"
           echo ""
           echo "To publish to Claude Code marketplace:"
-          echo "1. Ensure you have claude-code CLI installed"
-          echo "2. Run: claude-code skill publish ."
+          echo "1. Ensure you have the claude CLI installed"
+          echo "2. Run: claude plugin marketplace add https://github.com/${{ github.repository }}"
           echo "3. Or submit via: https://claude.ai/marketplace/publishers"
           echo ""
           echo "The marketplace will validate:"
@@ -404,17 +413,18 @@ jobs:
 
           Since automated marketplace publication is not yet configured, follow these steps:
 
-          1. **Authenticate with Claude Code CLI:**
-             \`\`\`bash
-             claude-code auth login
-             \`\`\`
-
-          2. **Publish the skill:**
+          1. **Install from local clone:**
              \`\`\`bash
              git clone https://github.com/${{ github.repository }}
              cd platform-skills
              git checkout v${{ needs.validate.outputs.version }}
-             claude-code skill publish .
+             claude plugin install .
+             \`\`\`
+
+          2. **Install from marketplace:**
+             \`\`\`bash
+             claude plugin marketplace add https://github.com/${{ github.repository }}
+             claude plugin install ${{ env.SKILL_NAME }}
              \`\`\`
 
           3. **Or submit via web:**
@@ -462,13 +472,8 @@ jobs:
           Once marketplace publication is complete, users can install:
 
           \`\`\`bash
-          claude-code skill install ${{ env.SKILL_NAME }}
-          \`\`\`
-
-          Or specific version:
-
-          \`\`\`bash
-          claude-code skill install ${{ env.SKILL_NAME }}@${{ needs.validate.outputs.version }}
+          claude plugin marketplace add https://github.com/${{ github.repository }}
+          claude plugin install ${{ env.SKILL_NAME }}
           \`\`\`
 
           ### Documentation
