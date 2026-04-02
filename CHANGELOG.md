@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-04-02
+
+### Added
+- `.claude-plugin/plugin.json` — registration manifest explicitly declaring plugin name, version, author, skill (`SKILL.md`), and all 5 command paths so Claude Code uses consistent `/platform-skills:<name>` namespacing regardless of install directory name
+
 ## [1.4.0] - 2026-04-02
 
 ### Added
