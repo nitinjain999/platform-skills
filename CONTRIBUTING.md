@@ -309,10 +309,12 @@ Platform Skills uses automated GitHub Actions workflows for releases.
    ```
 
 3. **Automated workflow handles:**
-   - ✅ Version validation
-   - ✅ Quality checks (markdown, YAML, Terraform, security)
-   - ✅ GitHub Release creation with changelog
+   - ✅ Version validation (tag matches marketplace.json)
+   - ✅ Quality checks (markdown presence, YAML/JSON syntax, internal links, Terraform validation)
+   - ✅ GitHub Release creation with changelog extraction
    - ✅ Marketplace publication preparation
+   
+   **Note:** Release workflow validates syntax and structure. For comprehensive validation including Kubernetes manifests and GitHub Actions security checks, use the standard PR workflow before tagging.
 
 4. **Verify release:**
    - GitHub Release created automatically

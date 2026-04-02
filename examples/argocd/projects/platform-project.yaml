@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: platform
+  namespace: argocd
+spec:
+  description: Platform team applications and infrastructure
+
+  # Source repositories that applications within this project can pull manifests from
+  sourceRepos:
+    - 'https://github.com/nitinjain999/platform-skills'
+    - '*'  # Allow any repository for examples
+
+  # Destinations that applications can deploy to
+  destinations:
+    - namespace: '*'
+      server: https://kubernetes.default.svc
+    - namespace: '*'
+      server: '*'
+
+  # Cluster resources that can be managed
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+  # Namespace resources that can be managed (default allow all when not specified)
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+
+  # Roles for RBAC within this project
+  roles:
+    - name: platform-admin
+      description: Platform team administrators
+      policies:
+        - p, proj:platform:platform-admin, applications, *, platform/*, allow
+      groups:
+        - platform-team

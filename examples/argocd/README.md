@@ -2,12 +2,30 @@
 
 This directory contains reference patterns for Argo CD application delivery and GitOps repository design.
 
+## Prerequisites
+
+Before deploying the app-of-apps example, create the required AppProject:
+
+```bash
+kubectl apply -f projects/platform-project.yaml
+```
+
+This creates the `platform` AppProject that constrains source repositories, destination namespaces, and permissions for all applications in this example.
+
+See [projects/platform-project.yaml](projects/platform-project.yaml) for the complete project definition.
+
 ## Example Areas
 
 ### 1. App of Apps
 
 See [app-of-apps/application.yaml](app-of-apps/application.yaml) for a root application that manages child Argo CD `Application` resources declaratively.
 The child applications live under `app-of-apps/applications/` and separate production infrastructure from production workloads.
+
+**Usage:**
+```bash
+# Apply the root application (after creating the platform AppProject above)
+kubectl apply -f app-of-apps/application.yaml
+```
 
 ### 2. Project Boundary
 
