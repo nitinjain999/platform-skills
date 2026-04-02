@@ -23,11 +23,10 @@ Do not store plain secrets in Git. Choose one of the patterns below based on you
 
 | Pattern | Best for | Tradeoff |
 |---|---|---|
-| External Secrets Operator (ESO) | Cloud-native backends: AWS Secrets Manager, Azure Key Vault, GCP Secret Manager, HashiCorp Vault, and more | Runtime dependency on provider; requires identity or static credentials |
+| External Secrets Operator (ESO) | Cloud-native and self-hosted backends: AWS Secrets Manager, Azure Key Vault, GCP Secret Manager, HashiCorp Vault, and more | Runtime dependency on provider; requires identity or static credentials |
 | Sealed Secrets | Air-gapped or simple setups; GitOps-first encryption with no external runtime dependency | Rotation requires re-sealing and a Git commit; master key backup is critical |
-| Vault Secrets Operator | HashiCorp Vault as primary secrets backend; multi-cloud or on-prem | Vault HA required in production; more moving parts |
 
-**When to pick ESO:** The cluster already has workload identity (IRSA on EKS, Workload Identity on AKS/GKE, Vault JWT auth). Secrets are managed in a central provider. Rotation should propagate automatically without a Git commit.
+**When to pick ESO:** The cluster already has workload identity (IRSA on EKS, Workload Identity on AKS/GKE, Vault JWT auth). Secrets are managed in a central provider. Rotation should propagate automatically without a Git commit. HashiCorp Vault is supported as an ESO provider — see the Vault `SecretStore` example below.
 
 **When to pick Sealed Secrets:** No cloud provider or Vault. Air-gapped environment. Team prefers all cluster state — including encrypted secrets — reviewable in Git.
 

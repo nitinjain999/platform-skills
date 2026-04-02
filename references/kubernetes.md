@@ -83,7 +83,11 @@ kubectl auth whoami
 # Inspect the projected token inside a running pod
 kubectl exec -n <namespace> <pod> -- \
   cat /var/run/secrets/kubernetes.io/serviceaccount/token \
-  | cut -d. -f2 | base64 -d 2>/dev/null | jq '{sub:.sub, exp:.exp, iss:.iss}'
+  | cut -d. -f2 \
+  | tr -- '-_' '+/' \
+  | awk '{ pad=4-length($0)%4; if(pad<4) for(i=0;i<pad;i++) $0=$0"="; print }' \
+  | base64 -d 2>/dev/null \
+  | jq '{sub:.sub, exp:.exp, iss:.iss}'
 
 # Confirm the service account exists
 kubectl get serviceaccount -n <namespace> <name>
