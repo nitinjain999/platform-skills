@@ -237,7 +237,7 @@ jobs:
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@651471c36a6092792c552e8b1bef71e592b462d3  # v3.1.2
+        uses: hashicorp/setup-terraform@4
         with:
           terraform_version: 1.7.0
 
