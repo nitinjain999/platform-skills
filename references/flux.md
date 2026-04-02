@@ -61,7 +61,7 @@ infrastructure/
 
 ## Image automation
 
-Flux image automation watches a container registry and commits updated image tags back to Git. The Git commit then triggers normal reconciliation — the cluster never pulls directly from the registry.
+Flux image automation watches a container registry and commits updated image tags back to Git. The Git commit then triggers normal reconciliation — the *desired state* in the cluster is updated from Git, while workloads still pull image layers from the container registry at runtime.
 
 ### Components
 
