@@ -7,7 +7,7 @@
   "plugins": [
     {
       "name": "platform-skills",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "description": "A platform engineering handbook covering Kubernetes, OpenShift, Argo CD, Flux CD, AWS, Azure, Terraform, and GitHub Actions. Provides structured troubleshooting, production-first patterns, root-cause analysis, and working examples across all 8 domains. Installable as a Claude Code skill for interactive guidance.",
       "author": {
         "name": "Nitin Jain"

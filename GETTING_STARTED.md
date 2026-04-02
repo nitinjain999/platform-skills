@@ -4,7 +4,7 @@ This guide is for people who are new to Claude and want to start using this repo
 
 ## What This Repository Is
 
-`platform-skills` is a platform engineering handbook covering 8 domains: Kubernetes, OpenShift, Argo CD, Flux CD, AWS, Azure, Terraform, and GitHub Actions. You can browse it directly on GitHub, clone it for templates, or install it as a Claude Code skill for interactive guidance. The handbook works without installing the skill.
+`platform-skills` is a platform engineering handbook covering 8 domains: Kubernetes, OpenShift, Argo CD, Flux CD, AWS, Azure, Terraform, and GitHub Actions. You can browse it directly on GitHub, clone it for templates, or install it as a Claude plugin for interactive guidance. The handbook works without installing the plugin.
 
 It helps with:
 
@@ -17,13 +17,27 @@ It helps with:
 You can use it in four ways:
 
 1. Read the examples and references directly on GitHub.
-2. Install it from the Claude marketplace if published.
+2. Install it from the Claude marketplace.
 3. Clone locally for templates and patterns.
 4. Install from local clone so Claude can reference your customized version.
 
 ## Fastest Path
 
-If you want the shortest route, do this:
+If you want the shortest route, use the marketplace install:
+
+```bash
+claude plugin marketplace add https://github.com/nitinjain999/platform-skills
+claude plugin install platform-skills
+```
+
+Then open Claude in your project:
+
+```bash
+cd your-project
+claude
+```
+
+If you also want the handbook content locally, clone the repo separately:
 
 ```bash
 git clone https://github.com/nitinjain999/platform-skills.git
@@ -37,25 +51,13 @@ Then:
 3. Pick the reference that matches your task under `references/`.
 4. Copy or adapt an example from `examples/`.
 
-If you are using Claude Code, install the skill locally:
-
-```bash
-claude-code skill install .
-```
-
 ## Install from Claude Marketplace (Recommended)
 
-**Check if published:**
+Add the marketplace, then install:
 
 ```bash
-# Search for the skill in marketplace
-claude-code skill search platform-skills
-```
-
-If `platform-skills` is available in the Claude marketplace, install it:
-
-```bash
-claude-code skill install platform-skills
+claude plugin marketplace add https://github.com/nitinjain999/platform-skills
+claude plugin install platform-skills
 ```
 
 This is the easiest way to get started. Claude will automatically reference these patterns while you work.
@@ -63,16 +65,16 @@ This is the easiest way to get started. Claude will automatically reference thes
 To update to the latest version:
 
 ```bash
-claude-code skill update platform-skills
+claude plugin update platform-skills
 ```
 
 To uninstall:
 
 ```bash
-claude-code skill uninstall platform-skills
+claude plugin uninstall platform-skills
 ```
 
-**If not yet published:** Use the local clone method below.
+If marketplace installation is not available in your environment yet, use the local clone method below.
 
 ## Install from Local Clone (For Customization)
 
@@ -84,7 +86,7 @@ git clone https://github.com/nitinjain999/platform-skills.git
 cd platform-skills
 
 # Install from local clone
-claude-code skill install .
+claude plugin install .
 ```
 
 **Use local install when:**

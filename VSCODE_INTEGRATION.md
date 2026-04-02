@@ -1,6 +1,9 @@
 # Platform Skills - VS Code Integration Guide
 
-This guide shows how to use `platform-skills` in Visual Studio Code with Claude Code and, optionally, GitHub Copilot.
+This guide shows how to use `platform-skills` in Visual Studio Code in two supported ways:
+
+1. with Claude Code
+2. without Claude, using GitHub Copilot plus the handbook
 
 ## Core Model
 
@@ -8,33 +11,37 @@ Use the tools for different jobs:
 
 | Tool | Best for |
 |------|----------|
-| Claude Code + `platform-skills` | Architecture, troubleshooting, design reviews, GitOps boundaries, IAM, release flow |
-| GitHub Copilot | Code completion, boilerplate, syntax help, repetitive edits |
+| Claude Code + `platform-skills` plugin | Architecture, troubleshooting, design reviews, GitOps boundaries, IAM, release flow |
+| GitHub Copilot + handbook | Code completion, scaffolding, repo-local generation guided by documented platform rules |
 
-## Install the Skill
+## Option 1: VS Code with Claude
 
-Install `platform-skills` once. The same install works for terminal sessions and the VS Code extension.
+Use this when Claude Code is allowed in your environment and you want interactive architecture and troubleshooting help inside the editor or terminal.
+
+### Install the Plugin
+
+Install `platform-skills` once. The same plugin install works for terminal sessions and the VS Code extension.
 
 ### Marketplace install
 
-Use this if the skill is already published:
+Use this if the plugin is already published:
 
 ```bash
-claude-code skill search platform-skills
-claude-code skill install platform-skills
+claude plugin marketplace add https://github.com/nitinjain999/platform-skills
+claude plugin install platform-skills
 ```
 
 ### Local clone install
 
-Use this if you want local customization or the skill is not yet published:
+Use this if you want local customization or the plugin is not yet published:
 
 ```bash
 git clone https://github.com/nitinjain999/platform-skills.git
 cd platform-skills
-claude-code skill install .
+claude plugin install .
 ```
 
-## Option 1: Claude Code Extension in VS Code
+### Claude Code Extension in VS Code
 
 1. Install the Claude Code extension from the VS Code extensions marketplace.
 2. Open the Claude Code sidebar or command palette action.
@@ -54,7 +61,7 @@ My Flux reconciliation is failing in staging after a merge. Tell me the likely r
 Review this Terraform module for AWS IAM blast-radius problems and suggest safer defaults.
 ```
 
-## Option 2: Copilot in Editor, Claude in Terminal
+### Copilot in Editor, Claude in Terminal
 
 This is a strong default if you already use GitHub Copilot.
 
@@ -75,6 +82,75 @@ Use Claude for:
 - reviewing IAM or RBAC policy shape
 - debugging Kubernetes, OpenShift, Flux, or Argo CD failures
 - reviewing deployment workflow security
+
+## Option 2: VS Code Without Claude
+
+Use this when your team cannot use Claude, does not have access to Claude, or wants to standardize on GitHub Copilot only.
+
+In this mode, `platform-skills` works as a handbook and prompt source:
+
+1. Clone the repository locally:
+
+```bash
+git clone https://github.com/nitinjain999/platform-skills.git
+cd platform-skills
+code .
+```
+
+2. Use the handbook directly:
+
+- [README.md](README.md) for navigation
+- [references/](references/) for platform guidance
+- [examples/](examples/) for manifests, workflows, and Terraform snippets
+- [.github/copilot-instructions.md](.github/copilot-instructions.md) for GitHub Copilot guidance
+
+3. Keep GitHub Copilot enabled in VS Code for:
+
+- code completion
+- manifest and workflow scaffolding
+- adapting examples to your repo
+- applying repo-local guidance from `.github/copilot-instructions.md`
+
+### Copilot-only workflow
+
+Open your project and this handbook side by side in VS Code. Then:
+
+1. Read the relevant reference file first.
+2. Open the matching example file.
+3. Ask Copilot to adapt it to your repo, environment, and naming.
+4. Review the generated output against the handbook rules before committing.
+
+### Good Copilot prompts
+
+Ask Copilot to use the repo rules explicitly.
+
+```text
+Using .github/copilot-instructions.md and references/terraform.md, generate a Terraform module layout for an EKS cluster with clear separation between reusable modules and environment state.
+```
+
+```text
+Using examples/kubernetes/deployment-baseline.yaml and references/kubernetes.md, generate a production-ready Deployment for this service and keep the security context locked down.
+```
+
+```text
+Using references/github-actions.md and .github/copilot-instructions.md, review this workflow for OIDC, permissions, and unsafe triggers.
+```
+
+### What Copilot can and cannot replace
+
+Use Copilot for:
+
+- generating first drafts
+- refactoring boilerplate
+- applying patterns from this repo to concrete files
+
+Do not rely on Copilot alone for:
+
+- final ownership-boundary decisions
+- security-sensitive IAM design without review
+- deciding whether Terraform, Kubernetes, Flux, or Argo CD should own a resource
+
+For those decisions, use the handbook references as the source of truth.
 
 ## Example Workflows
 
@@ -107,7 +183,7 @@ I need a repo layout for AWS, Terraform, and either Flux or Argo CD across dev, 
 
 ## Recommended Prompt Pattern
 
-Claude is most useful when you include:
+Claude or Copilot is most useful when you include:
 
 - the platform you use
 - the owning layer, if known
@@ -117,15 +193,33 @@ Claude is most useful when you include:
 
 ## Troubleshooting
 
-### The skill is not available in VS Code
+### The plugin is not available in VS Code
 
 Verify installation from a terminal:
 
 ```bash
-claude-code skill search platform-skills
+claude plugin list
 ```
 
-If the marketplace entry is not available yet, install from a local clone instead.
+If `platform-skills` is not listed, install it:
+
+```bash
+claude plugin marketplace add https://github.com/nitinjain999/platform-skills
+claude plugin install platform-skills
+```
+
+Or install from a local clone if it is not yet published.
+
+### Claude is not available in my organization
+
+Use the Copilot-only workflow in this guide.
+
+The minimum setup is:
+
+1. clone the repository
+2. open it in VS Code
+3. keep [references/](references/) and [examples/](examples/) open while working
+4. let Copilot use [.github/copilot-instructions.md](.github/copilot-instructions.md) as the repo guidance file
 
 ### Claude answers too generically
 

@@ -3,30 +3,30 @@
 ## Step 1: Confirm Claude Code
 
 ```bash
-claude-code --version
+claude --version
 ```
 
 If Claude Code is not installed, visit: https://claude.ai/code
 
-## Step 2: Install Platform Skills
+## Step 2: Install the Plugin
 
-### Marketplace
+### From Marketplace
 
-Use this if `platform-skills` is already published:
+Add the marketplace, then install:
 
 ```bash
-claude-code skill search platform-skills
-claude-code skill install platform-skills
+claude plugin marketplace add https://github.com/nitinjain999/platform-skills
+claude plugin install platform-skills
 ```
 
-### Local Clone
+### From Local Clone
 
 Use this if you want the repo immediately or need local customization:
 
 ```bash
 git clone https://github.com/nitinjain999/platform-skills.git
 cd platform-skills
-claude-code skill install .
+claude plugin install .
 ```
 
 ## Step 3: Use It
