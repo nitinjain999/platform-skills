@@ -23,10 +23,16 @@ claude plugin marketplace add https://github.com/nitinjain999/platform-skills
 claude plugin install platform-skills
 ```
 
-Update or remove it later with:
+**Upgrade** when a new version is released:
 
 ```bash
-claude plugin update platform-skills
+claude plugin marketplace update
+claude plugin install platform-skills
+```
+
+**Uninstall:**
+
+```bash
 claude plugin uninstall platform-skills
 ```
 

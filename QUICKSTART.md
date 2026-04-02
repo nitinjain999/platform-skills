@@ -52,6 +52,16 @@ My Argo CD application is out of sync after a merge. Help me find the most likel
 Review this GitHub Actions workflow for deployment security issues.
 ```
 
+## Upgrade
+
+When a new version is released:
+
+```bash
+claude plugin marketplace update
+claude plugin install platform-skills
+claude plugin list  # confirm new version
+```
+
 ## VS Code Workflow
 
 - Use the Claude Code extension for chat and inline help inside VS Code.
