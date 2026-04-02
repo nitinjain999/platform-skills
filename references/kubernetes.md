@@ -93,12 +93,12 @@ kubectl get serviceaccount -n <namespace> <name>
 
 | Cause | Fix |
 |---|---|
-| Expired token (manual `kubernetes.io/service-account-token` secret) | Delete the secret; the token controller recreates it |
+| Expired token (manual `kubernetes.io/service-account-token` secret) | On clusters \< 1.24, you can delete the Secret and let the token controller recreate it. On Kubernetes 1.24+, either recreate the Secret with the correct `kubernetes.io/service-account.name` and `kubernetes.io/service-account.uid` annotations, or migrate the workload to use projected service account tokens and update the pod volume mounts accordingly. |
 | Service account deleted while pod is running | Restart pod; it will mount a fresh projected token |
 | `kubeconfig` referencing a deleted cluster user | Re-generate kubeconfig from cloud provider (e.g. `aws eks update-kubeconfig`) |
 | Certificate expired on client | Rotate the client cert via your cluster CA or re-bootstrap the node |
 
-**Prevention:** Use projected service account tokens (default since Kubernetes 1.24). Avoid manually created `kubernetes.io/service-account-token` secrets — they do not auto-rotate.
+**Prevention:** Prefer projected service account tokens (default since Kubernetes 1.24+). Avoid manually created `kubernetes.io/service-account-token` Secrets — they do not auto-rotate and may not be auto-recreated if deleted.
 
 ---
 
