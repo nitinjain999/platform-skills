@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-04-02
+
+### Added
+
+#### Slash Commands
+
+Five explicit slash commands added under `commands/` — invoked as `/platform-skills:<name>`:
+
+- `/platform-skills:debug` — structured troubleshooting: classifies the problem layer, lists evidence commands, forms a root-cause hypothesis, proposes a fix with validation and rollback
+- `/platform-skills:review` — production-readiness review of any manifest, Terraform file, workflow, or Helm values: correctness, security, operational safety, deprecations
+- `/platform-skills:terraform` — full Terraform validation pipeline walkthrough (fmt, validate, tflint, tfsec/checkov), blast radius, IAM risk, state impact, module design
+- `/platform-skills:gitops` — Flux CD and Argo CD troubleshooting: classifies by source/artifact/reconciliation/runtime layer, provides exact evidence commands, fix, and rollback
+- `/platform-skills:linkerd` — Linkerd diagnostics: injection, mTLS, authorization policy, observability, traffic management, multi-cluster, control plane
+
 ## [1.3.0] - 2026-04-02
 
 ### Added
