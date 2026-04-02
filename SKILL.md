@@ -17,7 +17,8 @@ Match the task to the right layer:
 4. `Flux` or `Argo CD`: Reconcile in-cluster desired state after bootstrap and manage promotion of workloads or platform add-ons.
 5. `GitHub Actions`: Validate, package, test, and promote changes. Keep workflows declarative and reusable.
 6. `AWS` or `Azure`: Apply provider-specific account, subscription, identity, and governance patterns.
-7. `Cross-platform`: Design repo boundaries, ownership, promotion flows, and security controls first.
+7. `Linkerd`: Apply service mesh for automatic mTLS, golden-signal observability, and traffic management between workloads.
+8. `Cross-platform`: Design repo boundaries, ownership, promotion flows, and security controls first.
 
 If a task spans multiple areas, decide which layer owns the source of truth and keep the other layers consumers of that state.
 
@@ -58,5 +59,6 @@ When asked to generate code, start from the thinnest useful slice that proves th
 - For Azure management groups, identity, and AKS-oriented patterns, read [references/azure.md](references/azure.md).
 - For reusable workflows, OIDC, and delivery controls, read [references/github-actions.md](references/github-actions.md).
 - For secrets strategy, External Secrets Operator, and Sealed Secrets patterns, read [references/secrets.md](references/secrets.md).
+- For Linkerd service mesh, mTLS, observability, traffic management, and multi-cluster, read [references/linkerd.md](references/linkerd.md).
 
 Load only the files needed for the current request.
