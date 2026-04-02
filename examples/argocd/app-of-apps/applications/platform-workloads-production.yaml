@@ -1,17 +1,19 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: platform-root
+  name: platform-workloads-production
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
 spec:
   project: platform
   source:
     repoURL: https://github.com/nitinjain999/platform-skills
     targetRevision: main
-    path: examples/argocd/app-of-apps/applications
+    path: examples/flux/basic-monorepo/apps/production
   destination:
     server: https://kubernetes.default.svc
-    namespace: argocd
+    namespace: my-app
   syncPolicy:
     automated:
       prune: true

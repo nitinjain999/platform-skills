@@ -195,7 +195,12 @@ jobs:
       - name: Validate Kubernetes manifests (if present)
         run: |
           K8S_FILES=$(find . -type f \( -name "*.yml" -o -name "*.yaml" \) \
-            -path "*/examples/flux/*" \
+            \( \
+              -path "./examples/flux/*" -o \
+              -path "./examples/argocd/*" -o \
+              -path "./examples/kubernetes/*" -o \
+              -path "./examples/openshift/*" \
+            \) \
             ! -path "./.git/*")
 
           if [ -z "$K8S_FILES" ]; then
@@ -211,7 +216,7 @@ jobs:
           ERRORS=0
           while IFS= read -r file; do
             echo "Validating Kubernetes manifest: $file"
-            if ! kubeconform -summary -output text "$file"; then
+            if ! kubeconform -summary -output text -ignore-missing-schemas "$file"; then
               echo "❌ Kubeconform validation failed: $file"
               ERRORS=$((ERRORS + 1))
             fi
@@ -315,9 +320,12 @@ jobs:
 
       - name: Check for GitHub Actions security
         run: |
-          if find .github/workflows -type f -name "*.yml" -o -name "*.yaml" 2>/dev/null | grep -q .; then
+          WORKFLOW_FILES=$(find .github/workflows examples/github-actions -type f \
+            \( -name "*.yml" -o -name "*.yaml" \) 2>/dev/null)
+
+          if [ -n "$WORKFLOW_FILES" ]; then
             # Check for unpinned actions
-            UNPINNED=$(grep -r "uses:.*@[vV][0-9]" .github/workflows || true)
+            UNPINNED=$(grep -H "uses:.*@[vV][0-9]" $WORKFLOW_FILES || true)
             if [ -n "$UNPINNED" ]; then
               echo "⚠️  Found actions pinned to tags (should use SHA):"
               echo "$UNPINNED"
@@ -326,7 +334,7 @@ jobs:
             fi
 
             # Check for pull_request_target
-            DANGEROUS=$(grep -r "pull_request_target" .github/workflows || true)
+            DANGEROUS=$(grep -H "pull_request_target" $WORKFLOW_FILES || true)
             if [ -n "$DANGEROUS" ]; then
               echo "⚠️  Found pull_request_target trigger:"
               echo "$DANGEROUS"

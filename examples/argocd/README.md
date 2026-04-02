@@ -6,7 +6,8 @@ This directory contains reference patterns for Argo CD application delivery and 
 
 ### 1. App of Apps
 
-See [app-of-apps/application.yaml](app-of-apps/application.yaml) for a root application that manages other Argo CD applications declaratively.
+See [app-of-apps/application.yaml](app-of-apps/application.yaml) for a root application that manages child Argo CD `Application` resources declaratively.
+The child applications live under `app-of-apps/applications/` and separate production infrastructure from production workloads.
 
 ### 2. Project Boundary
 

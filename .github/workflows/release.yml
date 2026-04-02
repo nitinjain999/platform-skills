@@ -266,10 +266,14 @@ jobs:
           echo "" >> release-notes.md
           echo "**Full Changelog**: https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md" >> release-notes.md
           echo "" >> release-notes.md
-          echo "**Installation**:" >> release-notes.md
+          echo "**Installation from local clone:**" >> release-notes.md
           echo "\`\`\`bash" >> release-notes.md
-          echo "claude-code skill install ${{ env.SKILL_NAME }}" >> release-notes.md
+          echo "git clone https://github.com/${{ github.repository }}.git" >> release-notes.md
+          echo "cd platform-skills" >> release-notes.md
+          echo "claude-code skill install ./platform-skills" >> release-notes.md
           echo "\`\`\`" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "**Marketplace install:** available after marketplace publication is completed." >> release-notes.md
 
       - name: Create GitHub Release
         id: create_release
@@ -291,11 +295,15 @@ jobs:
           **Tag**: \`v${{ needs.validate.outputs.version }}\`
           **Release URL**: ${{ steps.create_release.outputs.html_url }}
 
-          ### 📦 Installation
+          ### 📦 Installation From Local Clone
 
           \`\`\`bash
-          claude-code skill install ${{ env.SKILL_NAME }}
+          git clone https://github.com/${{ github.repository }}.git
+          cd platform-skills
+          claude-code skill install ./platform-skills
           \`\`\`
+
+          Marketplace installation by name is available only after the manual marketplace publication step completes.
 
           ### ✅ Validation Passed
 

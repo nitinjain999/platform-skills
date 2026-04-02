@@ -66,7 +66,7 @@ This repository uses GitHub Actions for quality assurance:
 
 - **Continuous Validation**: Every PR and push validates structure, syntax, and security
 - **Automated Releases**: Tag-based releases with automatic GitHub Release creation
-- **Quality Gates**: Markdown, YAML, Terraform, and security checks before merge
+- **Quality Checks**: Advisory markdown checks plus blocking YAML, Terraform, and security validation before merge
 
 See [.github/workflows/](.github/workflows/) for workflow details.
 
@@ -76,7 +76,7 @@ New to Claude or using this repo for the first time? Start with [GETTING_STARTED
 
 > **Note:** This repository provides reference patterns and examples for platform engineering with Kubernetes, OpenShift, Argo CD, Flux CD, AWS, Azure, Terraform, and GitHub Actions. It can be used as:
 > 1. **Reference Documentation** - Browse examples and guides directly on GitHub
-> 2. **Claude Code Skill** - Install from marketplace or locally for interactive guidance
+> 2. **Claude Code Skill** - Install from marketplace if published, or locally for interactive guidance
 > 3. **Cloned Repository** - Clone locally for templates and customization
 
 ### As Reference Documentation
@@ -101,8 +101,9 @@ cp -r examples/terraform/eks-cluster/* your-terraform-modules/
 
 If using Claude Code, install this as a skill:
 
-**From Marketplace (Recommended):**
+**From Marketplace (If Published):**
 ```bash
+claude-code skill search platform-skills
 claude-code skill install platform-skills
 ```
 

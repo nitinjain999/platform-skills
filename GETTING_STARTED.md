@@ -17,7 +17,7 @@ It helps with:
 You can use it in four ways:
 
 1. Read the examples and references directly on GitHub.
-2. Install it from the Claude marketplace (easiest).
+2. Install it from the Claude marketplace if published.
 3. Clone locally for templates and patterns.
 4. Install from local clone so Claude can reference your customized version.
 
