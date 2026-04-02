@@ -236,7 +236,9 @@ jobs:
           ERRORS=0
           while IFS= read -r file; do
             echo "Validating Kubernetes manifest: $file"
-            if ! kubeconform -summary -output text -ignore-missing-schemas "$file"; then
+            # -skip-kinds Route: OpenShift Route CRD has no entry in yannh/kubernetes-json-schema;
+            # kubeconform returns a 429 rate-limit error (not 404) which -ignore-missing-schemas does not catch.
+            if ! kubeconform -summary -output text -ignore-missing-schemas -skip-kinds Route "$file"; then
               echo "❌ Kubeconform validation failed: $file"
               ERRORS=$((ERRORS + 1))
             fi
