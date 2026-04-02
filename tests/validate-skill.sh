@@ -13,7 +13,7 @@ echo ""
 echo "=== SKILL.md ==="
 
 # Must have YAML frontmatter
-if head -1 SKILL.md | grep -q "^---"; then
+if head -1 skills/platform-skills/SKILL.md | grep -q "^---"; then
   pass "SKILL.md has frontmatter"
 else
   fail "SKILL.md missing frontmatter"
@@ -21,7 +21,7 @@ fi
 
 # Must have name and description fields
 for field in "^name:" "^description:"; do
-  if sed -n '/^---$/,/^---$/p' SKILL.md | grep -qE "$field"; then
+  if sed -n '/^---$/,/^---$/p' skills/platform-skills/SKILL.md | grep -qE "$field"; then
     pass "SKILL.md frontmatter has '${field}' field"
   else
     fail "SKILL.md frontmatter missing '${field}' field"
@@ -80,7 +80,7 @@ echo ""
 echo "=== SKILL.md references all required reference files ==="
 
 for ref in "${REQUIRED_REFERENCES[@]}"; do
-  if grep -q "$ref" SKILL.md; then
+  if grep -q "$ref" skills/platform-skills/SKILL.md; then
     pass "SKILL.md references $ref"
   else
     fail "SKILL.md does not reference $ref"
