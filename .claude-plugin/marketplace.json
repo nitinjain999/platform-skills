@@ -1,39 +1,42 @@
 {
-  "name": "platform-skills",
-  "version": "1.0.0",
-  "description": "Platform engineering reference patterns and examples for Kubernetes, OpenShift, Argo CD, Flux CD, AWS, Azure, Terraform, and GitHub Actions - troubleshooting guides, production best practices, and working code",
-  "author": "Nitin Jain",
-  "license": "Apache-2.0",
-  "repository": "https://github.com/nitinjain999/platform-skills",
-  "category": "development",
-  "keywords": [
-    "platform-engineering",
-    "kubernetes",
-    "openshift",
-    "argocd",
-    "fluxcd",
-    "gitops",
-    "aws",
-    "azure",
-    "terraform",
-    "github-actions",
-    "eks",
-    "aks",
-    "infrastructure-as-code",
-    "ci-cd",
-    "devops"
-  ],
-  "activation": "When working with Kubernetes or OpenShift platforms, Argo CD or Flux GitOps deployments, AWS/Azure cloud infrastructure, Terraform/OpenTofu IaC, or GitHub Actions CI/CD - including troubleshooting reconciliation issues, debugging workloads, reviewing IAM policies, designing Helm or Kustomize repository structures, fixing GitHub Actions workflows, or making platform architecture decisions. Use one GitOps reconciler per ownership boundary unless the task is explicitly about migration",
-  "capabilities": [
-    "Kubernetes platform baselines and workload patterns",
-    "OpenShift operating and security patterns",
-    "Argo CD application and application set design",
-    "Flux CD troubleshooting and GitOps patterns",
-    "AWS service design and IAM best practices",
-    "Azure resource management and AKS operations",
-    "Terraform module architecture and state management",
-    "GitHub Actions workflow security and optimization",
-    "Multi-cloud Kubernetes operations",
-    "Platform reliability and observability"
+  "name": "platform-skills-marketplace",
+  "owner": {
+    "name": "Nitin Jain",
+    "email": "nitin.jain@atg.se"
+  },
+  "plugins": [
+    {
+      "name": "platform-skills",
+      "version": "1.0.0",
+      "description": "Platform engineering reference patterns and examples for Kubernetes, OpenShift, Argo CD, Flux CD, AWS, Azure, Terraform, and GitHub Actions - troubleshooting guides, production best practices, and working code",
+      "author": {
+        "name": "Nitin Jain"
+      },
+      "license": "Apache-2.0",
+      "category": "development",
+      "keywords": [
+        "platform-engineering",
+        "kubernetes",
+        "openshift",
+        "argocd",
+        "fluxcd",
+        "gitops",
+        "aws",
+        "azure",
+        "terraform",
+        "github-actions",
+        "eks",
+        "aks",
+        "infrastructure-as-code",
+        "ci-cd",
+        "devops"
+      ],
+      "source": {
+        "source": "url",
+        "url": "https://github.com/nitinjain999/platform-skills.git",
+        "sha": "954c2b66a51f455a596a2fbd84cad2c264132d9a"
+      },
+      "homepage": "https://github.com/nitinjain999/platform-skills"
+    }
   ]
 }
