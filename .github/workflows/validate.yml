@@ -344,7 +344,7 @@ jobs:
               exit 1
             fi
 
-            REPO_DANGEROUS=$(grep -H "pull_request_target" $REPO_WORKFLOWS || true)
+            REPO_DANGEROUS=$(grep -HE "^[[:space:]]*pull_request_target:" $REPO_WORKFLOWS || true)
             if [ -n "$REPO_DANGEROUS" ]; then
               echo "❌ Repository workflows must not use pull_request_target without explicit review:"
               echo "$REPO_DANGEROUS"
@@ -361,7 +361,7 @@ jobs:
               echo "Prefer SHAs or exact release tags in published examples as well"
             fi
 
-            EXAMPLE_DANGEROUS=$(grep -H "pull_request_target" $EXAMPLE_WORKFLOWS || true)
+            EXAMPLE_DANGEROUS=$(grep -HE "^[[:space:]]*pull_request_target:" $EXAMPLE_WORKFLOWS || true)
             if [ -n "$EXAMPLE_DANGEROUS" ]; then
               echo "⚠️  Example workflows contain pull_request_target:"
               echo "$EXAMPLE_DANGEROUS"
