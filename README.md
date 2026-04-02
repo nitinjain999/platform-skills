@@ -1,13 +1,13 @@
 # Platform Skills
 
-> A platform engineering handbook covering Kubernetes, OpenShift, Argo CD, Flux CD, AWS, Azure, Terraform, and GitHub Actions — with an optional Claude plugin layer for interactive guidance.
+> A practical handbook for developers and DevOps engineers working with Kubernetes, GitOps, Terraform, GitHub Actions, cloud infrastructure, and secrets management — with an optional Claude plugin layer for interactive guidance.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Claude Code](https://img.shields.io/badge/Claude-Code%20Skill-purple)](https://claude.ai/code)
 
 ## What is this?
 
-This repository is a reference handbook for platform engineers, SREs, and DevOps practitioners. It is structured in two independent layers:
+This repository is a reference handbook for developers, DevOps engineers, SREs, and platform teams. It is structured in two independent layers:
 
 - **Handbook** — `references/` and `examples/` are the main product. Every domain has a deep-dive guide and working example assets you can copy directly into your project. Use it on GitHub, from a local clone, or as a team knowledge base.
 - **Claude plugin** — `SKILL.md` and `.claude-plugin/marketplace.json` add an optional routing layer so Claude surfaces the right section of the handbook when you ask platform engineering questions interactively.
@@ -39,6 +39,7 @@ Both layers work independently. The plugin is optional.
 | 🏗️ Terraform | [references/terraform.md](references/terraform.md) | Module design, state management, testing, CI/CD integration |
 | 🚀 GitHub Actions | [references/github-actions.md](references/github-actions.md) | Security hardening, OIDC, SHA pinning, reusable workflows |
 | 🗺️ Platform model | [references/platform-operating-model.md](references/platform-operating-model.md) | Ownership boundaries, promotion flows, cross-tool design |
+| 🔐 Secrets | [references/secrets.md](references/secrets.md) | External Secrets Operator, Sealed Secrets, provider setup, troubleshooting |
 
 ## Core principles
 

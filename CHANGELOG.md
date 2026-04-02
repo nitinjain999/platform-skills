@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+#### Reference Guides
+- Added RBAC troubleshooting to `references/kubernetes.md`: 401 vs 403 diagnosis, `kubectl auth can-i` evidence collection, binding scope matrix (Role/ClusterRole × RoleBinding/ClusterRoleBinding), `ClusterRoleBinding` audit query
+- Added image automation section to `references/flux.md`: `ImageRepository`, `ImagePolicy`, `ImageUpdateAutomation` setup, ECR token rotation guidance, troubleshooting table for common failures, safety rules for staging vs. production promotion
+- Added `references/secrets.md`: decision matrix (ESO vs. Sealed Secrets vs. Vault), ESO setup with AWS Secrets Manager/IRSA, Sealed Secrets seal/rotate/backup workflow, troubleshooting tables for both patterns, least-privilege IAM policy example, operational rules
+
+#### Validation
+- Added `references/secrets.md` to `REQUIRED_REFERENCES` in `tests/validate-skill.sh`
+
 ## [1.1.0] - 2026-04-02
 
 ### Added
