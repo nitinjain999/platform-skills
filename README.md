@@ -62,15 +62,21 @@ Platform Skills is a specialized Claude Agent Skill designed for platform engine
 
 ## CI/CD & Automation
 
-This repository uses GitHub Actions for quality assurance:
+This repository uses GitHub Actions for quality assurance and Renovate for dependency management:
 
 - **Continuous Validation**: Every PR and push validates structure, syntax, and security
 - **Automated Releases**: Tag-based releases with automatic GitHub Release creation
+- **Dependency Updates**: Renovate automatically creates PRs for:
+  - GitHub Actions (SHA-pinned for security)
+  - Terraform providers and modules
+  - Helm chart versions
+  - Container images
+  - Security vulnerability patches
 - **Quality Checks**: 
   - **Blocking**: YAML syntax, Terraform validation, secret detection, and repository workflow security
   - **Advisory**: Markdown structure and example workflow pinning recommendations
 
-See [.github/workflows/](.github/workflows/) for workflow details.
+See [.github/workflows/](.github/workflows/) for workflow details and [renovate.json](renovate.json) for dependency automation configuration.
 
 ## Installation & Usage
 

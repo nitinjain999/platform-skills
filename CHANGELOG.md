@@ -40,6 +40,12 @@ Initial release of Platform Skills - A comprehensive Claude Agent Skill for plat
   - YAML and Kubernetes manifest validation
   - Terraform format and validation checks
   - Security scanning for secrets and action pinning
+- Renovate configuration for automated dependency updates (`renovate.json`)
+  - GitHub Actions SHA pinning with automatic updates
+  - Terraform provider version management
+  - Helm chart version tracking
+  - Container image update monitoring
+  - Security vulnerability alerts
 - Consolidated release process documentation in CONTRIBUTING.md
 - Removed redundant internal documentation (QUALITY_ASSURANCE.md, WORKFLOWS_SUMMARY.md)
 - Cleaned up experimental files for production release

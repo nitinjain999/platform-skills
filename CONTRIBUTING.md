@@ -377,6 +377,50 @@ After marketplace publication:
 - [ ] Announce release (optional)
 - [ ] Monitor issues for feedback
 
+## Automated Dependency Management
+
+This repository uses [Renovate](https://docs.renovatebot.com/) for automated dependency updates.
+
+### What Renovate Does
+
+Renovate automatically:
+- **GitHub Actions**: Updates action versions and maintains SHA pinning for security
+- **Terraform**: Updates provider versions and module references
+- **Helm Charts**: Updates chart versions in examples
+- **Container Images**: Updates image tags in Kubernetes manifests
+- **Security**: Creates high-priority PRs for vulnerability patches
+
+### Reviewing Renovate PRs
+
+When Renovate creates a pull request:
+
+1. **Check the CI status** - All validation workflows must pass
+2. **Review the changes** - Verify version compatibility
+3. **Test if needed** - For major updates, test examples locally
+4. **Merge promptly** - Security updates should be merged quickly
+
+### Renovate Configuration
+
+See [renovate.json](renovate.json) for the complete configuration. Key policies:
+
+- **Automerge**: Enabled for minor/patch updates to Terraform providers and security patches
+- **Manual review**: Required for GitHub Actions, major versions, and container images
+- **Schedule**: Runs weekly on Mondays before 6am Berlin time
+- **Grouping**: Related updates are grouped into single PRs
+
+### Pausing Renovate
+
+If you need to pause Renovate temporarily:
+
+```bash
+# Add a renovate.json field
+{
+  "enabled": false
+}
+```
+
+Or use the Renovate dashboard to pause updates for specific dependencies.
+
 ## Questions?
 
 - **General questions**: [Discussions](https://github.com/nitinjain999/platform-skills/discussions)

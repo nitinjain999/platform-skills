@@ -1,0 +1,109 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    ":semanticCommits",
+    ":separateMajorReleases"
+  ],
+  "timezone": "Europe/Berlin",
+  "schedule": ["before 6am on monday"],
+  "labels": ["dependencies", "renovate"],
+  "assignees": ["@nitinjain999"],
+  "prConcurrentLimit": 5,
+  "prCreation": "not-pending",
+  "rebaseWhen": "conflicted",
+  "semanticCommits": "enabled",
+  "commitMessagePrefix": "chore(deps):",
+  "postUpdateOptions": ["gomodTidy"],
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": ["security"],
+    "assignees": ["@nitinjain999"]
+  },
+  "packageRules": [
+    {
+      "description": "GitHub Actions - pin to commit SHA for security",
+      "matchManagers": ["github-actions"],
+      "pinDigests": true,
+      "automerge": false,
+      "groupName": "GitHub Actions",
+      "schedule": ["before 6am on monday"]
+    },
+    {
+      "description": "Terraform providers - automerge minor/patch",
+      "matchManagers": ["terraform"],
+      "matchDepTypes": ["required_provider"],
+      "groupName": "Terraform providers",
+      "automerge": true,
+      "automergeType": "pr",
+      "matchUpdateTypes": ["minor", "patch"]
+    },
+    {
+      "description": "Terraform modules - review major versions",
+      "matchManagers": ["terraform"],
+      "matchDepTypes": ["module"],
+      "automerge": false,
+      "groupName": "Terraform modules"
+    },
+    {
+      "description": "Helm charts - automerge patch only",
+      "matchManagers": ["helmv3"],
+      "automerge": true,
+      "automergeType": "pr",
+      "matchUpdateTypes": ["patch"]
+    },
+    {
+      "description": "Container images - review all updates",
+      "matchManagers": ["kubernetes", "docker-compose"],
+      "automerge": false,
+      "groupName": "Container images"
+    },
+    {
+      "description": "Security updates - high priority",
+      "matchUpdateTypes": ["patch"],
+      "matchCurrentVersion": "!/^0/",
+      "labels": ["security", "dependencies"],
+      "automerge": true,
+      "automergeType": "pr"
+    }
+  ],
+  "regexManagers": [
+    {
+      "description": "Update Terraform version in GitHub Actions workflows",
+      "fileMatch": ["^\\.github/workflows/.*\\.ya?ml$"],
+      "matchStrings": [
+        "terraform_version:\\s*['\"]?(?<currentValue>[^'\"\\s]+)['\"]?"
+      ],
+      "depNameTemplate": "hashicorp/terraform",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    },
+    {
+      "description": "Update Flux CD version in documentation",
+      "fileMatch": ["^examples/flux/.*\\.md$"],
+      "matchStrings": [
+        "Flux CLI \\((?<currentValue>[^)]+)\\)"
+      ],
+      "depNameTemplate": "fluxcd/flux2",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    },
+    {
+      "description": "Update Kubernetes version in documentation",
+      "fileMatch": ["^examples/.*/.*\\.md$"],
+      "matchStrings": [
+        "Kubernetes cluster \\((?<currentValue>[^)]+)\\+?\\)"
+      ],
+      "depNameTemplate": "kubernetes/kubernetes",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    }
+  ],
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/vendor/**",
+    "**/.terraform/**",
+    "**/charts/**"
+  ]
+}
