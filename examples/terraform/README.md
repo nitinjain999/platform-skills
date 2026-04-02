@@ -2,6 +2,8 @@
 
 This directory contains reference implementations for Terraform module patterns and best practices.
 
+Status: `eks-cluster/` is runnable today. `multi-env-structure/` is a reference layout. Testing and CI/CD sections below point to handbook patterns rather than committed subdirectories.
+
 ## Examples
 
 ### 1. EKS Cluster Module
@@ -29,7 +31,7 @@ This directory contains reference implementations for Terraform module patterns 
 
 ### 3. Module Testing
 
-[module-testing/](module-testing/) - Testing strategies for Terraform modules
+Handbook pattern: testing strategies for Terraform modules
 
 **Use case:** Validating module behavior  
 **Pattern:** Native tests, examples, and validation  
@@ -40,7 +42,7 @@ This directory contains reference implementations for Terraform module patterns 
 
 ### 4. CI/CD Pipeline
 
-[cicd-pipeline/](cicd-pipeline/) - Complete Terraform CI/CD workflow
+Handbook pattern: complete Terraform CI/CD workflow
 
 **Use case:** Automated plan, review, and apply  
 **Pattern:** GitHub Actions with OIDC and protected environments  
@@ -48,6 +50,8 @@ This directory contains reference implementations for Terraform module patterns 
 - PR validation workflow
 - Plan and apply workflows
 - Security scanning integration
+
+See [../github-actions/terraform-cicd.yml](../github-actions/terraform-cicd.yml) for the committed workflow example.
 
 ## Prerequisites
 

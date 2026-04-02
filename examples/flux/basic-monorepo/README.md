@@ -299,6 +299,6 @@ kustomize build apps/production
 
 ## Next Steps
 
-- Add [Helm releases](../helm-releases/) for third-party apps
-- Implement [image automation](../image-automation/) for updates
-- Consider [multi-tenant](../multi-tenant/) for team separation
+- Add Helm release patterns for third-party apps
+- Add image automation patterns for updates
+- Consider a multi-tenant split when teams need stronger repo boundaries

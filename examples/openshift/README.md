@@ -1,40 +1,26 @@
 # OpenShift Examples
 
-This directory contains reference patterns for adapting Kubernetes workloads and platform components to Red Hat OpenShift.
+Manifests for adapting workloads and platform components to Red Hat OpenShift constraints.
 
-## Example Areas
+Status: committed manifest snippets for the handbook. They illustrate OpenShift-specific adaptations rather than a complete standalone repo.
 
-### 1. Route Exposure
+## Files
 
-Prefer OpenShift `Route` resources when exposing services through the platform router:
+| File | What it shows |
+|---|---|
+| [route.yaml](route.yaml) | OpenShift Route with edge TLS termination and HTTP redirect |
+| [resource-quota.yaml](resource-quota.yaml) | ResourceQuota and LimitRange for tenant namespace isolation |
 
-```yaml
-apiVersion: route.openshift.io/v1
-kind: Route
-metadata:
-  name: payments-api
-  namespace: payments
-spec:
-  host: payments.apps.example.com
-  to:
-    kind: Service
-    name: payments-api
-  port:
-    targetPort: http
-  tls:
-    termination: edge
+## Usage
+
+```bash
+oc apply -f route.yaml
+oc apply -f resource-quota.yaml
 ```
 
-### 2. Restricted Security Compatibility
+## OpenShift Security Compatibility
 
-OpenShift commonly enforces restricted execution. Validate manifests against:
-
-- Randomized user IDs
-- Non-root execution
-- Writable volume requirements
-- Capability drops and privilege escalation rules
-
-Example pod security context:
+OpenShift enforces restricted execution by default. Every container spec must pass SCC validation:
 
 ```yaml
 securityContext:
@@ -45,36 +31,11 @@ securityContext:
       - ALL
 ```
 
-### 3. Project Quotas and Limits
+See [examples/kubernetes/deployment-baseline.yaml](../kubernetes/deployment-baseline.yaml) for a full deployment with this applied.
 
-Use quotas and limit ranges to isolate tenants:
+## Checklist
 
-```yaml
-apiVersion: v1
-kind: ResourceQuota
-metadata:
-  name: payments-quota
-  namespace: payments
-spec:
-  hard:
-    requests.cpu: "8"
-    requests.memory: 16Gi
-    limits.cpu: "16"
-    limits.memory: 32Gi
-```
-
-### 4. Operator-Centric Platform Services
-
-Prefer Operators for core platform services that OpenShift manages well:
-
-- Logging and observability operators
-- Service mesh operators
-- Certificate and ingress integrations
-- GitOps operator if Argo CD is the platform standard
-
-## Validation Checklist
-
-- Workloads pass OpenShift SCC defaults
+- Workloads pass OpenShift SCC defaults (no root, no privilege escalation, no host ports)
 - Routes use the correct hostname and TLS termination model
-- Operator-managed services are separated from app namespaces
-- Tenant projects have explicit RBAC, quotas, and limits
+- Operator-managed platform services are separated from application namespaces
+- Tenant projects have explicit RBAC, quotas, and limit ranges

@@ -60,10 +60,11 @@
       "groupName": "Container images"
     },
     {
-      "description": "Security updates - high priority",
+      "description": "Stable patch updates - automerge",
+      "matchManagers": ["terraform", "helmv3", "kubernetes", "docker-compose"],
       "matchUpdateTypes": ["patch"],
       "matchCurrentVersion": "!/^0/",
-      "labels": ["security", "dependencies"],
+      "labels": ["dependencies"],
       "automerge": true,
       "automergeType": "pr"
     }

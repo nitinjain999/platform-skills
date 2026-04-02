@@ -1,6 +1,6 @@
 ---
 name: platform-skills
-description: Platform engineering guidance for GitOps, cloud foundations, and delivery automation across Kubernetes, OpenShift, Flux, Argo CD, Terraform, AWS, Azure, and GitHub Actions. Use when Codex needs to design or review platform architectures, landing zones, Kubernetes delivery workflows, OpenShift operating patterns, Argo CD or Flux GitOps layouts, infrastructure module designs, CI/CD pipelines, identity patterns, environment promotion models, or cross-tool operating practices for a shared platform team.
+description: Platform engineering guidance for GitOps, cloud foundations, and delivery automation across Kubernetes, OpenShift, Flux, Argo CD, Terraform, AWS, Azure, and GitHub Actions. Use when Claude needs to design or review platform architectures, landing zones, Kubernetes delivery workflows, OpenShift operating patterns, Argo CD or Flux GitOps layouts, infrastructure module designs, CI/CD pipelines, identity patterns, environment promotion models, or cross-tool operating practices for a shared platform team.
 ---
 
 # Platform Skills
@@ -32,6 +32,7 @@ If a task spans multiple areas, decide which layer owns the source of truth and 
 - Prefer OIDC or workload identity over static cloud credentials.
 - Model environments explicitly. Promotion should be visible in Git history and reversible by commit rollback.
 - Standardize policy, naming, tagging, and observability across AWS and Azure instead of allowing each repository to invent its own conventions.
+- Enforce a tag baseline on all cloud resources. The specific keys are an organizational decision. Use AWS `default_tags` (provider level) or Azure `merge(local.common_tags, {...})` (module local) so the baseline is applied once, not repeated per resource. Back it with AWS Tag Policies or Azure Policy so resources created outside Terraform are also covered.
 
 ## Structure the Response
 

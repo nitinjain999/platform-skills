@@ -2,6 +2,8 @@
 
 This directory contains reference implementations for GitHub Actions CI/CD patterns with security best practices.
 
+Status: top-level workflows are runnable examples. Reusable workflows and composite actions are partial building blocks for handbook use.
+
 ## Examples
 
 ### 1. Terraform CI/CD

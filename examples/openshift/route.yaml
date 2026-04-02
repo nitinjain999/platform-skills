@@ -1,0 +1,16 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: payments-api
+  namespace: payments
+spec:
+  host: payments.apps.example.com
+  to:
+    kind: Service
+    name: payments-api
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect

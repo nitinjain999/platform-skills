@@ -60,7 +60,7 @@ jobs:
 
       - name: Check marketplace.json version matches tag
         run: |
-          MARKETPLACE_VERSION=$(jq -r '.version' .claude-plugin/marketplace.json)
+          MARKETPLACE_VERSION=$(jq -r '.plugins[0].version' .claude-plugin/marketplace.json)
           TAG_VERSION=${{ steps.version.outputs.version }}
 
           if [ "$MARKETPLACE_VERSION" != "$TAG_VERSION" ]; then
@@ -73,13 +73,27 @@ jobs:
 
       - name: Validate marketplace.json structure
         run: |
-          # Check required fields exist
-          jq -e '.name' .claude-plugin/marketplace.json > /dev/null
-          jq -e '.version' .claude-plugin/marketplace.json > /dev/null
-          jq -e '.description' .claude-plugin/marketplace.json > /dev/null
-          jq -e '.author' .claude-plugin/marketplace.json > /dev/null
-          jq -e '.license' .claude-plugin/marketplace.json > /dev/null
-          jq -e '.repository' .claude-plugin/marketplace.json > /dev/null
+          jq -e '
+            (.name | type == "string" and length > 0) and
+            (.owner.name | type == "string" and length > 0) and
+            (.plugins | type == "array" and length > 0) and
+            (.plugins[0].name | type == "string" and length > 0) and
+            (.plugins[0].version | type == "string" and length > 0) and
+            (.plugins[0].description | type == "string" and length > 0) and
+            (.plugins[0].author.name | type == "string" and length > 0) and
+            (.plugins[0].license | type == "string" and length > 0) and
+            (.plugins[0].source.url | type == "string" and length > 0) and
+            (.plugins[0].homepage | type == "string" and length > 0)
+          ' .claude-plugin/marketplace.json > /dev/null
+
+          ROOT_NAME=$(jq -r '.name' .claude-plugin/marketplace.json)
+          PLUGIN_NAME=$(jq -r '.plugins[0].name' .claude-plugin/marketplace.json)
+          if [ "$ROOT_NAME" != "$PLUGIN_NAME" ]; then
+            echo "❌ Top-level name and plugins[0].name must match"
+            echo "Top-level name: ${ROOT_NAME}"
+            echo "Plugin name: ${PLUGIN_NAME}"
+            exit 1
+          fi
 
           echo "✅ marketplace.json structure valid"
 
@@ -253,9 +267,6 @@ jobs:
     name: Create GitHub Release
     runs-on: ubuntu-latest
     needs: [validate, quality-checks]
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
-      release_id: ${{ steps.create_release.outputs.id }}
     steps:
       - name: Checkout code
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
@@ -292,37 +303,34 @@ jobs:
           echo "\`\`\`bash" >> release-notes.md
           echo "git clone https://github.com/${{ github.repository }}.git" >> release-notes.md
           echo "cd platform-skills" >> release-notes.md
-          echo "claude-code skill install ./platform-skills" >> release-notes.md
+          echo "claude-code skill install ." >> release-notes.md
           echo "\`\`\`" >> release-notes.md
           echo "" >> release-notes.md
           echo "**Marketplace install:** available after marketplace publication is completed." >> release-notes.md
 
       - name: Create GitHub Release
-        id: create_release
-        uses: actions/create-release@0cb9c9b65d5d1901c1f53e5e66eaf4afd303e70e  # v1.1.4
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Platform Skills v${{ needs.validate.outputs.version }}
-          body_path: release-notes.md
-          draft: false
-          prerelease: false
+        run: |
+          gh release create "v${{ needs.validate.outputs.version }}" \
+            --title "Platform Skills v${{ needs.validate.outputs.version }}" \
+            --notes-file release-notes.md
 
       - name: Generate release summary
         run: |
+          RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/v${{ needs.validate.outputs.version }}"
           cat << EOF >> $GITHUB_STEP_SUMMARY
           ## 🚀 Release v${{ needs.validate.outputs.version }} Created
 
           **Tag**: \`v${{ needs.validate.outputs.version }}\`
-          **Release URL**: ${{ steps.create_release.outputs.html_url }}
+          **Release URL**: ${RELEASE_URL}
 
           ### 📦 Installation From Local Clone
 
           \`\`\`bash
           git clone https://github.com/${{ github.repository }}.git
           cd platform-skills
-          claude-code skill install ./platform-skills
+          claude-code skill install .
           \`\`\`
 
           Marketplace installation by name is available only after the manual marketplace publication step completes.
@@ -352,11 +360,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
-
-      - name: Setup Node.js (if marketplace CLI needs it)
-        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8  # v4.0.2
-        with:
-          node-version: '20'
 
       - name: Notify about marketplace publication
         run: |

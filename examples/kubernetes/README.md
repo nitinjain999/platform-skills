@@ -1,105 +1,35 @@
 # Kubernetes Examples
 
-This directory contains reference implementations for baseline Kubernetes platform patterns that apply across managed clusters and distributions.
+Baseline manifests for Kubernetes platform patterns. These apply across managed cluster distributions (EKS, AKS, GKE, vanilla).
 
-## Example Areas
+Status: committed manifest snippets for the handbook. Adapt them into your own repo or GitOps structure.
 
-### 1. Namespace Baseline
+## Files
 
-Use a consistent namespace bootstrap for every team or service:
+| File | What it shows |
+|---|---|
+| [namespace-baseline.yaml](namespace-baseline.yaml) | Namespace with ownership labels and pod security enforcement |
+| [deployment-baseline.yaml](deployment-baseline.yaml) | Deployment with resource limits, health probes, and locked-down security context |
+| [network-policy-default-deny.yaml](network-policy-default-deny.yaml) | Default-deny ingress + example allow rule for ingress controller |
+| [pod-disruption-budget.yaml](pod-disruption-budget.yaml) | PDB protecting minimum availability during node drain |
 
-```yaml
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: payments
-  labels:
-    owner: platform-team
-    environment: production
-    pod-security.kubernetes.io/enforce: restricted
+## Usage
+
+Apply the namespace first, then the workload manifests:
+
+```bash
+kubectl apply -f namespace-baseline.yaml
+kubectl apply -f deployment-baseline.yaml
+kubectl apply -f network-policy-default-deny.yaml
+kubectl apply -f pod-disruption-budget.yaml
 ```
 
-### 2. Deployment Baseline
-
-Prefer workloads with explicit health checks and resource controls:
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: payments-api
-  namespace: payments
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: payments-api
-  template:
-    metadata:
-      labels:
-        app: payments-api
-    spec:
-      serviceAccountName: payments-api
-      containers:
-        - name: api
-          image: ghcr.io/example/payments-api:1.2.3
-          ports:
-            - containerPort: 8080
-          resources:
-            requests:
-              cpu: 100m
-              memory: 128Mi
-            limits:
-              cpu: 500m
-              memory: 512Mi
-          livenessProbe:
-            httpGet:
-              path: /healthz
-              port: 8080
-          readinessProbe:
-            httpGet:
-              path: /readyz
-              port: 8080
-```
-
-### 3. Network Policy Baseline
-
-Default-deny inbound traffic and allow only explicit paths:
-
-```yaml
-apiVersion: networking.k8s.io/v1
-kind: NetworkPolicy
-metadata:
-  name: default-deny
-  namespace: payments
-spec:
-  podSelector: {}
-  policyTypes:
-    - Ingress
-```
-
-### 4. Pod Disruption Budget
-
-Protect critical services during maintenance and node churn:
-
-```yaml
-apiVersion: policy/v1
-kind: PodDisruptionBudget
-metadata:
-  name: payments-api
-  namespace: payments
-spec:
-  minAvailable: 2
-  selector:
-    matchLabels:
-      app: payments-api
-```
-
-## Operational Checklist
+## Checklist
 
 - Namespace ownership labels present
-- Requests and limits defined
-- Health probes defined
-- ServiceAccount explicitly set
-- Network policy applied
-- Rollback path documented in GitOps or deployment tooling
+- Resource requests and limits defined on every container
+- Liveness and readiness probes defined
+- ServiceAccount explicitly set (no default service account)
+- Security context: `runAsNonRoot`, `allowPrivilegeEscalation: false`, `capabilities.drop: ALL`
+- Default-deny NetworkPolicy applied before allow rules
+- PodDisruptionBudget covers any deployment with `replicas >= 2`
