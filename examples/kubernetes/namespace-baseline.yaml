@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: payments
+  labels:
+    owner: platform-team
+    environment: production
+    pod-security.kubernetes.io/enforce: restricted

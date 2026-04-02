@@ -245,6 +245,8 @@ See [AWS IAM docs](https://docs.aws.amazon.com/iam/) for reference.
 
 ## Development Setup
 
+Before contributing, read [CLAUDE.md](CLAUDE.md) for the design philosophy, content structure, and writing principles that all patterns in this repository follow.
+
 ### Prerequisites
 
 - Git
@@ -291,21 +293,21 @@ Platform Skills uses automated GitHub Actions workflows for releases.
 1. **Update version and changelog:**
    ```bash
    # Update marketplace.json
-   vim .claude-plugin/marketplace.json  # Set "version": "1.0.0"
+   vim .claude-plugin/marketplace.json  # Set plugins[0].version to "X.Y.Z"
    
    # Update CHANGELOG.md
-   vim CHANGELOG.md  # Add [1.0.0] section with changes
+   vim CHANGELOG.md  # Add [X.Y.Z] section with changes
    
    # Commit
    git add .
-   git commit -m "Prepare v1.0.0 release"
+   git commit -m "Prepare vX.Y.Z release"
    git push origin main
    ```
 
 2. **Create and push tag (triggers automated release):**
    ```bash
-   git tag -a v1.0.0 -m "Release v1.0.0"
-   git push origin v1.0.0
+   git tag -a vX.Y.Z -m "Release vX.Y.Z"
+   git push origin vX.Y.Z
    ```
 
 3. **Automated workflow handles:**
@@ -324,12 +326,12 @@ Platform Skills uses automated GitHub Actions workflows for releases.
 5. **Distribution:**
    
    This repository is distributed through multiple channels:
-   - **Claude Marketplace**: Primary distribution for end users (currently requires manual publication)
-   - **GitHub Repository**: Browse patterns on GitHub, clone for customization
-   - **Local Installation**: Install from local clone for testing and organization-specific modifications
+   - **GitHub Repository**: Primary distribution — browse the handbook on GitHub, clone for templates
+   - **Local Installation**: Clone and install as a Claude Code skill for interactive guidance
+   - **Claude Marketplace**: Optional publication for end users who want one-command install (currently manual)
    
    **Current state:** Marketplace publication is manual (see Marketplace Publication section below).
-   **Future state:** When Claude marketplace API is available, publication will be automated via GitHub Release workflow.
+   **Future state:** When the Claude marketplace API is available, publication will be automated via the GitHub Release workflow.
 
 #### Versioning
 
@@ -344,7 +346,8 @@ Follow semantic versioning:
 Before creating a tag:
 
 - [ ] All PRs merged to main
-- [ ] Version updated in `.claude-plugin/marketplace.json`
+- [ ] Version updated in `.claude-plugin/marketplace.json` (`plugins[0].version`)
+- [ ] SHA in `.claude-plugin/marketplace.json` (`plugins[0].source.sha`) updated to the current HEAD commit — this field is not managed by Renovate and must be set manually
 - [ ] CHANGELOG.md updated with release notes
 - [ ] All CI checks passing
 - [ ] Examples tested locally
@@ -372,7 +375,7 @@ The release workflow provides marketplace publication instructions in the GitHub
 After marketplace publication:
 
 - [ ] Verify marketplace installation: `claude-code skill install platform-skills`
-- [ ] Verify local installation: `claude-code skill install ./platform-skills`
+- [ ] Verify local installation: `claude-code skill install .`
 - [ ] Update README badges if needed
 - [ ] Announce release (optional)
 - [ ] Monitor issues for feedback
@@ -388,7 +391,7 @@ Renovate automatically:
 - **Terraform**: Updates provider versions and module references
 - **Helm Charts**: Updates chart versions in examples
 - **Container Images**: Updates image tags in Kubernetes manifests
-- **Security**: Creates high-priority PRs for vulnerability patches
+- **Vulnerability alerts**: Raises separate security-labelled PRs for CVE-flagged dependencies (handled by the `vulnerabilityAlerts` config block, separate from normal update rules)
 
 ### Reviewing Renovate PRs
 
@@ -403,8 +406,8 @@ When Renovate creates a pull request:
 
 See [renovate.json](renovate.json) for the complete configuration. Key policies:
 
-- **Automerge**: Enabled for minor/patch updates to Terraform providers and security patches
-- **Manual review**: Required for GitHub Actions, major versions, and container images
+- **Automerge**: Terraform provider minor/patch; Helm chart patch only; stable patch updates for Terraform, Helm, Kubernetes, and docker-compose managers (non-0.x versions)
+- **Manual review**: Required for GitHub Actions (all versions), Terraform modules, container images, and all major version bumps
 - **Schedule**: Runs weekly on Mondays before 6am Berlin time
 - **Grouping**: Related updates are grouped into single PRs
 

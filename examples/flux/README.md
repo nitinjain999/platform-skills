@@ -2,6 +2,8 @@
 
 This directory contains reference implementations for Flux CD GitOps patterns.
 
+Status: `basic-monorepo/` is runnable today. The other patterns below are handbook roadmap items, not committed example directories yet.
+
 ## Examples
 
 ### 1. Basic Monorepo Structure
@@ -17,7 +19,7 @@ This directory contains reference implementations for Flux CD GitOps patterns.
 
 ### 2. Multi-Tenant Repository
 
-[multi-tenant/](multi-tenant/) - Separate tenant repositories with central platform
+Planned handbook pattern: separate tenant repositories with central platform
 
 **Use case:** Multiple teams with independent release cycles  
 **Pattern:** Platform repo references tenant repos  
@@ -28,7 +30,7 @@ This directory contains reference implementations for Flux CD GitOps patterns.
 
 ### 3. Helm Release Management
 
-[helm-releases/](helm-releases/) - HelmRelease patterns with value hierarchies
+Planned handbook pattern: HelmRelease value hierarchy and chart management
 
 **Use case:** Managing third-party Helm charts  
 **Pattern:** Base values with environment-specific overrides  
@@ -39,7 +41,7 @@ This directory contains reference implementations for Flux CD GitOps patterns.
 
 ### 4. Image Automation
 
-[image-automation/](image-automation/) - Automated image updates with policies
+Planned handbook pattern: automated image updates with policies
 
 **Use case:** Auto-update container images on new versions  
 **Pattern:** ImageRepository + ImagePolicy + ImageUpdateAutomation  
@@ -50,11 +52,8 @@ This directory contains reference implementations for Flux CD GitOps patterns.
 
 ## Quick Start
 
-Each example directory contains:
-- `README.md` - Setup instructions and explanation
-- `flux-config/` - Flux resource definitions
-- `manifests/` - Kubernetes manifests or Helm charts
-- `docs/` - Architecture diagrams and decision records
+The runnable example currently included is:
+- `basic-monorepo/` - setup instructions plus Flux and Kustomize manifests
 
 ## Prerequisites
 

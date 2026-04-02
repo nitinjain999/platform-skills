@@ -4,7 +4,7 @@ This guide is for people who are new to Claude and want to start using this repo
 
 ## What This Repository Is
 
-`platform-skills` is a platform engineering knowledge pack for Claude.
+`platform-skills` is a platform engineering handbook covering 8 domains: Kubernetes, OpenShift, Argo CD, Flux CD, AWS, Azure, Terraform, and GitHub Actions. You can browse it directly on GitHub, clone it for templates, or install it as a Claude Code skill for interactive guidance. The handbook works without installing the skill.
 
 It helps with:
 
@@ -40,7 +40,7 @@ Then:
 If you are using Claude Code, install the skill locally:
 
 ```bash
-claude-code skill install ./platform-skills
+claude-code skill install .
 ```
 
 ## Install from Claude Marketplace (Recommended)
@@ -81,9 +81,10 @@ If you want to customize the patterns or test unreleased changes:
 ```bash
 # Clone the repository
 git clone https://github.com/nitinjain999/platform-skills.git
+cd platform-skills
 
 # Install from local clone
-claude-code skill install ./platform-skills
+claude-code skill install .
 ```
 
 **Use local install when:**

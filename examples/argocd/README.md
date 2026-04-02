@@ -2,6 +2,8 @@
 
 This directory contains reference patterns for Argo CD application delivery and GitOps repository design.
 
+Status: runnable app-of-apps example plus additional handbook-style reference patterns.
+
 ## Prerequisites
 
 Before deploying the app-of-apps example, create the required AppProject:

@@ -7,20 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Planned
-- Expanded Flux CD troubleshooting patterns with real-world scenarios
-- AWS EKS node group troubleshooting guide
-- Azure AKS networking deep dive
-- GitHub Actions security scanning workflow examples
-- Terraform testing strategy comparison matrix
-- Cost optimization patterns across AWS/Azure
-- Disaster recovery runbooks for platform components
-- Expand GCP coverage
-- Add observability patterns (Prometheus, Grafana, Loki)
-- Include service mesh guidance (Istio, Linkerd)
-- Add policy-as-code examples (OPA, Kyverno, Gatekeeper)
-- Add OpenShift operator lifecycle examples
-- Expand Argo CD ApplicationSet fleet patterns
+### Added
+- Expanded AWS reference with tagging guidance: `default_tags` provider block, ASG `propagate_at_launch`, EBS/Lambda propagation gaps, AWS Config `required-tags` rule, cost allocation tag activation steps, org-level tag policy enforcement
+- Expanded Azure reference with tagging guidance: `merge(local.common_tags, {...})` pattern, tag inheritance gap explanation, Azure Policy `deny`/`modify` enforcement, remediation task for existing resources, AKS managed resource group tagging
+- Added tagging rule to SKILL.md: enforce a baseline via provider-level mechanisms; specific keys are an organizational decision
+- Added `tests/validate-skill.sh` — checks SKILL.md frontmatter, all reference files exist, each example domain has at least one asset beyond README.md, SKILL.md references every reference file; wired into `validate.yml` as a blocking CI job
+- Added real example assets for previously stub domains: `examples/kubernetes/*.yaml` (4 files), `examples/openshift/*.yaml` (2 files), `examples/aws/iam/*.json` (2 files), `examples/azure/workload-identity/` (`main.tf` + `serviceaccount.yaml`)
+
+### Changed
+- Trimmed VSCode install detail from README to a single pointer to VSCODE_INTEGRATION.md — install story now lives in one place
+- Updated README repository structure tree to show real example files rather than `README.md`-only entries
+
+## [1.1.0] - 2026-04-02
+
+### Fixed
+
+#### CI/CD Workflows
+- Fixed `validate.yml` and `release.yml` marketplace.json validation — field paths now match marketplace format (`plugins[0].version`, `plugins[0].description`, etc.)
+- Replaced deprecated `actions/create-release` (archived action) with `gh release create` CLI in `release.yml`
+- SHA-pinned `hashicorp/setup-terraform` in `validate.yml` — floating `@v4.0.0` tag was causing the workflow's own security check to fail
+- Removed unused `actions/setup-node` step from publish-marketplace job
+
+#### Documentation
+- Fixed dead Discord `#` placeholder link in README — replaced with real URL
+- Added `QUICKSTART.md`, `INSTALLATION.md`, and `VSCODE_INTEGRATION.md` to README navigation and repository structure table
+- Fixed hardcoded `v1.0.0` examples in CHANGELOG release checklist — replaced with `vX.Y.Z` placeholder
+
+### Added
+
+#### Developer Experience
+- Added `.github/copilot-instructions.md` — GitHub Copilot automatically applies Platform Skills patterns (no Claude Code required)
+  - Kubernetes security context and resource requirements enforced
+  - Flux CD HelmRelease version pinning and remediation patterns
+  - Argo CD named project requirement (never `default`)
+  - AWS IAM no-wildcard rule with IRSA patterns
+  - Azure workload identity patterns
+  - Terraform module structure and variable validation
+  - GitHub Actions SHA pinning and minimal permissions
+  - Structured troubleshooting response format
+- Added `VSCODE_INTEGRATION.md` — comprehensive guide for VSCode with Claude Code extension, GitHub Copilot split-screen, and browser workflows
+- Added `QUICKSTART.md` — 5-minute install and first-use guide
+- Added `INSTALLATION.md` — full installation methods, team setup, troubleshooting
+
+#### Dependency Management
+- Scoped Renovate automerge catch-all rule to explicit managers (terraform, helmv3, kubernetes, docker-compose) to prevent accidental automerge of GitHub Actions
+
+### Changed
+
+- Marketplace distribution: personal marketplace now named `platform-skills` (was `platform-skills-marketplace`)
+- Owner contact updated to personal email
 
 ## [1.0.0] - 2026-04-02
 
@@ -172,8 +207,8 @@ Before releasing:
 - [ ] Verify all examples work with current tool versions
 - [ ] Test skill activation in Claude Code
 - [ ] Review all external links
-- [ ] Tag release in git: `git tag -a v1.0.0 -m "Release v1.0.0"`
-- [ ] Push tag: `git push origin v1.0.0`
+- [ ] Tag release in git: `git tag -a vX.Y.Z -m "Release vX.Y.Z"`
+- [ ] Push tag: `git push origin vX.Y.Z`
 - [ ] Create GitHub release with changelog excerpt
 - [ ] Update marketplace if applicable
 

@@ -64,18 +64,34 @@ jobs:
             exit 1
           fi
 
-          # Check required fields
-          REQUIRED_FIELDS=("name" "version" "description" "author" "license" "repository")
+          # Validate current catalog-style schema
+          jq -e '
+            (.name | type == "string" and length > 0) and
+            (.owner.name | type == "string" and length > 0) and
+            (.plugins | type == "array" and length > 0) and
+            (.plugins[0].name | type == "string" and length > 0) and
+            (.plugins[0].version | type == "string" and length > 0) and
+            (.plugins[0].description | type == "string" and length > 0) and
+            (.plugins[0].author.name | type == "string" and length > 0) and
+            (.plugins[0].license | type == "string" and length > 0) and
+            (.plugins[0].source.url | type == "string" and length > 0) and
+            (.plugins[0].homepage | type == "string" and length > 0)
+          ' .claude-plugin/marketplace.json > /dev/null || {
+            echo "❌ marketplace.json is missing required catalog fields"
+            exit 1
+          }
 
-          for field in "${REQUIRED_FIELDS[@]}"; do
-            if ! jq -e ".$field" .claude-plugin/marketplace.json > /dev/null; then
-              echo "❌ Missing required field: $field"
-              exit 1
-            fi
-          done
+          ROOT_NAME=$(jq -r '.name' .claude-plugin/marketplace.json)
+          PLUGIN_NAME=$(jq -r '.plugins[0].name' .claude-plugin/marketplace.json)
+          if [ "$ROOT_NAME" != "$PLUGIN_NAME" ]; then
+            echo "❌ Top-level name and plugins[0].name must match"
+            echo "Top-level name: $ROOT_NAME"
+            echo "Plugin name: $PLUGIN_NAME"
+            exit 1
+          fi
 
           # Validate version format
-          VERSION=$(jq -r '.version' .claude-plugin/marketplace.json)
+          VERSION=$(jq -r '.plugins[0].version' .claude-plugin/marketplace.json)
           if ! [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "❌ Invalid version format: $VERSION"
             echo "Must be semver: MAJOR.MINOR.PATCH"
@@ -109,6 +125,10 @@ jobs:
             echo "⚠️  SKILL.md missing frontmatter"
             echo "Consider adding YAML frontmatter for better skill activation"
           fi
+
+      - name: Run handbook consistency checks
+        run: |
+          bash tests/handbook-consistency.sh
 
   validate-markdown:
     name: Validate Markdown
@@ -192,7 +212,7 @@ jobs:
 
           echo "✅ All YAML files valid"
 
-      - name: Validate Kubernetes manifests (if present)
+      - name: Validate Kubernetes manifests in examples (if present)
         run: |
           K8S_FILES=$(find . -type f \( -name "*.yml" -o -name "*.yaml" \) \
             \( \
@@ -237,7 +257,7 @@ jobs:
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v4.0.0
+        uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85  # v4.0.0
         with:
           terraform_version: 1.7.0
 
@@ -372,10 +392,20 @@ jobs:
 
           echo "✅ GitHub Actions security check complete"
 
+  validate-skill-structure:
+    name: Skill Structure Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+
+      - name: Run skill structure validation
+        run: bash tests/validate-skill.sh
+
   summary:
     name: Validation Summary
     runs-on: ubuntu-latest
-    needs: [validate-structure, validate-markdown, validate-yaml, validate-terraform, validate-security]
+    needs: [validate-structure, validate-markdown, validate-yaml, validate-terraform, validate-security, validate-skill-structure]
     if: always()
     steps:
       - name: Generate summary
@@ -390,6 +420,7 @@ jobs:
           | YAML Validation | ${{ needs.validate-yaml.result == 'success' && '✅ Passed' || '❌ Failed' }} |
           | Terraform Validation | ${{ needs.validate-terraform.result == 'success' && '✅ Passed' || '❌ Failed' }} |
           | Security Checks | ${{ needs.validate-security.result == 'success' && '✅ Passed' || '❌ Failed' }} |
+          | Skill Structure | ${{ needs.validate-skill-structure.result == 'success' && '✅ Passed' || '❌ Failed' }} |
 
           EOF
 
@@ -399,7 +430,8 @@ jobs:
              [[ "${{ needs.validate-markdown.result }}" != "success" ]] || \
              [[ "${{ needs.validate-yaml.result }}" != "success" ]] || \
              [[ "${{ needs.validate-terraform.result }}" != "success" ]] || \
-             [[ "${{ needs.validate-security.result }}" != "success" ]]; then
+             [[ "${{ needs.validate-security.result }}" != "success" ]] || \
+             [[ "${{ needs.validate-skill-structure.result }}" != "success" ]]; then
             echo "❌ Some validation checks failed"
             exit 1
           fi
