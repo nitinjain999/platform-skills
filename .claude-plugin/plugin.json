@@ -1,6 +1,6 @@
 {
   "name": "platform-skills",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Practical guidance for platform engineers working with Kubernetes, Terraform, GitOps, AWS, Azure, Linkerd, GitHub Actions, and secrets management.",
   "author": {
     "name": "Nitin Jain",
