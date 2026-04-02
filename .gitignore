@@ -60,7 +60,7 @@ secrets/
 *.secret.yaml
 *-secret.yaml
 
-# ===== FluxCD =====
+# ===== Flux CD =====
 # Age keys for SOPS
 age.agekey
 *.agekey

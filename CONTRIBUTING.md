@@ -165,7 +165,7 @@ Reviewers may:
 
 ### High Priority
 
-- **FluxCD troubleshooting patterns** for common reconciliation failures
+- **Flux CD troubleshooting patterns** for common reconciliation failures
 - **IAM policy examples** showing least-privilege patterns
 - **GitHub Actions security fixes** for common vulnerabilities
 - **Multi-cloud networking patterns** for hybrid environments
@@ -235,7 +235,7 @@ kind: ConfigMap
 
 Use relative links for internal docs:
 ```markdown
-See [FluxCD patterns](references/flux.md) for details.
+See [Flux CD patterns](references/flux.md) for details.
 ```
 
 Use absolute links for external resources:

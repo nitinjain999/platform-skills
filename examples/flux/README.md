@@ -1,6 +1,6 @@
-# FluxCD Examples
+# Flux CD Examples
 
-This directory contains reference implementations for FluxCD GitOps patterns.
+This directory contains reference implementations for Flux CD GitOps patterns.
 
 ## Examples
 

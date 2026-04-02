@@ -37,7 +37,7 @@ Platform engineering spans multiple tools. This skill maintains coherence by:
 ### Skill Activation
 
 The skill activates when users work with:
-- FluxCD or Argo CD reconciliation or GitOps repository design
+- Flux CD or Argo CD reconciliation or GitOps repository design
 - Kubernetes or OpenShift platform patterns
 - AWS/Azure infrastructure or IAM/RBAC configuration
 - Terraform modules or state management

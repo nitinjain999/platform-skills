@@ -237,7 +237,7 @@ jobs:
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v4
+        uses: hashicorp/setup-terraform@v4.0.0
         with:
           terraform_version: 1.7.0
 
@@ -335,10 +335,12 @@ jobs:
             \( -name "*.yml" -o -name "*.yaml" \) 2>/dev/null)
 
           if [ -n "$REPO_WORKFLOWS" ]; then
-            REPO_UNPINNED=$(grep -H "uses:.*@[vV][0-9]" $REPO_WORKFLOWS || true)
-            if [ -n "$REPO_UNPINNED" ]; then
-              echo "❌ Repository workflows must pin actions to SHAs:"
-              echo "$REPO_UNPINNED"
+            REPO_FLOATING=$(grep -HE "uses:.*@[vV][0-9]+(\.[0-9]+)?([[:space:]]|$)" $REPO_WORKFLOWS || true)
+            if [ -n "$REPO_FLOATING" ]; then
+              echo "❌ Repository workflows must use immutable references:"
+              echo "$REPO_FLOATING"
+              echo ""
+              echo "Use a commit SHA or an exact release tag like @v4.0.0"
               exit 1
             fi
 
@@ -351,12 +353,12 @@ jobs:
           fi
 
           if [ -n "$EXAMPLE_WORKFLOWS" ]; then
-            EXAMPLE_UNPINNED=$(grep -H "uses:.*@[vV][0-9]" $EXAMPLE_WORKFLOWS || true)
-            if [ -n "$EXAMPLE_UNPINNED" ]; then
-              echo "⚠️  Example workflows still contain tag-pinned actions:"
-              echo "$EXAMPLE_UNPINNED"
+            EXAMPLE_FLOATING=$(grep -HE "uses:.*@[vV][0-9]+(\.[0-9]+)?([[:space:]]|$)" $EXAMPLE_WORKFLOWS || true)
+            if [ -n "$EXAMPLE_FLOATING" ]; then
+              echo "⚠️  Example workflows still contain floating action tags:"
+              echo "$EXAMPLE_FLOATING"
               echo ""
-              echo "Prefer SHA pinning in published examples as well"
+              echo "Prefer SHAs or exact release tags in published examples as well"
             fi
 
             EXAMPLE_DANGEROUS=$(grep -H "pull_request_target" $EXAMPLE_WORKFLOWS || true)
