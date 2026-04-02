@@ -1,0 +1,26 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../base
+patches:
+  - target:
+      kind: HelmRelease
+      name: ingress-nginx
+    patch: |-
+      - op: replace
+        path: /spec/values/controller/replicaCount
+        value: 1
+      - op: replace
+        path: /spec/values/controller/resources/requests/cpu
+        value: "50m"
+      - op: replace
+        path: /spec/values/controller/resources/requests/memory
+        value: "64Mi"
+  - target:
+      kind: HelmRelease
+      name: cert-manager
+    patch: |-
+      - op: replace
+        path: /spec/values/replicaCount
+        value: 1

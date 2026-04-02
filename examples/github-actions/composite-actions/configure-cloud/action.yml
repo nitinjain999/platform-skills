@@ -1,0 +1,70 @@
+name: 'Configure Cloud Credentials'
+description: 'Configure AWS or Azure credentials using OIDC'
+author: 'Platform Team'
+
+inputs:
+  cloud_provider:
+    description: 'Cloud provider (aws or azure)'
+    required: true
+  aws_role_arn:
+    description: 'AWS IAM role ARN for OIDC'
+    required: false
+  aws_region:
+    description: 'AWS region'
+    required: false
+    default: 'us-east-1'
+  azure_client_id:
+    description: 'Azure client ID for OIDC'
+    required: false
+  azure_tenant_id:
+    description: 'Azure tenant ID'
+    required: false
+  azure_subscription_id:
+    description: 'Azure subscription ID'
+    required: false
+
+outputs:
+  cloud_provider:
+    description: 'Configured cloud provider'
+    value: ${{ inputs.cloud_provider }}
+  aws_account_id:
+    description: 'AWS account ID (if AWS)'
+    value: ${{ steps.aws_config.outputs.aws-account-id }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Configure AWS credentials
+      if: inputs.cloud_provider == 'aws'
+      id: aws_config
+      uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502  # v4.0.2
+      with:
+        role-to-assume: ${{ inputs.aws_role_arn }}
+        aws-region: ${{ inputs.aws_region }}
+        role-session-name: github-actions-${{ github.run_id }}
+        mask-aws-account-id: false
+
+    - name: Verify AWS configuration
+      if: inputs.cloud_provider == 'aws'
+      shell: bash
+      run: |
+        echo "AWS Account: $(aws sts get-caller-identity --query Account --output text)"
+        echo "AWS Region: ${{ inputs.aws_region }}"
+
+    - name: Azure CLI login
+      if: inputs.cloud_provider == 'azure'
+      uses: azure/login@6c251865b4e6290e7b78be643ea2d005bc51f69a  # v2.1.1
+      with:
+        client-id: ${{ inputs.azure_client_id }}
+        tenant-id: ${{ inputs.azure_tenant_id }}
+        subscription-id: ${{ inputs.azure_subscription_id }}
+
+    - name: Verify Azure configuration
+      if: inputs.cloud_provider == 'azure'
+      shell: bash
+      run: |
+        az account show --output table
+
+branding:
+  icon: 'cloud'
+  color: 'blue'

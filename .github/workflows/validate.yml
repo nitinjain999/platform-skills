@@ -1,0 +1,407 @@
+name: Validate
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+    paths:
+      - '**.md'
+      - '**.yml'
+      - '**.yaml'
+      - '**.tf'
+      - '**.json'
+      - '.github/workflows/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate-structure:
+    name: Validate Repository Structure
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+
+      - name: Check required files
+        run: |
+          REQUIRED_FILES=(
+            "SKILL.md"
+            "README.md"
+            "LICENSE"
+            "CHANGELOG.md"
+            "CONTRIBUTING.md"
+            "CLAUDE.md"
+            ".claude-plugin/marketplace.json"
+            ".gitignore"
+          )
+
+          MISSING=0
+          for file in "${REQUIRED_FILES[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "❌ Missing required file: $file"
+              MISSING=1
+            else
+              echo "✅ Found: $file"
+            fi
+          done
+
+          if [ $MISSING -eq 1 ]; then
+            exit 1
+          fi
+
+          echo "✅ All required files present"
+
+      - name: Validate marketplace.json
+        run: |
+          # Check JSON is valid
+          if ! jq empty .claude-plugin/marketplace.json 2>/dev/null; then
+            echo "❌ Invalid JSON in marketplace.json"
+            exit 1
+          fi
+
+          # Check required fields
+          REQUIRED_FIELDS=("name" "version" "description" "author" "license" "repository")
+
+          for field in "${REQUIRED_FIELDS[@]}"; do
+            if ! jq -e ".$field" .claude-plugin/marketplace.json > /dev/null; then
+              echo "❌ Missing required field: $field"
+              exit 1
+            fi
+          done
+
+          # Validate version format
+          VERSION=$(jq -r '.version' .claude-plugin/marketplace.json)
+          if ! [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid version format: $VERSION"
+            echo "Must be semver: MAJOR.MINOR.PATCH"
+            exit 1
+          fi
+
+          echo "✅ marketplace.json is valid"
+          echo "Version: $VERSION"
+
+      - name: Check SKILL.md frontmatter
+        run: |
+          # Check if SKILL.md starts with frontmatter
+          if head -n 1 SKILL.md | grep -q "^---$"; then
+            echo "✅ SKILL.md has frontmatter"
+
+            # Extract and validate frontmatter
+            FRONTMATTER=$(sed -n '/^---$/,/^---$/p' SKILL.md)
+
+            if echo "$FRONTMATTER" | grep -q "^name:"; then
+              echo "  ✅ Has 'name' field"
+            else
+              echo "  ⚠️  Missing 'name' field in frontmatter"
+            fi
+
+            if echo "$FRONTMATTER" | grep -q "^description:"; then
+              echo "  ✅ Has 'description' field"
+            else
+              echo "  ⚠️  Missing 'description' field in frontmatter"
+            fi
+          else
+            echo "⚠️  SKILL.md missing frontmatter"
+            echo "Consider adding YAML frontmatter for better skill activation"
+          fi
+
+  validate-markdown:
+    name: Validate Markdown
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+
+      - name: Install markdownlint
+        run: |
+          npm install -g markdownlint-cli
+
+      - name: Lint markdown files
+        run: |
+          # Create markdownlint config
+          cat > .markdownlint.json << 'EOF'
+          {
+            "default": true,
+            "MD013": false,
+            "MD033": false,
+            "MD041": false
+          }
+          EOF
+
+          # Run markdownlint
+          markdownlint '**/*.md' --ignore node_modules || {
+            echo "⚠️  Markdown linting found issues (non-blocking)"
+          }
+
+      - name: Check for broken links
+        run: |
+          # Simple check for obviously broken markdown links
+          for file in $(find . -type f -name "*.md" ! -path "./.git/*"); do
+            # Check for empty link text
+            if grep -q '\[\](.*]' "$file"; then
+              echo "⚠️  Empty link text in: $file"
+            fi
+
+            # Check for malformed links
+            if grep -q '\[.*\]([^)]*)$' "$file"; then
+              echo "⚠️  Potentially malformed link in: $file"
+            fi
+          done
+
+          echo "✅ Markdown link check complete"
+
+  validate-yaml:
+    name: Validate YAML Files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Validate all YAML files
+        run: |
+          YAML_FILES=$(find . -type f \( -name "*.yml" -o -name "*.yaml" \) ! -path "./.git/*")
+
+          if [ -z "$YAML_FILES" ]; then
+            echo "ℹ️  No YAML files found"
+            exit 0
+          fi
+
+          ERRORS=0
+          while IFS= read -r file; do
+            echo "Validating: $file"
+            if ! yq eval '.' "$file" > /dev/null 2>&1; then
+              echo "❌ Invalid YAML: $file"
+              ERRORS=$((ERRORS + 1))
+            fi
+          done <<< "$YAML_FILES"
+
+          if [ $ERRORS -gt 0 ]; then
+            echo "❌ Found $ERRORS YAML validation errors"
+            exit 1
+          fi
+
+          echo "✅ All YAML files valid"
+
+      - name: Validate Kubernetes manifests (if present)
+        run: |
+          K8S_FILES=$(find . -type f \( -name "*.yml" -o -name "*.yaml" \) \
+            \( \
+              -path "./examples/flux/*" -o \
+              -path "./examples/argocd/*" -o \
+              -path "./examples/kubernetes/*" -o \
+              -path "./examples/openshift/*" \
+            \) \
+            ! -path "./.git/*")
+
+          if [ -z "$K8S_FILES" ]; then
+            echo "ℹ️  No Kubernetes manifests found"
+            exit 0
+          fi
+
+          # Install kubeconform
+          wget https://github.com/yannh/kubeconform/releases/download/v0.6.4/kubeconform-linux-amd64.tar.gz
+          tar xzf kubeconform-linux-amd64.tar.gz
+          sudo mv kubeconform /usr/local/bin/
+
+          ERRORS=0
+          while IFS= read -r file; do
+            echo "Validating Kubernetes manifest: $file"
+            if ! kubeconform -summary -output text -ignore-missing-schemas "$file"; then
+              echo "❌ Kubeconform validation failed: $file"
+              ERRORS=$((ERRORS + 1))
+            fi
+          done <<< "$K8S_FILES"
+
+          if [ $ERRORS -gt 0 ]; then
+            echo "❌ Found $ERRORS Kubernetes manifest validation errors"
+            exit 1
+          fi
+
+          echo "✅ Kubernetes manifest validation complete"
+
+  validate-terraform:
+    name: Validate Terraform
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v4.0.0
+        with:
+          terraform_version: 1.7.0
+
+      - name: Find and validate Terraform directories
+        run: |
+          # Find all directories containing .tf files
+          TF_DIRS=$(find . -type f -name "*.tf" ! -path "./.git/*" -exec dirname {} \; | sort -u)
+
+          if [ -z "$TF_DIRS" ]; then
+            echo "ℹ️  No Terraform files found"
+            exit 0
+          fi
+
+          ERRORS=0
+          while IFS= read -r dir; do
+            echo ""
+            echo "📁 Validating Terraform in: $dir"
+            echo "─────────────────────────────────────"
+
+            (
+              cd "$dir"
+
+              # Format check
+              if ! terraform fmt -check -recursive; then
+                echo "❌ Terraform formatting issues in: $dir"
+                exit 1
+              else
+                echo "✅ Terraform formatting correct"
+              fi
+
+              # Initialize (backend=false to avoid remote state)
+              if ! terraform init -backend=false; then
+                echo "❌ Terraform init failed in: $dir"
+                exit 1
+              else
+                echo "✅ Terraform init successful"
+              fi
+
+              # Validate
+              if ! terraform validate; then
+                echo "❌ Terraform validation failed in: $dir"
+                exit 1
+              else
+                echo "✅ Terraform validation successful"
+              fi
+            ) || ERRORS=$((ERRORS + 1))
+          done <<< "$TF_DIRS"
+
+          if [ $ERRORS -gt 0 ]; then
+            echo ""
+            echo "❌ Found $ERRORS Terraform validation errors"
+            exit 1
+          fi
+
+          echo ""
+          echo "✅ All Terraform validations passed"
+
+  validate-security:
+    name: Security Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+
+      - name: Check for secrets in code
+        run: |
+          # Check for common secret patterns
+          # Exclude GitHub Actions variables and terraform backend config
+          POTENTIAL_SECRETS=$(grep -rE '(password|secret|key|token|apikey).*=.*["\x27][^"\x27]{8,}["\x27]' \
+             --exclude-dir=.git \
+             --exclude-dir=node_modules \
+             --exclude="*.md" \
+             --exclude="CHANGELOG.md" \
+             --exclude="QUALITY_ASSURANCE.md" . | \
+             grep -v 'matrix\.' | \
+             grep -v 'vars\.' | \
+             grep -v 'secrets\.' | \
+             grep -v 'backend-config=' || true)
+
+          if [ -n "$POTENTIAL_SECRETS" ]; then
+            echo "⚠️  Potential secrets found in code:"
+            echo "$POTENTIAL_SECRETS"
+            echo ""
+            echo "Review above matches to ensure they are not real secrets"
+            exit 1
+          fi
+
+          echo "✅ No obvious secrets detected"
+
+      - name: Check for GitHub Actions security
+        run: |
+          REPO_WORKFLOWS=$(find .github/workflows -type f \
+            \( -name "*.yml" -o -name "*.yaml" \) 2>/dev/null)
+          EXAMPLE_WORKFLOWS=$(find examples/github-actions -type f \
+            \( -name "*.yml" -o -name "*.yaml" \) 2>/dev/null)
+
+          if [ -n "$REPO_WORKFLOWS" ]; then
+            REPO_FLOATING=$(grep -HE "uses:.*@[vV][0-9]+(\.[0-9]+)?([[:space:]]|$)" $REPO_WORKFLOWS || true)
+            if [ -n "$REPO_FLOATING" ]; then
+              echo "❌ Repository workflows must use immutable references:"
+              echo "$REPO_FLOATING"
+              echo ""
+              echo "Use a commit SHA or an exact release tag like @v4.0.0"
+              exit 1
+            fi
+
+            REPO_DANGEROUS=$(grep -HE "^[[:space:]]*pull_request_target:" $REPO_WORKFLOWS || true)
+            if [ -n "$REPO_DANGEROUS" ]; then
+              echo "❌ Repository workflows must not use pull_request_target without explicit review:"
+              echo "$REPO_DANGEROUS"
+              exit 1
+            fi
+          fi
+
+          if [ -n "$EXAMPLE_WORKFLOWS" ]; then
+            EXAMPLE_FLOATING=$(grep -HE "uses:.*@[vV][0-9]+(\.[0-9]+)?([[:space:]]|$)" $EXAMPLE_WORKFLOWS || true)
+            if [ -n "$EXAMPLE_FLOATING" ]; then
+              echo "⚠️  Example workflows still contain floating action tags:"
+              echo "$EXAMPLE_FLOATING"
+              echo ""
+              echo "Prefer SHAs or exact release tags in published examples as well"
+            fi
+
+            EXAMPLE_DANGEROUS=$(grep -HE "^[[:space:]]*pull_request_target:" $EXAMPLE_WORKFLOWS || true)
+            if [ -n "$EXAMPLE_DANGEROUS" ]; then
+              echo "⚠️  Example workflows contain pull_request_target:"
+              echo "$EXAMPLE_DANGEROUS"
+              echo ""
+              echo "Document the risk clearly if this pattern is intentionally shown"
+            fi
+          fi
+
+          echo "✅ GitHub Actions security check complete"
+
+  summary:
+    name: Validation Summary
+    runs-on: ubuntu-latest
+    needs: [validate-structure, validate-markdown, validate-yaml, validate-terraform, validate-security]
+    if: always()
+    steps:
+      - name: Generate summary
+        run: |
+          cat << EOF >> $GITHUB_STEP_SUMMARY
+          ## Validation Results
+
+          | Check | Status |
+          |-------|--------|
+          | Repository Structure | ${{ needs.validate-structure.result == 'success' && '✅ Passed' || '❌ Failed' }} |
+          | Markdown Validation | ${{ needs.validate-markdown.result == 'success' && '✅ Passed' || '❌ Failed' }} |
+          | YAML Validation | ${{ needs.validate-yaml.result == 'success' && '✅ Passed' || '❌ Failed' }} |
+          | Terraform Validation | ${{ needs.validate-terraform.result == 'success' && '✅ Passed' || '❌ Failed' }} |
+          | Security Checks | ${{ needs.validate-security.result == 'success' && '✅ Passed' || '❌ Failed' }} |
+
+          EOF
+
+      - name: Check overall status
+        run: |
+          if [[ "${{ needs.validate-structure.result }}" != "success" ]] || \
+             [[ "${{ needs.validate-markdown.result }}" != "success" ]] || \
+             [[ "${{ needs.validate-yaml.result }}" != "success" ]] || \
+             [[ "${{ needs.validate-terraform.result }}" != "success" ]] || \
+             [[ "${{ needs.validate-security.result }}" != "success" ]]; then
+            echo "❌ Some validation checks failed"
+            exit 1
+          fi
+
+          echo "✅ All validation checks passed"

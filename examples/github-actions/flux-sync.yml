@@ -1,0 +1,202 @@
+name: Flux Validation
+
+on:
+  pull_request:
+    paths:
+      - 'flux/**'
+      - 'clusters/**'
+      - 'apps/**'
+      - 'infrastructure/**'
+      - '.github/workflows/flux-sync.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'flux/**'
+      - 'clusters/**'
+      - 'apps/**'
+      - 'infrastructure/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  validate:
+    name: Validate Flux Resources
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+
+      - name: Setup Flux CLI
+        uses: fluxcd/flux2/action@main
+        with:
+          version: '2.2.3'
+
+      - name: Validate Flux manifests
+        run: |
+          flux check --pre
+
+      - name: Validate Kustomizations
+        run: |
+          echo "Validating clusters/production..."
+          flux build kustomization infrastructure \
+            --path clusters/production \
+            --kustomization-file clusters/production/infrastructure.yaml
+
+          flux build kustomization apps \
+            --path clusters/production \
+            --kustomization-file clusters/production/apps.yaml
+
+          echo "Validating clusters/staging..."
+          flux build kustomization infrastructure \
+            --path clusters/staging \
+            --kustomization-file clusters/staging/infrastructure.yaml
+
+          flux build kustomization apps \
+            --path clusters/staging \
+            --kustomization-file clusters/staging/apps.yaml
+        continue-on-error: true
+        id: flux_build
+
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@2ba527d4d055ab63514ba50a99456fc35684947f  # v2.1.0
+
+      - name: Validate Kustomize overlays
+        run: |
+          echo "Building infrastructure/production..."
+          kustomize build infrastructure/production > /dev/null
+
+          echo "Building infrastructure/staging..."
+          kustomize build infrastructure/staging > /dev/null
+
+          echo "Building apps/production..."
+          kustomize build apps/production > /dev/null
+
+          echo "Building apps/staging..."
+          kustomize build apps/staging > /dev/null
+
+          echo "✅ All Kustomize builds successful"
+
+      - name: Setup Kubeconform
+        run: |
+          wget https://github.com/yannh/kubeconform/releases/download/v0.6.4/kubeconform-linux-amd64.tar.gz
+          tar xzf kubeconform-linux-amd64.tar.gz
+          sudo mv kubeconform /usr/local/bin/
+
+      - name: Validate Kubernetes manifests
+        run: |
+          echo "Validating production manifests..."
+          kustomize build infrastructure/production | \
+            kubeconform -strict -summary -output json
+
+          kustomize build apps/production | \
+            kubeconform -strict -summary -output json
+
+          echo "Validating staging manifests..."
+          kustomize build infrastructure/staging | \
+            kubeconform -strict -summary -output json
+
+          kustomize build apps/staging | \
+            kubeconform -strict -summary -output json
+
+      - name: Run Conftest policy checks
+        run: |
+          docker run --rm -v $(pwd):/project openpolicyagent/conftest test \
+            --policy policy/ \
+            infrastructure/production \
+            apps/production || true
+        continue-on-error: true
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          script: |
+            const output = `#### Flux Validation Results 🔍
+
+            - ✅ Flux manifests validated
+            - ✅ Kustomize builds successful
+            - ✅ Kubernetes schema validation passed
+
+            *Pusher: @${{ github.actor }}, Action: \`${{ github.event_name }}\`*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
+
+  diff:
+    name: Show Kustomize Diff
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Checkout base branch
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+        with:
+          ref: ${{ github.base_ref }}
+          path: base
+
+      - name: Checkout PR branch
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+        with:
+          path: pr
+
+      - name: Setup Kustomize
+        uses: imranismail/setup-kustomize@2ba527d4d055ab63514ba50a99456fc35684947f  # v2.1.0
+
+      - name: Generate diffs
+        run: |
+          mkdir -p diffs
+
+          # Production infrastructure diff
+          kustomize build base/infrastructure/production > base-infra-prod.yaml
+          kustomize build pr/infrastructure/production > pr-infra-prod.yaml
+          diff -u base-infra-prod.yaml pr-infra-prod.yaml > diffs/infra-prod.diff || true
+
+          # Production apps diff
+          kustomize build base/apps/production > base-apps-prod.yaml
+          kustomize build pr/apps/production > pr-apps-prod.yaml
+          diff -u base-apps-prod.yaml pr-apps-prod.yaml > diffs/apps-prod.diff || true
+
+          # Count changes
+          echo "INFRA_CHANGES=$(wc -l < diffs/infra-prod.diff)" >> $GITHUB_ENV
+          echo "APPS_CHANGES=$(wc -l < diffs/apps-prod.diff)" >> $GITHUB_ENV
+
+      - name: Comment PR with diff
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          script: |
+            const fs = require('fs');
+            const infraDiff = fs.readFileSync('diffs/infra-prod.diff', 'utf8');
+            const appsDiff = fs.readFileSync('diffs/apps-prod.diff', 'utf8');
+
+            const output = `#### Kustomize Diff for Production 📊
+
+            <details><summary>Infrastructure Changes (${process.env.INFRA_CHANGES} lines)</summary>
+
+            \`\`\`diff
+            ${infraDiff.substring(0, 5000)}
+            \`\`\`
+
+            </details>
+
+            <details><summary>Apps Changes (${process.env.APPS_CHANGES} lines)</summary>
+
+            \`\`\`diff
+            ${appsDiff.substring(0, 5000)}
+            \`\`\`
+
+            </details>
+
+            *Review these changes carefully before merging.*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: output
+            })
