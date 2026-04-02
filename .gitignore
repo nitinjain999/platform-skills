@@ -1,20 +1,25 @@
+# ===== Terraform =====
 # Local .terraform directories
 .terraform/
+.terraform.lock.hcl
 
 # .tfstate files
 *.tfstate
 *.tfstate.*
+*.tfstate.backup
 
 # Crash log files
 crash.log
 crash.*.log
 
 # Exclude all .tfvars files, which are likely to contain sensitive data, such as
-# password, private keys, and other secrets. These should not be part of version 
-# control as they are data points which are potentially sensitive and subject 
+# password, private keys, and other secrets. These should not be part of version
+# control as they are data points which are potentially sensitive and subject
 # to change depending on the environment.
 *.tfvars
 *.tfvars.json
+terraform.tfvars
+terraform.tfvars.json
 
 # Ignore override files as they are usually used to override resources locally and so
 # are not checked in
@@ -30,8 +35,126 @@ override.tf.json
 # !example_override.tf
 
 # Include tfplan files to ignore the plan output of command: terraform plan -out=tfplan
-# example: *tfplan*
+*.tfplan
+*.tfplan.*
 
 # Ignore CLI configuration files
 .terraformrc
 terraform.rc
+
+# ===== Kubernetes / Helm =====
+# Helm dependencies
+charts/
+Chart.lock
+
+# Kustomize build output (if generating locally)
+kustomize-build/
+
+# kubectl / kubeconfig files with credentials
+kubeconfig
+*.kubeconfig
+.kube/config
+
+# Secrets that might be templated locally
+secrets/
+*.secret.yaml
+*-secret.yaml
+
+# ===== FluxCD =====
+# Age keys for SOPS
+age.agekey
+*.agekey
+sops.yaml
+
+# ===== AWS =====
+# AWS credentials
+.aws/credentials
+**/aws-credentials
+
+# ===== Azure =====
+# Azure credentials
+.azure/
+**/azure-credentials
+
+# ===== GitHub Actions =====
+# Act (local GitHub Actions runner)
+.actrc
+.secrets
+
+# ===== General =====
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Linux
+*~
+.directory
+.Trash-*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+
+# Environment files with secrets
+.env
+.env.local
+.env.*.local
+*.env
+
+# SSH keys
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+.cache/
+
+# Test output
+test-output/
+coverage/
+.pytest_cache/
+
+# Build artifacts
+dist/
+build/
+*.zip
+*.tar.gz
+*.tgz
+
+# Documentation build
+site/
+_site/
+.jekyll-cache/
+
+# Backup files
+*.bak
+*.backup
+*~

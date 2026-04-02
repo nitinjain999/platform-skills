@@ -1,0 +1,60 @@
+name: 'Setup Terraform with Caching'
+description: 'Install Terraform and restore cached provider plugins'
+author: 'Platform Team'
+
+inputs:
+  terraform_version:
+    description: 'Terraform version to install'
+    required: false
+    default: '1.7.0'
+  terraform_wrapper:
+    description: 'Enable Terraform wrapper'
+    required: false
+    default: 'true'
+
+outputs:
+  terraform_version:
+    description: 'Installed Terraform version'
+    value: ${{ steps.setup.outputs.terraform_version }}
+  cache_hit:
+    description: 'Whether cache was restored'
+    value: ${{ steps.cache.outputs.cache-hit }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Create plugin cache directory
+      shell: bash
+      run: |
+        mkdir -p ~/.terraform.d/plugin-cache
+        echo 'plugin_cache_dir = "$HOME/.terraform.d/plugin-cache"' > ~/.terraformrc
+
+    - name: Cache Terraform providers
+      id: cache
+      uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9  # v4.0.2
+      with:
+        path: |
+          ~/.terraform.d/plugin-cache
+          **/.terraform
+          **/.terraform.lock.hcl
+        key: ${{ runner.os }}-terraform-${{ inputs.terraform_version }}-${{ hashFiles('**/.terraform.lock.hcl') }}
+        restore-keys: |
+          ${{ runner.os }}-terraform-${{ inputs.terraform_version }}-
+          ${{ runner.os }}-terraform-
+
+    - name: Setup Terraform
+      id: setup
+      uses: hashicorp/setup-terraform@a1502cd9e758c50496cc9ac5013915b74a51c08a  # v3.0.0
+      with:
+        terraform_version: ${{ inputs.terraform_version }}
+        terraform_wrapper: ${{ inputs.terraform_wrapper }}
+
+    - name: Verify Terraform installation
+      shell: bash
+      run: |
+        terraform version
+        echo "Terraform installed successfully"
+
+branding:
+  icon: 'download-cloud'
+  color: 'purple'

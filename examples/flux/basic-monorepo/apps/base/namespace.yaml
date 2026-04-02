@@ -1,0 +1,8 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: my-app
+  labels:
+    name: my-app
+    toolkit.fluxcd.io/tenant: app-team
