@@ -1,0 +1,36 @@
+{
+  "name": "platform-skills",
+  "version": "1.4.0",
+  "description": "Practical guidance for platform engineers working with Kubernetes, Terraform, GitOps, AWS, Azure, Linkerd, GitHub Actions, and secrets management.",
+  "author": {
+    "name": "Nitin Jain",
+    "email": "nitin.solna@gmail.com",
+    "url": "https://github.com/nitinjain999"
+  },
+  "homepage": "https://github.com/nitinjain999/platform-skills",
+  "repository": "https://github.com/nitinjain999/platform-skills",
+  "license": "Apache-2.0",
+  "keywords": [
+    "kubernetes",
+    "terraform",
+    "gitops",
+    "fluxcd",
+    "argocd",
+    "linkerd",
+    "aws",
+    "azure",
+    "github-actions",
+    "platform-engineering",
+    "devops"
+  ],
+  "skills": [
+    "./SKILL.md"
+  ],
+  "commands": [
+    "./commands/terraform.md",
+    "./commands/debug.md",
+    "./commands/review.md",
+    "./commands/gitops.md",
+    "./commands/linkerd.md"
+  ]
+}
