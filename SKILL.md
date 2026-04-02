@@ -62,3 +62,13 @@ When asked to generate code, start from the thinnest useful slice that proves th
 - For Linkerd service mesh, mTLS, observability, traffic management, and multi-cluster, read [references/linkerd.md](references/linkerd.md).
 
 Load only the files needed for the current request.
+
+## Slash Commands
+
+For explicit, repeatable workflows use these commands:
+
+- `/platform-skills:debug` — structured troubleshooting for any platform symptom
+- `/platform-skills:review` — production-readiness review of any manifest, Terraform, or workflow
+- `/platform-skills:terraform` — full fmt/validate/tflint/security pipeline + blast radius review
+- `/platform-skills:gitops` — Flux CD and Argo CD reconciliation troubleshooting
+- `/platform-skills:linkerd` — Linkerd mTLS, injection, policy, and multi-cluster diagnostics
