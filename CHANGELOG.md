@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-04-02
+
+### Changed
+- Moved `SKILL.md` from the repository root to `skills/platform-skills/SKILL.md` to match the Claude Code proper skill directory format
+- Updated `.claude-plugin/plugin.json` to declare `"skills": ["./skills/platform-skills"]` (directory reference) instead of the old root-level path
+- Updated `tests/validate-skill.sh` to reference `skills/platform-skills/SKILL.md` in all three validation checks
+
 ## [1.4.1] - 2026-04-02
 
 ### Added
