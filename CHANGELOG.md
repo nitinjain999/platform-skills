@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-04-02
+
+### Added
+
+#### Reference Guides
+- Added RBAC troubleshooting to `references/kubernetes.md`: 401 vs 403 diagnosis, `kubectl auth can-i` evidence collection, binding scope matrix (Role/ClusterRole × RoleBinding/ClusterRoleBinding), `ClusterRoleBinding` audit query
+- Added image automation section to `references/flux.md`: `ImageRepository`, `ImagePolicy`, `ImageUpdateAutomation` setup, registry auth table (GHCR/ECR/ACR/GAR/Docker Hub), troubleshooting table, safety rules for staging vs. production promotion
+- Added `references/secrets.md`: decision matrix (ESO vs. Sealed Secrets), ESO setup for AWS/Azure/Vault/static credentials, Sealed Secrets seal/rotate/backup workflow, troubleshooting tables for both patterns, least-privilege IAM example, operational rules
+- Added `references/secrets.md` to `REQUIRED_REFERENCES` in `tests/validate-skill.sh`
+
+#### Plugin
+- Bumped marketplace description and keywords to be developer-first (removed enterprise-only framing)
+- Added keywords: `helm`, `docker`, `containers`, `deployment`, `rbac`, `secrets`, `security`, `gke`
+- Updated SKILL.md activation description and body framing for discoverability by any developer
+- Fixed `assignees` format in `renovate.json` (removed `@` prefix)
+- Fixed `kubeconform` flag in `validate.yml`: `-skip-kinds` → `-skip` (correct flag name for v0.6.4)
+- Fixed `LICENSE` copyright placeholder `[yyyy] [name of copyright owner]` → `2026 Nitin Jain`
+
 ## [1.1.0] - 2026-04-02
 
 ### Added

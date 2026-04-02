@@ -1,15 +1,15 @@
 ---
 name: platform-skills
-description: Platform engineering guidance for GitOps, cloud foundations, and delivery automation across Kubernetes, OpenShift, Flux, Argo CD, Terraform, AWS, Azure, and GitHub Actions. Use when Claude needs to design or review platform architectures, landing zones, Kubernetes delivery workflows, OpenShift operating patterns, Argo CD or Flux GitOps layouts, infrastructure module designs, CI/CD pipelines, identity patterns, environment promotion models, or cross-tool operating practices for a shared platform team.
+description: Hands-on guidance for developers and DevOps engineers working with Kubernetes, Terraform, GitOps, GitHub Actions, AWS, Azure, and secrets management. Use when designing or troubleshooting Kubernetes workloads and RBAC, writing Terraform modules, configuring Flux or Argo CD, setting up CI/CD pipelines, managing cloud identity and IAM, handling secrets with External Secrets Operator or Sealed Secrets, debugging deployment failures, or building infrastructure as code — at any scale, for any team size.
 ---
 
 # Platform Skills
 
-Use this skill to turn broad platform requests into a coherent operating model instead of answering each tool in isolation.
+Use this skill for hands-on help with Kubernetes, GitOps, cloud infrastructure, CI/CD, and secrets management — whether you are a solo developer or part of a large platform team.
 
-## Start with the Control Plane
+## Pick the right tool for the job
 
-Classify the request before proposing implementation:
+Match the task to the right layer:
 
 1. `Terraform`: Provision cloud primitives, cluster bootstrap, shared services, identity, networking, and policy foundations.
 2. `Kubernetes`: Define workload, namespace, RBAC, service, policy, and platform baseline patterns that apply across distributions.
@@ -31,7 +31,6 @@ If a task spans multiple areas, decide which layer owns the source of truth and 
 - Use GitHub Actions for checks, plans, policy gates, artifact publishing, and promotion orchestration. Do not store long-lived environment truth in workflow YAML.
 - Prefer OIDC or workload identity over static cloud credentials.
 - Model environments explicitly. Promotion should be visible in Git history and reversible by commit rollback.
-- Standardize policy, naming, tagging, and observability across AWS and Azure instead of allowing each repository to invent its own conventions.
 - For every Terraform change, enforce in order: `terraform fmt -check -recursive`, `terraform validate`, `tflint --recursive`, security scan (`tfsec` or `checkov`), then `plan`. Do not let format or lint failures reach the plan step.
 - Enforce a tag baseline on all cloud resources. The specific keys are an organizational decision. Use AWS `default_tags` (provider level) or Azure `merge(local.common_tags, {...})` (module local) so the baseline is applied once, not repeated per resource. Back it with AWS Tag Policies or Azure Policy so resources created outside Terraform are also covered.
 
@@ -51,12 +50,13 @@ When asked to generate code, start from the thinnest useful slice that proves th
 
 - For repo topology, boundaries, and promotion flow, read [references/platform-operating-model.md](references/platform-operating-model.md).
 - For Terraform module, environment, testing, and state guidance, read [references/terraform.md](references/terraform.md).
-- For cluster baseline, workload, and policy guidance, read [references/kubernetes.md](references/kubernetes.md).
+- For cluster baseline, workload, RBAC, and policy guidance, read [references/kubernetes.md](references/kubernetes.md).
 - For OpenShift-specific operating patterns, read [references/openshift.md](references/openshift.md).
-- For Flux bootstrap, reconciliation, and app delivery guidance, read [references/flux.md](references/flux.md).
+- For Flux bootstrap, reconciliation, image automation, and app delivery guidance, read [references/flux.md](references/flux.md).
 - For Argo CD app delivery and application set patterns, read [references/argocd.md](references/argocd.md).
 - For AWS landing zones, IAM, and EKS-oriented patterns, read [references/aws.md](references/aws.md).
 - For Azure management groups, identity, and AKS-oriented patterns, read [references/azure.md](references/azure.md).
 - For reusable workflows, OIDC, and delivery controls, read [references/github-actions.md](references/github-actions.md).
+- For secrets strategy, External Secrets Operator, and Sealed Secrets patterns, read [references/secrets.md](references/secrets.md).
 
 Load only the files needed for the current request.

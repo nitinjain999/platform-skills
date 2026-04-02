@@ -7,29 +7,37 @@
   "plugins": [
     {
       "name": "platform-skills",
-      "version": "1.1.0",
-      "description": "A platform engineering handbook covering Kubernetes, OpenShift, Argo CD, Flux CD, AWS, Azure, Terraform, and GitHub Actions. Provides structured troubleshooting, production-first patterns, root-cause analysis, and working examples across all 8 domains. Available as a Claude plugin for interactive guidance.",
+      "version": "1.2.0",
+      "description": "Practical guidance for developers and DevOps engineers working with Kubernetes, Terraform, GitHub Actions, Flux, Argo CD, AWS, Azure, and secrets management. Get troubleshooting guides, security-first patterns, and working examples for Kubernetes workloads, GitOps workflows, CI/CD pipelines, cloud IAM, RBAC, and infrastructure as code — at any scale.",
       "author": {
         "name": "Nitin Jain"
       },
       "license": "Apache-2.0",
       "category": "development",
       "keywords": [
-        "platform-engineering",
         "kubernetes",
-        "openshift",
-        "argocd",
-        "fluxcd",
+        "helm",
+        "docker",
+        "containers",
+        "deployment",
         "gitops",
+        "fluxcd",
+        "argocd",
+        "terraform",
+        "infrastructure-as-code",
+        "github-actions",
+        "ci-cd",
         "aws",
         "azure",
-        "terraform",
-        "github-actions",
+        "gke",
         "eks",
         "aks",
-        "infrastructure-as-code",
-        "ci-cd",
-        "devops"
+        "rbac",
+        "secrets",
+        "security",
+        "openshift",
+        "devops",
+        "platform-engineering"
       ],
       "source": {
         "source": "url",

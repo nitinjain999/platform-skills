@@ -41,6 +41,7 @@ REQUIRED_REFERENCES=(
   references/aws.md
   references/azure.md
   references/github-actions.md
+  references/secrets.md
 )
 
 for ref in "${REQUIRED_REFERENCES[@]}"; do
