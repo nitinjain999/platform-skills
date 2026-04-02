@@ -212,7 +212,7 @@ More specific content...
 ## Further Reading
 
 - [External docs](https://example.com)
-- [Related patterns](../references/platform-operating-model.md)
+- [Related patterns](references/platform-operating-model.md)
 ```
 
 ### Code Block Standards
