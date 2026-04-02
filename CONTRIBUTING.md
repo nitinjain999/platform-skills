@@ -272,14 +272,14 @@ vale references/*.md
 If you have Claude Code installed:
 
 ```bash
-# Install skill locally
-claude-code skill install .
+# Install plugin locally
+claude plugin install .
 
-# Test skill activation
+# Test plugin activation
 # (Open Claude Code and try relevant prompts)
 
 # Uninstall after testing
-claude-code skill uninstall platform-skills
+claude plugin uninstall platform-skills
 ```
 
 ## Release Process
@@ -326,10 +326,10 @@ Platform Skills uses automated GitHub Actions workflows for releases.
 5. **Distribution:**
    
    This repository is distributed through multiple channels:
-   - **GitHub Repository**: Primary distribution — browse the handbook on GitHub, clone for templates
-   - **Local Installation**: Clone and install as a Claude Code skill for interactive guidance
-   - **Claude Marketplace**: Optional publication for end users who want one-command install (currently manual)
-   
+   - **Claude Marketplace**: Default end-user distribution for one-command install
+   - **GitHub Repository**: Source of truth for the handbook, examples, and release history
+   - **Local Installation**: Clone and install as a Claude plugin for testing or customization
+
    **Current state:** Marketplace publication is manual (see Marketplace Publication section below).
    **Future state:** When the Claude marketplace API is available, publication will be automated via the GitHub Release workflow.
 
@@ -362,7 +362,7 @@ The release workflow provides marketplace publication instructions in the GitHub
 1. After GitHub Release is created, follow the instructions in the release summary
 2. Use Claude Code CLI to publish:
    ```bash
-   claude-code skill publish .
+   claude plugin publish .
    ```
 3. Or submit via Claude marketplace publisher portal
 
@@ -374,8 +374,8 @@ The release workflow provides marketplace publication instructions in the GitHub
 
 After marketplace publication:
 
-- [ ] Verify marketplace installation: `claude-code skill install platform-skills`
-- [ ] Verify local installation: `claude-code skill install .`
+- [ ] Verify marketplace installation: `claude plugin install platform-skills`
+- [ ] Verify local installation: `claude plugin install .`
 - [ ] Update README badges if needed
 - [ ] Announce release (optional)
 - [ ] Monitor issues for feedback

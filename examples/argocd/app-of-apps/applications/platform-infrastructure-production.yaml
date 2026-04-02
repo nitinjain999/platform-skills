@@ -10,7 +10,7 @@ spec:
   source:
     repoURL: https://github.com/nitinjain999/platform-skills
     targetRevision: main
-    path: examples/flux/basic-monorepo/infrastructure/production
+    path: infrastructure/production
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd

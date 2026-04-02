@@ -32,6 +32,7 @@ If a task spans multiple areas, decide which layer owns the source of truth and 
 - Prefer OIDC or workload identity over static cloud credentials.
 - Model environments explicitly. Promotion should be visible in Git history and reversible by commit rollback.
 - Standardize policy, naming, tagging, and observability across AWS and Azure instead of allowing each repository to invent its own conventions.
+- For every Terraform change, enforce in order: `terraform fmt -check -recursive`, `terraform validate`, `tflint --recursive`, security scan (`tfsec` or `checkov`), then `plan`. Do not let format or lint failures reach the plan step.
 - Enforce a tag baseline on all cloud resources. The specific keys are an organizational decision. Use AWS `default_tags` (provider level) or Azure `merge(local.common_tags, {...})` (module local) so the baseline is applied once, not repeated per resource. Back it with AWS Tag Policies or Azure Policy so resources created outside Terraform are also covered.
 
 ## Structure the Response

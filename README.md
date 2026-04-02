@@ -1,6 +1,6 @@
 # Platform Skills
 
-> A platform engineering handbook covering Kubernetes, OpenShift, Argo CD, Flux CD, AWS, Azure, Terraform, and GitHub Actions — with an optional Claude Code skill layer for interactive guidance.
+> A platform engineering handbook covering Kubernetes, OpenShift, Argo CD, Flux CD, AWS, Azure, Terraform, and GitHub Actions — with an optional Claude plugin layer for interactive guidance.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Claude Code](https://img.shields.io/badge/Claude-Code%20Skill-purple)](https://claude.ai/code)
@@ -10,9 +10,9 @@
 This repository is a reference handbook for platform engineers, SREs, and DevOps practitioners. It is structured in two independent layers:
 
 - **Handbook** — `references/` and `examples/` are the main product. Every domain has a deep-dive guide and working example assets you can copy directly into your project. Use it on GitHub, from a local clone, or as a team knowledge base.
-- **Claude Code skill** — `SKILL.md` adds an optional routing layer so Claude surfaces the right section of the handbook when you ask platform engineering questions interactively.
+- **Claude plugin** — `SKILL.md` and `.claude-plugin/marketplace.json` add an optional routing layer so Claude surfaces the right section of the handbook when you ask platform engineering questions interactively.
 
-Both layers work independently. The skill is optional.
+Both layers work independently. The plugin is optional.
 
 ## Navigate
 
@@ -22,8 +22,8 @@ Both layers work independently. The skill is optional.
 | Full installation guide and troubleshooting | [INSTALLATION.md](INSTALLATION.md) |
 | Read a domain guide | [references/](references/) |
 | Copy a working example | [examples/](examples/) |
-| Install as a Claude Code skill | [Installation](#installation) |
-| Set up VSCode or Copilot | [VSCODE_INTEGRATION.md](VSCODE_INTEGRATION.md) |
+| Install as a Claude plugin | [Installation](#installation) |
+| Set up VSCode with or without Claude | [VSCODE_INTEGRATION.md](VSCODE_INTEGRATION.md) |
 | Contribute a pattern | [CONTRIBUTING.md](CONTRIBUTING.md) |
 
 ## Domains
@@ -79,6 +79,7 @@ No installation needed. Navigate directly:
 
 ```bash
 git clone https://github.com/nitinjain999/platform-skills.git
+cd platform-skills
 
 # Copy examples directly into your project
 cp -r examples/flux/basic-monorepo/*          your-gitops-repo/
@@ -86,23 +87,24 @@ cp -r examples/terraform/eks-cluster/*         your-terraform-modules/
 cp    examples/kubernetes/deployment-baseline.yaml  your-k8s-manifests/
 ```
 
-### Install as a Claude Code skill
+### Install as a Claude plugin
 
-The skill adds interactive guidance on top of the handbook. Claude will reference the right section automatically when you ask platform engineering questions — in your editor, terminal, or browser.
+The plugin adds interactive guidance on top of the handbook. Claude will reference the right section automatically when you ask platform engineering questions in your editor, terminal, or browser.
 
 **From marketplace:**
 ```bash
-claude-code skill search platform-skills
-claude-code skill install platform-skills
+claude plugin marketplace add https://github.com/nitinjain999/platform-skills
+claude plugin install platform-skills
 ```
 
 **From local clone (for customisation):**
 ```bash
 git clone https://github.com/nitinjain999/platform-skills.git
-claude-code skill install ./platform-skills
+cd platform-skills
+claude plugin install .
 ```
 
-For VSCode, Copilot, and team setup options, see [VSCODE_INTEGRATION.md](VSCODE_INTEGRATION.md).
+For VS Code workflows with Claude or with Copilot only, see [VSCODE_INTEGRATION.md](VSCODE_INTEGRATION.md).
 
 ## Repository structure
 
@@ -129,7 +131,7 @@ platform-skills/
 │   ├── terraform/eks-cluster/          # Production EKS Terraform module
 │   └── github-actions/                 # CI/CD, Flux sync, container build workflows
 │
-├── SKILL.md                            # Claude Code skill routing and patterns
+├── SKILL.md                            # Claude plugin routing and patterns
 ├── .claude-plugin/marketplace.json     # Marketplace metadata
 ├── .github/workflows/                  # Validation and release automation
 ├── tests/validate-skill.sh             # Skill structure consistency checks

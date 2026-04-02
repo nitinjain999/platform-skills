@@ -4,7 +4,7 @@ metadata:
   name: payments-api
   namespace: payments
 spec:
-  host: payments.apps.example.com
+  host: payments.apps.example.com  # Replace with your cluster's app domain
   to:
     kind: Service
     name: payments-api

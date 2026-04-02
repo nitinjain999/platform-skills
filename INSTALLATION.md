@@ -1,13 +1,13 @@
 # Platform Skills - Installation Guide
 
-This guide covers installation of `platform-skills` as a Claude Code skill. If you only want to browse the handbook guides and examples, no installation is needed — navigate directly to [references/](references/) or [examples/](examples/) on GitHub.
+This guide covers installation of `platform-skills` as a Claude plugin. If you only want to browse the handbook guides and examples, no installation is needed. Navigate directly to [references/](references/) or [examples/](examples/) on GitHub.
 
 ## Prerequisites
 
 Confirm Claude Code is installed:
 
 ```bash
-claude-code --version
+claude --version
 ```
 
 If Claude Code is not installed, visit: https://claude.ai/code
@@ -16,18 +16,18 @@ If Claude Code is not installed, visit: https://claude.ai/code
 
 ### Method 1: Install from Marketplace
 
-Use this when `platform-skills` is already published:
+Add the marketplace, then install by name:
 
 ```bash
-claude-code skill search platform-skills
-claude-code skill install platform-skills
+claude plugin marketplace add https://github.com/nitinjain999/platform-skills
+claude plugin install platform-skills
 ```
 
 Update or remove it later with:
 
 ```bash
-claude-code skill update platform-skills
-claude-code skill uninstall platform-skills
+claude plugin update platform-skills
+claude plugin uninstall platform-skills
 ```
 
 ### Method 2: Install from Local Clone
@@ -37,7 +37,7 @@ Use this when you want local customization or want the latest repo state before 
 ```bash
 git clone https://github.com/nitinjain999/platform-skills.git
 cd platform-skills
-claude-code skill install .
+claude plugin install .
 ```
 
 ### Method 3: Use the Repo Without Installing
@@ -76,17 +76,18 @@ Review this GitHub Actions workflow for OIDC, least privilege, and unsafe trigge
 
 ### Marketplace Install Fails
 
-If `claude-code skill install platform-skills` fails:
+If `claude plugin install platform-skills` fails with "not found":
 
-1. Check whether the skill is published:
+1. Make sure the marketplace was added first:
    ```bash
-   claude-code skill search platform-skills
+   claude plugin marketplace add https://github.com/nitinjain999/platform-skills
+   claude plugin install platform-skills
    ```
-2. If it is not available yet, install from a local clone:
+2. If the plugin is not yet published to the marketplace, install from a local clone:
    ```bash
    git clone https://github.com/nitinjain999/platform-skills.git
    cd platform-skills
-   claude-code skill install .
+   claude plugin install .
    ```
 
 ### Local Install Fails
@@ -101,10 +102,10 @@ ls SKILL.md .claude-plugin/marketplace.json
 Then run:
 
 ```bash
-claude-code skill install .
+claude plugin install .
 ```
 
-### The Skill Feels Too Generic
+### The Plugin Feels Too Generic
 
 Give Claude:
 

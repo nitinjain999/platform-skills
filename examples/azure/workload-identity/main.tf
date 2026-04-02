@@ -1,3 +1,12 @@
+terraform {
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = ">= 3.87.0"
+    }
+  }
+}
+
 variable "cluster_name" {
   description = "Name of the AKS cluster."
   type        = string

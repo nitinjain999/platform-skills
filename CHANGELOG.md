@@ -7,18 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-04-02
+
 ### Added
+
+#### Reference Guides
 - Expanded AWS reference with tagging guidance: `default_tags` provider block, ASG `propagate_at_launch`, EBS/Lambda propagation gaps, AWS Config `required-tags` rule, cost allocation tag activation steps, org-level tag policy enforcement
 - Expanded Azure reference with tagging guidance: `merge(local.common_tags, {...})` pattern, tag inheritance gap explanation, Azure Policy `deny`/`modify` enforcement, remediation task for existing resources, AKS managed resource group tagging
 - Added tagging rule to SKILL.md: enforce a baseline via provider-level mechanisms; specific keys are an organizational decision
-- Added `tests/validate-skill.sh` — checks SKILL.md frontmatter, all reference files exist, each example domain has at least one asset beyond README.md, SKILL.md references every reference file; wired into `validate.yml` as a blocking CI job
+
+#### Example Assets
 - Added real example assets for previously stub domains: `examples/kubernetes/*.yaml` (4 files), `examples/openshift/*.yaml` (2 files), `examples/aws/iam/*.json` (2 files), `examples/azure/workload-identity/` (`main.tf` + `serviceaccount.yaml`)
 
-### Changed
-- Trimmed VSCode install detail from README to a single pointer to VSCODE_INTEGRATION.md — install story now lives in one place
-- Updated README repository structure tree to show real example files rather than `README.md`-only entries
+#### Testing
+- Added `tests/validate-skill.sh` — checks SKILL.md frontmatter, all reference files exist, each example domain has at least one asset beyond README.md, SKILL.md references every reference file; wired into `validate.yml` as a blocking CI job
 
-## [1.1.0] - 2026-04-02
+#### Developer Experience
+- Added `.github/copilot-instructions.md` — GitHub Copilot automatically applies Platform Skills patterns (no Claude Code required)
+- Added `VSCODE_INTEGRATION.md` — comprehensive guide for VSCode with Claude Code extension, GitHub Copilot split-screen, and browser workflows
+- Added `QUICKSTART.md` — 5-minute install and first-use guide
+- Added `INSTALLATION.md` — full installation methods, team setup, troubleshooting
+
+#### Dependency Management
+- Scoped Renovate automerge catch-all rule to explicit managers (terraform, helmv3, kubernetes, docker-compose) to prevent accidental automerge of GitHub Actions
 
 ### Fixed
 
@@ -32,30 +43,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed dead Discord `#` placeholder link in README — replaced with real URL
 - Added `QUICKSTART.md`, `INSTALLATION.md`, and `VSCODE_INTEGRATION.md` to README navigation and repository structure table
 - Fixed hardcoded `v1.0.0` examples in CHANGELOG release checklist — replaced with `vX.Y.Z` placeholder
-
-### Added
-
-#### Developer Experience
-- Added `.github/copilot-instructions.md` — GitHub Copilot automatically applies Platform Skills patterns (no Claude Code required)
-  - Kubernetes security context and resource requirements enforced
-  - Flux CD HelmRelease version pinning and remediation patterns
-  - Argo CD named project requirement (never `default`)
-  - AWS IAM no-wildcard rule with IRSA patterns
-  - Azure workload identity patterns
-  - Terraform module structure and variable validation
-  - GitHub Actions SHA pinning and minimal permissions
-  - Structured troubleshooting response format
-- Added `VSCODE_INTEGRATION.md` — comprehensive guide for VSCode with Claude Code extension, GitHub Copilot split-screen, and browser workflows
-- Added `QUICKSTART.md` — 5-minute install and first-use guide
-- Added `INSTALLATION.md` — full installation methods, team setup, troubleshooting
-
-#### Dependency Management
-- Scoped Renovate automerge catch-all rule to explicit managers (terraform, helmv3, kubernetes, docker-compose) to prevent accidental automerge of GitHub Actions
+- Fixed Argo CD example Application `path:` fields — were pointing at Flux monorepo paths instead of Argo CD-appropriate paths
+- Fixed Azure workload-identity `main.tf` — added `required_providers` block with minimum `azurerm >= 3.87.0`
 
 ### Changed
 
+- README repositioned as handbook-first — skill layer described as optional, not the primary product
+- Updated README repository structure tree to show real example files rather than `README.md`-only entries
+- Trimmed VSCode install detail from README to a single pointer to VSCODE_INTEGRATION.md — install story now lives in one place
 - Marketplace distribution: personal marketplace now named `platform-skills` (was `platform-skills-marketplace`)
 - Owner contact updated to personal email
+- All CLI command references updated: binary is `claude`, subcommand is `claude plugin` (not `claude-code skill`)
 
 ## [1.0.0] - 2026-04-02
 
