@@ -165,26 +165,26 @@ Reviewers may:
 
 ### High Priority
 
-- **Flux CD troubleshooting patterns** for common reconciliation failures
+- **Linkerd examples** — working `examples/linkerd/` assets (HTTPRoute canary split, authorization policy, PodMonitor) to back up `references/linkerd.md`
 - **IAM policy examples** showing least-privilege patterns
 - **GitHub Actions security fixes** for common vulnerabilities
-- **Multi-cloud networking patterns** for hybrid environments
 - **Disaster recovery runbooks** for platform components
 
 ### Medium Priority
 
-- **Cost optimization patterns** across AWS/Azure
-- **Observability integration** examples
+- **Observability patterns**: Prometheus, Grafana, Loki integration examples
+- **Cost optimization patterns** across AWS and Azure
+- **Multi-cloud networking patterns** for hybrid environments
+- **Policy-as-code**: OPA, Kyverno, or Gatekeeper examples
 - **Testing strategies** for infrastructure changes
 - **Migration guides** between tool versions
-- **Performance tuning** guidelines
 
 ### Lower Priority (But Still Welcome)
 
 - **Alternative approaches** to existing patterns
 - **Edge case handling** for documented patterns
 - **Tool comparisons** with decision frameworks
-- **Historical context** for architectural choices
+- **GCP patterns**: landing zone, GKE, and IAM
 
 ## Documentation Standards
 
@@ -272,14 +272,22 @@ vale references/*.md
 If you have Claude Code installed:
 
 ```bash
-# Install plugin locally
-claude plugin install .
+# Register the local repo as a marketplace and install
+claude plugin marketplace add $(pwd)
+claude plugin install platform-skills
 
-# Test plugin activation
-# (Open Claude Code and try relevant prompts)
+# Verify version and status
+claude plugin list
 
 # Uninstall after testing
 claude plugin uninstall platform-skills
+```
+
+To upgrade after making further changes, re-run:
+
+```bash
+claude plugin marketplace update
+claude plugin install platform-skills
 ```
 
 ## Release Process
@@ -374,8 +382,8 @@ The release workflow provides marketplace publication instructions in the GitHub
 
 After marketplace publication:
 
-- [ ] Verify marketplace installation: `claude plugin install platform-skills`
-- [ ] Verify local installation: `claude plugin install .`
+- [ ] Verify marketplace installation: `claude plugin marketplace update && claude plugin install platform-skills`
+- [ ] Verify local installation: `claude plugin marketplace add $(pwd) && claude plugin install platform-skills`
 - [ ] Update README badges if needed
 - [ ] Announce release (optional)
 - [ ] Monitor issues for feedback
