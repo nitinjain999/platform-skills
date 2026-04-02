@@ -305,14 +305,23 @@ jobs:
       - name: Check for secrets in code
         run: |
           # Check for common secret patterns
-          if grep -rE '(password|secret|key|token|apikey).*=.*["\x27][^"\x27]{8,}["\x27]' \
+          # Exclude GitHub Actions variables and terraform backend config
+          POTENTIAL_SECRETS=$(grep -rE '(password|secret|key|token|apikey).*=.*["\x27][^"\x27]{8,}["\x27]' \
              --exclude-dir=.git \
              --exclude-dir=node_modules \
              --exclude="*.md" \
              --exclude="CHANGELOG.md" \
-             --exclude="QUALITY_ASSURANCE.md" .; then
-            echo "⚠️  Potential secrets found in code"
-            echo "Review above matches"
+             --exclude="QUALITY_ASSURANCE.md" . | \
+             grep -v 'matrix\.' | \
+             grep -v 'vars\.' | \
+             grep -v 'secrets\.' | \
+             grep -v 'backend-config=' || true)
+
+          if [ -n "$POTENTIAL_SECRETS" ]; then
+            echo "⚠️  Potential secrets found in code:"
+            echo "$POTENTIAL_SECRETS"
+            echo ""
+            echo "Review above matches to ensure they are not real secrets"
             exit 1
           fi
 
