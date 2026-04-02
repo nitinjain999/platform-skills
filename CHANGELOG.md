@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `references/linkerd.md`: mTLS, proxy injection, authorization policy, traffic management (HTTPRoute, retries, timeouts, canary splits), golden-signal observability (`linkerd viz stat/tap`), Prometheus integration, multi-cluster mirroring, and troubleshooting guide
+- Linkerd routing rule added to SKILL.md
+- `references/linkerd.md` added to `tests/validate-skill.sh` required references
+
 ## [1.2.0] - 2026-04-02
 
 ### Added

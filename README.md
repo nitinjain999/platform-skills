@@ -141,9 +141,13 @@ platform-skills/
 
 ## Roadmap
 
+**v1.3.0**
+- [x] Linkerd: mTLS, observability, traffic management, multi-cluster
+
+**Planned**
 - [ ] GCP: landing zone, GKE, and IAM patterns
 - [ ] Observability: Prometheus, Grafana, Loki
-- [ ] Service mesh: Istio, Linkerd
+- [ ] Service mesh: Istio
 - [ ] Policy-as-code: OPA, Kyverno, Gatekeeper
 - [ ] OpenShift operator lifecycle patterns
 - [ ] Argo CD ApplicationSet fleet patterns
