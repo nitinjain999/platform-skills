@@ -28,12 +28,26 @@ claude plugin list
 
 ## Step 3: Use It!
 
-Navigate to your project and start Claude:
+**Option A: VSCode with Claude Code Extension** (Full integration)
+1. Open VSCode
+2. Install Claude Code extension from marketplace
+3. Click Claude icon in sidebar or press Cmd+Shift+P → "Claude Code"
+4. Start asking questions!
 
+**Option B: VSCode with Just Copilot** (Split screen)
+1. Open VSCode with GitHub Copilot
+2. Split terminal (split icon in terminal)
+3. Left terminal: your work (git, kubectl, etc)
+4. Right terminal: `claude` for guidance
+5. Use Copilot for code, Claude for architecture
+
+**Option C: Terminal Only**
 ```bash
 cd your-project/
 claude
 ```
+
+> **💡 Tip**: Works great with GitHub Copilot! Use Copilot for code completion, Claude + Platform Skills for architecture and troubleshooting. See [VSCODE_INTEGRATION.md](VSCODE_INTEGRATION.md) for detailed workflows.
 
 ## Try These Examples
 

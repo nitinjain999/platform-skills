@@ -82,6 +82,43 @@ See [.github/workflows/](.github/workflows/) for workflow details and [renovate.
 
 New to Claude or using this repo for the first time? Start with [GETTING_STARTED.md](GETTING_STARTED.md).
 
+### 💻 Using in VSCode or IDEs
+
+Platform Skills works seamlessly with VSCode in multiple ways:
+
+**Option 1: Claude Code Extension + This Plugin**
+- Full integration in VSCode sidebar
+- Inline suggestions and quick edits
+- Best for: All-in-one experience
+
+**Option 2: Just Copilot + Claude Terminal** (Popular choice!)
+- Use GitHub Copilot for code completion in editor
+- Run `claude` in split terminal for architecture guidance
+- Best for: Developers who prefer Copilot for coding
+
+**Option 3: Browser + VSCode**
+- Claude.ai in browser for conversations
+- VSCode + Copilot for coding
+- Best for: Minimal extension setup
+
+**Quick Setup:**
+```bash
+# Install the plugin (works for all options above)
+claude plugin marketplace add https://github.com/nitinjain999/platform-skills
+claude plugin install platform-skills
+```
+
+**Workflow Example:**
+```
+VSCode Editor (Copilot)  │  Terminal/Browser (Claude + Platform Skills)
+────────────────────────┼──────────────────────────────────────────────
+Write Terraform code     │  "Should I use modules or resources?"
+Copilot suggests syntax  │  "Review this IAM policy for security"
+Implement solution       │  "How do I structure Flux CD repos?"
+```
+
+See **[VSCODE_INTEGRATION.md](VSCODE_INTEGRATION.md)** for complete workflows, keyboard shortcuts, and team setup.
+
 > **Note:** This repository provides reference patterns and examples for platform engineering with Kubernetes, OpenShift, Argo CD, Flux CD, AWS, Azure, Terraform, and GitHub Actions. It can be used as:
 > 1. **Reference Documentation** - Browse examples and guides directly on GitHub
 > 2. **Claude Code Skill** - Install from marketplace if published, or locally for interactive guidance
