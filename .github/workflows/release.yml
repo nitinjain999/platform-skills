@@ -273,21 +273,30 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Validate marketplace.json source.sha matches tagged commit
+      - name: Validate marketplace.json source.sha is a recent ancestor of tagged commit
         run: |
           TAG_COMMIT=$(git rev-parse HEAD)
           STORED_SHA=$(jq -r '.plugins[0].source.sha' .claude-plugin/marketplace.json)
 
-          if [ "$STORED_SHA" != "$TAG_COMMIT" ]; then
-            echo "❌ marketplace.json source.sha is stale"
+          # Exact equality is impossible: the SHA-update PR merge always creates one
+          # new commit on top of the stored SHA. Check reachability instead — the stored
+          # SHA must be an ancestor of the tagged commit (i.e. it is reachable from it).
+          if ! git merge-base --is-ancestor "$STORED_SHA" "$TAG_COMMIT"; then
+            echo "❌ marketplace.json source.sha is not reachable from the tagged commit"
             echo "  stored: ${STORED_SHA}"
             echo "  tagged: ${TAG_COMMIT}"
             echo ""
-            echo "Update .claude-plugin/marketplace.json in a PR and merge before creating this tag."
+            echo "Update source.sha in .claude-plugin/marketplace.json in a PR, merge, then retag."
             exit 1
           fi
 
-          echo "✅ source.sha matches tagged commit: ${TAG_COMMIT}"
+          # Warn if the SHA is more than 1 commit behind — that suggests a stale update.
+          DISTANCE=$(git rev-list --count "${STORED_SHA}..${TAG_COMMIT}")
+          if [ "$DISTANCE" -gt 1 ]; then
+            echo "⚠️  source.sha is ${DISTANCE} commits behind the tag — consider updating it."
+          fi
+
+          echo "✅ source.sha ${STORED_SHA} is reachable from tagged commit ${TAG_COMMIT}"
 
       - name: Extract changelog for this version
         id: changelog
