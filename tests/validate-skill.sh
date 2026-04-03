@@ -90,6 +90,25 @@ for ref in "${REQUIRED_REFERENCES[@]}"; do
 done
 
 echo ""
+echo "=== Command files declared in plugin.json exist ==="
+
+PLUGIN_JSON=".claude-plugin/plugin.json"
+if [ -f "$PLUGIN_JSON" ]; then
+  # Extract command paths from plugin.json (lines containing ./commands/)
+  while IFS= read -r cmd_path; do
+    # Strip leading ./ for file check
+    cmd_file="${cmd_path#./}"
+    if [ -f "$cmd_file" ]; then
+      pass "$cmd_file exists"
+    else
+      fail "$cmd_file declared in plugin.json but not found"
+    fi
+  done < <(grep -o '"./commands/[^"]*"' "$PLUGIN_JSON" | tr -d '"')
+else
+  fail "$PLUGIN_JSON not found"
+fi
+
+echo ""
 
 if [ "$ERRORS" -gt 0 ]; then
   echo "FAIL: $ERRORS validation error(s)"
