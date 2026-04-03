@@ -118,24 +118,28 @@ jobs:
           echo "✅ All required files present"
           echo "changelog_exists=true" >> $GITHUB_OUTPUT
 
-      - name: Validate marketplace.json source.sha matches tagged commit
+      - name: Write source.sha to tagged commit and push
         run: |
-          MARKETPLACE_SHA=$(jq -r '.plugins[0].source.sha' .claude-plugin/marketplace.json)
           TAG_COMMIT=$(git rev-parse HEAD)
+          STORED_SHA=$(jq -r '.plugins[0].source.sha' .claude-plugin/marketplace.json)
 
-          if [ "$MARKETPLACE_SHA" != "$TAG_COMMIT" ]; then
-            echo "❌ source.sha mismatch!"
-            echo "marketplace.json source.sha: ${MARKETPLACE_SHA}"
-            echo "Tagged commit (HEAD):         ${TAG_COMMIT}"
-            echo ""
-            echo "The update-marketplace-sha workflow should have set this automatically on the"
-            echo "last push to main. Wait for that workflow to complete before tagging, or run:"
-            echo "  jq --arg sha ${TAG_COMMIT} '.plugins[0].source.sha = \$sha' .claude-plugin/marketplace.json > tmp.json"
-            echo "  mv tmp.json .claude-plugin/marketplace.json && git commit -am 'chore: fix source.sha' && git push"
-            echo "Then delete and re-create the tag."
-            exit 1
+          echo "Tagged commit: ${TAG_COMMIT}"
+          echo "Stored SHA:    ${STORED_SHA}"
+
+          if [ "$STORED_SHA" = "$TAG_COMMIT" ]; then
+            echo "✅ source.sha already correct — nothing to commit"
+            exit 0
           fi
-          echo "✅ source.sha matches tagged commit: ${TAG_COMMIT}"
+
+          jq --arg sha "$TAG_COMMIT" '.plugins[0].source.sha = $sha' \
+            .claude-plugin/marketplace.json > tmp.json && mv tmp.json .claude-plugin/marketplace.json
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .claude-plugin/marketplace.json
+          git commit -m "chore: update marketplace.json source.sha to ${TAG_COMMIT}"
+          git push origin HEAD:main
+          echo "✅ source.sha updated to ${TAG_COMMIT} and pushed to main"
 
       - name: Check CHANGELOG.md has entry for this version
         if: steps.check.outputs.changelog_exists == 'true'
