@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-04-03
+
+### Added
+- `references/platform-mindset.md` — product mindset, developer experience (SPACE/DORA metrics, friction audits, golden paths, Backstage), collaboration and communication (RFC/ADR templates, incident updates, blameless post-mortems), and proactive problem-solving (systemic fixes, capacity planning, cost optimisation loop, quarterly platform health review)
+- `/platform-skills:product` command (`commands/product.md`) — applies product thinking to platform work across eight topics: devex, friction, rfc, adr, incident, postmortem, capacity, cost, and review
+- Domain 8 added to SKILL.md tool-routing section: `Platform Mindset`
+
 ## [1.4.2] - 2026-04-02
 
 ### Changed

@@ -18,7 +18,8 @@ Match the task to the right layer:
 5. `GitHub Actions`: Validate, package, test, and promote changes. Keep workflows declarative and reusable.
 6. `AWS` or `Azure`: Apply provider-specific account, subscription, identity, and governance patterns.
 7. `Linkerd`: Apply service mesh for automatic mTLS, golden-signal observability, and traffic management between workloads.
-8. `Cross-platform`: Design repo boundaries, ownership, promotion flows, and security controls first.
+8. `Platform Mindset`: Treat developers as customers. Apply product thinking, friction audits, DevEx metrics, RFC/ADR processes, incident communication, and blameless post-mortems.
+9. `Cross-platform`: Design repo boundaries, ownership, promotion flows, and security controls first.
 
 If a task spans multiple areas, decide which layer owns the source of truth and keep the other layers consumers of that state.
 
@@ -60,6 +61,7 @@ When asked to generate code, start from the thinnest useful slice that proves th
 - For reusable workflows, OIDC, and delivery controls, read [references/github-actions.md](references/github-actions.md).
 - For secrets strategy, External Secrets Operator, and Sealed Secrets patterns, read [references/secrets.md](references/secrets.md).
 - For Linkerd service mesh, mTLS, observability, traffic management, and multi-cluster, read [references/linkerd.md](references/linkerd.md).
+- For product mindset, developer experience, friction audits, RFC/ADR, incident communication, post-mortems, and capacity planning, read [references/platform-mindset.md](references/platform-mindset.md).
 
 Load only the files needed for the current request.
 
@@ -72,3 +74,4 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:terraform` — full fmt/validate/tflint/security pipeline + blast radius review
 - `/platform-skills:gitops` — Flux CD and Argo CD reconciliation troubleshooting
 - `/platform-skills:linkerd` — Linkerd mTLS, injection, policy, and multi-cluster diagnostics
+- `/platform-skills:product` — product thinking, friction audits, DevEx, RFC/ADR, incident updates, post-mortems

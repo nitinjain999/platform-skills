@@ -7,7 +7,7 @@
   "plugins": [
     {
       "name": "platform-skills",
-      "version": "1.4.2",
+      "version": "1.5.0",
       "description": "Practical guidance for developers and DevOps engineers working with Kubernetes, Terraform, GitHub Actions, Flux, Argo CD, AWS, Azure, and secrets management. Get troubleshooting guides, security-first patterns, and working examples for Kubernetes workloads, GitOps workflows, CI/CD pipelines, cloud IAM, RBAC, and infrastructure as code — at any scale.",
       "author": {
         "name": "Nitin Jain"

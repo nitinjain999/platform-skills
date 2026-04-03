@@ -1,6 +1,6 @@
 {
   "name": "platform-skills",
-  "version": "1.4.2",
+  "version": "1.5.0",
   "description": "Practical guidance for Kubernetes, Terraform, GitOps, GitHub Actions, AWS, Azure, and secrets management.",
   "author": {
     "name": "Nitin Jain",
@@ -31,6 +31,7 @@
     "./commands/debug.md",
     "./commands/review.md",
     "./commands/gitops.md",
-    "./commands/linkerd.md"
+    "./commands/linkerd.md",
+    "./commands/product.md"
   ]
 }

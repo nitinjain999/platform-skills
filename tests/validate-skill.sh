@@ -43,6 +43,7 @@ REQUIRED_REFERENCES=(
   references/github-actions.md
   references/secrets.md
   references/linkerd.md
+  references/platform-mindset.md
 )
 
 for ref in "${REQUIRED_REFERENCES[@]}"; do
