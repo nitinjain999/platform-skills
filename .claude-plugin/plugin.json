@@ -1,7 +1,7 @@
 {
   "name": "platform-skills",
-  "version": "1.4.2",
-  "description": "Practical guidance for Kubernetes, Terraform, GitOps, GitHub Actions, AWS, Azure, and secrets management.",
+  "version": "1.5.0",
+  "description": "Practical guidance for platform engineers: Kubernetes, Terraform, GitOps, GitHub Actions, AWS, Azure, Linkerd, Linux administration, networking, and platform product thinking.",
   "author": {
     "name": "Nitin Jain",
     "email": "nitin.solna@gmail.com",
@@ -21,7 +21,12 @@
     "azure",
     "github-actions",
     "platform-engineering",
-    "devops"
+    "devops",
+    "linux",
+    "networking",
+    "dns",
+    "developer-experience",
+    "devex"
   ],
   "skills": [
     "./skills/platform-skills"
@@ -31,6 +36,8 @@
     "./commands/debug.md",
     "./commands/review.md",
     "./commands/gitops.md",
-    "./commands/linkerd.md"
+    "./commands/linkerd.md",
+    "./commands/linux.md",
+    "./commands/product.md"
   ]
 }

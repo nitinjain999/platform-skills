@@ -1,11 +1,11 @@
 ---
 name: platform-skills
-description: Hands-on guidance for developers and DevOps engineers working with Kubernetes, Terraform, GitOps, GitHub Actions, AWS, Azure, and secrets management. Use when designing or troubleshooting Kubernetes workloads and RBAC, writing Terraform modules, configuring Flux or Argo CD, setting up CI/CD pipelines, managing cloud identity and IAM, handling secrets with External Secrets Operator or Sealed Secrets, debugging deployment failures, or building infrastructure as code — at any scale, for any team size.
+description: Hands-on guidance for platform and DevOps engineers working with Kubernetes, Terraform, GitOps, GitHub Actions, AWS, Azure, Linkerd, Linux, and networking. Use when designing or troubleshooting Kubernetes workloads and RBAC, writing Terraform modules, configuring Flux or Argo CD, setting up CI/CD pipelines, managing cloud identity and IAM, handling secrets, diagnosing DNS or VPC connectivity, operating a service mesh, or applying product thinking to developer experience — at any scale, for any team size.
 ---
 
 # Platform Skills
 
-Use this skill for hands-on help with Kubernetes, GitOps, cloud infrastructure, CI/CD, and secrets management — whether you are a solo developer or part of a large platform team.
+Use this skill for hands-on help with Kubernetes, GitOps, cloud infrastructure, CI/CD, secrets management, service mesh, Linux administration, networking, and platform product thinking — whether you are a solo developer or part of a large platform team.
 
 ## Pick the right tool for the job
 
@@ -18,7 +18,9 @@ Match the task to the right layer:
 5. `GitHub Actions`: Validate, package, test, and promote changes. Keep workflows declarative and reusable.
 6. `AWS` or `Azure`: Apply provider-specific account, subscription, identity, and governance patterns.
 7. `Linkerd`: Apply service mesh for automatic mTLS, golden-signal observability, and traffic management between workloads.
-8. `Cross-platform`: Design repo boundaries, ownership, promotion flows, and security controls first.
+8. `Linux & Networking`: Diagnose Linux systems and network problems — DNS resolution, load balancer routing, VPC/VNet design, kernel tuning, and connectivity troubleshooting.
+9. `Platform Mindset`: Treat developers as customers. Apply product thinking, friction audits, DevEx metrics, RFC/ADR processes, incident communication, and blameless post-mortems.
+10. `Cross-platform`: Design repo boundaries, ownership, promotion flows, and security controls first.
 
 If a task spans multiple areas, decide which layer owns the source of truth and keep the other layers consumers of that state.
 
@@ -32,6 +34,7 @@ If a task spans multiple areas, decide which layer owns the source of truth and 
 - Use GitHub Actions for checks, plans, policy gates, artifact publishing, and promotion orchestration. Do not store long-lived environment truth in workflow YAML.
 - Prefer OIDC or workload identity over static cloud credentials.
 - Model environments explicitly. Promotion should be visible in Git history and reversible by commit rollback.
+- For Linux and networking changes, validate at each layer before escalating: confirm the process is listening (`ss -tulnp`), then L3 reachability (`ping`), L4 connectivity (`nc -zv`), L7 response (`curl -v`), and security group / NACL rules last. Do not skip layers.
 - For every Terraform change, enforce in order: `terraform fmt -check -recursive`, `terraform validate`, `tflint --recursive`, security scan (`tfsec` or `checkov`), then `plan`. Do not let format or lint failures reach the plan step.
 - Enforce a tag baseline on all cloud resources. The specific keys are an organizational decision. Use AWS `default_tags` (provider level) or Azure `merge(local.common_tags, {...})` (module local) so the baseline is applied once, not repeated per resource. Back it with AWS Tag Policies or Azure Policy so resources created outside Terraform are also covered.
 
@@ -60,6 +63,8 @@ When asked to generate code, start from the thinnest useful slice that proves th
 - For reusable workflows, OIDC, and delivery controls, read [references/github-actions.md](references/github-actions.md).
 - For secrets strategy, External Secrets Operator, and Sealed Secrets patterns, read [references/secrets.md](references/secrets.md).
 - For Linkerd service mesh, mTLS, observability, traffic management, and multi-cluster, read [references/linkerd.md](references/linkerd.md).
+- For Linux administration, DNS, load balancing, VPC/VNet design, kernel tuning, and network troubleshooting, read [references/linux-networking.md](references/linux-networking.md).
+- For product mindset, developer experience, friction audits, RFC/ADR, incident communication, post-mortems, and capacity planning, read [references/platform-mindset.md](references/platform-mindset.md).
 
 Load only the files needed for the current request.
 
@@ -72,3 +77,5 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:terraform` — full fmt/validate/tflint/security pipeline + blast radius review
 - `/platform-skills:gitops` — Flux CD and Argo CD reconciliation troubleshooting
 - `/platform-skills:linkerd` — Linkerd mTLS, injection, policy, and multi-cluster diagnostics
+- `/platform-skills:linux` — Linux administration, DNS, load balancing, VPC/VNet, and connectivity troubleshooting
+- `/platform-skills:product` — product thinking, friction audits, DevEx, RFC/ADR, incident updates, post-mortems

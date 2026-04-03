@@ -312,13 +312,48 @@ jobs:
           echo "claude plugin install ${{ env.SKILL_NAME }}" >> release-notes.md
           echo "\`\`\`" >> release-notes.md
 
-      - name: Create GitHub Release
+      - name: Create GitHub Release (idempotent)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "v${{ needs.validate.outputs.version }}" \
-            --title "Platform Skills v${{ needs.validate.outputs.version }}" \
-            --notes-file release-notes.md
+          VERSION="v${{ needs.validate.outputs.version }}"
+          if gh release view "$VERSION" > /dev/null 2>&1; then
+            echo "✅ Release $VERSION already exists — skipping create"
+          else
+            gh release create "$VERSION" \
+              --title "Platform Skills $VERSION" \
+              --notes-file release-notes.md
+            echo "✅ Release $VERSION created"
+          fi
+
+      - name: Write source.sha to tagged commit and push to main (idempotent)
+        run: |
+          TAG_COMMIT=$(git rev-parse HEAD)
+
+          # Always read and base changes on origin/main, not the local tag checkout.
+          # This makes reruns safe: if a previous run already pushed the update,
+          # origin/main already has the correct SHA and we skip without creating a
+          # duplicate commit that would cause a non-fast-forward failure.
+          git fetch origin main
+          REMOTE_SHA=$(git show origin/main:.claude-plugin/marketplace.json | jq -r '.plugins[0].source.sha')
+
+          if [ "$REMOTE_SHA" = "$TAG_COMMIT" ]; then
+            echo "✅ source.sha already correct on origin/main — nothing to commit"
+            exit 0
+          fi
+
+          # Move HEAD to a branch rooted at origin/main so the commit is
+          # parented to the current main tip, not the detached tag checkout.
+          git switch -C release-marketplace-sha origin/main
+          jq --arg sha "$TAG_COMMIT" '.plugins[0].source.sha = $sha' \
+            .claude-plugin/marketplace.json > tmp.json && mv tmp.json .claude-plugin/marketplace.json
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .claude-plugin/marketplace.json
+          git commit -m "chore: update marketplace.json source.sha to ${TAG_COMMIT}"
+          git push origin HEAD:main
+          echo "✅ source.sha updated to ${TAG_COMMIT} and pushed to main"
 
       - name: Generate release summary
         run: |
@@ -481,6 +516,6 @@ jobs:
           - **README**: https://github.com/${{ github.repository }}/blob/v${{ needs.validate.outputs.version }}/README.md
           - **Changelog**: https://github.com/${{ github.repository }}/blob/v${{ needs.validate.outputs.version }}/CHANGELOG.md
           - **Examples**: https://github.com/${{ github.repository }}/tree/v${{ needs.validate.outputs.version }}/examples
-          - **Release Notes**: ${{ needs.create-release.outputs.html_url }}
+          - **Release Notes**: https://github.com/${{ github.repository }}/releases/tag/v${{ needs.validate.outputs.version }}
 
           EOF
