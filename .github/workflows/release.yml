@@ -342,8 +342,9 @@ jobs:
             exit 0
           fi
 
-          # Base the file on origin/main so the push is always a fast-forward
-          git checkout origin/main -- .claude-plugin/marketplace.json
+          # Move HEAD to a branch rooted at origin/main so the commit is
+          # parented to the current main tip, not the detached tag checkout.
+          git switch -C release-marketplace-sha origin/main
           jq --arg sha "$TAG_COMMIT" '.plugins[0].source.sha = $sha' \
             .claude-plugin/marketplace.json > tmp.json && mv tmp.json .claude-plugin/marketplace.json
 
