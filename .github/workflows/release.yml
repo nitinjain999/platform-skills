@@ -329,13 +329,21 @@ jobs:
       - name: Write source.sha to tagged commit and push to main (idempotent)
         run: |
           TAG_COMMIT=$(git rev-parse HEAD)
-          STORED_SHA=$(jq -r '.plugins[0].source.sha' .claude-plugin/marketplace.json)
 
-          if [ "$STORED_SHA" = "$TAG_COMMIT" ]; then
-            echo "✅ source.sha already correct — nothing to commit"
+          # Always read and base changes on origin/main, not the local tag checkout.
+          # This makes reruns safe: if a previous run already pushed the update,
+          # origin/main already has the correct SHA and we skip without creating a
+          # duplicate commit that would cause a non-fast-forward failure.
+          git fetch origin main
+          REMOTE_SHA=$(git show origin/main:.claude-plugin/marketplace.json | jq -r '.plugins[0].source.sha')
+
+          if [ "$REMOTE_SHA" = "$TAG_COMMIT" ]; then
+            echo "✅ source.sha already correct on origin/main — nothing to commit"
             exit 0
           fi
 
+          # Base the file on origin/main so the push is always a fast-forward
+          git checkout origin/main -- .claude-plugin/marketplace.json
           jq --arg sha "$TAG_COMMIT" '.plugins[0].source.sha = $sha' \
             .claude-plugin/marketplace.json > tmp.json && mv tmp.json .claude-plugin/marketplace.json
 
