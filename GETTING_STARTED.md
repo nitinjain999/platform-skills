@@ -4,7 +4,7 @@ This guide is for people who are new to Claude and want to start using this repo
 
 ## What This Repository Is
 
-`platform-skills` is a platform engineering handbook covering 8 domains: Kubernetes, OpenShift, Argo CD, Flux CD, AWS, Azure, Terraform, and GitHub Actions. You can browse it directly on GitHub, clone it for templates, or install it as a Claude plugin for interactive guidance. The handbook works without installing the plugin.
+`platform-skills` is a platform engineering handbook covering 13 domains: Kubernetes, OpenShift, Argo CD, Flux CD, AWS, Azure, Terraform, GitHub Actions, Secrets management, Linkerd, Linux & Networking, Platform Operating Model, and Platform Mindset. You can browse it directly on GitHub, clone it for templates, or install it as a Claude plugin for interactive guidance. The handbook works without installing the plugin.
 
 It helps with:
 
@@ -13,6 +13,9 @@ It helps with:
 - Terraform module and environment structure
 - AWS and Azure platform decisions
 - GitHub Actions workflow design and review
+- Linkerd service mesh: mTLS, traffic management, and multi-cluster
+- Linux administration, DNS, load balancing, and VPC/VNet networking
+- Developer experience, RFC/ADR drafting, incident communication, and post-mortems
 
 You can use it in four ways:
 

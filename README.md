@@ -40,6 +40,9 @@ Both layers work independently. The plugin is optional.
 | 🚀 GitHub Actions | [references/github-actions.md](references/github-actions.md) | Security hardening, OIDC, SHA pinning, reusable workflows |
 | 🗺️ Platform model | [references/platform-operating-model.md](references/platform-operating-model.md) | Ownership boundaries, promotion flows, cross-tool design |
 | 🔐 Secrets | [references/secrets.md](references/secrets.md) | External Secrets Operator, Sealed Secrets, provider setup, troubleshooting |
+| 🔗 Linkerd | [references/linkerd.md](references/linkerd.md) | mTLS, proxy injection, AuthorizationPolicy, observability, multi-cluster |
+| 🐧 Linux & Networking | [references/linux-networking.md](references/linux-networking.md) | Linux admin, DNS, load balancing, VPC/VNet design, connectivity troubleshooting |
+| 🧠 Platform Mindset | [references/platform-mindset.md](references/platform-mindset.md) | DevEx, friction audits, RFC/ADR, incident comms, post-mortems, capacity planning |
 
 ## Core principles
 
@@ -72,7 +75,7 @@ Every troubleshooting section in the handbook follows this consistent framework 
 
 No installation needed. Navigate directly:
 
-- [examples/](examples/) — copy-paste examples for all 8 domains
+- [examples/](examples/) — copy-paste examples for all domains
 - [references/](references/) — deep-dive domain guides
 - [SKILL.md](SKILL.md) — core patterns and routing logic
 
@@ -120,7 +123,11 @@ platform-skills/
 │   ├── aws.md
 │   ├── azure.md
 │   ├── terraform.md
-│   └── github-actions.md
+│   ├── github-actions.md
+│   ├── secrets.md
+│   ├── linkerd.md
+│   ├── linux-networking.md
+│   └── platform-mindset.md
 │
 ├── examples/                           # Working examples and handbook snippets
 │   ├── flux/basic-monorepo/            # Complete Flux CD monorepo structure
@@ -141,8 +148,10 @@ platform-skills/
 
 ## Roadmap
 
-**v1.3.0**
-- [x] Linkerd: mTLS, observability, traffic management, multi-cluster
+**Completed**
+- [x] v1.3.0 — Linkerd: mTLS, observability, traffic management, multi-cluster
+- [x] v1.5.0 — Linux & Networking: Linux admin, DNS, load balancing, VPC/VNet
+- [x] v1.5.0 — Platform Mindset: DevEx, RFC/ADR, incident comms, post-mortems
 
 **Planned**
 - [ ] GCP: landing zone, GKE, and IAM patterns
@@ -151,7 +160,6 @@ platform-skills/
 - [ ] Policy-as-code: OPA, Kyverno, Gatekeeper
 - [ ] OpenShift operator lifecycle patterns
 - [ ] Argo CD ApplicationSet fleet patterns
-- [ ] Cost optimisation across AWS and Azure
 - [ ] Disaster recovery runbooks for platform components
 - [ ] Multi-cloud networking patterns
 

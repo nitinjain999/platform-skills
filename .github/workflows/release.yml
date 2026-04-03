@@ -118,6 +118,21 @@ jobs:
           echo "✅ All required files present"
           echo "changelog_exists=true" >> $GITHUB_OUTPUT
 
+      - name: Validate marketplace.json source.sha matches tagged commit
+        run: |
+          MARKETPLACE_SHA=$(jq -r '.plugins[0].source.sha' .claude-plugin/marketplace.json)
+          TAG_COMMIT=$(git rev-parse HEAD)
+
+          if [ "$MARKETPLACE_SHA" != "$TAG_COMMIT" ]; then
+            echo "❌ source.sha mismatch!"
+            echo "marketplace.json source.sha: ${MARKETPLACE_SHA}"
+            echo "Tagged commit (HEAD):         ${TAG_COMMIT}"
+            echo ""
+            echo "Update source.sha in .claude-plugin/marketplace.json to ${TAG_COMMIT} and retag."
+            exit 1
+          fi
+          echo "✅ source.sha matches tagged commit: ${TAG_COMMIT}"
+
       - name: Check CHANGELOG.md has entry for this version
         if: steps.check.outputs.changelog_exists == 'true'
         run: |
