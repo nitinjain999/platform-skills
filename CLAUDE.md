@@ -42,6 +42,9 @@ The skill activates when users work with:
 - AWS/Azure infrastructure or IAM/RBAC configuration
 - Terraform modules or state management
 - GitHub Actions workflows or CI/CD security
+- Linkerd service mesh, mTLS, or traffic management
+- Linux system administration, DNS, load balancing, or VPC/VNet networking
+- Developer experience, platform product thinking, or cross-team communication
 - Multi-cloud platform architecture decisions
 
 Activation is automatic based on context, and users can also ask for platform-skills guidance explicitly in conversation.
@@ -64,7 +67,11 @@ references/                   # Deep-dive guides
 ├── aws.md                       # AWS-specific guidance
 ├── azure.md                     # Azure-specific guidance
 ├── terraform.md                 # IaC patterns
-└── github-actions.md            # CI/CD patterns
+├── github-actions.md            # CI/CD patterns
+├── secrets.md                   # Secrets management patterns
+├── linkerd.md                   # Service mesh and mTLS
+├── linux-networking.md          # Linux admin, DNS, LB, VPC/VNet
+└── platform-mindset.md          # DevEx, RFC/ADR, post-mortems, capacity
 
 examples/                     # Working implementations
 ├── flux/                     # GitOps repo structures
@@ -283,7 +290,14 @@ Claude Code discovers this skill via:
 Users can invoke via:
 - **Automatic activation** - Working with relevant files
 - **Explicit request** - Ask for platform-skills guidance in context
-- **Context menus** - Right-click on errors or files
+- **Slash commands** - Explicit entry points for repeatable workflows:
+  - `/platform-skills:debug` - structured troubleshooting for any platform symptom
+  - `/platform-skills:review` - production-readiness review of manifests, Terraform, or workflows
+  - `/platform-skills:terraform` - full fmt/validate/tflint/security pipeline + blast radius review
+  - `/platform-skills:gitops` - Flux CD and Argo CD reconciliation troubleshooting
+  - `/platform-skills:linkerd` - Linkerd mTLS, injection, policy, and multi-cluster diagnostics
+  - `/platform-skills:linux` - Linux admin, DNS, load balancing, VPC/VNet, and connectivity troubleshooting
+  - `/platform-skills:product` - product thinking, friction audits, DevEx, RFC/ADR, incident updates, post-mortems
 
 ### Response Format
 
