@@ -326,34 +326,21 @@ jobs:
             echo "✅ Release $VERSION created"
           fi
 
-      - name: Write source.sha to tagged commit and push to main (idempotent)
+      - name: Validate marketplace.json source.sha matches tagged commit
         run: |
           TAG_COMMIT=$(git rev-parse HEAD)
+          STORED_SHA=$(jq -r '.plugins[0].source.sha' .claude-plugin/marketplace.json)
 
-          # Always read and base changes on origin/main, not the local tag checkout.
-          # This makes reruns safe: if a previous run already pushed the update,
-          # origin/main already has the correct SHA and we skip without creating a
-          # duplicate commit that would cause a non-fast-forward failure.
-          git fetch origin main
-          REMOTE_SHA=$(git show origin/main:.claude-plugin/marketplace.json | jq -r '.plugins[0].source.sha')
-
-          if [ "$REMOTE_SHA" = "$TAG_COMMIT" ]; then
-            echo "✅ source.sha already correct on origin/main — nothing to commit"
-            exit 0
+          if [ "$STORED_SHA" != "$TAG_COMMIT" ]; then
+            echo "❌ marketplace.json source.sha is stale"
+            echo "  stored: ${STORED_SHA}"
+            echo "  tagged: ${TAG_COMMIT}"
+            echo ""
+            echo "Update .claude-plugin/marketplace.json in a PR and merge before creating this tag."
+            exit 1
           fi
 
-          # Move HEAD to a branch rooted at origin/main so the commit is
-          # parented to the current main tip, not the detached tag checkout.
-          git switch -C release-marketplace-sha origin/main
-          jq --arg sha "$TAG_COMMIT" '.plugins[0].source.sha = $sha' \
-            .claude-plugin/marketplace.json > tmp.json && mv tmp.json .claude-plugin/marketplace.json
-
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .claude-plugin/marketplace.json
-          git commit -m "chore: update marketplace.json source.sha to ${TAG_COMMIT}"
-          git push origin HEAD:main
-          echo "✅ source.sha updated to ${TAG_COMMIT} and pushed to main"
+          echo "✅ source.sha matches tagged commit: ${TAG_COMMIT}"
 
       - name: Generate release summary
         run: |
