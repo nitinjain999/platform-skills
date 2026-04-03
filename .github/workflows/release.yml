@@ -312,15 +312,21 @@ jobs:
           echo "claude plugin install ${{ env.SKILL_NAME }}" >> release-notes.md
           echo "\`\`\`" >> release-notes.md
 
-      - name: Create GitHub Release
+      - name: Create GitHub Release (idempotent)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "v${{ needs.validate.outputs.version }}" \
-            --title "Platform Skills v${{ needs.validate.outputs.version }}" \
-            --notes-file release-notes.md
+          VERSION="v${{ needs.validate.outputs.version }}"
+          if gh release view "$VERSION" > /dev/null 2>&1; then
+            echo "✅ Release $VERSION already exists — skipping create"
+          else
+            gh release create "$VERSION" \
+              --title "Platform Skills $VERSION" \
+              --notes-file release-notes.md
+            echo "✅ Release $VERSION created"
+          fi
 
-      - name: Write source.sha to tagged commit and push to main
+      - name: Write source.sha to tagged commit and push to main (idempotent)
         run: |
           TAG_COMMIT=$(git rev-parse HEAD)
           STORED_SHA=$(jq -r '.plugins[0].source.sha' .claude-plugin/marketplace.json)
