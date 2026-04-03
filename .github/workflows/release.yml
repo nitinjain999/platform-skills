@@ -273,29 +273,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Write source.sha to tagged commit and push to main
-        run: |
-          TAG_COMMIT=$(git rev-parse HEAD)
-          STORED_SHA=$(jq -r '.plugins[0].source.sha' .claude-plugin/marketplace.json)
-
-          echo "Tagged commit: ${TAG_COMMIT}"
-          echo "Stored SHA:    ${STORED_SHA}"
-
-          if [ "$STORED_SHA" = "$TAG_COMMIT" ]; then
-            echo "✅ source.sha already correct — nothing to commit"
-            exit 0
-          fi
-
-          jq --arg sha "$TAG_COMMIT" '.plugins[0].source.sha = $sha' \
-            .claude-plugin/marketplace.json > tmp.json && mv tmp.json .claude-plugin/marketplace.json
-
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .claude-plugin/marketplace.json
-          git commit -m "chore: update marketplace.json source.sha to ${TAG_COMMIT}"
-          git push origin HEAD:main
-          echo "✅ source.sha updated to ${TAG_COMMIT} and pushed to main"
-
       - name: Extract changelog for this version
         id: changelog
         run: |
@@ -342,6 +319,26 @@ jobs:
           gh release create "v${{ needs.validate.outputs.version }}" \
             --title "Platform Skills v${{ needs.validate.outputs.version }}" \
             --notes-file release-notes.md
+
+      - name: Write source.sha to tagged commit and push to main
+        run: |
+          TAG_COMMIT=$(git rev-parse HEAD)
+          STORED_SHA=$(jq -r '.plugins[0].source.sha' .claude-plugin/marketplace.json)
+
+          if [ "$STORED_SHA" = "$TAG_COMMIT" ]; then
+            echo "✅ source.sha already correct — nothing to commit"
+            exit 0
+          fi
+
+          jq --arg sha "$TAG_COMMIT" '.plugins[0].source.sha = $sha' \
+            .claude-plugin/marketplace.json > tmp.json && mv tmp.json .claude-plugin/marketplace.json
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .claude-plugin/marketplace.json
+          git commit -m "chore: update marketplace.json source.sha to ${TAG_COMMIT}"
+          git push origin HEAD:main
+          echo "✅ source.sha updated to ${TAG_COMMIT} and pushed to main"
 
       - name: Generate release summary
         run: |
