@@ -8,7 +8,7 @@
     {
       "name": "platform-skills",
       "version": "1.5.0",
-      "description": "Practical guidance for developers and DevOps engineers working with Kubernetes, Terraform, GitHub Actions, Flux, Argo CD, AWS, Azure, and secrets management. Get troubleshooting guides, security-first patterns, and working examples for Kubernetes workloads, GitOps workflows, CI/CD pipelines, cloud IAM, RBAC, and infrastructure as code — at any scale.",
+      "description": "Practical guidance for platform engineers: Kubernetes, Terraform, GitOps, GitHub Actions, AWS, Azure, Linkerd, Linux administration, networking, and platform product thinking. Covers troubleshooting, security-first patterns, DevEx, RFC/ADR, and working examples — at any scale.",
       "author": {
         "name": "Nitin Jain"
       },
@@ -40,7 +40,13 @@
         "platform-engineering",
         "linkerd",
         "service-mesh",
-        "mtls"
+        "mtls",
+        "linux",
+        "networking",
+        "dns",
+        "developer-experience",
+        "devex",
+        "platform-mindset"
       ],
       "source": {
         "source": "url",

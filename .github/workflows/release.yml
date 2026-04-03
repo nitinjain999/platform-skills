@@ -128,7 +128,11 @@ jobs:
             echo "marketplace.json source.sha: ${MARKETPLACE_SHA}"
             echo "Tagged commit (HEAD):         ${TAG_COMMIT}"
             echo ""
-            echo "Update source.sha in .claude-plugin/marketplace.json to ${TAG_COMMIT} and retag."
+            echo "The update-marketplace-sha workflow should have set this automatically on the"
+            echo "last push to main. Wait for that workflow to complete before tagging, or run:"
+            echo "  jq --arg sha ${TAG_COMMIT} '.plugins[0].source.sha = \$sha' .claude-plugin/marketplace.json > tmp.json"
+            echo "  mv tmp.json .claude-plugin/marketplace.json && git commit -am 'chore: fix source.sha' && git push"
+            echo "Then delete and re-create the tag."
             exit 1
           fi
           echo "✅ source.sha matches tagged commit: ${TAG_COMMIT}"
@@ -496,6 +500,6 @@ jobs:
           - **README**: https://github.com/${{ github.repository }}/blob/v${{ needs.validate.outputs.version }}/README.md
           - **Changelog**: https://github.com/${{ github.repository }}/blob/v${{ needs.validate.outputs.version }}/CHANGELOG.md
           - **Examples**: https://github.com/${{ github.repository }}/tree/v${{ needs.validate.outputs.version }}/examples
-          - **Release Notes**: ${{ needs.create-release.outputs.html_url }}
+          - **Release Notes**: https://github.com/${{ github.repository }}/releases/tag/v${{ needs.validate.outputs.version }}
 
           EOF
