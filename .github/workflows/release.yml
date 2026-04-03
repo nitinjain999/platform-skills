@@ -273,6 +273,22 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Validate marketplace.json source.sha matches tagged commit
+        run: |
+          TAG_COMMIT=$(git rev-parse HEAD)
+          STORED_SHA=$(jq -r '.plugins[0].source.sha' .claude-plugin/marketplace.json)
+
+          if [ "$STORED_SHA" != "$TAG_COMMIT" ]; then
+            echo "❌ marketplace.json source.sha is stale"
+            echo "  stored: ${STORED_SHA}"
+            echo "  tagged: ${TAG_COMMIT}"
+            echo ""
+            echo "Update .claude-plugin/marketplace.json in a PR and merge before creating this tag."
+            exit 1
+          fi
+
+          echo "✅ source.sha matches tagged commit: ${TAG_COMMIT}"
+
       - name: Extract changelog for this version
         id: changelog
         run: |
@@ -325,22 +341,6 @@ jobs:
               --notes-file release-notes.md
             echo "✅ Release $VERSION created"
           fi
-
-      - name: Validate marketplace.json source.sha matches tagged commit
-        run: |
-          TAG_COMMIT=$(git rev-parse HEAD)
-          STORED_SHA=$(jq -r '.plugins[0].source.sha' .claude-plugin/marketplace.json)
-
-          if [ "$STORED_SHA" != "$TAG_COMMIT" ]; then
-            echo "❌ marketplace.json source.sha is stale"
-            echo "  stored: ${STORED_SHA}"
-            echo "  tagged: ${TAG_COMMIT}"
-            echo ""
-            echo "Update .claude-plugin/marketplace.json in a PR and merge before creating this tag."
-            exit 1
-          fi
-
-          echo "✅ source.sha matches tagged commit: ${TAG_COMMIT}"
 
       - name: Generate release summary
         run: |
