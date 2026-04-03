@@ -32,6 +32,7 @@
     "./commands/review.md",
     "./commands/gitops.md",
     "./commands/linkerd.md",
+    "./commands/linux.md",
     "./commands/product.md"
   ]
 }

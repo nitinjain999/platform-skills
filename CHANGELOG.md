@@ -12,7 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `references/platform-mindset.md` — product mindset, developer experience (SPACE/DORA metrics, friction audits, golden paths, Backstage), collaboration and communication (RFC/ADR templates, incident updates, blameless post-mortems), and proactive problem-solving (systemic fixes, capacity planning, cost optimisation loop, quarterly platform health review)
 - `/platform-skills:product` command (`commands/product.md`) — applies product thinking to platform work across eight topics: devex, friction, rfc, adr, incident, postmortem, capacity, cost, and review
-- Domain 8 added to SKILL.md tool-routing section: `Platform Mindset`
+- `references/linux-networking.md` — Linux administration (process/service management, disk, memory/CPU, kernel tuning, permissions) and networking fundamentals (DNS record types, CoreDNS, Route 53, Azure Private DNS, ALB/NLB, Ingress/Gateway API, VPC/VNet CIDR design, subnet tiers, peering vs Transit Gateway, PrivateLink, NSGs, troubleshooting checklists)
+- `/platform-skills:linux` command (`commands/linux.md`) — structured guidance for dns, lb, vpc, process, disk, network, security-groups, and troubleshoot topics
+- Domain 8 added to SKILL.md tool-routing section: `Linux & Networking`
+- Domain 9 added to SKILL.md tool-routing section: `Platform Mindset`
 
 ## [1.4.2] - 2026-04-02
 

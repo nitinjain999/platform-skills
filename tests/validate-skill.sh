@@ -43,6 +43,7 @@ REQUIRED_REFERENCES=(
   references/github-actions.md
   references/secrets.md
   references/linkerd.md
+  references/linux-networking.md
   references/platform-mindset.md
 )
 
