@@ -1,0 +1,50 @@
+name: Sync Flux CD GitOps Skills
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'  # Every Monday at 06:00 UTC
+  workflow_dispatch:       # Allow manual trigger
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sync:
+    name: Sync from fluxcd/agent-skills
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Sync Flux CD GitOps skills from upstream
+        run: bash scripts/sync-fluxcd-skills.sh
+
+      - name: Create pull request if files changed
+        uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0  # v8.1.0
+        with:
+          commit-message: |
+            chore: sync fluxcd gitops skills from upstream
+
+            Automated sync from https://github.com/fluxcd/agent-skills
+          title: "chore: sync fluxcd gitops skills from upstream"
+          body: |
+            ## Automated Upstream Sync
+
+            This PR was created automatically by the `sync-fluxcd-skills` workflow.
+
+            **Source:** [fluxcd/agent-skills](https://github.com/fluxcd/agent-skills) (`main`)
+
+            **Updated skills:**
+            - `skills/gitops-knowledge` — SKILL.md, OpenAPI schemas, references
+            - `skills/gitops-repo-audit` — SKILL.md, OpenAPI schemas, references, scripts
+            - `skills/gitops-cluster-debug` — SKILL.md, OpenAPI schemas, references
+
+            ### Review checklist
+            - [ ] No breaking changes to skill behavior
+            - [ ] Schema updates are additive (no removed fields)
+            - [ ] Scripts changes are safe to run
+          branch: chore/sync-fluxcd-skills
+          base: main
+          labels: dependencies
+          delete-branch: true

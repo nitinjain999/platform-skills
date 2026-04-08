@@ -3,3 +3,20 @@ Copyright 2026 Nitin Jain
 
 This project is licensed under the Apache License, Version 2.0.
 See the LICENSE file for the full license text.
+
+---
+
+This project includes files from fluxcd/agent-skills:
+  https://github.com/fluxcd/agent-skills
+
+  Copyright The Flux authors
+  Licensed under the Apache License, Version 2.0
+
+  Included files (auto-synced via scripts/sync-fluxcd-skills.sh):
+    skills/gitops-knowledge/
+    skills/gitops-repo-audit/
+    skills/gitops-cluster-debug/
+
+  These files are reproduced without modification from the upstream project.
+  See https://github.com/fluxcd/agent-skills/blob/main/LICENSE for the
+  original license text.

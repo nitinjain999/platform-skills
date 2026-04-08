@@ -29,7 +29,10 @@
     "devex"
   ],
   "skills": [
-    "./skills/platform-skills"
+    "./skills/platform-skills",
+    "./skills/gitops-knowledge",
+    "./skills/gitops-repo-audit",
+    "./skills/gitops-cluster-debug"
   ],
   "commands": [
     "./commands/terraform.md",
