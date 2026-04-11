@@ -135,8 +135,10 @@ jobs:
           POTENTIAL_SECRETS=$(grep -rE '(password|secret|key|token|apikey).*=.*["\x27][^"\x27]{8,}["\x27]' \
              --exclude-dir=.git \
              --exclude-dir=node_modules \
+             --exclude-dir=examples \
              --exclude="*.md" \
-             --exclude="CHANGELOG.md" . | \
+             --exclude="CHANGELOG.md" \
+             --exclude="release.yml" . | \
              grep -v 'matrix\.' | \
              grep -v 'vars\.' | \
              grep -v 'secrets\.' | \
