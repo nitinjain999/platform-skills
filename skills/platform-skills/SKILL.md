@@ -1,6 +1,6 @@
 ---
 name: platform-skills
-description: Hands-on guidance for platform and DevOps engineers working with Kubernetes, Terraform, GitOps, GitHub Actions, AWS, Azure, Linkerd, Linux, and networking. Use when designing or troubleshooting Kubernetes workloads and RBAC, writing Terraform modules, configuring Flux or Argo CD, setting up CI/CD pipelines, managing cloud identity and IAM, handling secrets, diagnosing DNS or VPC connectivity, operating a service mesh, or applying product thinking to developer experience — at any scale, for any team size.
+description: Hands-on guidance for platform and DevOps engineers working with Kubernetes, Terraform, GitOps, GitHub Actions, AWS, Azure, Linkerd, Linux, networking, and compliance. Use when designing or troubleshooting Kubernetes workloads and RBAC, writing Terraform modules, configuring Flux or Argo CD, setting up CI/CD pipelines, managing cloud identity and IAM, handling secrets, diagnosing DNS or VPC connectivity, operating a service mesh, applying product thinking to developer experience, or implementing SOC 2 compliance controls in Terraform — at any scale, for any team size.
 ---
 
 # Platform Skills
@@ -21,6 +21,7 @@ Match the task to the right layer:
 8. `Linux & Networking`: Diagnose Linux systems and network problems — DNS resolution, load balancer routing, VPC/VNet design, kernel tuning, and connectivity troubleshooting.
 9. `Platform Mindset`: Treat developers as customers. Apply product thinking, friction audits, DevEx metrics, RFC/ADR processes, incident communication, and blameless post-mortems.
 10. `Cross-platform`: Design repo boundaries, ownership, promotion flows, and security controls first.
+11. `Compliance`: Implement SOC 2 Trust Services Criteria controls in Terraform — IAM least privilege, encryption, audit logging, network security, and change management. Run Checkov for continuous enforcement and collect evidence for auditors.
 
 If a task spans multiple areas, decide which layer owns the source of truth and keep the other layers consumers of that state.
 
@@ -65,6 +66,7 @@ When asked to generate code, start from the thinnest useful slice that proves th
 - For Linkerd service mesh, mTLS, observability, traffic management, and multi-cluster, read [references/linkerd.md](references/linkerd.md).
 - For Linux administration, DNS, load balancing, VPC/VNet design, kernel tuning, and network troubleshooting, read [references/linux-networking.md](references/linux-networking.md).
 - For product mindset, developer experience, friction audits, RFC/ADR, incident communication, post-mortems, and capacity planning, read [references/platform-mindset.md](references/platform-mindset.md).
+- For SOC 2 Trust Services Criteria controls in Terraform — IAM, encryption, audit logging, network security, change management, Checkov enforcement, and audit evidence — read [references/compliance.md](references/compliance.md).
 
 Load only the files needed for the current request.
 
@@ -79,3 +81,4 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:linkerd` — Linkerd mTLS, injection, policy, and multi-cluster diagnostics
 - `/platform-skills:linux` — Linux administration, DNS, load balancing, VPC/VNet, and connectivity troubleshooting
 - `/platform-skills:product` — product thinking, friction audits, DevEx, RFC/ADR, incident updates, post-mortems
+- `/platform-skills:compliance` — SOC 2 gap analysis, control implementation, evidence collection, and Checkov remediation for Terraform

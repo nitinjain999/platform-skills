@@ -163,28 +163,28 @@ Reviewers may:
 
 ## What We're Looking For
 
-### High Priority
+### High Priority (v1.7.0 targets)
 
-- **Linkerd examples** — working `examples/linkerd/` assets (HTTPRoute canary split, authorization policy, PodMonitor) to back up `references/linkerd.md`
-- **IAM policy examples** showing least-privilege patterns
-- **GitHub Actions security fixes** for common vulnerabilities
-- **Disaster recovery runbooks** for platform components
+- **SOC 2 for Kubernetes** — Kyverno `ClusterPolicy` resources mapped to SOC 2 Trust Services Criteria (privileged containers, required labels, image tag mutability, non-root enforcement); `kube-bench` CIS Benchmark integration; pod security admission evidence commands. Backs up `references/compliance.md` with a Kubernetes layer.
+- **HIPAA and PCI-DSS control mapping** — extend `references/compliance.md` with HIPAA §164.3xx and PCI-DSS Req 1–12 mapped to existing Terraform patterns. Most controls overlap with SOC 2; the work is mapping, evidence commands, and a per-framework readiness checklist.
+- **Linkerd examples** — working `examples/linkerd/` assets (HTTPRoute canary split, `AuthorizationPolicy` + `MeshTLSAuthentication`, PodMonitor) to back up `references/linkerd.md`
 
-### Medium Priority
+### Medium Priority (v1.8.0 targets)
 
-- **Observability patterns**: Prometheus, Grafana, Loki integration examples
-- **Cost optimization patterns** across AWS and Azure
-- **Multi-cloud networking patterns** for hybrid environments
-- **Policy-as-code**: OPA, Kyverno, or Gatekeeper examples
-- **Testing strategies** for infrastructure changes
-- **Migration guides** between tool versions
+- **Azure compliance** — SOC 2 controls in Terraform for Azure: Azure Policy assignments (CIS benchmark initiative), Defender for Cloud standards, Monitor diagnostic settings for audit logging, Azure Backup. Mirrors the AWS compliance domain.
+- **Observability patterns** — Prometheus `ServiceMonitor` / `PodMonitor`, Grafana dashboard-as-code, Loki log pipeline, alerting rules with runbook annotations
+- **Cost optimisation patterns** — AWS Compute Optimizer integration in Terraform, resource tagging enforcement with Config rules, showback via Cost and Usage Report
+- **Policy-as-code** — OPA/Gatekeeper `ConstraintTemplate` and Kyverno `ClusterPolicy` examples with SOC 2 and CIS Benchmark annotations
+- **Testing strategies** — `terratest` module tests, `kubeconform` + `conftest` in CI, contract testing for Helm values
 
 ### Lower Priority (But Still Welcome)
 
-- **Alternative approaches** to existing patterns
-- **Edge case handling** for documented patterns
-- **Tool comparisons** with decision frameworks
-- **GCP patterns**: landing zone, GKE, and IAM
+- **GCP patterns** — landing zone, GKE, Workload Identity, and IAM examples
+- **Istio** — traffic management, mTLS, and telemetry (counterpart to the Linkerd domain)
+- **Migration guides** — Flux v1 → v2, Helm 2 → 3, EKS 1.27 → 1.30
+- **Multi-cloud networking** — Transit Gateway, VNet peering, PrivateLink, cross-cloud DNS
+- **Alternative approaches** to existing patterns with documented trade-offs
+- **Argo CD ApplicationSet** — cluster generator, matrix strategy, and progressive rollout examples
 
 ## Documentation Standards
 

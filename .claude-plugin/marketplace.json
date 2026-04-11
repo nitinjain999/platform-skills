@@ -7,8 +7,8 @@
   "plugins": [
     {
       "name": "platform-skills",
-      "version": "1.5.0",
-      "description": "Practical guidance for platform engineers: Kubernetes, Terraform, GitOps, GitHub Actions, AWS, Azure, Linkerd, Linux administration, networking, and platform product thinking. Covers troubleshooting, security-first patterns, DevEx, RFC/ADR, and working examples — at any scale.",
+      "version": "1.6.0",
+      "description": "Practical guidance for platform engineers: Kubernetes, Terraform, GitOps, GitHub Actions, AWS, Azure, Linkerd, Linux administration, networking, platform product thinking, and SOC 2 compliance for Terraform. Covers troubleshooting, security-first patterns, DevEx, RFC/ADR, compliance controls, and working examples — at any scale.",
       "author": {
         "name": "Nitin Jain"
       },
@@ -46,7 +46,13 @@
         "dns",
         "developer-experience",
         "devex",
-        "platform-mindset"
+        "platform-mindset",
+        "compliance",
+        "soc2",
+        "checkov",
+        "audit-logging",
+        "iam-least-privilege",
+        "cloudtrail"
       ],
       "source": {
         "source": "url",
