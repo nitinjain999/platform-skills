@@ -231,7 +231,7 @@ resource "aws_cloudtrail" "compliance" {
     # Log all S3 object-level read/write events — required for CC7.2 audit evidence
     data_resource {
       type   = "AWS::S3::Object"
-      values = ["arn:aws:s3:::"]   # All buckets; scope to specific buckets in cost-sensitive envs
+      values = ["arn:aws:s3:::"] # All buckets; scope to specific buckets in cost-sensitive envs
     }
   }
 

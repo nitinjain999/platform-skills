@@ -449,5 +449,5 @@ resource "aws_redshift_logging" "main" {
   bucket_name          = var.redshift_audit_log_bucket_name
   s3_key_prefix        = "redshift/production-dw/"
   log_destination_type = "s3"
-  log_exports          = ["connectionlog", "useractivitylog", "userlog"]   # CC7.2: audit trail
+  log_exports          = ["connectionlog", "useractivitylog", "userlog"] # CC7.2: audit trail
 }

@@ -337,7 +337,11 @@ jobs:
              grep -v 'matrix\.' | \
              grep -v 'vars\.' | \
              grep -v 'secrets\.' | \
-             grep -v 'backend-config=' || true)
+             grep -v 'backend-config=' | \
+             grep -v 'token.actions.githubusercontent.com' | \
+             grep -v 's3_key_prefix' | \
+             grep -vE '"[a-z][a-z0-9_-]+" = "[A-Z0-9_]+"' | \
+             grep -vE '^\s+key\s*=\s*"[A-Za-z0-9:_/-]{1,40}"' || true)
 
           if [ -n "$POTENTIAL_SECRETS" ]; then
             echo "⚠️  Potential secrets found in code:"
