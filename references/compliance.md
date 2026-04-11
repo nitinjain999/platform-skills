@@ -1642,7 +1642,6 @@ CKV_AWS_35   — Ensure CloudTrail logs are encrypted using KMS CMK
 CKV_AWS_67   — Ensure CloudTrail is enabled in all regions (is_multi_region_trail)
 CKV2_AWS_10  — Ensure CloudTrail trails are integrated with CloudWatch Logs
 CKV_AWS_91   — Ensure S3 bucket has access logging enabled
-CKV_AWS_71   — Ensure Redshift cluster logging is enabled
 CKV_AWS_84   — Ensure OpenSearch logging is enabled
 ```
 

@@ -426,19 +426,19 @@ resource "aws_redshift_cluster" "main" {
 
   # A1.2: 35-day automated snapshot retention
   automated_snapshot_retention_period = 35
-  snapshot_window                     = "03:00-05:00"
 
   # A1.1: multi-AZ (Redshift RA3 clusters only — dc2 uses multi-node instead)
   availability_zone_relocation_enabled = false
 
-  # CC7.2: ship database audit logs to an immutable S3 log bucket.
-  logging {
-    enable        = true
-    bucket_name   = var.redshift_audit_log_bucket_name
-    s3_key_prefix = "redshift/production-dw/"
-  }
-
   tags = local.common_tags
+}
+
+resource "aws_redshift_logging" "main" {
+  cluster_identifier   = aws_redshift_cluster.main.cluster_identifier
+  bucket_name          = var.redshift_audit_log_bucket_name
+  s3_key_prefix        = "redshift/production-dw/"
+  log_destination_type = "s3"
+  log_exports          = ["connectionlog", "useractivitylog", "userlog"]
 }
 
 variable "redshift_audit_log_bucket_name" {
