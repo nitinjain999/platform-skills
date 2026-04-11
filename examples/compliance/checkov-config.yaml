@@ -1,0 +1,108 @@
+# .checkov.yaml — Checkov configuration for SOC 2 compliance scanning
+#
+# Run from this directory with:
+#   checkov -d . --config-file checkov-config.yaml
+#
+# Check IDs are grouped by SOC 2 Trust Services Criterion for traceability.
+# To add a suppression, move the check ID to the skip-check list and document
+# the justification in a comment.
+
+compact: true
+download-external-modules: false
+evaluate-variables: true
+framework:
+  - terraform
+
+# Checks required for SOC 2 audit coverage.
+# Removing a check ID here must be accompanied by a documented compensating control.
+check:
+  # --- CC6.1: Logical Access Controls ---
+  - CKV_AWS_40    # IAM user policies should not be attached inline
+  - CKV_AWS_274   # Disallow IAM role with AdministratorAccess policy
+  - CKV_AWS_1     # Ensure IAM policy does not have Action *
+  - CKV_AWS_275   # Disallow IAM role with inline policy containing wildcards
+
+  # --- CC6.2: Authentication ---
+  - CKV_AWS_44    # Ensure IAM password policy requires MFA
+  - CKV2_AWS_57   # Ensure IAM user has MFA device enabled
+  - CKV_AWS_9     # Ensure IAM password policy expires passwords
+
+  # --- CC6.6: Network Security + WAF ---
+  - CKV_AWS_25    # Ensure no security groups allow ingress 0.0.0.0/0 to port 22
+  - CKV_AWS_24    # Ensure no security groups allow ingress 0.0.0.0/0 to port 3389
+  - CKV_AWS_260   # Ensure no security groups allow ingress 0.0.0.0/0 to port 80
+  - CKV2_AWS_12   # Ensure VPC flow logs are enabled
+  - CKV2_AWS_11   # Ensure VPC has a default security group that restricts all traffic
+  - CKV_AWS_148   # Ensure EKS node groups are deployed in private subnets
+  - CKV2_AWS_31   # Ensure WAF2 has a logging configuration
+
+  # --- CC6.7: Encryption — core ---
+  - CKV_AWS_19    # Ensure S3 bucket has server-side encryption enabled
+  - CKV_AWS_18    # Ensure S3 bucket has access logging enabled
+  - CKV_AWS_21    # Ensure S3 bucket versioning is enabled
+  - CKV_AWS_53    # Ensure S3 bucket has block public ACLs enabled
+  - CKV_AWS_54    # Ensure S3 bucket has block public policy enabled
+  - CKV2_AWS_6    # Ensure S3 bucket has public access block enabled
+  - CKV_AWS_16    # Ensure RDS is encrypted at rest
+  - CKV_AWS_17    # Ensure RDS is not publicly accessible
+  - CKV_AWS_7     # Ensure KMS key rotation is enabled
+  - CKV_AWS_211   # Ensure RDS uses a modern CA certificate
+
+  # --- CC6.7: Encryption — data services ---
+  - CKV_AWS_28    # Ensure DynamoDB is encrypted with a KMS CMK
+  - CKV_AWS_119   # Ensure DynamoDB point-in-time recovery is enabled
+  - CKV_AWS_136   # Ensure ECR is encrypted with a KMS CMK
+  - CKV_AWS_163   # Ensure ECR image tags are immutable
+  - CKV_AWS_29    # Ensure ElastiCache is encrypted at rest
+  - CKV_AWS_30    # Ensure ElastiCache has transit encryption enabled
+  - CKV_AWS_31    # Ensure ElastiCache transit encryption uses an auth token
+  - CKV_AWS_191   # Ensure ElastiCache is encrypted at rest with a KMS CMK
+  - CKV_AWS_5     # Ensure OpenSearch is encrypted at rest
+  - CKV_AWS_6     # Ensure OpenSearch encrypts node-to-node traffic
+  - CKV_AWS_83    # Ensure OpenSearch enforces HTTPS
+  - CKV_AWS_228   # Ensure OpenSearch uses a current TLS policy
+  - CKV_AWS_247   # Ensure OpenSearch is encrypted with a KMS CMK
+  - CKV_AWS_186   # Ensure Kinesis stream is encrypted with a KMS CMK
+  - CKV_AWS_42    # Ensure EFS is encrypted at rest
+  - CKV_AWS_64    # Ensure Redshift cluster is encrypted at rest
+  - CKV_AWS_87    # Ensure Redshift is not publicly accessible
+  - CKV_AWS_105   # Ensure Redshift requires SSL connections
+  - CKV_AWS_142   # Ensure Redshift cluster is encrypted with KMS
+  - CKV_AWS_321   # Ensure Redshift uses enhanced VPC routing
+
+  # --- CC6.8: Vulnerability Management ---
+  - CKV_AWS_8     # Ensure ECR image scanning on push is enabled
+  - CKV_AWS_65    # Ensure ECR image scanning is enabled
+
+  # --- CC7.1: Detection ---
+  - CKV2_AWS_35   # Ensure GuardDuty is enabled
+  - CKV_AWS_193   # Ensure GuardDuty has S3 logs enabled
+
+  # --- CC7.2: Audit Logging ---
+  - CKV_AWS_36    # Ensure CloudTrail log file validation is enabled
+  - CKV_AWS_35    # Ensure CloudTrail logs are encrypted using KMS CMK
+  - CKV_AWS_67    # Ensure CloudTrail is enabled in all regions
+  - CKV2_AWS_10   # Ensure CloudTrail trails are integrated with CloudWatch Logs
+  - CKV_AWS_91    # Ensure S3 bucket has access logging enabled
+  - CKV_AWS_71    # Ensure Redshift cluster logging is enabled
+  - CKV_AWS_84    # Ensure OpenSearch logging is enabled
+
+  # --- CC7.3: Incident Response ---
+  - CKV_AWS_26    # Ensure SNS topic is encrypted at rest using KMS
+
+  # --- CC8.1: Change Management ---
+  - CKV_TF_1      # Ensure Terraform module sources use a commit hash
+  - CKV_TF_2      # Ensure Terraform registry module sources use a version tag
+
+  # --- A1.1 / A1.2: Availability + Backup ---
+  - CKV_AWS_157   # Ensure RDS has multi-AZ enabled
+  - CKV_AWS_133   # Ensure RDS cluster has backup retention period set
+  - CKV_AWS_166   # Ensure Backup Vault is encrypted at rest using KMS CMK
+
+# Suppressions — each must be documented with a justification.
+# Format: "Justification: <reason> [Owner: <team>] [Review: YYYY-MM-DD]"
+skip-check: []
+# Example:
+# skip-check:
+#   - CKV_AWS_8   # Justification: registry-level scanning via aws_ecr_registry_scanning_configuration — per-repo scan_on_push redundant [Owner: platform] [Review: 2026-07-01]
+#   - CKV2_AWS_35 # Justification: GuardDuty managed by Security team in master account, not provisioned per-workload [Owner: security] [Review: 2026-07-01]

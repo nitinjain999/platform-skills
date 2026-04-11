@@ -45,6 +45,7 @@ REQUIRED_REFERENCES=(
   references/linkerd.md
   references/linux-networking.md
   references/platform-mindset.md
+  references/compliance.md
 )
 
 for ref in "${REQUIRED_REFERENCES[@]}"; do
@@ -67,6 +68,7 @@ EXAMPLE_DOMAINS=(
   examples/flux
   examples/terraform
   examples/github-actions
+  examples/compliance
 )
 
 for domain in "${EXAMPLE_DOMAINS[@]}"; do

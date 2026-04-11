@@ -1,7 +1,7 @@
 {
   "name": "platform-skills",
-  "version": "1.5.0",
-  "description": "Practical guidance for platform engineers: Kubernetes, Terraform, GitOps, GitHub Actions, AWS, Azure, Linkerd, Linux administration, networking, and platform product thinking.",
+  "version": "1.6.0",
+  "description": "Practical guidance for platform engineers: Kubernetes, Terraform, GitOps, GitHub Actions, AWS, Azure, Linkerd, Linux administration, networking, platform product thinking, and SOC 2 compliance for Terraform.",
   "author": {
     "name": "Nitin Jain",
     "email": "nitin.solna@gmail.com",
@@ -38,6 +38,7 @@
     "./commands/gitops.md",
     "./commands/linkerd.md",
     "./commands/linux.md",
-    "./commands/product.md"
+    "./commands/product.md",
+    "./commands/compliance.md"
   ]
 }

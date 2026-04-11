@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-04-11
+
+### Added
+
+#### Compliance Domain (SOC 2 for Terraform)
+
+New Domain 11: `Compliance` — SOC 2 Trust Services Criteria mapped to Terraform patterns, covering 11 criteria across access, encryption, detection, logging, change management, and availability.
+
+**Reference guide:**
+- `references/compliance.md` — full SOC 2 TSC coverage with Terraform patterns, Checkov rule IDs, AWS CLI evidence commands, and a pre-audit readiness checklist
+
+**Criteria covered with Terraform patterns, Checkov rules, and evidence commands:**
+- `CC6.1` — IAM least privilege: scoped policies, IRSA, SCPs denying privilege escalation
+- `CC6.2` — Authentication: MFA-enforcement SCP, GitHub Actions OIDC (no static credentials)
+- `CC6.3` — Access removal: access key rotation via Config `access-keys-rotated` rule
+- `CC6.6` — Network security: security groups, private subnets, VPC flow logs, WAF (`aws_wafv2_web_acl`) with rate limiting and AWS managed rule groups
+- `CC6.7` — Encryption: S3, RDS, EBS, KMS; extended to DynamoDB, ECR, ElastiCache, OpenSearch, Kinesis, EFS, and Redshift
+- `CC6.8` — Vulnerability management: `aws_ecr_registry_scanning_configuration` (ENHANCED + CONTINUOUS_SCAN), `aws_inspector2_enabler`, `aws_ssm_patch_baseline`
+- `CC7.1` — Detection: `aws_guardduty_detector` (S3, EKS, malware sources), 7 CIS Benchmark CloudWatch metric filters and alarms (root usage, unauthorized API calls, IAM policy changes, CloudTrail changes, S3 policy changes, security group changes), `aws_securityhub_account` with AWS Foundational and CIS standards
+- `CC7.2` — Audit logging: multi-region CloudTrail with KMS encryption, S3 object lock (COMPLIANCE mode, 365-day), AWS Config recorder with 12 SOC 2-relevant managed rules, VPC flow logs
+- `CC7.3` — Incident response: KMS-encrypted SNS topic with email and PagerDuty subscriptions, GuardDuty HIGH/CRITICAL findings → EventBridge → SNS pipeline, Config delivery channel with SNS notification
+- `CC8.1` — Change management: S3 + DynamoDB state locking, PR-gated Terraform plan/apply workflow with plan posted as PR comment
+- `A1.1` — Availability: multi-AZ EKS node groups, RDS multi-AZ
+- `A1.2 / A1.3` — Backup and recovery: `aws_backup_plan` (daily 35-day + monthly 1-year), `aws_backup_vault_lock_configuration` (COMPLIANCE mode, 35-day minimum), cross-region copy for DR, tag-based backup selection
+
+**Slash command:**
+- `/platform-skills:compliance` (`commands/compliance.md`) — five modes: `gap` (find audit blockers), `control` (implement a specific criterion), `evidence` (generate audit-ready CLI commands), `remediate` (fix a Checkov finding with blast-radius analysis), `checklist` (full SOC 2 readiness review)
+
+**Examples:**
+- `examples/compliance/checkov-config.yaml` — Checkov config with all SOC 2 check IDs grouped by criterion and documented suppression format
+- `examples/compliance/iam/` — IRSA application role, GitHub Actions OIDC trust (plan + apply), SCPs for MFA enforcement and privilege escalation prevention
+- `examples/compliance/logging/` — CloudTrail with object lock, AWS Config recorder with 12 managed rules, VPC flow logs
+- `examples/compliance/network/` — WAF, security groups, and VPC flow logs
+- `examples/compliance/encryption-data-services/` — DynamoDB, ECR, ElastiCache, OpenSearch, Kinesis, EFS, and Redshift encryption/logging controls
+- `examples/compliance/vulnerability/` — Inspector v2, ECR enhanced scanning, and SSM patching
+- `examples/compliance/detection/` — GuardDuty, CIS CloudWatch alarms, and Security Hub
+- `examples/compliance/incident-response/` — KMS-encrypted SNS, EventBridge alert routing, and PagerDuty subscription
+- `examples/compliance/backup/` — AWS Backup plan, vault lock, and cross-region DR copies
+
+**Infrastructure updates:**
+- Domain 11 (`Compliance`) added to `skills/platform-skills/SKILL.md` tool-routing and reference file list
+- `references/compliance.md` added to `REQUIRED_REFERENCES` in `tests/validate-skill.sh`
+- `examples/compliance` added to `EXAMPLE_DOMAINS` in `tests/validate-skill.sh`
+- `compliance`, `soc2`, `checkov`, `audit-logging`, `iam-least-privilege`, `cloudtrail` added to `marketplace.json` keywords
+
 ## [1.5.0] - 2026-04-03
 
 ### Added

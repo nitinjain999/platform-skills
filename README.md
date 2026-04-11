@@ -43,6 +43,7 @@ Both layers work independently. The plugin is optional.
 | 🔗 Linkerd | [references/linkerd.md](references/linkerd.md) | mTLS, proxy injection, AuthorizationPolicy, observability, multi-cluster |
 | 🐧 Linux & Networking | [references/linux-networking.md](references/linux-networking.md) | Linux admin, DNS, load balancing, VPC/VNet design, connectivity troubleshooting |
 | 🧠 Platform Mindset | [references/platform-mindset.md](references/platform-mindset.md) | DevEx, friction audits, RFC/ADR, incident comms, post-mortems, capacity planning |
+| 🔒 Compliance | [references/compliance.md](references/compliance.md) | SOC 2 Trust Services Criteria in Terraform: IAM, encryption, detection, audit logging, backup, Checkov enforcement |
 
 ## Core principles
 
@@ -127,7 +128,8 @@ platform-skills/
 │   ├── secrets.md
 │   ├── linkerd.md
 │   ├── linux-networking.md
-│   └── platform-mindset.md
+│   ├── platform-mindset.md
+│   └── compliance.md                   # SOC 2 controls in Terraform (v1.6.0)
 │
 ├── examples/                           # Working examples and handbook snippets
 │   ├── flux/basic-monorepo/            # Complete Flux CD monorepo structure
@@ -137,7 +139,17 @@ platform-skills/
 │   ├── aws/iam/                        # Least-privilege IAM policy examples
 │   ├── azure/workload-identity/        # Managed identity + federated credential
 │   ├── terraform/eks-cluster/          # Production EKS Terraform module
-│   └── github-actions/                 # CI/CD, Flux sync, container build workflows
+│   ├── github-actions/                 # CI/CD, Flux sync, container build workflows
+│   └── compliance/                     # SOC 2 Terraform examples (v1.6.0)
+│       ├── checkov-config.yaml         # Checkov config grouped by SOC 2 criterion
+│       ├── iam/                        # CC6.1/CC6.2: IAM, IRSA, OIDC, SCPs
+│       ├── logging/                    # CC7.2: CloudTrail, Config, VPC flow logs
+│       ├── network/                    # CC6.6: WAF, security groups, flow logs
+│       ├── encryption-data-services/   # CC6.7: DynamoDB, ECR, ElastiCache, OpenSearch, Kinesis, EFS, Redshift
+│       ├── vulnerability/              # CC6.8: Inspector v2, ECR scanning, SSM patching
+│       ├── detection/                  # CC7.1: GuardDuty, CIS CloudWatch alarms, Security Hub
+│       ├── incident-response/          # CC7.3: SNS, EventBridge, PagerDuty
+│       └── backup/                     # A1.2/A1.3: Backup Plan, vault lock, cross-region DR
 │
 ├── SKILL.md                            # Claude plugin routing and patterns
 ├── .claude-plugin/marketplace.json     # Marketplace metadata
@@ -152,16 +164,21 @@ platform-skills/
 - [x] v1.3.0 — Linkerd: mTLS, observability, traffic management, multi-cluster
 - [x] v1.5.0 — Linux & Networking: Linux admin, DNS, load balancing, VPC/VNet
 - [x] v1.5.0 — Platform Mindset: DevEx, RFC/ADR, incident comms, post-mortems
+- [x] v1.6.0 — Compliance: SOC 2 Trust Services Criteria in Terraform — IAM, encryption (11 data services), detection (GuardDuty, CIS CloudWatch alarms, Security Hub), audit logging, vulnerability management, incident response, and backup/recovery
+
+**Near-term**
+- [ ] v1.7.0 — SOC 2 for Kubernetes: Kyverno policies mapped to TSC criteria, pod security admission, network policy as compliance evidence, `kube-bench` CIS Benchmark integration
+- [ ] v1.7.0 — Compliance extended: HIPAA and PCI-DSS control mapping for AWS Terraform (building on v1.6.0 SOC 2 foundation)
+- [ ] v1.8.0 — Azure compliance: SOC 2 controls in Terraform for Azure — Azure Policy, Defender for Cloud, Monitor diagnostic settings, Backup
 
 **Planned**
-- [ ] GCP: landing zone, GKE, and IAM patterns
-- [ ] Observability: Prometheus, Grafana, Loki
-- [ ] Service mesh: Istio
-- [ ] Policy-as-code: OPA, Kyverno, Gatekeeper
-- [ ] OpenShift operator lifecycle patterns
-- [ ] Argo CD ApplicationSet fleet patterns
-- [ ] Disaster recovery runbooks for platform components
-- [ ] Multi-cloud networking patterns
+- [ ] GCP: landing zone, GKE, Workload Identity, and IAM patterns
+- [ ] Observability: Prometheus, Grafana, Loki — alerting rules, dashboards-as-code, retention policies
+- [ ] Service mesh: Istio — traffic management, mTLS, telemetry (counterpart to Linkerd domain)
+- [ ] Policy-as-code: Kyverno and OPA/Gatekeeper cluster policies with compliance mapping
+- [ ] OpenShift operator lifecycle: OLM, CatalogSource, operator upgrade patterns
+- [ ] Argo CD ApplicationSet fleet patterns: cluster generators, matrix strategies, progressive rollout
+- [ ] Multi-cloud networking: Transit Gateway, VNet peering, PrivateLink, cross-cloud DNS
 
 ## Contributing
 
