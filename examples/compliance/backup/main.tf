@@ -52,6 +52,11 @@ variable "kms_key_arn" {
   type        = string
 }
 
+variable "security_alert_topic_arn" {
+  description = "SNS topic ARN for backup job failure notifications"
+  type        = string
+}
+
 locals {
   common_tags = {
     ManagedBy  = "terraform"
@@ -189,11 +194,6 @@ resource "aws_backup_vault_notifications" "main" {
     "COPY_JOB_FAILED",
     "RESTORE_JOB_FAILED",
   ]
-}
-
-variable "security_alert_topic_arn" {
-  description = "SNS topic ARN for backup job failure notifications"
-  type        = string
 }
 
 # ─── Outputs ──────────────────────────────────────────────────────────────────

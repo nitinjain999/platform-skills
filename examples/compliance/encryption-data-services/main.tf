@@ -40,6 +40,17 @@ variable "redis_auth_token" {
   sensitive   = true
 }
 
+variable "redshift_master_password" {
+  description = "Redshift master password — store in Secrets Manager, not in tfvars"
+  type        = string
+  sensitive   = true
+}
+
+variable "redshift_audit_log_bucket_name" {
+  description = "S3 bucket name for Redshift audit logs (CC7.2)"
+  type        = string
+}
+
 variable "subnet_ids" {
   description = "Private subnet IDs for data services"
   type        = list(string)
@@ -438,16 +449,5 @@ resource "aws_redshift_logging" "main" {
   bucket_name          = var.redshift_audit_log_bucket_name
   s3_key_prefix        = "redshift/production-dw/"
   log_destination_type = "s3"
-  log_exports          = ["connectionlog", "useractivitylog", "userlog"]
-}
-
-variable "redshift_audit_log_bucket_name" {
-  description = "S3 bucket name for Redshift audit logs"
-  type        = string
-}
-
-variable "redshift_master_password" {
-  description = "Redshift master password — store in Secrets Manager, not in tfvars"
-  type        = string
-  sensitive   = true
+  log_exports          = ["connectionlog", "useractivitylog", "userlog"]   # CC7.2: audit trail
 }

@@ -844,6 +844,15 @@ resource "aws_redshift_parameter_group" "ssl" {
     value = "true"
   }
 }
+
+# Audit logging to S3 — connection logs, user activity, and DDL (CC7.2)
+resource "aws_redshift_logging" "main" {
+  cluster_identifier   = aws_redshift_cluster.main.cluster_identifier
+  bucket_name          = var.redshift_audit_log_bucket_name
+  s3_key_prefix        = "redshift/production-dw/"
+  log_destination_type = "s3"
+  log_exports          = ["connectionlog", "useractivitylog", "userlog"]
+}
 ```
 
 **Checkov rules (CC6.7 — extended data services):**
