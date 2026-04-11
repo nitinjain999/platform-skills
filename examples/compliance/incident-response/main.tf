@@ -1,4 +1,4 @@
-# terraform-soc2-incident-response.tf
+# examples/compliance/incident-response/main.tf
 #
 # SOC 2 CC7.3 — incident response: encrypted SNS topic for security alerts,
 # subscriptions (email + PagerDuty), GuardDuty and Config delivery channel
@@ -7,8 +7,8 @@
 # Prerequisites:
 #   - aws provider >= 5.0
 #   - KMS key for SNS encryption
-#   - guardduty_detector and config_delivery_channel are in separate files
-#     (terraform-soc2-detection.tf and terraform-soc2-logging.tf) and consume
+#   - guardduty_detector and config_delivery_channel are in separate modules
+#     (../detection and ../logging) and consume
 #     the SNS topic ARN output from this file
 #
 # Validation:
@@ -114,7 +114,7 @@ data "aws_caller_identity" "current" {}
 resource "aws_sns_topic" "security_alerts" {
   name              = "security-alerts"
   display_name      = "Platform Security Alerts"
-  kms_master_key_id = aws_kms_key.sns.arn   # CC7.3: encrypt topic messages
+  kms_master_key_id = aws_kms_key.sns.arn # CC7.3: encrypt topic messages
 
   tags = local.common_tags
 }
@@ -176,7 +176,7 @@ resource "aws_sns_topic_subscription" "pagerduty" {
 
 resource "aws_sqs_queue" "security_alerts_dlq" {
   name                      = "security-alerts-dlq"
-  message_retention_seconds = 1209600   # 14 days
+  message_retention_seconds = 1209600 # 14 days
   kms_master_key_id         = aws_kms_key.sns.arn
 
   tags = local.common_tags

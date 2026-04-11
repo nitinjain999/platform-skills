@@ -1,4 +1,4 @@
-# terraform-soc2-network.tf
+# examples/compliance/network/main.tf
 #
 # SOC 2 network security controls: WAF (CC6.6), VPC flow logs (CC6.6 / CC7.2),
 # and security group hardening.
@@ -52,7 +52,7 @@ locals {
 
 resource "aws_wafv2_web_acl" "main" {
   name        = "production-waf"
-  scope       = "REGIONAL"   # Use "CLOUDFRONT" for CloudFront distributions
+  scope       = "REGIONAL" # Use "CLOUDFRONT" for CloudFront distributions
   description = "SOC 2 CC6.6 — application-layer network protection"
 
   default_action {
@@ -168,7 +168,7 @@ resource "aws_wafv2_web_acl_logging_configuration" "main" {
 
 resource "aws_flow_log" "main" {
   vpc_id               = var.vpc_id
-  traffic_type         = "ALL"   # Log ACCEPT and REJECT — auditors need both
+  traffic_type         = "ALL" # Log ACCEPT and REJECT — auditors need both
   log_destination_type = "s3"
   log_destination      = "${var.flow_log_bucket_arn}/vpc-flow-logs/"
 
@@ -194,7 +194,7 @@ resource "aws_security_group_rule" "app_ingress_from_alb" {
   from_port                = 8080
   to_port                  = 8080
   protocol                 = "tcp"
-  source_security_group_id = aws_security_group.alb.id   # ALB SG only — not 0.0.0.0/0
+  source_security_group_id = aws_security_group.alb.id # ALB SG only — not 0.0.0.0/0
   security_group_id        = aws_security_group.app.id
   description              = "App port from ALB only"
 }

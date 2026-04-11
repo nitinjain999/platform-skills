@@ -1,4 +1,4 @@
-# terraform-soc2-detection.tf
+# examples/compliance/detection/main.tf
 #
 # SOC 2 CC7.1 — detection and monitoring: GuardDuty (threat detection),
 # CloudWatch metric filters + alarms for CIS Benchmark 3.x controls,
@@ -7,8 +7,8 @@
 # Prerequisites:
 #   - aws provider >= 5.0
 #   - CloudTrail must be enabled and shipping to a CloudWatch Logs group
-#     (see terraform-soc2-logging.tf)
-#   - aws_sns_topic.security_alerts must exist (see terraform-soc2-incident-response.tf)
+#     (see ../logging)
+#   - aws_sns_topic.security_alerts must exist (see ../incident-response)
 #
 # Validation:
 #   checkov -d . --config-file ../checkov-config.yaml
@@ -188,7 +188,7 @@ resource "aws_cloudwatch_metric_alarm" "cis" {
   evaluation_periods  = 1
   metric_name         = each.key
   namespace           = "SOC2/CISBenchmark"
-  period              = 300   # 5-minute evaluation window
+  period              = 300 # 5-minute evaluation window
   statistic           = "Sum"
   threshold           = 1
   treat_missing_data  = "notBreaching"

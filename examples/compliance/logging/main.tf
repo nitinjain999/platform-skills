@@ -1,4 +1,4 @@
-# terraform-soc2-logging.tf
+# examples/compliance/logging/main.tf
 #
 # SOC 2 audit logging foundation: CloudTrail (CC7.2), AWS Config (CC7.1),
 # and VPC flow logs (CC6.6 / CC7.2).
@@ -44,8 +44,8 @@ variable "vpc_id" {
 
 locals {
   common_tags = {
-    ManagedBy   = "terraform"
-    Compliance  = "soc2"
+    ManagedBy  = "terraform"
+    Compliance = "soc2"
   }
 }
 
@@ -53,8 +53,8 @@ locals {
 
 resource "aws_s3_bucket" "cloudtrail_logs" {
   bucket              = "cloudtrail-logs-${var.account_id}-${var.region}"
-  force_destroy       = false              # Protect audit logs from accidental deletion
-  object_lock_enabled = true              # Required for object lock configuration below
+  force_destroy       = false # Protect audit logs from accidental deletion
+  object_lock_enabled = true  # Required for object lock configuration below
 
   tags = merge(local.common_tags, { Name = "cloudtrail-logs" })
 }
@@ -117,7 +117,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "cloudtrail_logs" {
     }
 
     expiration {
-      days = 2555  # 7 years
+      days = 2555 # 7 years
     }
   }
 }
@@ -174,7 +174,7 @@ resource "aws_s3_bucket_policy" "cloudtrail_logs" {
 
 resource "aws_cloudwatch_log_group" "cloudtrail" {
   name              = "/aws/cloudtrail/compliance"
-  retention_in_days = 90   # Short CloudWatch retention; long-term in S3
+  retention_in_days = 90 # Short CloudWatch retention; long-term in S3
   kms_key_id        = var.cloudtrail_kms_key_arn
 
   tags = local.common_tags
@@ -217,8 +217,8 @@ resource "aws_cloudtrail" "compliance" {
   name                          = "compliance-trail"
   s3_bucket_name                = aws_s3_bucket.cloudtrail_logs.id
   include_global_service_events = true
-  is_multi_region_trail         = true                # Required: covers all regions (CC7.2)
-  enable_log_file_validation    = true                # Tamper detection (CC7.2)
+  is_multi_region_trail         = true # Required: covers all regions (CC7.2)
+  enable_log_file_validation    = true # Tamper detection (CC7.2)
   kms_key_id                    = var.cloudtrail_kms_key_arn
 
   cloud_watch_logs_group_arn = "${aws_cloudwatch_log_group.cloudtrail.arn}:*"

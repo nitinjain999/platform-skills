@@ -1,4 +1,4 @@
-# terraform-soc2-iam.tf
+# examples/compliance/iam/main.tf
 #
 # SOC 2 IAM patterns: least-privilege role (CC6.1), OIDC for CI/CD (CC6.2),
 # and SCP enforcing MFA and denying privilege escalation (CC6.1 / CC6.2).
@@ -105,9 +105,9 @@ resource "aws_iam_policy" "app_s3_read" {
         Resource = "arn:aws:s3:::${var.bucket_name}/*"
       },
       {
-        Sid    = "S3List"
-        Effect = "Allow"
-        Action = ["s3:ListBucket"]
+        Sid      = "S3List"
+        Effect   = "Allow"
+        Action   = ["s3:ListBucket"]
         Resource = "arn:aws:s3:::${var.bucket_name}"
       }
     ]

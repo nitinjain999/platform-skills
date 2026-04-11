@@ -1,4 +1,4 @@
-# terraform-soc2-backup.tf
+# examples/compliance/backup/main.tf
 #
 # SOC 2 A1.2 / A1.3 — backup and recovery: AWS Backup Plan with daily and
 # monthly schedules, vault lock in COMPLIANCE mode (35-day minimum retention),
@@ -63,7 +63,7 @@ locals {
 
 resource "aws_backup_vault" "main" {
   name        = "production-backup-vault"
-  kms_key_arn = var.kms_key_arn   # CC6.7: encrypt backups at rest
+  kms_key_arn = var.kms_key_arn # CC6.7: encrypt backups at rest
 
   tags = local.common_tags
 }
@@ -73,9 +73,9 @@ resource "aws_backup_vault" "main" {
 # WARNING: test this in non-production first — it is irreversible.
 resource "aws_backup_vault_lock_configuration" "main" {
   backup_vault_name   = aws_backup_vault.main.name
-  min_retention_days  = 35    # A1.2: compliance.tf specifies 35-day minimum
+  min_retention_days  = 35 # A1.2: compliance.tf specifies 35-day minimum
   max_retention_days  = 365
-  changeable_for_days = 3     # Lock becomes permanent after 3 days — set before go-live
+  changeable_for_days = 3 # Lock becomes permanent after 3 days — set before go-live
 }
 
 # ─── Backup plan ──────────────────────────────────────────────────────────────
@@ -87,9 +87,9 @@ resource "aws_backup_plan" "main" {
   rule {
     rule_name         = "daily-35-day-retention"
     target_vault_name = aws_backup_vault.main.name
-    schedule          = "cron(0 3 * * ? *)"   # Daily at 03:00 UTC
-    start_window      = 60                     # Must start within 60 minutes
-    completion_window = 180                    # Must complete within 3 hours
+    schedule          = "cron(0 3 * * ? *)" # Daily at 03:00 UTC
+    start_window      = 60                  # Must start within 60 minutes
+    completion_window = 180                 # Must complete within 3 hours
 
     lifecycle {
       delete_after = 35
@@ -111,12 +111,12 @@ resource "aws_backup_plan" "main" {
   rule {
     rule_name         = "monthly-1-year-retention"
     target_vault_name = aws_backup_vault.main.name
-    schedule          = "cron(0 3 1 * ? *)"   # First of each month at 03:00 UTC
+    schedule          = "cron(0 3 1 * ? *)" # First of each month at 03:00 UTC
     start_window      = 60
     completion_window = 360
 
     lifecycle {
-      cold_storage_after = 30    # Move to cold storage after 30 days (cost optimisation)
+      cold_storage_after = 30 # Move to cold storage after 30 days (cost optimisation)
       delete_after       = 365
     }
 
@@ -182,8 +182,8 @@ resource "aws_backup_selection" "production" {
 # ─── Backup notifications ─────────────────────────────────────────────────────
 
 resource "aws_backup_vault_notifications" "main" {
-  backup_vault_name   = aws_backup_vault.main.name
-  sns_topic_arn       = var.security_alert_topic_arn
+  backup_vault_name = aws_backup_vault.main.name
+  sns_topic_arn     = var.security_alert_topic_arn
   backup_vault_events = [
     "BACKUP_JOB_FAILED",
     "COPY_JOB_FAILED",

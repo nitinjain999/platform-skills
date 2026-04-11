@@ -1,4 +1,4 @@
-# terraform-soc2-encryption-data-services.tf
+# examples/compliance/encryption-data-services/main.tf
 #
 # SOC 2 CC6.7 — encryption at rest and in transit for data services:
 # DynamoDB, ECR, ElastiCache (Redis), OpenSearch, Kinesis, EFS, and Redshift.
@@ -247,7 +247,7 @@ resource "aws_elasticache_replication_group" "main" {
   at_rest_encryption_enabled = true
   transit_encryption_enabled = true
   kms_key_id                 = aws_kms_key.elasticache.arn
-  auth_token                 = var.redis_auth_token   # Required when transit_encryption_enabled = true
+  auth_token                 = var.redis_auth_token # Required when transit_encryption_enabled = true
 
   # A1.1: multi-AZ automatic failover
   automatic_failover_enabled = true
@@ -335,7 +335,7 @@ resource "aws_security_group" "opensearch" {
 resource "aws_kinesis_stream" "events" {
   name             = "production-events"
   shard_count      = 2
-  retention_period = 168   # 7 days (default is 24h — increase for replay capability)
+  retention_period = 168 # 7 days (default is 24h — increase for replay capability)
 
   # CC6.7: encryption at rest
   encryption_type = "KMS"
@@ -413,7 +413,7 @@ resource "aws_redshift_cluster" "main" {
   master_username    = "admin"
   master_password    = var.redshift_master_password
 
-  cluster_subnet_group_name  = aws_redshift_subnet_group.main.name
+  cluster_subnet_group_name    = aws_redshift_subnet_group.main.name
   cluster_parameter_group_name = aws_redshift_parameter_group.ssl.name
 
   # CC6.7: encryption at rest

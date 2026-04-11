@@ -1928,7 +1928,7 @@ checkov -d terraform/ --output sarif > checkov-results.sarif
 
 ## Complete Working Examples
 
-All Terraform examples live in [`examples/compliance/`](../examples/compliance/). Each file is self-contained with a `terraform {}` block, inline comments mapping to SOC 2 criteria, and validation commands in the header.
+All Terraform examples live in [`examples/compliance/`](../examples/compliance/). Each subdirectory is a standalone Terraform module with a `terraform {}` block, inline comments mapping to SOC 2 criteria, and validation commands in the header.
 
 | Directory | Criteria covered | What it provisions |
 |-----------|-----------------|-------------------|
@@ -1942,7 +1942,7 @@ All Terraform examples live in [`examples/compliance/`](../examples/compliance/)
 | [`examples/compliance/backup/`](../examples/compliance/backup/) | A1.2, A1.3 | Backup vault (KMS + COMPLIANCE vault lock), daily/monthly plan, cross-region copy |
 | [`checkov-config.yaml`](../examples/compliance/checkov-config.yaml) | All | Checkov rule IDs grouped by SOC 2 criterion, skip guidance for false positives |
 
-**Usage:** Each file can be applied independently. Cross-file dependencies (e.g., `security_alert_topic_arn` from `terraform-soc2-incident-response.tf` consumed by other files) are passed as variables.
+**Usage:** Each module can be applied independently. Cross-module dependencies (for example, `security_alert_topic_arn` from `incident-response/` consumed by other modules) are passed as variables.
 
 ---
 
