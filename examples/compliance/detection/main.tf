@@ -114,6 +114,9 @@ locals {
 resource "aws_guardduty_detector" "main" {
   enable = true
 
+  # Note: the datasources block is deprecated in aws provider >= 5.37.
+  # Migration path: replace with separate aws_guardduty_detector_feature resources.
+  # Still supported in >= 5.0 (our minimum), so no functional impact now.
   datasources {
     # Detect S3 data access anomalies (exfiltration, unusual access patterns)
     s3_logs {

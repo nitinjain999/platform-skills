@@ -61,6 +61,11 @@ resource "aws_kms_key" "sns" {
     Version = "2012-10-17"
     Statement = [
       {
+        # AWS-required baseline: grants account root full key management access.
+        # Without this statement the key becomes unmanageable if all IAM policies
+        # granting key access are deleted. This is the AWS-recommended default
+        # (see https://docs.aws.amazon.com/kms/latest/developerguide/key-policies.html).
+        # Checkov CKV2_AWS_64 passes with this pattern.
         Sid    = "Enable IAM key management"
         Effect = "Allow"
         Principal = {
