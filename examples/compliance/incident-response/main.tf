@@ -100,6 +100,15 @@ resource "aws_kms_key" "sns" {
         }
         Action   = ["kms:GenerateDataKey", "kms:Decrypt"]
         Resource = "*"
+      },
+      {
+        Sid    = "Allow SQS to use this key"
+        Effect = "Allow"
+        Principal = {
+          Service = "sqs.amazonaws.com"
+        }
+        Action   = ["kms:GenerateDataKey", "kms:Decrypt"]
+        Resource = "*"
       }
     ]
   })
@@ -197,4 +206,9 @@ output "security_alerts_topic_arn" {
 output "security_alerts_kms_key_arn" {
   description = "KMS key ARN used to encrypt the security alerts SNS topic"
   value       = aws_kms_key.sns.arn
+}
+
+output "security_alerts_dlq_arn" {
+  description = "SQS DLQ ARN for missed EventBridge deliveries — pass to detection module"
+  value       = aws_sqs_queue.security_alerts_dlq.arn
 }

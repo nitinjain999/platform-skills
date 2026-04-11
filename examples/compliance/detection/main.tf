@@ -35,6 +35,11 @@ variable "security_alert_topic_arn" {
   type        = string
 }
 
+variable "security_alerts_dlq_arn" {
+  description = "SQS DLQ ARN for missed EventBridge deliveries (output of incident-response module)"
+  type        = string
+}
+
 variable "region" {
   description = "AWS region"
   type        = string
@@ -163,6 +168,10 @@ resource "aws_cloudwatch_event_target" "guardduty_sns" {
   rule      = aws_cloudwatch_event_rule.guardduty_high.name
   target_id = "GuardDutyHighToSNS"
   arn       = var.security_alert_topic_arn
+
+  dead_letter_config {
+    arn = var.security_alerts_dlq_arn
+  }
 }
 
 # ─── CloudWatch metric filters + alarms (CIS Benchmark 3.x) ──────────────────
@@ -250,4 +259,8 @@ resource "aws_cloudwatch_event_target" "securityhub_sns" {
   rule      = aws_cloudwatch_event_rule.securityhub_critical.name
   target_id = "SecurityHubCriticalToSNS"
   arn       = var.security_alert_topic_arn
+
+  dead_letter_config {
+    arn = var.security_alerts_dlq_arn
+  }
 }

@@ -407,11 +407,12 @@ resource "aws_vpc" "main" {
 }
 
 # Flow logs to S3 for SOC 2 CC7.2 (audit logging)
+# Note: iam_role_arn is only required for log_destination_type = "cloud-watch-logs";
+# S3 delivery uses delivery.logs.amazonaws.com and does not use the role field.
 resource "aws_flow_log" "main" {
-  vpc_id          = aws_vpc.main.id
-  traffic_type    = "ALL"
-  iam_role_arn    = aws_iam_role.flow_log.arn
-  log_destination = aws_s3_bucket.flow_logs.arn
+  vpc_id               = aws_vpc.main.id
+  traffic_type         = "ALL"
+  log_destination      = aws_s3_bucket.flow_logs.arn
   log_destination_type = "s3"
 
   log_format = "$${version} $${account-id} $${interface-id} $${srcaddr} $${dstaddr} $${srcport} $${dstport} $${protocol} $${packets} $${bytes} $${start} $${end} $${action} $${log-status}"
@@ -1466,8 +1467,6 @@ resource "aws_backup_selection" "main" {
     value = "production"
   }
 
-  # Explicitly include resource types that support AWS Backup
-  resources = ["*"]
 }
 
 resource "aws_iam_role" "backup" {
@@ -1504,7 +1503,7 @@ CKV_AWS_119  — Ensure DynamoDB point-in-time recovery is enabled
 # Backup jobs completed in the last 7 days
 aws backup list-backup-jobs \
   --by-state COMPLETED \
-  --by-created-after "$(date -v-7d '+%Y-%m-%dT00:00:00Z')" \
+  --by-created-after "$(date -u -d '7 days ago' '+%Y-%m-%dT00:00:00Z')" \
   --query 'BackupJobs[*].{Resource:ResourceArn,Vault:BackupVaultName,Completed:CompletionDate,Size:BackupSizeInBytes}' \
   --output table
 
@@ -1627,7 +1626,7 @@ aws s3api list-object-versions \
 # CloudTrail: DynamoDB lock acquire events (each represents a terraform apply)
 aws cloudtrail lookup-events \
   --lookup-attributes AttributeKey=EventName,AttributeValue=PutItem \
-  --start-time "$(date -v-30d '+%Y-%m-%dT00:00:00Z')" \
+  --start-time "$(date -u -d '30 days ago' '+%Y-%m-%dT00:00:00Z')" \
   --query 'Events[?Resources[?ResourceName==`terraform-state-lock`]].{Time:EventTime,User:Username}' \
   --output table
 ```

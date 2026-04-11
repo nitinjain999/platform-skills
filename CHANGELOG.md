@@ -25,7 +25,7 @@ New Domain 11: `Compliance` — SOC 2 Trust Services Criteria mapped to Terrafor
 - `CC6.6` — Network security: security groups, private subnets, VPC flow logs, WAF (`aws_wafv2_web_acl`) with rate limiting and AWS managed rule groups
 - `CC6.7` — Encryption: S3, RDS, EBS, KMS; extended to DynamoDB, ECR, ElastiCache, OpenSearch, Kinesis, EFS, and Redshift
 - `CC6.8` — Vulnerability management: `aws_ecr_registry_scanning_configuration` (ENHANCED + CONTINUOUS_SCAN), `aws_inspector2_enabler`, `aws_ssm_patch_baseline`
-- `CC7.1` — Detection: `aws_guardduty_detector` (S3, EKS, malware sources), 7 CIS Benchmark CloudWatch metric filters and alarms (root usage, unauthorized API calls, IAM policy changes, CloudTrail changes, S3 policy changes, security group changes), `aws_securityhub_account` with AWS Foundational and CIS standards
+- `CC7.1` — Detection: `aws_guardduty_detector` (S3, EKS, malware sources), 14 CIS Benchmark CloudWatch metric filters and alarms (CIS 3.1–3.14), `aws_securityhub_account` with AWS Foundational and CIS standards
 - `CC7.2` — Audit logging: multi-region CloudTrail with KMS encryption, S3 object lock (COMPLIANCE mode, 365-day), AWS Config recorder with 12 SOC 2-relevant managed rules, VPC flow logs
 - `CC7.3` — Incident response: KMS-encrypted SNS topic with email and PagerDuty subscriptions, GuardDuty HIGH/CRITICAL findings → EventBridge → SNS pipeline, Config delivery channel with SNS notification
 - `CC8.1` — Change management: S3 + DynamoDB state locking, PR-gated Terraform plan/apply workflow with plan posted as PR comment

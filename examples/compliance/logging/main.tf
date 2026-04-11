@@ -152,6 +152,34 @@ resource "aws_s3_bucket_policy" "cloudtrail_logs" {
         }
       },
       {
+        # VPC Flow Logs delivery to S3 requires this statement in addition to CloudTrail
+        Sid    = "AWSLogDeliveryWrite"
+        Effect = "Allow"
+        Principal = {
+          Service = "delivery.logs.amazonaws.com"
+        }
+        Action   = "s3:PutObject"
+        Resource = "${aws_s3_bucket.cloudtrail_logs.arn}/vpc-flow-logs/*"
+        Condition = {
+          StringEquals = {
+            "s3:x-amz-acl"      = "bucket-owner-full-control"
+            "aws:SourceAccount" = var.account_id
+          }
+        }
+      },
+      {
+        Sid    = "AWSLogDeliveryAclCheck"
+        Effect = "Allow"
+        Principal = {
+          Service = "delivery.logs.amazonaws.com"
+        }
+        Action   = "s3:GetBucketAcl"
+        Resource = aws_s3_bucket.cloudtrail_logs.arn
+        Condition = {
+          StringEquals = { "aws:SourceAccount" = var.account_id }
+        }
+      },
+      {
         Sid       = "DenyInsecureTransport"
         Effect    = "Deny"
         Principal = "*"

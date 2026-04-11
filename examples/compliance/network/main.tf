@@ -36,11 +36,6 @@ variable "flow_log_bucket_arn" {
   type        = string
 }
 
-variable "allowed_ingress_cidrs" {
-  description = "CIDRs allowed to reach application ports (e.g. VPN CIDR or trusted ranges)"
-  type        = list(string)
-}
-
 locals {
   common_tags = {
     ManagedBy  = "terraform"
@@ -152,9 +147,30 @@ resource "aws_cloudwatch_log_group" "waf" {
   tags = local.common_tags
 }
 
+# CloudWatch Logs resource policy — WAF requires delivery.logs.amazonaws.com
+# permission to write to the log group
+resource "aws_cloudwatch_log_resource_policy" "waf" {
+  policy_name = "waf-logs-delivery-policy"
+  policy_document = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "delivery.logs.amazonaws.com" }
+      Action    = ["logs:CreateLogStream", "logs:PutLogEvents"]
+      Resource  = "${aws_cloudwatch_log_group.waf.arn}:*"
+      Condition = {
+        StringEquals = { "aws:SourceAccount" = data.aws_caller_identity.current.account_id }
+      }
+    }]
+  })
+}
+
+data "aws_caller_identity" "current" {}
+
 resource "aws_wafv2_web_acl_logging_configuration" "main" {
   log_destination_configs = [aws_cloudwatch_log_group.waf.arn]
   resource_arn            = aws_wafv2_web_acl.main.arn
+  depends_on              = [aws_cloudwatch_log_resource_policy.waf]
 
   # Redact authorization headers from logs (do not store credentials)
   redacted_fields {

@@ -36,12 +36,6 @@ variable "region" {
   default     = "eu-central-1"
 }
 
-variable "dr_region" {
-  description = "Disaster recovery region for cross-region backup copies"
-  type        = string
-  default     = "eu-west-1"
-}
-
 variable "dr_vault_arn" {
   description = "ARN of the backup vault in the DR region (must be pre-created)"
   type        = string
