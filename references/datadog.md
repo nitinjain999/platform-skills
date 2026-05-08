@@ -4,6 +4,57 @@ Covers APM, Infrastructure Monitoring, Log Management, Synthetic Monitoring, Das
 
 ---
 
+## MCP Server Setup
+
+The official Datadog MCP server lets Claude Code query logs, metrics, traces, monitors, and incidents directly — no manual API calls needed during incident investigation.
+
+### Connect to Claude Code
+
+```bash
+# EU site
+claude mcp add --transport http datadog https://mcp.datadoghq.eu/api/unstable/mcp-server/mcp
+
+# US1 site
+claude mcp add --transport http datadog https://mcp.datadoghq.com/api/unstable/mcp-server/mcp
+```
+
+Or add to `.mcp.json` in your project root:
+
+```json
+{
+  "mcpServers": {
+    "datadog": {
+      "type": "http",
+      "url": "https://mcp.datadoghq.eu/api/unstable/mcp-server/mcp"
+    }
+  }
+}
+```
+
+Authentication uses your Datadog session — log in via the browser prompt on first use.
+
+### Available Capabilities
+
+| Category | What you can do |
+|----------|----------------|
+| Monitors | List firing monitors, get monitor details, resolve monitors |
+| Logs | Search logs by service/env/time, filter by status |
+| Metrics | Query time series, compare before/after incident |
+| APM Traces | Fetch traces with errors, inspect spans and stack traces |
+| Events | List deployment events, audit events by tag |
+| Incidents | List active incidents, post updates |
+| Notebooks | Create notebooks for post-mortem documentation |
+
+### Incident Investigation Workflow
+
+Use `/platform-skills:datadog investigate` for a guided 4-phase workflow:
+1. **Triage** — list firing monitors and recent deployments
+2. **Signals** — pull error logs, error rate, and failing traces
+3. **Root cause** — compare before/after metrics, isolate failing endpoint or host
+4. **Resolution** — acknowledge monitor, post Slack update, create post-mortem notebook
+
+---
+
 ## Agent Setup
 
 ### Kubernetes (Helm)

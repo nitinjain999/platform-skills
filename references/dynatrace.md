@@ -4,6 +4,64 @@ Covers OneAgent deployment, Kubernetes Operator, Davis AI, Distributed Tracing, 
 
 ---
 
+## MCP Server Setup
+
+The official Dynatrace MCP server lets Claude Code query Problems, logs, traces, DQL, and Davis AI directly — enabling AI-driven incident investigation without leaving your editor.
+
+### Connect to Claude Code
+
+```bash
+# stdio transport (local, Node.js 22+ required)
+claude mcp add dynatrace -- npx -y @dynatrace-oss/dynatrace-mcp-server
+
+# Set your environment URL
+export DT_ENVIRONMENT="https://abc12345.apps.dynatrace.com"   # Platform URL (not classic)
+```
+
+Or add to `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "dynatrace": {
+      "command": "npx",
+      "args": ["-y", "@dynatrace-oss/dynatrace-mcp-server@latest"],
+      "env": {
+        "DT_ENVIRONMENT": "https://abc12345.apps.dynatrace.com"
+      }
+    }
+  }
+}
+```
+
+**Remote MCP** (no local Node.js needed): available at the [Dynatrace Hub](https://www.dynatrace.com/hub/detail/dynatrace-mcp-server/). Authentication handled via browser OAuth — no token needed.
+
+**Cost note**: `execute_dql` scans Grail data and may incur costs. Set `DT_GRAIL_QUERY_BUDGET_GB` (default 1000 GB) to cap session spend. Use short timeframes (1h–24h) during investigation.
+
+### Available Capabilities
+
+| Category | Key Tools |
+|----------|-----------|
+| Problems | `list_problems`, full problem details with root cause entity and impact |
+| Logs / Metrics / Traces | `execute_dql` — query any Grail data with DQL |
+| Natural language | `generate_dql_from_natural_language`, `explain_dql_in_natural_language` |
+| Entity discovery | `find_entity_by_name` — look up services, hosts, process groups |
+| Davis AI | `chat_with_davis_copilot`, `list_davis_analyzers`, `execute_davis_analyzer` |
+| Kubernetes | `get_kubernetes_events` |
+| Exceptions | `list_exceptions` with stack traces |
+| Notifications | `send_slack_message`, `send_email`, `send_event` |
+| Documentation | `create_dynatrace_notebook` for post-mortem capture |
+
+### Incident Investigation Workflow
+
+Use `/platform-skills:dynatrace investigate` for a guided 4-phase workflow:
+1. **Triage** — list open Problems, get Davis AI root cause entity and impact scope
+2. **Signals** — DQL queries for error logs, exceptions, and failing traces
+3. **Root cause** — Davis Copilot analysis, Davis Analyzer execution, entity health check
+4. **Resolution** — close Problem with note, send Slack update, create Notebook
+
+---
+
 ## Deployment
 
 ### Kubernetes Operator (recommended)

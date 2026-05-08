@@ -1,10 +1,10 @@
 ---
 name: dynatrace
-description: Deploy and configure Dynatrace — OneAgent Kubernetes Operator, code-level instrumentation, Log Monitoring, custom metrics, SLOs, Dashboards, anomaly detection, and Davis AI problem feeds. Covers Terraform-managed Dynatrace resources.
-argument-hint: "[setup|instrument|monitor|slo|dashboard|debug] [service or description]"
+description: Deploy and configure Dynatrace — OneAgent Kubernetes Operator, code-level instrumentation, Log Monitoring, custom metrics, SLOs, Dashboards, anomaly detection, Davis AI, and live incident investigation using the Dynatrace MCP server. Covers Terraform-managed Dynatrace resources.
+argument-hint: "[setup|instrument|monitor|slo|dashboard|investigate|debug] [service or description]"
 ---
 
-Configure or troubleshoot Dynatrace observability for a service or platform.
+Configure, troubleshoot, or investigate incidents in Dynatrace.
 
 ## Mode: setup
 
@@ -75,9 +75,88 @@ Steps:
 
 Reference: `references/dynatrace.md` → Terraform Provider
 
+## Mode: investigate
+
+**Live incident investigation using the Dynatrace MCP server.**
+
+Requires the Dynatrace MCP server connected to Claude Code. See setup in `references/dynatrace.md` → MCP Server Setup.
+
+**Cost note**: `execute_dql` queries scan Grail data and may incur costs based on your Dynatrace consumption model. Start with short timeframes (last 1h–24h). Set `DT_GRAIL_QUERY_BUDGET_GB` to cap session spend.
+
+### Phase 1 — Triage (what is Davis AI seeing?)
+
+Ask Claude to run these via the MCP server:
+- List all open Problems — Davis AI auto-detects anomalies and groups related symptoms
+- Fetch full problem details including root cause entity, impact, and affected services
+- Check recent Kubernetes events for the affected namespace
+
+```
+List all open Problems in Dynatrace right now.
+Get full details for Problem <problem-id> including root cause and affected entities.
+Show me Kubernetes events for namespace production in the last 30 minutes.
+```
+
+### Phase 2 — Signals (logs, traces, exceptions)
+
+Use DQL via the MCP to query Grail directly:
+- Fetch error logs for the affected service in the incident window
+- List recent exceptions with stack traces
+- Find distributed traces with errors to identify the failing call
+
+```
+Show me error logs for the orders-service in the last hour.
+List the top exceptions for orders-service with stack traces.
+Find distributed traces with errors for orders-service — show the slowest and most frequent.
+```
+
+Example DQL the MCP can generate and execute:
+
+```dql
+fetch logs
+| filter service.name == "orders-service" and loglevel == "ERROR"
+| sort timestamp desc
+| limit 50
+| fields timestamp, content, trace_id, span_id
+```
+
+```dql
+fetch spans
+| filter service.name == "orders-service" and status == "ERROR"
+| sort timestamp desc
+| limit 20
+| fields timestamp, span_name, error.message, trace_id, duration
+```
+
+### Phase 3 — Root cause with Davis AI
+
+Let Davis AI perform automated analysis:
+- Ask Davis Copilot to explain the problem in plain English
+- Run a Davis Analyzer on the affected service for automated root cause analysis
+- Find the entity (service, host, process group) at the root of the problem
+
+```
+Chat with Davis Copilot: "Why is orders-service having elevated error rates since 14:00 UTC?"
+List available Davis analyzers for root cause analysis.
+Find the entity named "orders-service" and show its current health.
+```
+
+### Phase 4 — Resolution and follow-up
+
+- Create a Dynatrace Notebook capturing the timeline, DQL queries, and evidence
+- Send a Slack message or email via the MCP notification tools
+- Close the Problem with a resolution note once fix is validated
+
+```
+Create a Dynatrace notebook summarising the orders-service incident with the DQL queries we ran.
+Send a Slack message to #incidents: "orders-service error rate normalising, fix deployed at <time>."
+Close Problem <problem-id> with message "Root cause: bad deploy at 14:05 UTC, rolled back at 14:22 UTC."
+```
+
+Reference: `references/dynatrace.md` → MCP Server Setup, Incident Investigation Workflow
+
 ## Mode: debug
 
-Diagnose Dynatrace data gaps or injection failures.
+Diagnose Dynatrace data gaps or injection failures without the MCP server.
 
 Classify the failure:
 - **Injection** — OneAgent not injecting into pods
