@@ -8,7 +8,7 @@ terraform {
 }
 
 provider "datadog" {
-  api_url = "https://api.datadoghq.eu/"   # EU site — change for US
+  api_url = "https://api.datadoghq.eu/" # EU site — change for US
   # api_key and app_key read from DD_API_KEY and DD_APP_KEY env vars
 }
 
