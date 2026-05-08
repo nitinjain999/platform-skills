@@ -166,10 +166,18 @@ echo "=== values.schema.json correctness ==="
 
 SCHEMA="$CHART/values.schema.json"
 
-if python3 -c "import json; d=json.load(open('$SCHEMA')); props=d.get('properties',{}); keys=list(props.keys()); assert keys.count('replicaCount') == 1, 'duplicate replicaCount'; print('ok')" 2>/dev/null | grep -q "ok"; then
+DUPLICATE_PROPS=$(python3 - "$SCHEMA" <<'PYEOF'
+import json, sys
+d = json.load(open(sys.argv[1]))
+props = list(d.get("properties", {}).keys())
+dups = [p for p in props if props.count(p) > 1]
+print(",".join(set(dups)) if dups else "ok")
+PYEOF
+)
+if [ "$DUPLICATE_PROPS" = "ok" ]; then
   pass "values.schema.json has no duplicate property keys"
 else
-  fail "values.schema.json has duplicate property keys (e.g. replicaCount defined twice)"
+  fail "values.schema.json has duplicate property keys: $DUPLICATE_PROPS"
 fi
 
 if python3 -c "import json; json.load(open('$SCHEMA')); print('ok')" 2>/dev/null | grep -q "ok"; then
