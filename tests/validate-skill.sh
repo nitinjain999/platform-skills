@@ -46,6 +46,7 @@ REQUIRED_REFERENCES=(
   references/linux-networking.md
   references/platform-mindset.md
   references/compliance.md
+  references/helm.md
 )
 
 for ref in "${REQUIRED_REFERENCES[@]}"; do
@@ -69,6 +70,7 @@ EXAMPLE_DOMAINS=(
   examples/terraform
   examples/github-actions
   examples/compliance
+  examples/helm
 )
 
 for domain in "${EXAMPLE_DOMAINS[@]}"; do

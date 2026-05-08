@@ -19,6 +19,7 @@ Both layers work independently. The plugin is optional.
 | I want to... | Go to |
 |---|---|
 | Get started in 5 minutes | [QUICKSTART.md](QUICKSTART.md) |
+| Understand how AI agents and skills work | [HOW_IT_WORKS.md](HOW_IT_WORKS.md) |
 | Full installation guide and troubleshooting | [INSTALLATION.md](INSTALLATION.md) |
 | Read a domain guide | [references/](references/) |
 | Copy a working example | [examples/](examples/) |
@@ -44,6 +45,7 @@ Both layers work independently. The plugin is optional.
 | 🐧 Linux & Networking | [references/linux-networking.md](references/linux-networking.md) | Linux admin, DNS, load balancing, VPC/VNet design, connectivity troubleshooting |
 | 🧠 Platform Mindset | [references/platform-mindset.md](references/platform-mindset.md) | DevEx, friction audits, RFC/ADR, incident comms, post-mortems, capacity planning |
 | 🔒 Compliance | [references/compliance.md](references/compliance.md) | SOC 2 Trust Services Criteria in Terraform: IAM, encryption, detection, audit logging, backup, Checkov enforcement |
+| ⛵ Helm | [references/helm.md](references/helm.md) | Chart scaffolding, values design, template patterns, security hardening, lint/validation pipeline, GitOps integration |
 
 ## Core principles
 
@@ -129,7 +131,8 @@ platform-skills/
 │   ├── linkerd.md
 │   ├── linux-networking.md
 │   ├── platform-mindset.md
-│   └── compliance.md                   # SOC 2 controls in Terraform (v1.6.0)
+│   ├── compliance.md                   # SOC 2 controls in Terraform (v1.6.0)
+│   └── helm.md                         # Helm chart patterns, lint pipeline, values design (Unreleased)
 │
 ├── examples/                           # Working examples and handbook snippets
 │   ├── flux/basic-monorepo/            # Complete Flux CD monorepo structure
@@ -140,6 +143,7 @@ platform-skills/
 │   ├── azure/workload-identity/        # Managed identity + federated credential
 │   ├── terraform/eks-cluster/          # Production EKS Terraform module
 │   ├── github-actions/                 # CI/CD, Flux sync, container build workflows
+│   ├── helm/web-service/               # Production Helm chart: Deployment, HPA, PDB, NetworkPolicy, schema
 │   └── compliance/                     # SOC 2 Terraform examples (v1.6.0)
 │       ├── checkov-config.yaml         # Checkov config grouped by SOC 2 criterion
 │       ├── iam/                        # CC6.1/CC6.2: IAM, IRSA, OIDC, SCPs

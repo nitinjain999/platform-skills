@@ -192,6 +192,10 @@ Use this loop:
 5. Apply the smallest useful change first.
 6. Validate before expanding the pattern.
 
+## How the Agent and Skills Actually Work
+
+If you want to understand what is happening under the hood — how Claude uses skills, what activates them, how the review workflow is structured, and what the agent can and cannot do — read [HOW_IT_WORKS.md](HOW_IT_WORKS.md) first.
+
 ## If You Are Completely New to Claude
 
 Keep your first sessions simple.

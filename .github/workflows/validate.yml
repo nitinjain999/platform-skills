@@ -189,7 +189,10 @@ jobs:
 
       - name: Validate all YAML files
         run: |
-          YAML_FILES=$(find . -type f \( -name "*.yml" -o -name "*.yaml" \) ! -path "./.git/*")
+          # Exclude Helm template directories — Go template syntax ({{ }}) is not valid YAML
+          YAML_FILES=$(find . -type f \( -name "*.yml" -o -name "*.yaml" \) \
+            ! -path "./.git/*" \
+            ! -path "./examples/helm/*/templates/*")
 
           if [ -z "$YAML_FILES" ]; then
             echo "ℹ️  No YAML files found"
@@ -408,6 +411,9 @@ jobs:
 
       - name: Run skill structure validation
         run: bash tests/validate-skill.sh
+
+      - name: Run helmcheck validation
+        run: bash tests/validate-helmcheck.sh
 
   summary:
     name: Validation Summary

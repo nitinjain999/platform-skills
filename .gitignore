@@ -157,4 +157,5 @@ _site/
 # Backup files
 *.bak
 *.backup
-*~
+
+.claude/
