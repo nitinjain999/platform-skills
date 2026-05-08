@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-05-08
+
+### Added
+
+#### MCP Domain (Model Context Protocol)
+
+New Domain 13: `MCP (Model Context Protocol)` — build, review, and debug MCP servers and clients covering TypeScript and Python SDKs, Zod/Pydantic schema validation, stdio/HTTP/SSE transports, protocol compliance, authentication, and rate limiting.
+
+- `references/mcp.md` — protocol fundamentals, TypeScript SDK patterns, Python FastMCP patterns, schema design, error handling, testing with MCP Inspector, security, and deployment checklist
+- `/platform-skills:mcp` (`commands/mcp.md`) — three modes: `create` (scaffold production-ready server), `review` (protocol compliance and security audit), `debug` (diagnose transport/protocol/schema/handler failures)
+- `examples/mcp/docs-server/` — complete TypeScript MCP server with `search_docs` and `get_doc` tools and a `docs://index` resource
+
+#### Observability Domain
+
+New Domain 14: `Observability` — instrument services with structured logging, Prometheus metrics, and OpenTelemetry tracing; build Grafana dashboards, write alerting rules, run k6 load tests, and plan capacity.
+
+- `references/observability.md` — Pino/structlog structured logging, prom-client/prometheus-client metrics, OpenTelemetry tracing, RED/USE method alerting rules, Grafana dashboard templates, k6 load testing, and capacity planning formulas
+- `/platform-skills:observability` (`commands/observability.md`) — five modes: `instrument`, `dashboard`, `alert`, `loadtest`, `capacity`
+- `examples/observability/prometheus-alerts/` — RED method Prometheus alerting rules for a production service
+
+#### Documentation Domain
+
+New Domain 15: `Documentation` — generate and validate inline docstrings (Google/NumPy/Sphinx/JSDoc), OpenAPI 3.1 specifications, documentation sites (MkDocs, TypeDoc), and developer getting started guides.
+
+- `references/documentation.md` — Google/NumPy/Sphinx docstring styles, TypeScript JSDoc, OpenAPI 3.1 spec with shared components, FastAPI and NestJS auto-documentation, coverage measurement, MkDocs site setup, and guide structure
+- `/platform-skills:document` (`commands/document.md`) — four modes: `docstrings`, `openapi`, `site`, `guide`
+- `examples/documentation/openapi-spec/` — complete OpenAPI 3.1 Orders API with shared components, security schemes, and response definitions
+
 ## [1.7.0] - 2026-05-08
 
 ### Added

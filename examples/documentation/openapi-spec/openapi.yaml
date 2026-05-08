@@ -1,0 +1,222 @@
+openapi: "3.1.0"
+info:
+  title: Orders API
+  version: "1.0.0"
+  description: |
+    Manages customer orders and payment processing.
+
+    ## Authentication
+    All endpoints require a Bearer JWT token obtained from the identity provider.
+
+    ## Rate Limiting
+    100 requests per minute per authenticated user. Returns 429 on excess.
+
+servers:
+  - url: https://api.example.com/v1
+    description: Production
+  - url: https://api.staging.example.com/v1
+    description: Staging
+
+paths:
+  /orders:
+    get:
+      summary: List orders
+      operationId: listOrders
+      tags: [Orders]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, paid, shipped, cancelled]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Paginated list of orders
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderPage"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+    post:
+      summary: Create an order
+      operationId: createOrder
+      tags: [Orders]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateOrderInput"
+            example:
+              productId: "prod-123"
+              quantity: 2
+      responses:
+        "201":
+          description: Order created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "400":
+          $ref: "#/components/responses/ValidationError"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /orders/{orderId}:
+    parameters:
+      - name: orderId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      summary: Get an order
+      operationId: getOrder
+      tags: [Orders]
+      responses:
+        "200":
+          description: Order found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      summary: Cancel an order
+      operationId: cancelOrder
+      tags: [Orders]
+      responses:
+        "204":
+          description: Order cancelled
+        "400":
+          description: Order cannot be cancelled (already shipped)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  schemas:
+    CreateOrderInput:
+      type: object
+      required: [productId, quantity]
+      properties:
+        productId:
+          type: string
+          minLength: 1
+          description: Product catalog identifier
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 100
+          description: Number of units to order
+
+    Order:
+      type: object
+      required: [id, productId, quantity, status, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        productId:
+          type: string
+        quantity:
+          type: integer
+        status:
+          type: string
+          enum: [pending, paid, shipped, cancelled]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    OrderPage:
+      type: object
+      required: [items, total, page, limit]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Order"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+        details:
+          type: array
+          items:
+            type: string
+
+  responses:
+    ValidationError:
+      description: Request body failed schema validation
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: "Validation failed"
+            details: ["quantity must be >= 1"]
+
+    Unauthorized:
+      description: Missing or invalid authentication token
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: "Unauthorized"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+          example:
+            error: "Not found"
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - bearerAuth: []

@@ -47,6 +47,9 @@ REQUIRED_REFERENCES=(
   references/platform-mindset.md
   references/compliance.md
   references/helm.md
+  references/mcp.md
+  references/observability.md
+  references/documentation.md
 )
 
 for ref in "${REQUIRED_REFERENCES[@]}"; do
@@ -71,6 +74,9 @@ EXAMPLE_DOMAINS=(
   examples/github-actions
   examples/compliance
   examples/helm
+  examples/mcp
+  examples/observability
+  examples/documentation
 )
 
 for domain in "${EXAMPLE_DOMAINS[@]}"; do

@@ -97,6 +97,9 @@ Slash commands are predefined workflows. Use them instead of writing a long prom
 | `/platform-skills:linux` | DNS, load balancer, VPC connectivity, or kernel issue |
 | `/platform-skills:compliance` | SOC 2 gap analysis or Checkov remediation for Terraform |
 | `/platform-skills:product` | RFC/ADR drafting, DevEx audit, incident communication, post-mortem |
+| `/platform-skills:mcp` | Scaffold, review, or debug an MCP server or client |
+| `/platform-skills:observability` | Instrument services, build dashboards, write alerts, run load tests, plan capacity |
+| `/platform-skills:document` | Generate docstrings, OpenAPI specs, documentation sites, or getting started guides |
 
 Invoke a command by typing it at the start of your message:
 
