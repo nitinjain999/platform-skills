@@ -188,9 +188,9 @@ json.load(io.StringIO(raw), object_pairs_hook=root_hook)
 # root_pairs contains ALL keys at every depth; find true top-level property names
 # by checking the 'properties' value of the root object directly
 doc = json.loads(raw)
-props_keys = list(doc.get("properties", {}).keys())
+prop_names = list(doc.get("properties", {}).keys())
 # Count occurrences in root_pairs to detect top-level property duplication
-dups = [k for k in set(props_keys) if root_pairs.count(k) > 1]
+dups = [k for k in set(prop_names) if root_pairs.count(k) > 1]
 print(",".join(sorted(set(dups))) if dups else "ok")
 PYEOF
 )
