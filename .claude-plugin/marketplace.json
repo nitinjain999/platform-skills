@@ -7,7 +7,7 @@
   "plugins": [
     {
       "name": "platform-skills",
-      "version": "1.6.0",
+      "version": "1.7.0",
       "description": "Practical guidance for platform engineers: Kubernetes, Helm chart development and linting, Terraform, GitOps, GitHub Actions, AWS, Azure, Linkerd, Linux administration, networking, platform product thinking, and SOC 2 compliance for Terraform. Covers troubleshooting, security-first patterns, DevEx, RFC/ADR, compliance controls, and working examples — at any scale.",
       "author": {
         "name": "Nitin Jain"
