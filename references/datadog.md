@@ -33,6 +33,8 @@ Or add to `.mcp.json` in your project root:
 
 Authentication uses your Datadog session — log in via the browser prompt on first use.
 
+> **Note**: The MCP endpoint path contains `/api/unstable/`. This is the URL Datadog currently publishes. The path may change when the API is promoted to stable — check [docs.datadoghq.com/bits_ai/mcp_server/](https://docs.datadoghq.com/bits_ai/mcp_server/) for the latest endpoint.
+
 ### Available Capabilities
 
 | Category | What you can do |

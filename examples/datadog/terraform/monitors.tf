@@ -2,7 +2,7 @@ terraform {
   required_providers {
     datadog = {
       source  = "DataDog/datadog"
-      version = "~> 3.0"
+      version = "~> 4.0"
     }
   }
 }
@@ -66,6 +66,7 @@ resource "datadog_monitor" "orders_latency" {
 
   notify_no_data    = true
   no_data_timeframe = 10
+  renotify_interval = 30
 }
 
 # ---------------------------------------------------------------------------

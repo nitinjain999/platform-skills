@@ -36,6 +36,8 @@ Or add to `.mcp.json`:
 
 **Remote MCP** (no local Node.js needed): available at the [Dynatrace Hub](https://www.dynatrace.com/hub/detail/dynatrace-mcp-server/). Authentication handled via browser OAuth — no token needed.
 
+> **URL note**: `DT_ENVIRONMENT` must be the Platform URL (`abc12345.apps.dynatrace.com`). The classic URL (`abc12345.live.dynatrace.com`) used by the Operator `apiUrl` and REST API will not work here.
+
 **Cost note**: `execute_dql` scans Grail data and may incur costs. Set `DT_GRAIL_QUERY_BUDGET_GB` (default 1000 GB) to cap session spend. Use short timeframes (1h–24h) during investigation.
 
 ### Available Capabilities
