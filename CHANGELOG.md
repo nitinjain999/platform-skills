@@ -9,6 +9,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.8.0] - 2026-05-08
 
+### Added (continued)
+
+#### Datadog Domain
+
+New Domain 16: `Datadog` — deploy and configure the Datadog Agent on Kubernetes, instrument services with APM and log correlation, and manage monitors, dashboards, SLOs, and synthetic tests as Terraform-managed resources.
+
+- `references/datadog.md` — Agent Helm setup, APM instrumentation (Node.js/Python), Unified Service Tagging, Log Management with processing rules, Monitors (Terraform), Dashboards (Terraform), SLOs, Synthetic tests, and troubleshooting table
+- `/platform-skills:datadog` (`commands/datadog.md`) — six modes: `setup`, `instrument`, `monitor`, `dashboard`, `slo`, `debug`
+- `examples/datadog/terraform/monitors.tf` — Terraform monitors for error rate and latency, plus SLO resource
+
+#### Dynatrace Domain
+
+New Domain 17: `Dynatrace` — deploy OneAgent via the Kubernetes Operator with automatic injection, configure anomaly detection, ingest custom metrics, define SLOs, and manage dashboards and alerting profiles with the Dynatrace Terraform provider.
+
+- `references/dynatrace.md` — Operator and DynaKube CR setup, Node.js/Python/Java SDK instrumentation, Log Monitoring, custom metrics via MINT API, SLOs, Terraform provider (anomaly detection, SLOs, alerting), Davis AI problem feeds, troubleshooting table, and token scopes
+- `/platform-skills:dynatrace` (`commands/dynatrace.md`) — six modes: `setup`, `instrument`, `monitor`, `slo`, `dashboard`, `debug`
+- `examples/dynatrace/operator/dynakube.yaml` — production DynaKube CR with cloudNativeFullStack injection and ActiveGate
+
+## [1.8.0] - 2026-05-08
+
 ### Added
 
 #### MCP Domain (Model Context Protocol)

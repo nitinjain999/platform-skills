@@ -50,6 +50,8 @@ REQUIRED_REFERENCES=(
   references/mcp.md
   references/observability.md
   references/documentation.md
+  references/datadog.md
+  references/dynatrace.md
 )
 
 for ref in "${REQUIRED_REFERENCES[@]}"; do
@@ -77,6 +79,8 @@ EXAMPLE_DOMAINS=(
   examples/mcp
   examples/observability
   examples/documentation
+  examples/datadog
+  examples/dynatrace
 )
 
 for domain in "${EXAMPLE_DOMAINS[@]}"; do

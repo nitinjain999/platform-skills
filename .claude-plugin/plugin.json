@@ -50,6 +50,8 @@
     "./commands/helmcheck.md",
     "./commands/mcp.md",
     "./commands/observability.md",
-    "./commands/document.md"
+    "./commands/document.md",
+    "./commands/datadog.md",
+    "./commands/dynatrace.md"
   ]
 }

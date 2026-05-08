@@ -64,7 +64,11 @@
         "opentelemetry",
         "documentation",
         "openapi",
-        "docstrings"
+        "docstrings",
+        "datadog",
+        "dynatrace",
+        "apm",
+        "monitoring"
       ],
       "source": {
         "source": "url",

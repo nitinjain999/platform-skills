@@ -26,6 +26,8 @@ Match the task to the right layer:
 13. `MCP (Model Context Protocol)`: Build, review, and debug MCP servers and clients — tool and resource handlers, Zod/Pydantic schema validation, stdio/HTTP/SSE transports, protocol compliance, auth, and rate limiting.
 14. `Observability`: Instrument services with structured logging, Prometheus metrics, and OpenTelemetry tracing. Build Grafana dashboards, write alerting rules, run k6 load tests, and plan capacity.
 15. `Documentation`: Generate and validate inline docstrings (Google/NumPy/JSDoc), OpenAPI 3.1 specs, documentation sites (MkDocs, TypeDoc), and getting started guides.
+16. `Datadog`: Deploy and configure the Datadog Agent on Kubernetes, instrument services with APM and log correlation, write monitors, dashboards, SLOs, and synthetic tests — all as Terraform-managed resources.
+17. `Dynatrace`: Deploy OneAgent via the Kubernetes Operator with automatic injection, configure anomaly detection, ingest custom metrics, define SLOs, and manage dashboards and alerting profiles with the Dynatrace Terraform provider.
 
 If a task spans multiple areas, decide which layer owns the source of truth and keep the other layers consumers of that state.
 
@@ -76,6 +78,8 @@ When asked to generate code, start from the thinnest useful slice that proves th
 - For MCP server and client development — protocol, TypeScript/Python SDKs, schema validation, transports, security, and testing — read [references/mcp.md](references/mcp.md).
 - For observability instrumentation, Prometheus metrics, OpenTelemetry tracing, alerting rules, Grafana dashboards, load testing, and capacity planning, read [references/observability.md](references/observability.md).
 - For code documentation — Python docstrings, JSDoc, OpenAPI 3.1 specs, documentation sites, and developer guides — read [references/documentation.md](references/documentation.md).
+- For Datadog Agent setup, APM, log management, monitors, dashboards, SLOs, and synthetic tests — read [references/datadog.md](references/datadog.md).
+- For Dynatrace OneAgent Operator, auto-instrumentation, custom metrics, SLOs, anomaly detection, and Terraform provider — read [references/dynatrace.md](references/dynatrace.md).
 
 Load only the files needed for the current request.
 
@@ -95,3 +99,5 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:mcp` — MCP server/client scaffolding, protocol review, and integration debugging
 - `/platform-skills:observability` — instrument services, build dashboards, write alerts, run load tests, plan capacity
 - `/platform-skills:document` — generate docstrings, OpenAPI specs, documentation sites, and getting started guides
+- `/platform-skills:datadog` — Datadog Agent setup, APM instrumentation, monitors, dashboards, SLOs, and debugging
+- `/platform-skills:dynatrace` — OneAgent deployment, instrumentation, anomaly detection, SLOs, and debugging
