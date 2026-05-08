@@ -1,0 +1,47 @@
+apiVersion: dynatrace.com/v1beta1
+kind: DynaKube
+metadata:
+  name: dynakube
+  namespace: dynatrace
+  annotations:
+    feature.dynatrace.com/automatic-kubernetes-api-monitoring: "true"
+spec:
+  # Replace with your environment URL
+  # Classic URL (live.dynatrace.com) — correct for the Operator and REST API.
+  # This is distinct from DT_ENVIRONMENT used by the MCP server, which requires
+  # the Platform URL (abc12345.apps.dynatrace.com).
+  apiUrl: "https://ENVIRONMENT_ID.live.dynatrace.com/api"
+
+  # Token secret created with:
+  # kubectl -n dynatrace create secret generic dynakube \
+  #   --from-literal=apiToken="${DT_API_TOKEN}" \
+  #   --from-literal=dataIngestToken="${DT_DATA_INGEST_TOKEN}"
+  tokens: dynakube
+
+  oneAgent:
+    # cloudNativeFullStack: automatic injection, no pod restarts needed
+    cloudNativeFullStack:
+      tolerations:
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/control-plane  # k8s >= 1.24
+          operator: Exists
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/master         # k8s < 1.24 (deprecated)
+          operator: Exists
+
+  activeGate:
+    capabilities:
+      - routing
+      - kubernetes-monitoring
+      - dynatrace-api
+    replicas: 2
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        memory: 512Mi
+
+  # Enrich all telemetry with Kubernetes metadata (namespace, pod, node)
+  metadataEnrichment:
+    enabled: true

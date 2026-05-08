@@ -1,0 +1,66 @@
+groups:
+  - name: orders-service
+    rules:
+      # --- Availability ---
+      - alert: OrdersServiceDown
+        expr: up{job="orders-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "orders-service is down"
+          description: "No scrape targets healthy for orders-service in {{ $labels.namespace }}"
+          runbook: "https://wiki.internal/runbooks/orders-service-down"
+
+      # --- Error Rate (RED — Errors) ---
+      - alert: OrdersHighErrorRate
+        expr: |
+          rate(http_requests_total{job="orders-service",status=~"5.."}[5m])
+          / rate(http_requests_total{job="orders-service"}[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Error rate {{ $value | humanizePercentage }} on {{ $labels.route }}"
+          description: "5xx rate above 5% sustained for 2 minutes on route {{ $labels.route }}"
+          runbook: "https://wiki.internal/runbooks/orders-high-error-rate"
+
+      # --- Latency (RED — Duration) ---
+      - alert: OrdersHighP99Latency
+        expr: |
+          histogram_quantile(0.99,
+            rate(http_request_duration_seconds_bucket{job="orders-service"}[5m])
+          ) > 1
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "p99 latency {{ $value | humanizeDuration }} on {{ $labels.route }}"
+          description: "99th percentile latency above 1s for 5 minutes on route {{ $labels.route }}"
+          runbook: "https://wiki.internal/runbooks/orders-high-latency"
+
+      # --- Throughput drop (RED — Rate) ---
+      - alert: OrdersLowRequestRate
+        expr: |
+          rate(http_requests_total{job="orders-service"}[5m]) < 1
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Request rate below 1 rps — possible upstream issue or dead queue"
+          runbook: "https://wiki.internal/runbooks/orders-low-traffic"
+
+      # --- Queue depth (saturation) ---
+      - alert: OrdersQueueDepthHigh
+        expr: job_queue_depth{job="orders-service",queue="payments"} > 500
+        for: 3m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Payment queue depth {{ $value }} — consumer may be lagging"
+          runbook: "https://wiki.internal/runbooks/orders-queue-saturation"

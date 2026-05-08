@@ -1,7 +1,7 @@
 {
   "name": "platform-skills",
-  "version": "1.7.0",
-  "description": "Practical guidance for platform engineers: Kubernetes, Terraform, GitOps, GitHub Actions, AWS, Azure, Linkerd, Linux administration, networking, platform product thinking, and SOC 2 compliance for Terraform.",
+  "version": "1.8.0",
+  "description": "Practical guidance for platform engineers: Kubernetes, Helm, Terraform, GitOps, GitHub Actions, AWS, Azure, Linkerd, Linux, networking, MCP development, observability, code documentation, and SOC 2 compliance for Terraform.",
   "author": {
     "name": "Nitin Jain",
     "email": "nitin.solna@gmail.com",
@@ -26,7 +26,14 @@
     "networking",
     "dns",
     "developer-experience",
-    "devex"
+    "devex",
+    "mcp",
+    "model-context-protocol",
+    "observability",
+    "prometheus",
+    "opentelemetry",
+    "documentation",
+    "openapi"
   ],
   "skills": [
     "./skills/platform-skills"
@@ -40,6 +47,11 @@
     "./commands/linux.md",
     "./commands/product.md",
     "./commands/compliance.md",
-    "./commands/helmcheck.md"
+    "./commands/helmcheck.md",
+    "./commands/mcp.md",
+    "./commands/observability.md",
+    "./commands/document.md",
+    "./commands/datadog.md",
+    "./commands/dynatrace.md"
   ]
 }
