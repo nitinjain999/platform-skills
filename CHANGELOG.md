@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+#### Helm Domain (Helmcheck)
+
+New Domain 12: `Helm (Helmcheck)` — production-grade Helm chart development covering scaffolding, values design, template patterns, dependency management, security hardening, and the full lint/validation pipeline.
+
+**Reference guide:**
+- `references/helm.md` — complete template patterns, standard `_helpers.tpl`, security-hardened Deployment baseline, conditional resource templates (Ingress, HPA, PDB, NetworkPolicy), `values.yaml` design principles, `values.schema.json` type safety, dependency management, lint/validation pipeline, and GitOps integration (Flux HelmRelease, Argo CD Application)
+
+**Slash command:**
+- `/platform-skills:helmcheck` (`commands/helmcheck.md`) — three modes: `create` (scaffold a production-ready chart), `review` (analyse chart structure and quality), `security` (audit RBAC, pod security, network policies, and secrets handling)
+
+**Platform rules added:**
+- Helm lint pipeline rule: enforce `helm lint --strict` → `helm template --debug` → `kubeconform -strict -summary` → `checkov` → `helm test` in order; fail CI on any `helm lint --strict` warning
+
 ## [1.6.0] - 2026-04-11
 
 ### Added

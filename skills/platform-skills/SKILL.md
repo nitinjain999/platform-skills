@@ -22,6 +22,7 @@ Match the task to the right layer:
 9. `Platform Mindset`: Treat developers as customers. Apply product thinking, friction audits, DevEx metrics, RFC/ADR processes, incident communication, and blameless post-mortems.
 10. `Cross-platform`: Design repo boundaries, ownership, promotion flows, and security controls first.
 11. `Compliance`: Implement SOC 2 Trust Services Criteria controls in Terraform — IAM least privilege, encryption, audit logging, network security, and change management. Run Checkov for continuous enforcement and collect evidence for auditors.
+12. `Helm (Helmcheck)`: Build, lint, and audit Helm charts — scaffolding, values design, template patterns, dependency management, security hardening, and the full lint/validation pipeline.
 
 If a task spans multiple areas, decide which layer owns the source of truth and keep the other layers consumers of that state.
 
@@ -37,6 +38,7 @@ If a task spans multiple areas, decide which layer owns the source of truth and 
 - Model environments explicitly. Promotion should be visible in Git history and reversible by commit rollback.
 - For Linux and networking changes, validate at each layer before escalating: confirm the process is listening (`ss -tulnp`), then L3 reachability (`ping`), L4 connectivity (`nc -zv`), L7 response (`curl -v`), and security group / NACL rules last. Do not skip layers.
 - For every Terraform change, enforce in order: `terraform fmt -check -recursive`, `terraform validate`, `tflint --recursive`, security scan (`tfsec` or `checkov`), then `plan`. Do not let format or lint failures reach the plan step.
+- For every Helm chart change, enforce in order: `helm lint --strict`, `helm template --debug`, `kubeconform -strict -summary` on rendered output, `checkov` on rendered manifests, then `helm test` in-cluster. Fail CI on any `helm lint --strict` warning.
 - Enforce a tag baseline on all cloud resources. The specific keys are an organizational decision. Use AWS `default_tags` (provider level) or Azure `merge(local.common_tags, {...})` (module local) so the baseline is applied once, not repeated per resource. Back it with AWS Tag Policies or Azure Policy so resources created outside Terraform are also covered.
 
 ## Structure the Response
@@ -67,6 +69,7 @@ When asked to generate code, start from the thinnest useful slice that proves th
 - For Linux administration, DNS, load balancing, VPC/VNet design, kernel tuning, and network troubleshooting, read [references/linux-networking.md](references/linux-networking.md).
 - For product mindset, developer experience, friction audits, RFC/ADR, incident communication, post-mortems, and capacity planning, read [references/platform-mindset.md](references/platform-mindset.md).
 - For SOC 2 Trust Services Criteria controls in Terraform — IAM, encryption, audit logging, network security, change management, Checkov enforcement, and audit evidence — read [references/compliance.md](references/compliance.md).
+- For Helm chart scaffolding, template patterns, values design, lint pipeline, and GitOps integration, read [references/helm.md](references/helm.md).
 
 Load only the files needed for the current request.
 
@@ -82,3 +85,4 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:linux` — Linux administration, DNS, load balancing, VPC/VNet, and connectivity troubleshooting
 - `/platform-skills:product` — product thinking, friction audits, DevEx, RFC/ADR, incident updates, post-mortems
 - `/platform-skills:compliance` — SOC 2 gap analysis, control implementation, evidence collection, and Checkov remediation for Terraform
+- `/platform-skills:helmcheck` — Helm chart scaffolding, structural review, and security audit with full lint/validation pipeline

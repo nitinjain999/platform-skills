@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -fsSL \"https://raw.githubusercontent.com/alirezarezvani/claude-skills/main/engineering/helm-chart-builder/skills/helm-chart-builder/references/chart-patterns.md\")",
+      "Bash(curl -fsSL \"https://raw.githubusercontent.com/alirezarezvani/claude-skills/main/engineering/helm-chart-builder/skills/helm-chart-builder/references/values-design.md\")"
+    ]
+  }
+}

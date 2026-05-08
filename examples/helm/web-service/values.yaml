@@ -1,0 +1,105 @@
+# -- Number of pod replicas (ignored when autoscaling.enabled is true)
+replicaCount: 2
+
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  # -- Container image repository
+  repository: ghcr.io/example/payments-api
+  # -- Image pull policy
+  pullPolicy: IfNotPresent
+  # -- Image tag — defaults to .Chart.AppVersion when empty
+  tag: ""
+
+imagePullSecrets: []
+
+serviceAccount:
+  # -- Create a dedicated ServiceAccount
+  create: true
+  annotations: {}
+  name: ""
+  # -- Do not mount the SA token unless the pod needs K8s API access
+  automount: false
+
+podAnnotations: {}
+podLabels: {}
+
+# -- Pod-level security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+# -- Container-level security context
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 80
+  # -- Internal container port the app listens on
+  targetPort: 8080
+
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: payments-api.example.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+# -- Container resource requests and limits
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  initialDelaySeconds: 15
+  periodSeconds: 20
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /readyz
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  failureThreshold: 3
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+
+pdb:
+  # -- Enable PodDisruptionBudget — recommended for replicas >= 2
+  enabled: true
+  minAvailable: 1
+
+networkPolicy:
+  # -- Enable NetworkPolicy — default-deny ingress + allow from ingress controller
+  enabled: true
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+volumes: []
+volumeMounts: []
