@@ -23,5 +23,5 @@ spec:
           drop:
             - ALL
       command: ['wget']
-      args: ['{{ include "payments-api.fullname" . }}:{{ .Values.service.port }}/healthz']
+      args: ['-qO-', '{{ include "payments-api.fullname" . }}:{{ .Values.service.port }}/healthz']
   restartPolicy: Never

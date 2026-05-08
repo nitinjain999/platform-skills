@@ -168,10 +168,30 @@ SCHEMA="$CHART/values.schema.json"
 
 DUPLICATE_PROPS=$(python3 - "$SCHEMA" <<'PYEOF'
 import json, sys
-d = json.load(open(sys.argv[1]))
-props = list(d.get("properties", {}).keys())
-dups = [p for p in props if props.count(p) > 1]
-print(",".join(set(dups)) if dups else "ok")
+# Only check top-level properties keys for duplicates.
+# Nested objects legitimately reuse keywords like "type", "minimum", etc.
+top_pairs = []
+def top_level_hook(lst):
+    top_pairs.extend(k for k, _ in lst)
+    return dict(lst)
+with open(sys.argv[1]) as f:
+    raw = f.read()
+import re
+# Extract only the top-level properties object by loading the doc normally
+# then re-parsing just its keys via a targeted hook on the root document.
+root_pairs = []
+def root_hook(lst):
+    root_pairs.extend(k for k, _ in lst)
+    return dict(lst)
+import io
+json.load(io.StringIO(raw), object_pairs_hook=root_hook)
+# root_pairs contains ALL keys at every depth; find true top-level property names
+# by checking the 'properties' value of the root object directly
+doc = json.loads(raw)
+props_keys = list(doc.get("properties", {}).keys())
+# Count occurrences in root_pairs to detect top-level property duplication
+dups = [k for k in set(props_keys) if root_pairs.count(k) > 1]
+print(",".join(sorted(set(dups))) if dups else "ok")
 PYEOF
 )
 if [ "$DUPLICATE_PROPS" = "ok" ]; then
@@ -222,11 +242,11 @@ else
   fail "deployment.yaml missing AppVersion fallback — image tag may be hardcoded"
 fi
 
-# automountServiceAccountToken must be explicitly false on pod spec
-if grep -q "automountServiceAccountToken: false" "$DEPLOYMENT"; then
-  pass "deployment.yaml sets automountServiceAccountToken: false on pod spec"
+# automountServiceAccountToken on pod spec must be wired to values (default false)
+if grep -q "automountServiceAccountToken: {{ .Values.serviceAccount.automount }}" "$DEPLOYMENT"; then
+  pass "deployment.yaml wires automountServiceAccountToken to .Values.serviceAccount.automount"
 else
-  fail "deployment.yaml missing automountServiceAccountToken: false on pod spec"
+  fail "deployment.yaml missing automountServiceAccountToken wired to .Values.serviceAccount.automount"
 fi
 
 # emptyDir for /tmp (required when readOnlyRootFilesystem: true)
@@ -244,9 +264,11 @@ else
   pass "_helpers.tpl selectorLabels does not contain app.kubernetes.io/version"
 fi
 
-# NetworkPolicy must not reference kubeval
-if ! grep -q "kubeval" "$NETPOL"; then
-  pass "networkpolicy.yaml does not reference kubeval"
+# NetworkPolicy must not reference deprecated kubeval
+if grep -q "kubeval" "$NETPOL"; then
+  fail "networkpolicy.yaml references deprecated kubeval — replace with kubeconform"
+else
+  pass "networkpolicy.yaml does not reference deprecated kubeval"
 fi
 
 # NetworkPolicy — both ingress AND egress policy types declared

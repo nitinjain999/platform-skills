@@ -41,7 +41,7 @@ appVersion: "1.0.0"
 
 ### 2. _helpers.tpl
 
-Include all four standard helpers: `name`, `fullname`, `chart`, `labels`, `selectorLabels`, `serviceAccountName`.
+Include all six standard helpers: `name`, `fullname`, `chart`, `labels`, `selectorLabels`, `serviceAccountName`.
 - `selectorLabels` must NOT include `app.kubernetes.io/version` — it is immutable after creation
 - Always `trunc 63 | trimSuffix "-"` on name fields
 

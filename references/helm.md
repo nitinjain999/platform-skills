@@ -375,13 +375,14 @@ ingress:
           pathType: ImplementationSpecific
   tls: []
 
-# -- Container resource requests and limits
+# -- Container resource requests and limits.
+# CPU limit is intentionally omitted — setting it causes CFS throttling for bursty workloads.
+# Set a CPU limit only if you need hard multi-tenant isolation and accept the throttling trade-off.
 resources:
   requests:
     cpu: 100m
     memory: 128Mi
   limits:
-    cpu: 500m
     memory: 256Mi
 
 livenessProbe:
@@ -551,9 +552,9 @@ metadata:
 spec:
   containers:
     - name: wget
-      image: busybox
+      image: busybox:1.36
       command: ['wget']
-      args: ['{{ include "mychart.fullname" . }}:{{ .Values.service.port }}']
+      args: ['-qO-', '{{ include "mychart.fullname" . }}:{{ .Values.service.port }}/healthz']
   restartPolicy: Never
 ```
 
@@ -607,7 +608,7 @@ spec:
   chart:
     spec:
       chart: mychart
-      version: ">=0.1.0 <1.0.0"
+      version: "0.1.0"
       sourceRef:
         kind: HelmRepository
         name: myrepo
@@ -634,7 +635,7 @@ metadata:
   name: myapp
   namespace: argocd
 spec:
-  project: default
+  project: platform-apps
   source:
     repoURL: https://charts.example.com
     chart: mychart
