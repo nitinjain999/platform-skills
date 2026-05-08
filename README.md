@@ -169,17 +169,18 @@ platform-skills/
 - [x] v1.5.0 — Linux & Networking: Linux admin, DNS, load balancing, VPC/VNet
 - [x] v1.5.0 — Platform Mindset: DevEx, RFC/ADR, incident comms, post-mortems
 - [x] v1.6.0 — Compliance: SOC 2 Trust Services Criteria in Terraform — IAM, encryption (11 data services), detection (GuardDuty, CIS CloudWatch alarms, Security Hub), audit logging, vulnerability management, incident response, and backup/recovery
-
-**Near-term**
-- [ ] v1.7.0 — SOC 2 for Kubernetes: Kyverno policies mapped to TSC criteria, pod security admission, network policy as compliance evidence, `kube-bench` CIS Benchmark integration
-- [ ] v1.7.0 — Compliance extended: HIPAA and PCI-DSS control mapping for AWS Terraform (building on v1.6.0 SOC 2 foundation)
-- [ ] v1.8.0 — Azure compliance: SOC 2 controls in Terraform for Azure — Azure Policy, Defender for Cloud, Monitor diagnostic settings, Backup
+- [x] v1.7.0 — Helm (Helmcheck): production chart scaffolding, values design, template patterns, security hardening, full lint/validation pipeline
+- [x] v1.8.0 — MCP: build, review, and debug Model Context Protocol servers (TypeScript + Python SDKs, stdio/SSE transports, schema design, security)
+- [x] v1.8.0 — Observability: structured logging, Prometheus metrics, OpenTelemetry tracing, Grafana dashboards, alerting rules, k6 load testing, capacity planning
+- [x] v1.8.0 — Documentation: docstrings (Google/NumPy/JSDoc), OpenAPI 3.1 specs, doc sites (MkDocs/TypeDoc), developer guides
+- [x] v1.8.0 — Datadog: Agent Helm setup, APM instrumentation, log management, monitors/dashboards/SLOs as Terraform, incident investigation via Datadog MCP
+- [x] v1.8.0 — Dynatrace: OneAgent Kubernetes Operator, custom metrics/SLOs/dashboards via Terraform provider, Davis AI incident investigation via Dynatrace MCP
 
 **Planned**
 - [ ] GCP: landing zone, GKE, Workload Identity, and IAM patterns
-- [ ] Observability: Prometheus, Grafana, Loki — alerting rules, dashboards-as-code, retention policies
 - [ ] Service mesh: Istio — traffic management, mTLS, telemetry (counterpart to Linkerd domain)
 - [ ] Policy-as-code: Kyverno and OPA/Gatekeeper cluster policies with compliance mapping
+- [ ] SOC 2 for Kubernetes: Kyverno policies mapped to TSC criteria, pod security admission, `kube-bench` CIS Benchmark integration
 - [ ] OpenShift operator lifecycle: OLM, CatalogSource, operator upgrade patterns
 - [ ] Argo CD ApplicationSet fleet patterns: cluster generators, matrix strategies, progressive rollout
 - [ ] Multi-cloud networking: Transit Gateway, VNet peering, PrivateLink, cross-cloud DNS
