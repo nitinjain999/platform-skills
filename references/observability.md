@@ -145,7 +145,7 @@ scrape_configs:
 
 ### Node.js
 
-```js
+```typescript
 import { NodeSDK } from "@opentelemetry/sdk-node";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { trace, SpanStatusCode } from "@opentelemetry/api";

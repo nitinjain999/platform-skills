@@ -19,7 +19,7 @@ Steps:
 6. Verify injection: `kubectl describe pod <app-pod> | grep dynatrace`
 
 Required token scopes:
-- `apiToken`: `ReadConfig WriteConfig DataExport LogExport`
+- `apiToken`: `ReadConfig WriteConfig DataExport LogExport ReadSyntheticData WriteAnomalyDetection`
 - `dataIngestToken`: `metrics.ingest logs.ingest`
 
 Reference: `references/dynatrace.md` → Deployment, Token Scopes

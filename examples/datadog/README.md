@@ -8,17 +8,19 @@ Production-ready Datadog configurations for Kubernetes, APM, monitors, dashboard
 
 | Example | Type | Description |
 |---------|------|-------------|
-| [helm-values/](helm-values/) | Helm | Agent values — APM, logs, Cluster Agent |
 | [terraform/](terraform/) | Terraform | Monitors, dashboards, and SLOs as code |
 
 ## Usage
 
 ```bash
-# Deploy agent
+# Deploy agent — create API key secret first, never pass on command line
+kubectl create secret generic datadog-secret \
+  --from-literal=api-key="${DD_API_KEY}" \
+  -n datadog --dry-run=client -o yaml | kubectl apply -f -
+
 helm repo add datadog https://helm.datadoghq.com
 helm upgrade --install datadog datadog/datadog \
-  -f helm-values/datadog-values.yaml \
-  --set datadog.apiKey="${DD_API_KEY}" \
+  --set datadog.apiKeyExistingSecret=datadog-secret \
   -n datadog --create-namespace
 
 # Apply Terraform resources

@@ -9,7 +9,6 @@ Production-ready Dynatrace configurations for OneAgent Kubernetes deployment, an
 | Example | Type | Description |
 |---------|------|-------------|
 | [operator/](operator/) | Kubernetes | DynaKube CR for cloudNativeFullStack injection |
-| [terraform/](terraform/) | Terraform | Anomaly detection, SLOs, and alerting as code |
 
 ## Usage
 
@@ -21,10 +20,6 @@ kubectl -n dynatrace create secret generic dynakube \
   --from-literal=apiToken="${DT_API_TOKEN}" \
   --from-literal=dataIngestToken="${DT_DATA_INGEST_TOKEN}"
 kubectl apply -f operator/dynakube.yaml
-
-# Apply Terraform resources
-cd terraform
-terraform init && terraform plan
 ```
 
 ## See Also

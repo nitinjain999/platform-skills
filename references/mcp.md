@@ -134,9 +134,20 @@ import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import express from "express";
 
 const app = express();
-const transport = new SSEServerTransport("/message", res);
-app.get("/sse", (req, res) => server.connect(new SSEServerTransport("/message", res)));
-app.post("/message", (req, res) => transport.handlePostMessage(req, res));
+const transports = new Map<string, SSEServerTransport>();
+
+app.get("/sse", async (req, res) => {
+  const transport = new SSEServerTransport("/message", res);
+  transports.set(transport.sessionId, transport);
+  await server.connect(transport);
+});
+
+app.post("/message", async (req, res) => {
+  const sessionId = req.query.sessionId as string;
+  const transport = transports.get(sessionId);
+  await transport?.handlePostMessage(req, res);
+});
+
 app.listen(3000);
 ```
 
@@ -153,20 +164,23 @@ pip install mcp
 ### Tool with Pydantic Validation
 
 ```python
+import json
+
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel, Field
 
 mcp = FastMCP("my-server")
 
-@mcp.tool()
-async def search_docs(query: str, limit: int = 10) -> str:
-    """Search internal documentation by keyword.
 
-    Args:
-        query: Search query string.
-        limit: Maximum number of results (1-50).
-    """
-    results = await search_index(query, limit)
+class SearchInput(BaseModel):
+    query: str = Field(description="Search query string")
+    limit: int = Field(default=10, ge=1, le=50, description="Maximum results")
+
+
+@mcp.tool()
+async def search_docs(input: SearchInput) -> str:
+    """Search internal documentation by keyword."""
+    results = await search_index(input.query, input.limit)
     return json.dumps(results)
 ```
 

@@ -64,8 +64,8 @@ Use `/platform-skills:datadog investigate` for a guided 4-phase workflow:
 ```yaml
 # datadog-values.yaml
 datadog:
-  apiKey: "$(DD_API_KEY)"       # inject from secret, never hardcode
-  site: "datadoghq.eu"          # or datadoghq.com
+  apiKeyExistingSecret: "datadog-secret"  # kubectl create secret generic datadog-secret --from-literal=api-key="${DD_API_KEY}"
+  site: "datadoghq.eu"                    # or datadoghq.com
   apm:
     portEnabled: true
   logs:
@@ -85,10 +85,14 @@ clusterAgent:
 ```
 
 ```bash
+# Create the API key secret first — never pass the key on the command line
+kubectl create secret generic datadog-secret \
+  --from-literal=api-key="${DD_API_KEY}" \
+  -n datadog --dry-run=client -o yaml | kubectl apply -f -
+
 helm repo add datadog https://helm.datadoghq.com
 helm upgrade --install datadog datadog/datadog \
   -f datadog-values.yaml \
-  --set datadog.apiKey="${DD_API_KEY}" \
   -n datadog --create-namespace
 ```
 
