@@ -24,6 +24,7 @@ Both layers work independently. The plugin is optional.
 | Read a domain guide | [references/](references/) |
 | Copy a working example | [examples/](examples/) |
 | Install as a Claude plugin | [Installation](#installation) |
+| Learn how to use each slash command | [COMMANDS.md](COMMANDS.md) |
 | Set up VSCode with or without Claude | [VSCODE_INTEGRATION.md](VSCODE_INTEGRATION.md) |
 | Contribute a pattern | [CONTRIBUTING.md](CONTRIBUTING.md) |
 
