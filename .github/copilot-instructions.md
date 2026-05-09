@@ -570,3 +570,28 @@ For deeper patterns, reference these files in this repository:
 - `references/conventional-commits.md` — Commit message spec, types, scopes, tooling, validation
 - `references/opa.md` — Rego v1 syntax, rule types, input shapes, testing, Conftest CLI, Regal, GitHub Actions
 - `examples/` — Working, production-ready code examples
+
+---
+
+## Skill Quick Reference
+
+Use these slash commands in Claude Code for repeatable workflows:
+
+| Command | When to use | Examples directory |
+|---------|------------|-------------------|
+| `/platform-skills:debug` | Structured diagnosis for any platform symptom | — |
+| `/platform-skills:review` | Production-readiness check on any manifest, Terraform, or workflow | — |
+| `/platform-skills:terraform` | Full fmt/validate/tflint/security pipeline + blast radius | `examples/terraform/` |
+| `/platform-skills:gitops` | Flux CD or Argo CD not reconciling | `examples/flux/`, `examples/argocd/` |
+| `/platform-skills:helmcheck` | Create, review, or security-audit a Helm chart | `examples/helm/` |
+| `/platform-skills:linkerd` | mTLS, injection, traffic policy, multi-cluster | — |
+| `/platform-skills:linux` | DNS, load balancer, VPC connectivity, kernel issue | — |
+| `/platform-skills:compliance` | SOC 2 gap analysis, control implementation, Checkov remediation | `examples/compliance/` |
+| `/platform-skills:product` | RFC/ADR, DevEx audit, incident communication, post-mortem | — |
+| `/platform-skills:mcp` | Scaffold, review, or debug an MCP server | `examples/mcp/` |
+| `/platform-skills:observability` | Instrument services, alerts, dashboards, load tests, capacity | `examples/observability/` |
+| `/platform-skills:document` | Generate docstrings, OpenAPI specs, doc sites | `examples/documentation/` |
+| `/platform-skills:datadog` | Agent setup, APM, monitors, SLOs, incident investigation | `examples/datadog/` |
+| `/platform-skills:dynatrace` | OneAgent deployment, instrumentation, SLOs, incident investigation | `examples/dynatrace/` |
+| `/platform-skills:commit` | Analyze diff, generate conventional commit message, validate | `examples/conventional-commits/` |
+| `/platform-skills:opa` | Generate Rego policies, write tests, run fmt/regal/verify pipeline | `examples/opa/` |

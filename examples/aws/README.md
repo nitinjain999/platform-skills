@@ -1,80 +1,98 @@
+Status: Stable
+
 # AWS Examples
 
-Status: committed file-level snippets for the handbook. Use these as building blocks rather than a complete standalone AWS stack.
+Production-ready IAM patterns for EKS workloads and GitHub Actions OIDC authentication — no static credentials.
 
-## Files
+## Examples
 
-| File | What it shows |
-|---|---|
-| [iam/s3-least-privilege.json](iam/s3-least-privilege.json) | S3 IAM policy scoped to specific bucket and prefix |
-| [iam/irsa-dynamodb.json](iam/irsa-dynamodb.json) | DynamoDB IAM policy for IRSA with leading key condition |
+| Example | Type | Description |
+|---------|------|-------------|
+| [iam/](iam/) | Terraform | IRSA role for EKS pod + GitHub Actions OIDC trust |
 
-For EKS infrastructure, see [examples/terraform/eks-cluster/](../terraform/eks-cluster/).
+## Quick Start
 
-## Patterns
+```bash
+cd iam
+terraform init
+terraform plan \
+  -var="cluster_oidc_issuer=https://oidc.eks.eu-central-1.amazonaws.com/id/EXAMPLED539D4633E53DE1B71EXAMPLE" \
+  -var="namespace=my-app" \
+  -var="service_account=my-app-sa"
+terraform apply
+```
 
-### EKS with IRSA
+## Key Patterns
+
+### IRSA — IAM Roles for Service Accounts
+
+Pods on EKS authenticate to AWS using projected service account tokens — no access keys needed:
 
 ```hcl
-module "irsa_role" {
-  source = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts-eks"
-
-  role_name = "my-app-irsa"
-
-  oidc_providers = {
-    main = {
-      provider_arn               = module.eks.oidc_provider_arn
-      namespace_service_accounts = ["my-app:my-app-sa"]
+# Trust policy pins to specific namespace + service account
+assume_role_policy = jsonencode({
+  Statement = [{
+    Effect    = "Allow"
+    Principal = { Federated = aws_iam_openid_connect_provider.cluster.arn }
+    Action    = "sts:AssumeRoleWithWebIdentity"
+    Condition = {
+      StringEquals = {
+        "${local.oidc_issuer}:sub" = "system:serviceaccount:${var.namespace}:${var.service_account}"
+      }
     }
-  }
-
-  role_policy_arns = {
-    policy = aws_iam_policy.my_app.arn
-  }
-}
+  }]
+})
 ```
-
-### ALB Ingress
 
 ```yaml
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: my-app
-  annotations:
-    alb.ingress.kubernetes.io/scheme: internet-facing
-    alb.ingress.kubernetes.io/target-type: ip
-    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:region:account:certificate/id
-    alb.ingress.kubernetes.io/ssl-redirect: '443'
+# Pod spec — EKS injects the token automatically
 spec:
-  ingressClassName: alb
-  rules:
-  - host: my-app.example.com
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: my-app
-            port:
-              number: 80
+  serviceAccountName: my-app-sa  # Annotated with role ARN
 ```
 
-## Troubleshooting
+### Least-privilege IAM
 
-### EKS node not joining
-1. Check IAM role trust relationship
-2. Verify security group allows cluster communication
-3. Check cloud-init: `sudo cat /var/log/cloud-init-output.log`
-4. Verify correct AMI for the Kubernetes version
+```hcl
+# ✅ Scoped actions and resources
+resource "aws_iam_policy" "app" {
+  policy = jsonencode({
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["s3:GetObject", "s3:ListBucket"]
+      Resource = [
+        "arn:aws:s3:::my-bucket",
+        "arn:aws:s3:::my-bucket/*"
+      ]
+    }]
+  })
+}
+# ❌ Never: Action = "*" or Resource = "*"
+```
 
-### IRSA not working
-1. Verify OIDC provider exists and matches the cluster endpoint
-2. Check service account annotation on the pod
-3. Verify the IAM role trust policy includes the correct OIDC condition
+### GitHub Actions OIDC (no static credentials)
 
-### ALB ingress not creating
-1. Check AWS Load Balancer Controller logs
-2. Verify IAM policy covers required actions
-3. Verify subnet tags: `kubernetes.io/role/elb=1`
+```yaml
+permissions:
+  id-token: write
+  contents: read
+
+steps:
+  - uses: aws-actions/configure-aws-credentials@v4
+    with:
+      role-to-assume: arn:aws:iam::123456789012:role/github-actions-terraform
+      aws-region: eu-central-1
+```
+
+## Checklist
+
+- [ ] No static IAM access keys — IRSA for EKS pods, OIDC for GitHub Actions
+- [ ] IAM policies use specific actions and scoped ARNs (no wildcards)
+- [ ] IRSA trust pins to specific namespace and service account
+- [ ] GitHub Actions OIDC trust pins to specific repo and ref
+- [ ] All resources tagged via provider `default_tags`
+
+## See Also
+
+- [references/aws.md](../../references/aws.md) — account model, EKS, IAM, tagging, cost management
+- [references/compliance.md](../../references/compliance.md) — SOC 2 CC6.1/CC6.2 IAM controls
+- `/platform-skills:review` — production-readiness review of Terraform IAM resources
