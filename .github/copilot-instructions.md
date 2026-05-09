@@ -402,6 +402,118 @@ terraform {
 - `enable_log_file_validation = false` on CloudTrail
 - Image references ending in `:latest` in any resource
 
+## Helm Charts
+
+When generating or reviewing Helm charts, enforce in order:
+`helm lint --strict` → `helm template --debug` → `kubeconform -strict -summary` → `checkov` → `helm test`
+
+```yaml
+# values.yaml — always include schema-validated defaults
+# Reference: references/helm.md
+```
+
+Never use `helm upgrade --set` to pass secrets — use existing secrets references.
+
+## MCP Servers
+
+When scaffolding MCP servers:
+- Use `@modelcontextprotocol/sdk` for TypeScript, `mcp` (FastMCP) for Python
+- Validate all tool inputs with Zod (TypeScript) or Pydantic (Python)
+- SSE transport: create transport inside `/sse` handler, use session map for `/message` routing
+- Always set `BREAKING CHANGE:` footer when `!` is used in commit subject
+
+```typescript
+// ✅ Correct SSE pattern
+app.get("/sse", async (req, res) => {
+  const transport = new SSEServerTransport("/message", res);
+  transports.set(transport.sessionId, transport);
+  await server.connect(transport);
+});
+```
+
+## Observability
+
+When instrumenting services:
+- Structured logs: include `trace_id`, `span_id`, `service`, `env` on every log line
+- Prometheus metrics: expose `/metrics`, use `prom-client` (Node.js) or `prometheus-client` (Python)
+- OpenTelemetry: initialize SDK before any other import; export to OTLP endpoint
+- Alert on RED method: request rate, error rate, duration (p99)
+
+```typescript
+// ✅ OTEL initialization — must be first import
+import { NodeSDK } from "@opentelemetry/sdk-node";
+```
+
+## Datadog
+
+When generating Datadog configuration:
+- Never use `--set datadog.apiKey` or `apiKey:` in values files — use `apiKeyExistingSecret`
+- Always apply Unified Service Tagging: `DD_ENV`, `DD_SERVICE`, `DD_VERSION` on all pods
+- Enable `logInjection: true` in tracer init to correlate logs and traces
+
+```yaml
+# ✅ Secure Helm values
+datadog:
+  apiKeyExistingSecret: "datadog-secret"
+```
+
+```bash
+# ❌ Never
+helm upgrade --install datadog datadog/datadog --set datadog.apiKey="${DD_API_KEY}"
+```
+
+## Dynatrace
+
+When generating Dynatrace configuration:
+- `DynaKube.spec.apiUrl` uses the classic URL (`live.dynatrace.com`) — correct for the Operator
+- `DT_ENVIRONMENT` (MCP server) uses the Platform URL (`apps.dynatrace.com`) — different from apiUrl
+- Store `apiToken` and `dataIngestToken` in a Kubernetes Secret, never in plain Helm values
+
+```yaml
+# ✅ Correct apiUrl for DynaKube CR
+apiUrl: "https://ENVIRONMENT_ID.live.dynatrace.com/api"
+```
+
+## Conventional Commits
+
+Always generate commit messages following the Conventional Commits 1.0.0 specification:
+
+```
+<type>(<scope>): <imperative subject explaining WHY>
+
+<body — optional, explains motivation and approach>
+
+<footers — optional>
+```
+
+**Type selection:**
+- `feat` — new user-facing capability
+- `fix` — corrects broken behavior
+- `refactor` — restructures without behavior change
+- `chore` — deps, build tooling, no production effect
+- `ci` — CI/CD pipeline changes
+- `docs` — documentation only
+- `test` — tests only
+- `perf` — measurable performance improvement
+
+**Rules:**
+- Subject line ≤ 72 characters, imperative mood, lowercase start, no trailing period
+- Use `!` and `BREAKING CHANGE:` footer for breaking changes
+- Focus on WHY, not just what: `fix(auth): reject expired tokens before redirect` not `fix(auth): update token check`
+
+```
+# ✅ Good
+feat(orders): add idempotency key to prevent duplicate charges
+
+# ❌ Bad
+updated orders service
+```
+
+Never generate:
+- Commit messages without a type prefix
+- `Co-authored-by: Claude` or any AI attribution in commit messages
+- Subject lines over 72 characters
+
 ## Reference Files
 
 For deeper patterns, reference these files in this repository:
@@ -416,4 +528,11 @@ For deeper patterns, reference these files in this repository:
 - `references/github-actions.md` — Workflow security, OIDC
 - `references/platform-operating-model.md` — Cross-cutting architecture
 - `references/compliance.md` — SOC 2 controls in Terraform, Checkov rules, evidence commands
+- `references/helm.md` — Helm chart scaffolding, template patterns, lint pipeline
+- `references/mcp.md` — MCP protocol, TypeScript/Python SDKs, transports, security
+- `references/observability.md` — Logging, metrics, tracing, alerting, dashboards, load testing
+- `references/documentation.md` — Docstrings, OpenAPI 3.1, doc sites, developer guides
+- `references/datadog.md` — Agent setup, APM, log management, monitors, SLOs
+- `references/dynatrace.md` — Operator, instrumentation, metrics, SLOs, Terraform provider
+- `references/conventional-commits.md` — Commit message spec, types, scopes, tooling, validation
 - `examples/` — Working, production-ready code examples
