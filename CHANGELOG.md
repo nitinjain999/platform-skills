@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-05-09
+
+### Added
+
+#### Conventional Commits Domain
+
+New Domain 18: `Conventional Commits` — analyze git diffs or staged changes, generate commit messages that explain WHY a change was made, intelligently stage files for atomic commits, and validate messages against the Conventional Commits 1.0.0 specification.
+
+- `references/conventional-commits.md` — message structure (subject/body/footer rules), type classification table with decision guidance, scope rules, breaking change patterns with examples, atomic commit strategy with `git add -p`, full examples for fix/feat/chore/breaking/revert, commitlint setup with scope allow-list, husky git hook configuration, GitHub Actions PR title lint workflow, semantic-release configuration with version bump rules, and a validation rules table
+- `/platform-skills:commit` (`commands/commit.md`) — four modes: `analyze` (classify type/scope/breaking from diff), `generate` (produce full conventional commit message), `stage` (intelligently group and stage files for atomic commits), `validate` (check an existing message against the spec)
+- `examples/conventional-commits/commitlint/` — commitlint config with scope allow-list, husky `commit-msg` hook, and `package.json` for installation
+
 #### Datadog Domain
 
 New Domain 16: `Datadog` — deploy and configure the Datadog Agent on Kubernetes, instrument services with APM and log correlation, and manage monitors, dashboards, SLOs, and synthetic tests as Terraform-managed resources.
