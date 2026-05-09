@@ -1,6 +1,6 @@
 {
   "name": "platform-skills",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "description": "Practical guidance for platform engineers: Kubernetes, Helm, Terraform, GitOps, GitHub Actions, AWS, Azure, Linkerd, Linux, networking, MCP development, observability, code documentation, and SOC 2 compliance for Terraform.",
   "author": {
     "name": "Nitin Jain",
@@ -53,6 +53,7 @@
     "./commands/document.md",
     "./commands/datadog.md",
     "./commands/dynatrace.md",
-    "./commands/commit.md"
+    "./commands/commit.md",
+    "./commands/opa.md"
   ]
 }
