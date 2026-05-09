@@ -37,7 +37,7 @@ allowed_regions := {"eu-central-1", "eu-west-1"}
 deny contains msg if {
     some name
     resource := input.resource.aws_instance[name]
-    not resource.availability_zone in allowed_regions
+    not resource.region in allowed_regions
     msg := sprintf("EC2 instance '%s' must be in an allowed region", [name])
 }
 
@@ -49,15 +49,21 @@ deny contains msg if {
     msg := sprintf("ECR repository '%s' name must start with 'prod-'", [name])
 }
 
-# Negation — not
+# Negation — not (AWS provider >= 5: encryption is a separate resource)
 deny contains msg if {
     some name
-    bucket := input.resource.aws_s3_bucket[name]
-    not bucket.server_side_encryption_configuration
-    msg := sprintf("S3 bucket '%s' must have server-side encryption enabled", [name])
+    _ = input.resource.aws_s3_bucket[name]
+    not _has_enc_resource(name)
+    msg := sprintf("S3 bucket '%s' must have an aws_s3_bucket_server_side_encryption_configuration resource", [name])
 }
 
-# every — all elements must satisfy condition
+_has_enc_resource(bucket_name) if {
+    some enc_name
+    enc := input.resource.aws_s3_bucket_server_side_encryption_configuration[enc_name]
+    enc.bucket == bucket_name
+}
+
+# Existential check — deny if any ingress rule is fully open
 deny contains msg if {
     some name
     group := input.resource.aws_security_group[name]
@@ -100,7 +106,7 @@ Every policy file should have a METADATA block immediately before the package de
 package my.namespace
 ```
 
-`entrypoint: true` is required for Conftest to discover the policy.
+`entrypoint: true` marks the package as an OPA bundle entrypoint for tools like `opa build` and Regal's `no-defined-entrypoint` rule. Conftest discovers policies by package name and rule names (`deny`/`warn`/`violation`) — not by this flag. Include it for lint compliance and bundle compatibility.
 
 ---
 
