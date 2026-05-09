@@ -102,6 +102,7 @@ Slash commands are predefined workflows. Use them instead of writing a long prom
 | `/platform-skills:document` | Generate docstrings, OpenAPI specs, documentation sites, or getting started guides |
 | `/platform-skills:datadog` | Datadog Agent setup, APM instrumentation, monitors, dashboards, SLOs, and debugging |
 | `/platform-skills:dynatrace` | OneAgent deployment, instrumentation, anomaly detection, SLOs, and debugging |
+| `/platform-skills:commit` | Write a commit message, generate a commit, describe staged changes, or validate a message |
 
 Invoke a command by typing it at the start of your message:
 

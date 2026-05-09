@@ -175,6 +175,7 @@ platform-skills/
 - [x] v1.8.0 — Documentation: docstrings (Google/NumPy/JSDoc), OpenAPI 3.1 specs, doc sites (MkDocs/TypeDoc), developer guides
 - [x] v1.8.0 — Datadog: Agent Helm setup, APM instrumentation, log management, monitors/dashboards/SLOs as Terraform, incident investigation via Datadog MCP
 - [x] v1.8.0 — Dynatrace: OneAgent Kubernetes Operator, custom metrics/SLOs/dashboards via Terraform provider, Davis AI incident investigation via Dynatrace MCP
+- [x] v1.9.0 — Conventional Commits: analyze diffs, generate WHY-focused commit messages, intelligent file staging, commitlint/husky/semantic-release tooling
 
 **Planned**
 - [ ] GCP: landing zone, GKE, Workload Identity, and IAM patterns
