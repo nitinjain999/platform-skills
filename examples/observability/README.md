@@ -8,7 +8,7 @@ Production-ready alerting rules using the RED method (Request rate, Error rate, 
 
 | Example | Tool | Description |
 |---------|------|-------------|
-| [prometheus-alerts/orders-service.yaml](prometheus-alerts/) | Prometheus | RED method alerting rules for a production service |
+| [prometheus-alerts/orders-service.yaml](prometheus-alerts/orders-service.yaml) | Prometheus | RED method alerting rules for a production service |
 
 ## Quick Start
 

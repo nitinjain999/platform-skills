@@ -8,18 +8,21 @@ Production-ready IAM patterns for EKS workloads and GitHub Actions OIDC authenti
 
 | Example | Type | Description |
 |---------|------|-------------|
-| [iam/](iam/) | Terraform | IRSA role for EKS pod + GitHub Actions OIDC trust |
+| [iam/irsa-dynamodb.json](iam/irsa-dynamodb.json) | IAM JSON | IRSA trust policy + DynamoDB scoped permissions |
+| [iam/s3-least-privilege.json](iam/s3-least-privilege.json) | IAM JSON | Least-privilege S3 read policy |
 
 ## Quick Start
 
 ```bash
-cd iam
-terraform init
-terraform plan \
-  -var="cluster_oidc_issuer=https://oidc.eks.eu-central-1.amazonaws.com/id/EXAMPLED539D4633E53DE1B71EXAMPLE" \
-  -var="namespace=my-app" \
-  -var="service_account=my-app-sa"
-terraform apply
+# Create the IAM policy from the JSON document
+aws iam create-policy \
+  --policy-name my-app-s3-read \
+  --policy-document file://iam/s3-least-privilege.json
+
+# Attach to an IRSA role
+aws iam attach-role-policy \
+  --role-name my-app-irsa-role \
+  --policy-arn arn:aws:iam::$(aws sts get-caller-identity --query Account --output text):policy/my-app-s3-read
 ```
 
 ## Key Patterns

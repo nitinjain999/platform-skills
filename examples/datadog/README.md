@@ -53,14 +53,17 @@ env:
 ### Secure Agent installation (no `--set apiKey`)
 
 ```bash
-# ✅ Create secret first
+# ✅ Create namespace + secret (idempotent)
+kubectl create namespace datadog --dry-run=client -o yaml | kubectl apply -f -
 kubectl create secret generic datadog-secret \
   --from-literal=api-key="${DD_API_KEY}" \
-  -n datadog
+  -n datadog \
+  --dry-run=client -o yaml | kubectl apply -f -
 
 # ✅ Reference secret in Helm values
 helm upgrade --install datadog datadog/datadog \
   --set datadog.apiKeyExistingSecret=datadog-secret \
+  --create-namespace \
   -n datadog
 
 # ❌ Never pass key on command line — stored in Helm release history
