@@ -29,6 +29,7 @@ Match the task to the right layer:
 16. `Datadog`: Deploy and configure the Datadog Agent on Kubernetes, instrument services with APM and log correlation, write monitors, dashboards, SLOs, and synthetic tests — all as Terraform-managed resources.
 17. `Dynatrace`: Deploy OneAgent via the Kubernetes Operator with automatic injection, configure anomaly detection, ingest custom metrics, define SLOs, and manage dashboards and alerting profiles with the Dynatrace Terraform provider.
 18. `Conventional Commits`: Analyze git diffs, generate commit messages that explain WHY a change was made, intelligently stage files for atomic commits, and validate messages against the Conventional Commits specification.
+19. `OPA / Conftest`: Generate Rego policies with correct rule types and namespacing, write unit tests, run the full validation pipeline (fmt → regal lint → conftest verify → integration test), explain existing policies, and debug why a rule is not firing.
 
 If a task spans multiple areas, decide which layer owns the source of truth and keep the other layers consumers of that state.
 
@@ -82,6 +83,7 @@ When asked to generate code, start from the thinnest useful slice that proves th
 - For Datadog Agent setup, APM, log management, monitors, dashboards, SLOs, and synthetic tests — read [references/datadog.md](references/datadog.md).
 - For Dynatrace OneAgent Operator, auto-instrumentation, custom metrics, SLOs, anomaly detection, and Terraform provider — read [references/dynatrace.md](references/dynatrace.md).
 - For Conventional Commits — type classification, scope rules, breaking changes, message structure, atomic commits, commitlint, husky, semantic-release, and validation rules — read [references/conventional-commits.md](references/conventional-commits.md).
+- For OPA / Conftest — Rego v1 syntax, rule types, package namespacing, input shapes, unit tests, validation pipeline (fmt/regal/verify), GitHub Actions integration, and troubleshooting — read [references/opa.md](references/opa.md).
 
 Load only the files needed for the current request.
 
@@ -104,3 +106,4 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:datadog` — Datadog Agent setup, APM instrumentation, monitors, dashboards, SLOs, and debugging
 - `/platform-skills:dynatrace` — OneAgent deployment, instrumentation, anomaly detection, SLOs, and debugging
 - `/platform-skills:commit` — analyze diff, generate conventional commit message, stage files atomically, validate message
+- `/platform-skills:opa` — generate Rego policies, write unit tests, run fmt/regal/verify pipeline, explain or debug policies

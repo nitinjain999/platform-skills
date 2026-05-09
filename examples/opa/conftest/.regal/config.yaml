@@ -1,0 +1,13 @@
+rules:
+  idiomatic:
+    no-defined-entrypoint:
+      level: error
+  style:
+    line-length:
+      level: warning
+      max-line-length: 120
+    prefer-snake-case:
+      level: warning
+  bugs:
+    unused-variable:
+      level: error

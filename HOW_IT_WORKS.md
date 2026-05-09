@@ -103,6 +103,7 @@ Slash commands are predefined workflows. Use them instead of writing a long prom
 | `/platform-skills:datadog` | Datadog Agent setup, APM instrumentation, monitors, dashboards, SLOs, and debugging |
 | `/platform-skills:dynatrace` | OneAgent deployment, instrumentation, anomaly detection, SLOs, and debugging |
 | `/platform-skills:commit` | Write a commit message, generate a commit, describe staged changes, or validate a message |
+| `/platform-skills:opa` | Generate Rego policies, write unit tests, run fmt/regal/verify pipeline, explain or debug |
 
 Invoke a command by typing it at the start of your message:
 

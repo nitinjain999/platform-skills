@@ -7,7 +7,7 @@
   "plugins": [
     {
       "name": "platform-skills",
-      "version": "1.9.0",
+      "version": "1.10.0",
       "description": "Practical guidance for platform engineers: Kubernetes, Helm, Terraform, GitOps, GitHub Actions, AWS, Azure, Linkerd, Linux, networking, MCP server development, observability (Prometheus/OpenTelemetry/Grafana), code documentation (OpenAPI/docstrings), SOC 2 compliance for Terraform, Datadog, Dynatrace, and conventional commit message generation. Covers troubleshooting, security-first patterns, DevEx, RFC/ADR, compliance controls, and working examples — at any scale.",
       "author": {
         "name": "Nitin Jain"
@@ -73,7 +73,13 @@
         "commitlint",
         "semantic-release",
         "git",
-        "commit-message"
+        "commit-message",
+        "opa",
+        "open-policy-agent",
+        "rego",
+        "conftest",
+        "regal",
+        "policy-as-code"
       ],
       "source": {
         "source": "url",

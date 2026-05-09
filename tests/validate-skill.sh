@@ -53,6 +53,7 @@ REQUIRED_REFERENCES=(
   references/datadog.md
   references/dynatrace.md
   references/conventional-commits.md
+  references/opa.md
 )
 
 for ref in "${REQUIRED_REFERENCES[@]}"; do
@@ -83,6 +84,7 @@ EXAMPLE_DOMAINS=(
   examples/datadog
   examples/dynatrace
   examples/conventional-commits
+  examples/opa
 )
 
 for domain in "${EXAMPLE_DOMAINS[@]}"; do

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-05-09
+
+### Added
+
+#### OPA / Conftest Domain
+
+New Domain 19: `OPA / Conftest` — generate Rego policies, write unit tests, run the full validation pipeline (fmt → regal lint → conftest verify → integration test), explain existing policies in plain English, and debug why a rule is not firing.
+
+- `references/opa.md` — Rego v1 syntax, METADATA blocks, rule types (deny/warn/violation), package namespacing, input shape analysis with `conftest parse`, policy examples (Terraform IAM, Kubernetes pod security), unit test patterns with input fixtures, full validation pipeline (conftest fmt, regal lint, conftest verify, integration test), GitHub Actions workflow, shared `data.*` allow-lists, and troubleshooting table
+- `/platform-skills:opa` (`commands/opa.md`) — five modes: `generate` (write Rego from description with correct structure), `test` (write `_test.rego` unit tests with fixtures), `validate` (run fmt/regal/verify/integration pipeline), `explain` (translate policy to plain English), `debug` (diagnose namespace mismatch, wrong rule name, input shape issues)
+- `examples/opa/conftest/` — working S3 encryption policy (`deny_unencrypted_s3.rego`), full unit test suite (`deny_unencrypted_s3_test.rego`), sample Terraform input, and `.regal/config.yaml`
+
 ## [1.9.0] - 2026-05-09
 
 ### Added
