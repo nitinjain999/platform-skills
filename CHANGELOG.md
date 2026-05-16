@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.13.0] - 2026-05-16
+
+### Added
+
+#### Review Bot Comment Mode
+
+Enhanced the `/platform-skills:review` command with automated PR comment support.
+
+- `commands/review.md` — adds `--bot` flag and structured GitHub-flavoured markdown output format for PR comment workflows
+- Defines `MERGE_READY / NEEDS_FIX / BLOCKED` result values based on finding severity
+- Uses `<!-- platform-skills-review -->` HTML marker so GitHub Actions can find and update the existing comment on re-push instead of posting a new one each time
+- Severity table with emoji labels (🔴 Critical, 🟡 Improvement, 🔵 Note) and file/line references
+
+#### Wiki
+
+- Full GitHub wiki published at https://github.com/nitinjain999/platform-skills/wiki
+- 50 pages covering all 18 commands and 24 domains
+- Navigation index, Quick Start, Installation, Editor Integrations, How It Works, Contributing pages
+- One page per command with Claude Code slash syntax, Copilot Chat prompts, and what gets checked
+- One page per domain with key patterns, code examples, and links to reference guides
+
 ## [1.12.0] - 2026-05-16
 
 ### Added
