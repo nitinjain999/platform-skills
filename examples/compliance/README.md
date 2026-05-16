@@ -8,20 +8,14 @@ SOC 2 Trust Services Criteria controls implemented as Terraform — covering IAM
 
 | Example | TSC Criterion | Description |
 |---------|--------------|-------------|
-| [iam/irsa-role.tf](iam/irsa-role.tf) | CC6.1, CC6.2 | IRSA application role and GitHub Actions OIDC trust |
-| [iam/scp-mfa.tf](iam/scp-mfa.tf) | CC6.2 | SCP enforcing MFA and blocking privilege escalation |
-| [logging/cloudtrail.tf](logging/cloudtrail.tf) | CC7.2 | Multi-region CloudTrail with KMS encryption and object lock |
-| [logging/aws-config.tf](logging/aws-config.tf) | CC7.2 | AWS Config recorder with 12 SOC 2 managed rules |
-| [logging/vpc-flow-logs.tf](logging/vpc-flow-logs.tf) | CC6.6, CC7.2 | VPC flow logs to S3 |
-| [network/waf.tf](network/waf.tf) | CC6.6 | WAF with rate limiting and AWS managed rule groups |
-| [network/security-groups.tf](network/security-groups.tf) | CC6.6 | Least-privilege security group baseline |
+| [iam/main.tf](iam/main.tf) | CC6.1, CC6.2 | IRSA application role, GitHub Actions OIDC trust, SCP enforcing MFA |
+| [logging/main.tf](logging/main.tf) | CC6.6, CC7.2 | Multi-region CloudTrail, AWS Config recorder, VPC flow logs |
+| [network/main.tf](network/main.tf) | CC6.6 | WAF with rate limiting, least-privilege security group baseline |
 | [encryption-data-services/](encryption-data-services/) | CC6.7 | KMS encryption for DynamoDB, ECR, ElastiCache, OpenSearch, Kinesis, EFS, Redshift |
-| [detection/guardduty.tf](detection/guardduty.tf) | CC7.1 | GuardDuty with S3, EKS, and malware protection sources |
-| [detection/cloudwatch-alarms.tf](detection/cloudwatch-alarms.tf) | CC7.1 | 14 CIS Benchmark CloudWatch metric filters and alarms |
-| [detection/security-hub.tf](detection/security-hub.tf) | CC7.1 | Security Hub with AWS Foundational and CIS standards |
-| [incident-response/sns.tf](incident-response/sns.tf) | CC7.3 | KMS-encrypted SNS for GuardDuty HIGH/CRITICAL events |
-| [vulnerability/inspector.tf](vulnerability/inspector.tf) | CC6.8 | Inspector v2 with ECR enhanced scanning |
-| [backup/backup-plan.tf](backup/backup-plan.tf) | A1.2, A1.3 | AWS Backup plan, vault lock, and cross-region DR |
+| [detection/main.tf](detection/main.tf) | CC7.1 | GuardDuty, CIS CloudWatch alarms, Security Hub |
+| [incident-response/main.tf](incident-response/main.tf) | CC7.3 | KMS-encrypted SNS for GuardDuty HIGH/CRITICAL events |
+| [vulnerability/main.tf](vulnerability/main.tf) | CC6.8 | Inspector v2 with ECR enhanced scanning |
+| [backup/main.tf](backup/main.tf) | A1.2, A1.3 | AWS Backup plan, vault lock, and cross-region DR |
 | [checkov-config.yaml](checkov-config.yaml) | All | Checkov config grouping SOC 2 check IDs by criterion |
 
 ## Quick Start

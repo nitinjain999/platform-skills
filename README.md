@@ -194,27 +194,13 @@ platform-skills/
 
 ## Roadmap
 
-**Completed**
-- [x] v1.3.0 — Linkerd: mTLS, observability, traffic management, multi-cluster
-- [x] v1.5.0 — Linux & Networking: Linux admin, DNS, load balancing, VPC/VNet
-- [x] v1.5.0 — Platform Mindset: DevEx, RFC/ADR, incident comms, post-mortems
-- [x] v1.6.0 — Compliance: SOC 2 Trust Services Criteria in Terraform — IAM, encryption (11 data services), detection (GuardDuty, CIS CloudWatch alarms, Security Hub), audit logging, vulnerability management, incident response, and backup/recovery
-- [x] v1.7.0 — Helm (Helmcheck): production chart scaffolding, values design, template patterns, security hardening, full lint/validation pipeline
-- [x] v1.8.0 — MCP: build, review, and debug Model Context Protocol servers (TypeScript + Python SDKs, stdio/SSE transports, schema design, security)
-- [x] v1.8.0 — Observability: structured logging, Prometheus metrics, OpenTelemetry tracing, Grafana dashboards, alerting rules, k6 load testing, capacity planning
-- [x] v1.8.0 — Documentation: docstrings (Google/NumPy/JSDoc), OpenAPI 3.1 specs, doc sites (MkDocs/TypeDoc), developer guides
-- [x] v1.8.0 — Datadog: Agent Helm setup, APM instrumentation, log management, monitors/dashboards/SLOs as Terraform, incident investigation via Datadog MCP
-- [x] v1.8.0 — Dynatrace: OneAgent Kubernetes Operator, custom metrics/SLOs/dashboards via Terraform provider, Davis AI incident investigation via Dynatrace MCP
-- [x] v1.9.0 — Conventional Commits: analyze diffs, generate WHY-focused commit messages, intelligent file staging, commitlint/husky/semantic-release tooling
-- [x] v1.10.0 — OPA / Conftest: generate Rego policies, unit tests, fmt/regal/verify validation pipeline, explain and debug
-- [x] v1.11.0 — Kyverno: ValidatingPolicy/MutatingPolicy/GeneratingPolicy/ImageValidatingPolicy (policies.kyverno.io/v1), CEL expressions, Audit→Deny promotion, PolicyException, PolicyReport analysis, kyverno-cli testing, PSP and Gatekeeper migration
-- [x] v1.12.0 — PR Review: cost impact, environment drift, ownership and governance gaps, SOC 2 compliance, deprecated API / version hygiene, rollback feasibility scoring
-- [x] v1.13.0 — PR Comment Triage: classify bot or human review comments, apply valid fixes, reply, and resolve threads with `gh`
-- [x] v1.14.0 — KEDA: ScaledObject, ScaledJob, TriggerAuthentication, scalers (Prometheus/SQS/Kafka/Redis/Cron/HTTP/Azure Service Bus), scale-to-zero, IRSA, GitOps integration, troubleshooting
+**Current release: v1.14.0** — 20 commands, 25 domains, 50+ reference pages.
+
+Full version history is in [CHANGELOG.md](CHANGELOG.md).
 
 **Planned**
 - [ ] GCP: landing zone, GKE, Workload Identity, and IAM patterns
-- [ ] Service mesh: Istio — traffic management, mTLS, telemetry (counterpart to Linkerd domain)
+- [ ] Istio: traffic management, mTLS, telemetry (counterpart to Linkerd domain)
 - [ ] SOC 2 for Kubernetes: Kyverno policies mapped to TSC criteria, pod security admission, `kube-bench` CIS Benchmark integration
 - [ ] OpenShift operator lifecycle: OLM, CatalogSource, operator upgrade patterns
 - [ ] Argo CD ApplicationSet fleet patterns: cluster generators, matrix strategies, progressive rollout

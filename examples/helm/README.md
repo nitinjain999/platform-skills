@@ -2,7 +2,9 @@
 
 Production-ready Helm chart patterns. Copy, adapt, and lint before deploying.
 
-Status: committed chart templates for the handbook. Adapt them into your own repo — do not copy blindly into production without reviewing values, image references, and namespace strategy.
+Status: Stable
+
+Committed chart templates for the handbook. Adapt them into your own repo — do not copy blindly into production without reviewing values, image references, and namespace strategy.
 
 ## Charts
 

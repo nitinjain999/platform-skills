@@ -2,7 +2,9 @@
 
 This directory contains reference implementations for Flux CD GitOps patterns.
 
-Status: `basic-monorepo/` is runnable today. The other patterns below are handbook roadmap items, not committed example directories yet.
+Status: Stable
+
+`basic-monorepo/` is runnable today. The other patterns below are handbook roadmap items, not committed example directories yet.
 
 ## Examples
 

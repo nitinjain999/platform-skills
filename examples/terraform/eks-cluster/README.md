@@ -83,7 +83,7 @@ module "eks_cluster" {
 
 ## Examples
 
-See [examples/](examples/) directory for complete working examples.
+See the [terraform examples](../) directory for additional patterns.
 
 ## Security Considerations
 

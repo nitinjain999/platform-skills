@@ -125,9 +125,8 @@ echo "=== Command files declared in plugin.json exist ==="
 
 PLUGIN_JSON=".claude-plugin/plugin.json"
 if [ -f "$PLUGIN_JSON" ]; then
-  # Extract command paths from plugin.json (lines containing ./commands/)
+  # Every command path in plugin.json must point to a real file
   while IFS= read -r cmd_path; do
-    # Strip leading ./ for file check
     cmd_file="${cmd_path#./}"
     if [ -f "$cmd_file" ]; then
       pass "$cmd_file exists"
@@ -136,6 +135,7 @@ if [ -f "$PLUGIN_JSON" ]; then
     fi
   done < <(grep -o '"./commands/[^"]*"' "$PLUGIN_JSON" | tr -d '"')
 
+  # Every commands/*.md file must be registered in plugin.json
   for cmd_file in commands/*.md; do
     cmd_path="./$cmd_file"
     if grep -q "\"$cmd_path\"" "$PLUGIN_JSON"; then
@@ -149,95 +149,100 @@ else
 fi
 
 echo ""
-echo "=== Triage command integration ==="
+echo "=== All commands: frontmatter fields and doc presence ==="
 
-TRIAGE_CMD="commands/triage.md"
-TRIAGE_EXAMPLES="examples/triage"
+# Docs that must carry the full /platform-skills:<name> slash command form
+SLASH_CMD_DOCS=(
+  SKILL.md
+  skills/platform-skills/SKILL.md
+  COMMANDS.md
+  HOW_IT_WORKS.md
+)
 
-if [ -f "$TRIAGE_CMD" ]; then
-  pass "$TRIAGE_CMD exists"
-else
-  fail "$TRIAGE_CMD missing"
-fi
+# Docs where the command name alone is sufficient (short-name tables)
+# README.md has a domain table (not commands) — not included here
+# QUICKSTART.md is intentionally minimal — links to COMMANDS.md rather than listing all commands
+NAME_ONLY_DOCS=(
+  GETTING_STARTED.md
+)
 
-for field in "^name: triage$" "^description:" "^argument-hint:"; do
-  if grep -qE "$field" "$TRIAGE_CMD"; then
-    pass "$TRIAGE_CMD has '$field'"
-  else
-    fail "$TRIAGE_CMD missing '$field'"
+for cmd_file in commands/*.md; do
+  cmd_name="$(awk '/^name:/{print $2; exit}' "$cmd_file")"
+
+  if [ -z "$cmd_name" ]; then
+    fail "$cmd_file: missing 'name:' in frontmatter"
+    continue
   fi
+
+  # Required frontmatter fields
+  for field in "^name:" "^description:" "^argument-hint:"; do
+    if grep -qE "$field" "$cmd_file"; then
+      pass "$cmd_file has '$field'"
+    else
+      fail "$cmd_file missing '$field'"
+    fi
+  done
+
+  # Full slash command form must appear in canonical reference docs
+  for doc in "${SLASH_CMD_DOCS[@]}"; do
+    if grep -q "/platform-skills:${cmd_name}" "$doc"; then
+      pass "$doc references /platform-skills:${cmd_name}"
+    else
+      fail "$doc missing /platform-skills:${cmd_name}"
+    fi
+  done
+
+  # Command name (short form) must appear in navigational docs
+  for doc in "${NAME_ONLY_DOCS[@]}"; do
+    if grep -qi "${cmd_name}" "$doc"; then
+      pass "$doc mentions ${cmd_name}"
+    else
+      fail "$doc missing any mention of ${cmd_name}"
+    fi
+  done
 done
-
-if grep -q '"./commands/triage.md"' "$PLUGIN_JSON"; then
-  pass "commands/triage.md registered in plugin.json"
-else
-  fail "commands/triage.md not registered in plugin.json"
-fi
-
-for doc in SKILL.md skills/platform-skills/SKILL.md COMMANDS.md HOW_IT_WORKS.md README.md GETTING_STARTED.md QUICKSTART.md; do
-  if grep -q "/platform-skills:triage" "$doc"; then
-    pass "$doc references /platform-skills:triage"
-  else
-    fail "$doc missing /platform-skills:triage"
-  fi
-done
-
-if [ -d "$TRIAGE_EXAMPLES" ] && [ -f "$TRIAGE_EXAMPLES/README.md" ]; then
-  pass "$TRIAGE_EXAMPLES has README.md"
-else
-  fail "$TRIAGE_EXAMPLES missing README.md"
-fi
 
 echo ""
-echo "=== KEDA command integration ==="
+echo "=== Commands with example directories: README.md present ==="
 
-KEDA_CMD="commands/keda.md"
-KEDA_EXAMPLES="examples/keda"
+for cmd_file in commands/*.md; do
+  cmd_name="$(awk '/^name:/{print $2; exit}' "$cmd_file")"
+  [ -z "$cmd_name" ] && continue
 
-if [ -f "$KEDA_CMD" ]; then
-  pass "$KEDA_CMD exists"
-else
-  fail "$KEDA_CMD missing"
-fi
-
-for field in "^name: keda$" "^description:" "^argument-hint:"; do
-  if grep -qE "$field" "$KEDA_CMD"; then
-    pass "$KEDA_CMD has '$field'"
-  else
-    fail "$KEDA_CMD missing '$field'"
-  fi
+  # Check common example directory names for this command
+  for dir_candidate in "examples/${cmd_name}" "examples/${cmd_name}-networking" "examples/conventional-commits"; do
+    if [ "$dir_candidate" = "examples/commit-networking" ]; then continue; fi
+    if [ -d "$dir_candidate" ] && [ -f "${dir_candidate}/README.md" ]; then
+      pass "${dir_candidate}/README.md exists"
+    fi
+  done
 done
 
-if grep -q '"./commands/keda.md"' "$PLUGIN_JSON"; then
-  pass "commands/keda.md registered in plugin.json"
-else
-  fail "commands/keda.md not registered in plugin.json"
-fi
+echo ""
+echo "=== Domain validator scripts: run if present ==="
 
-for doc in SKILL.md skills/platform-skills/SKILL.md COMMANDS.md HOW_IT_WORKS.md README.md GETTING_STARTED.md QUICKSTART.md; do
-  if grep -q "/platform-skills:keda" "$doc"; then
-    pass "$doc references /platform-skills:keda"
+# Commands that ship a validate script alongside their examples
+VALIDATE_SCRIPTS=(
+  "examples/keda/keda-validate.sh"
+  "examples/kyverno/kyverno-validate.sh"
+  "examples/opa/opa-validate.sh"
+  "examples/terraform/terraform-validate.sh"
+  "examples/github-actions/gha-validate.sh"
+  "examples/compliance/compliance-validate.sh"
+)
+
+for script in "${VALIDATE_SCRIPTS[@]}"; do
+  if [ -f "$script" ]; then
+    pass "$script exists"
+    if bash "$script" >/dev/null 2>&1; then
+      pass "$script passed"
+    else
+      fail "$script failed — run it directly for details"
+    fi
   else
-    fail "$doc missing /platform-skills:keda"
+    fail "$script missing"
   fi
 done
-
-if [ -d "$KEDA_EXAMPLES" ] && [ -f "$KEDA_EXAMPLES/README.md" ]; then
-  pass "$KEDA_EXAMPLES has README.md"
-else
-  fail "$KEDA_EXAMPLES missing README.md"
-fi
-
-if [ -f "$KEDA_EXAMPLES/keda-validate.sh" ]; then
-  pass "$KEDA_EXAMPLES/keda-validate.sh exists"
-  if bash "$KEDA_EXAMPLES/keda-validate.sh" >/dev/null 2>&1; then
-    pass "$KEDA_EXAMPLES/keda-validate.sh passed"
-  else
-    fail "$KEDA_EXAMPLES/keda-validate.sh failed — run it directly for details"
-  fi
-else
-  fail "$KEDA_EXAMPLES/keda-validate.sh missing"
-fi
 
 echo ""
 
