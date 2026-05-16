@@ -59,8 +59,8 @@ Both layers work independently. The plugin is optional.
 | 🔌 MCP | [references/mcp.md](references/mcp.md) | Model Context Protocol server/client development, TypeScript and Python SDKs, stdio/SSE transports, security, testing |
 | 📊 Observability | [references/observability.md](references/observability.md) | Structured logging, Prometheus metrics, OpenTelemetry tracing, Grafana dashboards, alerting rules, k6 load testing, capacity planning |
 | 📝 Documentation | [references/documentation.md](references/documentation.md) | Docstrings (Google/NumPy/JSDoc), OpenAPI 3.1 specs, doc sites (MkDocs/TypeDoc), developer guides |
-| 🐕 Datadog | [references/datadog.md](references/datadog.md) | Agent Helm setup, APM instrumentation, log management, monitors/dashboards/SLOs as Terraform |
-| 🦖 Dynatrace | [references/dynatrace.md](references/dynatrace.md) | OneAgent Kubernetes Operator, custom metrics, SLOs, dashboards and alerting via Terraform provider |
+| 📈 Datadog | [references/datadog.md](references/datadog.md) | Agent Helm setup, APM instrumentation, log management, monitors/dashboards/SLOs as Terraform |
+| 🔭 Dynatrace | [references/dynatrace.md](references/dynatrace.md) | OneAgent Kubernetes Operator, custom metrics, SLOs, dashboards and alerting via Terraform provider |
 | 💬 Conventional Commits | [references/conventional-commits.md](references/conventional-commits.md) | Message structure, type classification, atomic staging, commitlint/husky/semantic-release tooling |
 | 📋 OPA / Conftest | [references/opa.md](references/opa.md) | Rego v1 syntax, rule types, unit tests, fmt/regal/verify validation pipeline, GitHub Actions integration |
 | 🔍 PR Review | [references/pr-review.md](references/pr-review.md) | Cost impact, environment drift, ownership gaps, SOC 2 compliance, deprecated API / version hygiene, rollback feasibility |
