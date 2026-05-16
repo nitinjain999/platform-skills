@@ -1,0 +1,23 @@
+# SCENARIO: values-prod.yaml — three keys missing relative to values-dev.yaml
+# Run: /platform-skills:pr-review drift
+# and paste both files to see the drift findings above.
+
+replicaCount: 3
+
+image:
+  repository: payments-api
+  tag: "v1.4.2"
+
+ingress:
+  enabled: true
+  annotations:
+    # ❌ ssl-redirect missing — falls back to chart default (false)
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+
+# ❌ resources.requests missing — silent overprovisioning in prod
+resources:
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+# ❌ featureFlags absent — chart default disables new checkout flow in prod

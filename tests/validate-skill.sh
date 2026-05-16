@@ -88,6 +88,7 @@ EXAMPLE_DOMAINS=(
   examples/conventional-commits
   examples/opa
   examples/kyverno
+  examples/pr-review
 )
 
 for domain in "${EXAMPLE_DOMAINS[@]}"; do

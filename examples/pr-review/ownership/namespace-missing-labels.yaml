@@ -1,0 +1,71 @@
+# SCENARIO: Ownership gaps — new Namespace with no team label or ResourceQuota
+#
+# Expected output:
+#
+#   [OWNERSHIP] Namespace/payments — missing team label
+#     Gap: No app.kubernetes.io/team label. Cannot attribute cost, alert routing,
+#     or policy scope to an owning team.
+#     Severity: MEDIUM
+#     Recommendation: Add label app.kubernetes.io/team: payments-team
+#
+#   [OWNERSHIP] Namespace/payments — no ResourceQuota
+#     Gap: Namespace has no ResourceQuota. Runaway pods can consume unlimited
+#     cluster resources and affect other tenants.
+#     Severity: HIGH
+#     Recommendation: Add a ResourceQuota with cpu/memory limits appropriate
+#     for the team's expected workload.
+#
+#   [OWNERSHIP] Namespace/payments — no LimitRange
+#     Gap: No LimitRange means containers with no resource requests/limits get
+#     scheduled without constraints.
+#     Severity: MEDIUM
+#     Recommendation: Add a LimitRange setting default requests and limits.
+
+# ❌ BEFORE — namespace with no ownership signals
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: payments
+  # ❌ no team label
+  # ❌ no owner annotation
+---
+# ✅ AFTER — namespace with full ownership signals
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: payments
+  labels:
+    app.kubernetes.io/team: payments-team
+    app.kubernetes.io/part-of: commerce-platform
+  annotations:
+    team-contact: payments-team@example.com
+---
+# ✅ ResourceQuota to protect cluster neighbours
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: payments-quota
+  namespace: payments
+spec:
+  hard:
+    requests.cpu: "4"
+    requests.memory: 8Gi
+    limits.cpu: "8"
+    limits.memory: 16Gi
+    pods: "20"
+---
+# ✅ LimitRange to set defaults for containers that omit resource fields
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: payments-limits
+  namespace: payments
+spec:
+  limits:
+    - type: Container
+      default:
+        cpu: 500m
+        memory: 256Mi
+      defaultRequest:
+        cpu: 100m
+        memory: 128Mi

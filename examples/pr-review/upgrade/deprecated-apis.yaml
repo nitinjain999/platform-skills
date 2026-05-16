@@ -1,0 +1,94 @@
+# SCENARIO: Upgrade — deprecated Kubernetes API versions and floating action pins
+#
+# Expected output:
+#
+#   [UPGRADE] ingress.yaml:1 — networking.k8s.io/v1beta1 Ingress
+#     Found: apiVersion: networking.k8s.io/v1beta1
+#     Target version: Kubernetes 1.24
+#     Removed in: 1.22 — this manifest will fail to apply on any cluster >= 1.22
+#     Replacement: apiVersion: networking.k8s.io/v1 (spec.rules and spec.tls unchanged;
+#     spec.backend replaced by spec.defaultBackend)
+#     Migration effort: LOW
+#
+#   [UPGRADE] cronjob.yaml:1 — batch/v1beta1 CronJob
+#     Found: apiVersion: batch/v1beta1
+#     Target version: Kubernetes 1.25
+#     Removed in: 1.25 — use batch/v1
+#     Replacement: apiVersion: batch/v1 (spec unchanged)
+#     Migration effort: LOW
+#
+#   [UPGRADE] pdb.yaml:1 — policy/v1beta1 PodDisruptionBudget
+#     Found: apiVersion: policy/v1beta1
+#     Target version: Kubernetes 1.25
+#     Removed in: 1.25 — use policy/v1
+#     Replacement: apiVersion: policy/v1 (spec unchanged)
+#     Migration effort: LOW
+
+# ❌ Deprecated Ingress API — removed in Kubernetes 1.22
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: payments-ingress
+  namespace: payments
+spec:
+  rules:
+    - host: payments.example.com
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: payments-api
+              servicePort: 80
+---
+# ✅ Current Ingress API
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: payments-ingress
+  namespace: payments
+spec:
+  rules:
+    - host: payments.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: payments-api
+                port:
+                  number: 80
+---
+# ❌ Deprecated CronJob API — removed in Kubernetes 1.25
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: db-backup
+  namespace: payments
+spec:
+  schedule: "0 2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: backup
+              image: backup-tool:v2.1.0
+          restartPolicy: OnFailure
+---
+# ✅ Current CronJob API
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: db-backup
+  namespace: payments
+spec:
+  schedule: "0 2 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: backup
+              image: backup-tool:v2.1.0
+          restartPolicy: OnFailure

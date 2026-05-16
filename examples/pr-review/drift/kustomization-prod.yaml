@@ -1,0 +1,32 @@
+# SCENARIO: Kustomize overlay drift — prod missing a patch that dev and staging have
+#
+# A PR adds a HorizontalPodAutoscaler patch to the dev and staging overlays but
+# forgets to add it to the prod overlay.
+#
+# Expected output:
+#
+#   [DRIFT] overlays/dev/kustomization.yaml + overlays/staging/kustomization.yaml
+#            vs overlays/prod/kustomization.yaml
+#     Field: patchesStrategicMerge (hpa-patch.yaml)
+#     Dev value: present   Staging value: present   Prod value: MISSING
+#     Severity: HIGH — HPA active in dev/staging but base Deployment runs without
+#     autoscaling in prod; prod will not scale under load
+#     Recommendation: Add hpa-patch.yaml to overlays/prod/kustomization.yaml or
+#     confirm prod scaling is handled differently (e.g. KEDA) with a comment.
+
+# overlays/prod/kustomization.yaml — MISSING the hpa patch
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../../base
+
+images:
+  - name: payments-api
+    newTag: v1.4.2
+
+# ❌ hpa-patch.yaml present in dev and staging overlays but not here
+# patches:
+#   - path: hpa-patch.yaml
+
+namespace: payments-prod

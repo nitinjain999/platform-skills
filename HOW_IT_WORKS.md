@@ -206,6 +206,202 @@ A practical loop for any platform task:
 
 ---
 
+## How the PR Review Workflow Works
+
+`/platform-skills:pr-review` is the structured pre-merge risk review command. It accepts a PR number or a pasted diff and reviews it across six independent dimensions. Each mode produces severity-rated findings with concrete recommendations and, where relevant, exact remediation code.
+
+### Getting the diff
+
+```bash
+# Pipe the diff into your clipboard
+gh pr diff 42 | pbcopy   # macOS
+
+# Or write it to a file
+gh pr diff 42 > pr-42.diff
+```
+
+Then paste it after the command:
+
+```text
+/platform-skills:pr-review full
+
+[paste diff here]
+```
+
+### The six modes
+
+#### cost — spend delta
+
+Inspects compute, storage, and network changes for their cost impact. Compares instance types, replica counts, PVC sizes, NAT Gateways, and load balancers against AWS pricing benchmarks.
+
+```text
+/platform-skills:pr-review cost
+
+[diff showing replicas: 2 → 8 on a Deployment using m5.xlarge nodes]
+```
+
+Output:
+```
+[COST] payments-api Deployment — replicas increased from 2 to 8
+  Estimated delta: +$840/month (8× m5.xlarge On-Demand)
+  Severity: HIGH
+  Recommendation: Use HPA with minReplicas: 2 so floor cost stays low outside peak.
+```
+
+See: [examples/pr-review/cost/](examples/pr-review/cost/)
+
+#### drift — environment alignment
+
+Checks whether a change applied to one environment's config (Helm values, Kustomize overlay, Terraform workspace) was intentionally omitted from sibling environments or silently missed. Flags any security controls that differ across environments as HIGH.
+
+```text
+/platform-skills:pr-review drift
+
+values-dev.yaml: [paste]
+values-prod.yaml: [paste]
+```
+
+Output:
+```
+[DRIFT] values-dev.yaml vs values-prod.yaml
+  Field: ingress.annotations."nginx.ingress.kubernetes.io/ssl-redirect"
+  Dev: "true"   Prod: MISSING (chart default: "false")
+  Severity: HIGH — prod ingress does not force HTTPS; dev does
+  Recommendation: Add ssl-redirect: "true" to values-prod.yaml
+```
+
+See: [examples/pr-review/drift/](examples/pr-review/drift/)
+
+#### ownership — governance gaps
+
+Reviews whether new directories, namespaces, Terraform modules, and PRs have the ownership signals that make a platform operable at scale: CODEOWNERS entries, team labels, module READMEs, and variable descriptions.
+
+```text
+/platform-skills:pr-review ownership
+
+[diff adding a new platform/ directory and a Kubernetes Namespace]
+```
+
+Output:
+```
+[OWNERSHIP] platform/ — new top-level directory
+  Gap: No CODEOWNERS entry. Any engineer can self-merge PRs to this path.
+  Severity: HIGH
+  Recommendation: Add to .github/CODEOWNERS:
+    platform/   @platform-team @platform-leads
+```
+
+See: [examples/pr-review/ownership/](examples/pr-review/ownership/)
+
+#### compliance — SOC 2 control impact
+
+Maps every relevant change in the diff to a SOC 2 Trust Services Criteria control area (CC6.1–CC8.1, A1.2). Flags critical findings that would block an audit, provides exact Terraform remediations, and outputs the `aws` CLI commands auditors need to verify the control.
+
+```text
+/platform-skills:pr-review compliance
+
+[diff with wildcard IAM policy and unencrypted RDS]
+```
+
+Output:
+```
+[COMPLIANCE] CC6.1 — Logical access
+  Finding: aws_iam_role_policy.app uses Action: "*" Resource: "*"
+  Severity: CRITICAL
+  Remediation: Replace with explicit actions scoped to required services.
+  Auditor evidence: aws iam simulate-principal-policy ...
+```
+
+See: [examples/pr-review/compliance/](examples/pr-review/compliance/)
+
+#### upgrade — deprecated API and version hygiene
+
+Checks every `apiVersion` in the diff against the Kubernetes deprecation timeline, flags Terraform provider constraints that allow major version jumps, identifies GitHub Actions pinned to branches instead of SHAs, and finds `:latest` container image tags.
+
+```text
+/platform-skills:pr-review upgrade
+
+[diff with networking.k8s.io/v1beta1 Ingress and >= 3.0 provider constraint]
+```
+
+Output:
+```
+[UPGRADE] ingress.yaml:1 — networking.k8s.io/v1beta1 Ingress
+  Removed in: Kubernetes 1.22 — BREAKING
+  Replacement: apiVersion: networking.k8s.io/v1
+  Migration effort: LOW
+```
+
+See: [examples/pr-review/upgrade/](examples/pr-review/upgrade/)
+
+#### rollback — feasibility score
+
+Scores each change on two axes: **Reversibility** (FULL / PARTIAL / MANUAL / NONE) and **Blast radius** (LOCAL / CLUSTER / PLATFORM / DATA). Produces a traffic-light Rollback Risk Score and lists the exact pre-merge requirements for anything that is not fully reversible.
+
+```text
+/platform-skills:pr-review rollback
+
+[diff with RDS allocated_storage increase and Deployment rename]
+```
+
+Output:
+```
+[ROLLBACK] aws_db_instance.payments — allocated_storage 100 → 500 GB
+  Reversibility: NONE — AWS does not support storage decrease
+  Blast radius: DATA
+  Pre-merge requirement: Take manual RDS snapshot and record ARN in PR description
+
+Rollback Risk Score: 🔴 HIGH
+```
+
+See: [examples/pr-review/rollback/](examples/pr-review/rollback/)
+
+### full mode — Merge Readiness Summary
+
+Run all six modes in sequence and get a single consolidated summary:
+
+```text
+/platform-skills:pr-review full 42
+```
+
+```
+Cost delta:      +$840/month (2 findings)
+Drift:           3 environment mismatches
+Ownership gaps:  2 findings
+Compliance:      2 control areas affected (2 critical)
+Upgrade risk:    2 deprecated items (2 breaking)
+Rollback score:  🔴 HIGH
+
+Blockers (must fix before merge):
+  - Wildcard IAM action and resource (CC6.1)
+  - RDS storage_encrypted = false (CC6.7)
+  - networking.k8s.io/v1beta1 Ingress (removed in K8s 1.22)
+  - RDS storage increase — take snapshot first (Reversibility: NONE)
+
+Recommended:
+  - Add ssl-redirect annotation to values-prod.yaml
+  - Add CODEOWNERS entry for platform/
+
+Informational:
+  - replica increase adds $840/month; confirm with team before merge
+```
+
+### What the agent does under the hood
+
+```
+You: /platform-skills:pr-review compliance [paste diff]
+
+Claude:
+  1. Reads commands/pr-review.md → loads compliance mode definition
+  2. Reads references/pr-review.md → loads SOC 2 control mapping table
+  3. Reads references/compliance.md → loads Terraform patterns and evidence commands
+  4. Parses the diff — identifies IAM, RDS, S3, and network resource changes
+  5. Maps each change to a TSC control code
+  6. For each finding: produces severity, exact remediation, and auditor evidence command
+```
+
+---
+
 ## What the Agent Cannot Do
 
 Be clear about the limits:

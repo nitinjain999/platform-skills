@@ -1,0 +1,46 @@
+# SCENARIO: Environment drift — feature flag and TLS setting present in dev, absent in prod
+#
+# The /platform-skills:pr-review drift mode would flag:
+#
+#   [DRIFT] values-dev.yaml vs values-prod.yaml
+#     Field: ingress.annotations."nginx.ingress.kubernetes.io/ssl-redirect"
+#     Dev value: "true"   Prod value: MISSING (falls back to chart default: "false")
+#     Severity: HIGH — prod ingress does not force HTTPS; dev does
+#     Recommendation: Add ssl-redirect: "true" to values-prod.yaml or confirm
+#     this is handled at the load balancer layer with evidence.
+#
+#   [DRIFT] values-dev.yaml vs values-prod.yaml
+#     Field: featureFlags.newCheckoutFlow
+#     Dev value: "true"   Prod value: MISSING (falls back to chart default: "false")
+#     Severity: MEDIUM — feature live in dev but dark in prod; intentional or missed?
+#     Recommendation: Add explicit value to values-prod.yaml with a comment explaining
+#     the promotion timeline, or enable if the flag was cleared for prod.
+#
+#   [DRIFT] values-dev.yaml vs values-prod.yaml
+#     Field: resources.requests.memory
+#     Dev value: 128Mi   Prod value: MISSING
+#     Severity: MEDIUM — prod falls back to chart default (no requests); silent overprovisioning
+#     Recommendation: Set resource requests explicitly in values-prod.yaml.
+
+replicaCount: 1
+
+image:
+  repository: payments-api
+  tag: "v1.4.2"
+
+ingress:
+  enabled: true
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"    # ← present in dev, missing in prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi      # ← present in dev, missing in prod
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+featureFlags:
+  newCheckoutFlow: "true"    # ← enabled in dev, absent from prod
