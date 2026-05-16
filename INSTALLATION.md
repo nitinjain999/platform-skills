@@ -1,32 +1,68 @@
-# Platform Skills - Installation Guide
+# Installation Guide
 
-This guide covers installation of `platform-skills` as a Claude plugin. If you only want to browse the handbook guides and examples, no installation is needed. Navigate directly to [references/](references/) or [examples/](examples/) on GitHub.
+This is the canonical install reference for platform-skills.
 
-## Prerequisites
+**No installation needed to use the handbook.** Browse [references/](references/) and [examples/](examples/) directly on GitHub.
+Install only if you want the Claude plugin for interactive guidance.
 
-Confirm Claude Code is installed:
+---
+
+## Option A — GitHub Copilot (no Claude required)
+
+Works in VSCode, JetBrains, Cursor, and any editor with Copilot support.
 
 ```bash
-claude --version
+# Clone platform-skills
+git clone https://github.com/nitinjain999/platform-skills.git
+
+# Copy the instructions file into your project
+# macOS / Linux
+cp platform-skills/.github/copilot-instructions.md your-project/.github/copilot-instructions.md
+
+# Windows (PowerShell)
+Copy-Item platform-skills\.github\copilot-instructions.md your-project\.github\copilot-instructions.md
+
+# Commit — every team member gets it automatically
+cd your-project
+git add .github/copilot-instructions.md
+git commit -m "chore: add platform-skills copilot instructions"
+git push
 ```
 
-If Claude Code is not installed, visit: https://claude.ai/code
+Open Copilot Chat and ask platform engineering questions — the rules are active.
 
-## Installation Methods
+**Upgrade:**
 
-### Method 1: Install from Marketplace
+```bash
+cd platform-skills && git pull origin main
+cp .github/copilot-instructions.md your-project/.github/copilot-instructions.md
+cd your-project && git add .github/copilot-instructions.md && git commit -m "chore: update platform-skills copilot instructions"
+```
 
-Add the marketplace, then install by name:
+→ For global (all-projects) setup and Cursor rules: [EDITOR_INTEGRATIONS.md](EDITOR_INTEGRATIONS.md)
+
+---
+
+## Option B — Claude plugin from marketplace
+
+Requires [Claude Code](https://claude.ai/code).
 
 ```bash
 claude plugin marketplace add https://github.com/nitinjain999/platform-skills
 claude plugin install platform-skills
 ```
 
-**Upgrade** when a new version is released:
+**Verify:**
 
 ```bash
-claude plugin marketplace update
+claude plugin list
+# platform-skills  v1.12.0  enabled
+```
+
+**Upgrade:**
+
+```bash
+claude plugin marketplace update platform-skills
 claude plugin install platform-skills
 ```
 
@@ -36,9 +72,11 @@ claude plugin install platform-skills
 claude plugin uninstall platform-skills
 ```
 
-### Method 2: Install from Local Clone
+---
 
-Use this when you want local customization or want the latest repo state before marketplace publication:
+## Option C — Claude plugin from local clone
+
+Use this when you want to customise the patterns or test unreleased changes.
 
 ```bash
 git clone https://github.com/nitinjain999/platform-skills.git
@@ -46,87 +84,68 @@ cd platform-skills
 claude plugin install .
 ```
 
-### Method 3: Use the Repo Without Installing
+**When to use local vs marketplace:**
 
-You can also use this repository directly as reference material:
+| | Marketplace | Local clone |
+|---|---|---|
+| Easiest setup | ✅ | |
+| Customise patterns | | ✅ |
+| Test unreleased changes | | ✅ |
+| Onboard teammates quickly | ✅ | |
 
-- read [README.md](README.md)
-- read [SKILL.md](SKILL.md)
-- use the content under `references/`
-- adapt examples from `examples/`
+---
 
-## Verify Installation
-
-After installation, open Claude Code in your project:
+## Verify Claude plugin is working
 
 ```bash
 cd your-project
 claude
 ```
 
-Then ask something concrete:
+Then try a concrete prompt:
 
-```text
-Review this Terraform layout and tell me what Terraform should own versus what Flux or Argo CD should own.
+```
+Review this Terraform layout and tell me what should stay in Terraform versus GitOps.
 ```
 
-```text
-My OpenShift deployment is failing after a GitOps sync. Help me narrow the likely cause from the manifest and events.
+```
+My Argo CD application is out of sync after a merge. What evidence should I collect first?
 ```
 
-```text
-Review this GitHub Actions workflow for OIDC, least privilege, and unsafe trigger choices.
-```
+---
 
 ## Troubleshooting
 
-### Marketplace Install Fails
+**`claude plugin install platform-skills` fails with "not found"**
 
-If `claude plugin install platform-skills` fails with "not found":
-
-1. Make sure the marketplace was added first:
-   ```bash
-   claude plugin marketplace add https://github.com/nitinjain999/platform-skills
-   claude plugin install platform-skills
-   ```
-2. If the plugin is not yet published to the marketplace, install from a local clone:
-   ```bash
-   git clone https://github.com/nitinjain999/platform-skills.git
-   cd platform-skills
-   claude plugin install .
-   ```
-
-### Local Install Fails
-
-Make sure you are running the install from the cloned repository root:
+Add the marketplace first:
 
 ```bash
-pwd
-ls SKILL.md .claude-plugin/marketplace.json
+claude plugin marketplace add https://github.com/nitinjain999/platform-skills
+claude plugin install platform-skills
 ```
 
-Then run:
+**Local install fails**
+
+Confirm you are at the repo root:
 
 ```bash
+ls SKILL.md .claude-plugin/marketplace.json
 claude plugin install .
 ```
 
-### The Plugin Feels Too Generic
+**Plugin feels too generic**
 
-Give Claude:
+Paste the actual file — manifest, Terraform, workflow, or error output. The more concrete the input, the more specific the answer.
 
-- the exact file or manifest
-- the cluster or environment
-- the tool boundary involved
-- the exact error text
-- the desired end state
+---
 
-## Related Docs
+## Related docs
 
-- [GETTING_STARTED.md](GETTING_STARTED.md)
-- [QUICKSTART.md](QUICKSTART.md)
-- [VSCODE_INTEGRATION.md](VSCODE_INTEGRATION.md)
-- [CONTRIBUTING.md](CONTRIBUTING.md)
+- [QUICKSTART.md](QUICKSTART.md) — 2-minute start
+- [EDITOR_INTEGRATIONS.md](EDITOR_INTEGRATIONS.md) — Copilot, Cursor, JetBrains, Neovim setup
+- [GETTING_STARTED.md](GETTING_STARTED.md) — ownership model and how to think about the platform
+- [CONTRIBUTING.md](CONTRIBUTING.md) — how to add patterns
 
 ## License
 
