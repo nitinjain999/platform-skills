@@ -8,12 +8,28 @@ echo "Checking skill and marketplace identity..."
 SKILL_NAME="$(awk '/^name:/{print $2; exit}' SKILL.md)"
 MARKETPLACE_NAME="$(jq -r '.name' .claude-plugin/marketplace.json)"
 PLUGIN_NAME="$(jq -r '.plugins[0].name' .claude-plugin/marketplace.json)"
+PLUGIN_VERSION="$(jq -r '.version' .claude-plugin/plugin.json)"
+MARKETPLACE_VERSION="$(jq -r '.plugins[0].version' .claude-plugin/marketplace.json)"
+CHANGELOG_VERSION="$(awk '$1 == "##" && $2 ~ /^\[[0-9]+\.[0-9]+\.[0-9]+\]$/ {gsub(/[][]/, "", $2); print $2; exit}' CHANGELOG.md)"
 
 if [[ "$SKILL_NAME" != "$MARKETPLACE_NAME" || "$SKILL_NAME" != "$PLUGIN_NAME" ]]; then
   echo "❌ Skill and marketplace names are out of sync"
   echo "SKILL.md: $SKILL_NAME"
   echo "marketplace root: $MARKETPLACE_NAME"
   echo "marketplace plugin: $PLUGIN_NAME"
+  exit 1
+fi
+
+if [[ "$PLUGIN_VERSION" != "$MARKETPLACE_VERSION" || "$PLUGIN_VERSION" != "$CHANGELOG_VERSION" ]]; then
+  echo "❌ Plugin, marketplace, and changelog versions are out of sync"
+  echo "plugin.json: $PLUGIN_VERSION"
+  echo "marketplace.json: $MARKETPLACE_VERSION"
+  echo "CHANGELOG.md latest: $CHANGELOG_VERSION"
+  exit 1
+fi
+
+if ! grep -q "platform-skills  v${PLUGIN_VERSION}  enabled" INSTALLATION.md; then
+  echo "❌ INSTALLATION.md verify output does not match version $PLUGIN_VERSION"
   exit 1
 fi
 
@@ -37,6 +53,8 @@ declare -a REQUIRED_PATHS=(
   "examples/github-actions/reusable-workflows/terraform-plan.yml"
   "examples/github-actions/composite-actions/setup-terraform/action.yml"
   "examples/github-actions/composite-actions/configure-cloud/action.yml"
+  "examples/triage/README.md"
+  "commands/triage.md"
   "examples/aws/README.md"
   "examples/azure/README.md"
   "examples/kubernetes/README.md"
@@ -51,24 +69,13 @@ for path in "${REQUIRED_PATHS[@]}"; do
   fi
 done
 
-declare -a STATUS_DOCS=(
-  "examples/argocd/README.md"
-  "examples/aws/README.md"
-  "examples/azure/README.md"
-  "examples/flux/README.md"
-  "examples/github-actions/README.md"
-  "examples/kubernetes/README.md"
-  "examples/openshift/README.md"
-  "examples/terraform/README.md"
-)
-
 echo "Checking example maturity labels..."
-for path in "${STATUS_DOCS[@]}"; do
+while IFS= read -r path; do
   if ! grep -q "^Status:" "$path"; then
     echo "❌ Missing maturity label in $path"
     exit 1
   fi
-done
+done < <(find examples -mindepth 2 -maxdepth 2 -name README.md | sort)
 
 declare -a STALE_LINK_PATTERNS=(
   "\\[multi-tenant/\\]\\(multi-tenant/\\)"

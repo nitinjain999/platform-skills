@@ -1,5 +1,7 @@
 # PR Review Examples
 
+Status: Stable
+
 Realistic before/after scenarios for each `/platform-skills:pr-review` mode. Each example shows the input that triggers a finding and the expected output the command produces.
 
 ## Structure

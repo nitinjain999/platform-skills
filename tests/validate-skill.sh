@@ -12,6 +12,12 @@ fail() { echo "  FAIL: $1"; ERRORS=$((ERRORS + 1)); }
 echo ""
 echo "=== SKILL.md ==="
 
+if diff -q SKILL.md skills/platform-skills/SKILL.md >/dev/null; then
+  pass "root SKILL.md matches packaged skill"
+else
+  fail "root SKILL.md and skills/platform-skills/SKILL.md are out of sync"
+fi
+
 # Must have YAML frontmatter
 if head -1 skills/platform-skills/SKILL.md | grep -q "^---"; then
   pass "SKILL.md has frontmatter"
@@ -89,6 +95,7 @@ EXAMPLE_DOMAINS=(
   examples/opa
   examples/kyverno
   examples/pr-review
+  examples/triage
 )
 
 for domain in "${EXAMPLE_DOMAINS[@]}"; do
@@ -126,8 +133,57 @@ if [ -f "$PLUGIN_JSON" ]; then
       fail "$cmd_file declared in plugin.json but not found"
     fi
   done < <(grep -o '"./commands/[^"]*"' "$PLUGIN_JSON" | tr -d '"')
+
+  for cmd_file in commands/*.md; do
+    cmd_path="./$cmd_file"
+    if grep -q "\"$cmd_path\"" "$PLUGIN_JSON"; then
+      pass "$cmd_file registered in plugin.json"
+    else
+      fail "$cmd_file exists but is not registered in plugin.json"
+    fi
+  done
 else
   fail "$PLUGIN_JSON not found"
+fi
+
+echo ""
+echo "=== Triage command integration ==="
+
+TRIAGE_CMD="commands/triage.md"
+TRIAGE_EXAMPLES="examples/triage"
+
+if [ -f "$TRIAGE_CMD" ]; then
+  pass "$TRIAGE_CMD exists"
+else
+  fail "$TRIAGE_CMD missing"
+fi
+
+for field in "^name: triage$" "^description:" "^argument-hint:"; do
+  if grep -qE "$field" "$TRIAGE_CMD"; then
+    pass "$TRIAGE_CMD has '$field'"
+  else
+    fail "$TRIAGE_CMD missing '$field'"
+  fi
+done
+
+if grep -q '"./commands/triage.md"' "$PLUGIN_JSON"; then
+  pass "commands/triage.md registered in plugin.json"
+else
+  fail "commands/triage.md not registered in plugin.json"
+fi
+
+for doc in SKILL.md skills/platform-skills/SKILL.md COMMANDS.md HOW_IT_WORKS.md README.md GETTING_STARTED.md QUICKSTART.md; do
+  if grep -q "/platform-skills:triage" "$doc"; then
+    pass "$doc references /platform-skills:triage"
+  else
+    fail "$doc missing /platform-skills:triage"
+  fi
+done
+
+if [ -d "$TRIAGE_EXAMPLES" ] && [ -f "$TRIAGE_EXAMPLES/README.md" ]; then
+  pass "$TRIAGE_EXAMPLES has README.md"
+else
+  fail "$TRIAGE_EXAMPLES missing README.md"
 fi
 
 echo ""

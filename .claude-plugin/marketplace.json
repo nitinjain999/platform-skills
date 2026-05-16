@@ -8,7 +8,7 @@
     {
       "name": "platform-skills",
       "version": "1.13.0",
-      "description": "Practical guidance for platform engineers: Kubernetes, Helm, Terraform, GitOps, GitHub Actions, AWS, Azure, Linkerd, Linux, networking, MCP server development, observability (Prometheus/OpenTelemetry/Grafana), code documentation (OpenAPI/docstrings), SOC 2 compliance for Terraform, Datadog, Dynatrace, conventional commit message generation, OPA/Conftest Rego policies, Kyverno admission policies (ValidatingPolicy/MutatingPolicy/GeneratingPolicy/ImageValidatingPolicy, CEL expressions, Audit→Deny promotion), and comprehensive PR review (cost impact, environment drift, ownership governance, compliance, deprecated API upgrade, rollback feasibility). Covers troubleshooting, security-first patterns, DevEx, RFC/ADR, compliance controls, and working examples — at any scale.",
+      "description": "Practical guidance for platform engineers: Kubernetes, Helm, Terraform, GitOps, GitHub Actions, AWS, Azure, Linkerd, Linux, networking, MCP server development, observability (Prometheus/OpenTelemetry/Grafana), code documentation (OpenAPI/docstrings), SOC 2 compliance for Terraform, Datadog, Dynatrace, conventional commit message generation, OPA/Conftest Rego policies, Kyverno admission policies (ValidatingPolicy/MutatingPolicy/GeneratingPolicy/ImageValidatingPolicy, CEL expressions, Audit→Deny promotion), comprehensive PR review (cost impact, environment drift, ownership governance, compliance, deprecated API upgrade, rollback feasibility), and PR comment triage. Covers troubleshooting, security-first patterns, DevEx, RFC/ADR, compliance controls, and working examples — at any scale.",
       "author": {
         "name": "Nitin Jain"
       },
@@ -91,7 +91,10 @@
         "environment-drift",
         "rollback",
         "upgrade-safety",
-        "governance"
+        "governance",
+        "triage",
+        "pr-comment-triage",
+        "review-thread"
       ],
       "source": {
         "source": "url",

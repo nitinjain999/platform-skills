@@ -34,6 +34,8 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:document](#platform-skillsdocument) | Docstrings, OpenAPI specs, docs sites, guides |
 | [/platform-skills:mcp](#platform-skillsmcp) | MCP server scaffold, review, debug |
 | [/platform-skills:product](#platform-skillsproduct) | DevEx, RFC/ADR, post-mortems, capacity, cost |
+| [/platform-skills:pr-review](#platform-skillspr-review) | Comprehensive PR risk review |
+| [/platform-skills:triage](#platform-skillstriage) | Triage and resolve PR comments |
 
 ---
 
@@ -1634,6 +1636,36 @@ Comprehensive pre-merge risk review across six dimensions. Each mode inspects th
 ```
 
 Reference: `references/pr-review.md`
+
+---
+
+## `/platform-skills:triage`
+
+Triage a PR review or issue comment from a bot, CI tool, or human reviewer. The command fetches the comment and diff with `gh`, classifies the thread, applies a minimal fix when the feedback is valid, replies, and resolves the review thread.
+
+**Modes**
+
+| Mode | What it does |
+|---|---|
+| `<PR number> <comment ID>` | Triage one specific comment |
+| `--all <PR number>` | Triage every unresolved review thread on the PR |
+
+**Usage**
+
+```
+/platform-skills:triage 42 123456789
+/platform-skills:triage --all 42
+```
+
+**Classifications**
+
+| Classification | Meaning |
+|---|---|
+| `ACTIONABLE_FIX` | Real issue in the changed files; apply the minimal fix, reply, and resolve |
+| `INFORMATIONAL` | Question or non-blocking suggestion; answer, reply, and resolve |
+| `NOT_APPLICABLE` | Status message, duplicate, already fixed, or outside this PR; explain and resolve |
+
+Reference: `commands/triage.md` and `examples/triage/README.md`
 
 ---
 

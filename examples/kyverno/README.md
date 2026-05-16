@@ -1,5 +1,7 @@
 # Kyverno Examples
 
+Status: Stable
+
 Working Kyverno policy examples. Each subdirectory is independently testable with `kyverno test .`.
 
 ## Structure

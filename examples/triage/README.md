@@ -1,5 +1,7 @@
 # Triage Examples
 
+Status: Stable
+
 Realistic scenarios for the `/platform-skills:triage` command. Each example shows
 an actual PR comment, the file it refers to, the expected classification, the fix
 (if any), and the exact reply posted on the thread.
@@ -64,22 +66,14 @@ gh api graphql -f query='
 
 ```
 actionable-fix/
-  security-wildcard-iam.md          # Copilot flags wildcard IAM — fix applied
-  missing-resource-limits.md        # Reviewer flags missing limits on Deployment
-  deprecated-k8s-api.md             # Bot flags networking.k8s.io/v1beta1 Ingress
-  broken-helm-probe-path.md         # Reviewer flags wrong liveness probe path
-  plaintext-secret-in-config.md     # Copilot flags a hardcoded API key
-
-informational/
-  question-why-two-replicas.md      # "Why only 2 replicas?" — explained, no change
-  suggest-pdb-follow-up.md          # "Consider adding a PDB" — acknowledged, future work
-  ask-about-kms-rotation.md         # "Is KMS rotation enabled?" — answered with evidence
-
-not-applicable/
-  ci-status-bot.md                  # GitHub Actions pass/fail status comment
-  duplicate-thread.md               # Same issue already fixed in a later commit
-  out-of-scope-file.md              # Comment on a file not changed in this PR
+  security-wildcard-iam.tf          # Copilot flags wildcard IAM — fix applied
+  missing-resource-limits.yaml      # Reviewer flags missing limits on Deployment
+  deprecated-k8s-api.yaml           # Bot flags networking.k8s.io/v1beta1 Ingress
+  broken-helm-probe-path.yaml       # Reviewer flags wrong liveness probe path
+  plaintext-secret-in-config.yaml   # Copilot flags a hardcoded API key
 ```
+
+The informational and not-applicable cases below are documented inline because they do not need fixture files.
 
 ---
 

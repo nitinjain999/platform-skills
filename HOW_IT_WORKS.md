@@ -106,6 +106,7 @@ Slash commands are predefined workflows. Use them instead of writing a long prom
 | `/platform-skills:opa` | Generate Rego policies, write unit tests, run fmt/regal/verify pipeline, explain or debug |
 | `/platform-skills:kyverno` | Generate, test, audit, debug, or migrate Kyverno admission policies |
 | `/platform-skills:pr-review` | Comprehensive PR review: cost, drift, ownership, compliance, upgrade, rollback |
+| `/platform-skills:triage` | Triage a PR comment, fix valid findings, reply, and resolve the thread |
 
 Invoke a command by typing it at the start of your message:
 

@@ -1,7 +1,7 @@
 {
   "name": "platform-skills",
-  "version": "1.12.0",
-  "description": "Practical guidance for platform engineers: Kubernetes, Kyverno admission policies, Helm, Terraform, GitOps, GitHub Actions, AWS, Azure, Linkerd, Linux, networking, MCP development, observability, code documentation, SOC 2 compliance, and comprehensive PR review (cost, drift, ownership, compliance, upgrade, rollback).",
+  "version": "1.13.0",
+  "description": "Practical guidance for platform engineers: Kubernetes, Kyverno admission policies, Helm, Terraform, GitOps, GitHub Actions, AWS, Azure, Linkerd, Linux, networking, MCP development, observability, code documentation, SOC 2 compliance, comprehensive PR review, and PR comment triage.",
   "author": {
     "name": "Nitin Jain",
     "email": "nitin.solna@gmail.com",
@@ -42,7 +42,9 @@
     "cost-analysis",
     "environment-drift",
     "rollback",
-    "upgrade-safety"
+    "upgrade-safety",
+    "triage",
+    "pr-comment-triage"
   ],
   "skills": [
     "./skills/platform-skills"
@@ -65,6 +67,7 @@
     "./commands/commit.md",
     "./commands/opa.md",
     "./commands/kyverno.md",
-    "./commands/pr-review.md"
+    "./commands/pr-review.md",
+    "./commands/triage.md"
   ]
 }

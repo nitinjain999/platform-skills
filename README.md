@@ -64,6 +64,7 @@ Both layers work independently. The plugin is optional.
 | <img src="https://cdn.simpleicons.org/git/F05032" width="16" height="16" alt="Git"> Conventional Commits | [references/conventional-commits.md](references/conventional-commits.md) | Message structure, type classification, atomic staging, commitlint/husky/semantic-release tooling |
 | 📋 OPA / Conftest | [references/opa.md](references/opa.md) | Rego v1 syntax, rule types, unit tests, fmt/regal/verify validation pipeline, GitHub Actions integration |
 | 🔍 PR Review | [references/pr-review.md](references/pr-review.md) | Cost impact, environment drift, ownership gaps, SOC 2 compliance, deprecated API / version hygiene, rollback feasibility |
+| 🧵 PR Comment Triage | [commands/triage.md](commands/triage.md) | `/platform-skills:triage` classifies PR comments, applies valid fixes, replies, and resolves review threads |
 
 ## Core principles
 
@@ -165,6 +166,7 @@ platform-skills/
 │   ├── terraform/eks-cluster/          # Production EKS Terraform module
 │   ├── github-actions/                 # CI/CD, Flux sync, container build workflows
 │   ├── helm/web-service/               # Production Helm chart: Deployment, HPA, PDB, NetworkPolicy, schema
+│   ├── triage/                         # PR comment triage scenarios and fixtures (v1.13.0)
 │   └── compliance/                     # SOC 2 Terraform examples (v1.6.0)
 │       ├── checkov-config.yaml         # Checkov config grouped by SOC 2 criterion
 │       ├── iam/                        # CC6.1/CC6.2: IAM, IRSA, OIDC, SCPs
@@ -200,6 +202,7 @@ platform-skills/
 - [x] v1.10.0 — OPA / Conftest: generate Rego policies, unit tests, fmt/regal/verify validation pipeline, explain and debug
 - [x] v1.11.0 — Kyverno: ValidatingPolicy/MutatingPolicy/GeneratingPolicy/ImageValidatingPolicy (policies.kyverno.io/v1), CEL expressions, Audit→Deny promotion, PolicyException, PolicyReport analysis, kyverno-cli testing, PSP and Gatekeeper migration
 - [x] v1.12.0 — PR Review: cost impact, environment drift, ownership and governance gaps, SOC 2 compliance, deprecated API / version hygiene, rollback feasibility scoring
+- [x] v1.13.0 — PR Comment Triage: classify bot or human review comments, apply valid fixes, reply, and resolve threads with `gh`
 
 **Planned**
 - [ ] GCP: landing zone, GKE, Workload Identity, and IAM patterns

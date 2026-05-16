@@ -32,6 +32,7 @@ Match the task to the right layer:
 19. `OPA / Conftest`: Generate Rego policies with correct rule types and namespacing, write unit tests, run the full validation pipeline (fmt → regal lint → conftest verify → integration test), explain existing policies, and debug why a rule is not firing.
 20. `Kyverno`: Write and maintain Kubernetes-native admission policies using the CEL-based types — ValidatingPolicy, MutatingPolicy, GeneratingPolicy, ImageValidatingPolicy (all `policies.kyverno.io/v1`). Covers matchConstraints, matchConditions, CEL validations/mutations, generator.Apply(), Audit→Deny promotion, PolicyException, and kyverno-cli testing.
 21. `PR Review`: Comprehensive pre-merge risk review across six dimensions — cost impact, environment drift, ownership and governance gaps, SOC 2 compliance, deprecated API / version hygiene, and rollback feasibility scoring.
+22. `PR Comment Triage`: Triage bot or human PR comments, classify them as ACTIONABLE_FIX / INFORMATIONAL / NOT_APPLICABLE, make the minimal fix when valid, reply on the thread, and resolve it through `gh`.
 
 If a task spans multiple areas, decide which layer owns the source of truth and keep the other layers consumers of that state.
 
@@ -113,3 +114,4 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:opa` — generate Rego policies, write unit tests, run fmt/regal/verify pipeline, explain or debug policies
 - `/platform-skills:kyverno` — generate, test, audit, debug, or migrate Kyverno CEL-based admission policies
 - `/platform-skills:pr-review` — comprehensive PR review: cost, drift, ownership, compliance, upgrade, rollback
+- `/platform-skills:triage` — triage a PR comment (bot or human): classify as ACTIONABLE_FIX / INFORMATIONAL / NOT_APPLICABLE, produce the exact fix if needed, and write the thread reply
