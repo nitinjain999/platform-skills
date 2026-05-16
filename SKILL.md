@@ -13,15 +13,15 @@ Match the task to the right layer:
 
 1. `Terraform`: Provision cloud primitives, cluster bootstrap, shared services, identity, networking, and policy foundations.
 2. `Kubernetes`: Define workload, namespace, RBAC, service, policy, and platform baseline patterns that apply across distributions.
-3. `Kyverno`: Write and maintain Kubernetes-native admission policies — validate, mutate, generate, and verifyImages rules, Audit→Enforce promotion, PolicyException, and kyverno-cli testing.
-4. `OpenShift`: Adapt Kubernetes patterns to OpenShift-native routing, security, operator, and tenancy constraints.
-5. `Flux` or `Argo CD`: Reconcile in-cluster desired state after bootstrap and manage promotion of workloads or platform add-ons.
-6. `GitHub Actions`: Validate, package, test, and promote changes. Keep workflows declarative and reusable.
-7. `AWS` or `Azure`: Apply provider-specific account, subscription, identity, and governance patterns.
-8. `Linkerd`: Apply service mesh for automatic mTLS, golden-signal observability, and traffic management between workloads.
-9. `Linux & Networking`: Diagnose Linux systems and network problems — DNS resolution, load balancer routing, VPC/VNet design, kernel tuning, and connectivity troubleshooting.
-10. `Platform Mindset`: Treat developers as customers. Apply product thinking, friction audits, DevEx metrics, RFC/ADR processes, incident communication, and blameless post-mortems.
-11. `Cross-platform`: Design repo boundaries, ownership, promotion flows, and security controls first.
+3. `OpenShift`: Adapt Kubernetes patterns to OpenShift-native routing, security, operator, and tenancy constraints.
+4. `Flux` or `Argo CD`: Reconcile in-cluster desired state after bootstrap and manage promotion of workloads or platform add-ons.
+5. `GitHub Actions`: Validate, package, test, and promote changes. Keep workflows declarative and reusable.
+6. `AWS` or `Azure`: Apply provider-specific account, subscription, identity, and governance patterns.
+7. `Linkerd`: Apply service mesh for automatic mTLS, golden-signal observability, and traffic management between workloads.
+8. `Linux & Networking`: Diagnose Linux systems and network problems — DNS resolution, load balancer routing, VPC/VNet design, kernel tuning, and connectivity troubleshooting.
+9. `Platform Mindset`: Treat developers as customers. Apply product thinking, friction audits, DevEx metrics, RFC/ADR processes, incident communication, and blameless post-mortems.
+10. `Cross-platform`: Design repo boundaries, ownership, promotion flows, and security controls first.
+11. `Kyverno`: Write and maintain Kubernetes-native admission policies using the CEL-based types — `ValidatingPolicy`, `MutatingPolicy`, `GeneratingPolicy`, `ImageValidatingPolicy` (all `policies.kyverno.io/v1`). Covers `matchConstraints`, `matchConditions`, CEL validations/mutations, `generator.Apply()`, Audit→Deny promotion, PolicyException, and kyverno-cli testing.
 
 If a task spans multiple areas, decide which layer owns the source of truth and keep the other layers consumers of that state.
 
@@ -56,7 +56,6 @@ When asked to generate code, start from the thinnest useful slice that proves th
 - For repo topology, boundaries, and promotion flow, read [references/platform-operating-model.md](references/platform-operating-model.md).
 - For Terraform module, environment, testing, and state guidance, read [references/terraform.md](references/terraform.md).
 - For cluster baseline, workload, RBAC, and policy guidance, read [references/kubernetes.md](references/kubernetes.md).
-- For Kyverno policy design, validate/mutate/generate/verifyImages rules, Audit→Enforce promotion, PolicyException, and kyverno-cli testing, read [references/kyverno.md](references/kyverno.md).
 - For OpenShift-specific operating patterns, read [references/openshift.md](references/openshift.md).
 - For Flux bootstrap, reconciliation, image automation, and app delivery guidance, read [references/flux.md](references/flux.md).
 - For Argo CD app delivery and application set patterns, read [references/argocd.md](references/argocd.md).

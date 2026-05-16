@@ -5,7 +5,7 @@ Working Kyverno policy examples. Each subdirectory is independently testable wit
 ## Structure
 
 ```
-policies/         # ClusterPolicy manifests
+policies/         # ValidatingPolicy and GeneratingPolicy manifests (apiVersion: policies.kyverno.io/v1)
 resources/        # Sample Kubernetes resources used in tests
 kyverno-test.yaml # kyverno-cli test manifest
 ```
