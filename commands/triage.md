@@ -1,101 +1,173 @@
 ---
 name: triage
-description: Triages a PR comment (from a bot, reviewer, or CI tool). Classifies the comment as actionable, informational, or not applicable. If actionable, proposes the exact fix. Always closes the thread with a reply explaining the decision.
-argument-hint: "[comment text] [--diff <diff text or file path>] [--file <file path>]"
+description: Triages a PR comment — from a bot (Copilot, CI) or a human reviewer. Fetches the comment and diff via gh CLI, classifies it, applies the fix directly to the file if valid, posts a reply on the thread, and resolves it. Run from inside the repo.
+argument-hint: "<PR number> <comment ID> | --all <PR number>"
 ---
 
-You are a senior platform engineer triaging a PR comment.
+You are a senior platform engineer triaging PR comments.
 
 Input: `$ARGUMENTS`
 
-The input contains the comment text, optionally accompanied by:
-- `--diff` — the PR diff or path to a diff file
-- `--file` — the specific file the comment refers to
+Two modes:
+- `<PR number> <comment ID>` — triage one specific comment
+- `--all <PR number>` — triage every unresolved comment on the PR in order
 
-If the diff or file content is not provided but is needed to assess the comment, say so explicitly and ask the user to paste it.
+Run all `gh` commands directly. You have full access to the shell.
 
 ---
 
-## Step 1 — Classify the comment
+## Step 1 — Fetch the comment and context
 
-Choose exactly one classification:
+For a single comment:
+```bash
+# Get the comment text
+gh api repos/{owner}/{repo}/pulls/comments/<comment_id>
+# or for a PR issue comment:
+gh api repos/{owner}/{repo}/issues/comments/<comment_id>
 
-**ACTIONABLE_FIX**
-The comment identifies a real, concrete problem in the changed files that should be fixed now:
-- Wrong value, missing required field, broken reference
+# Get the PR diff
+gh pr diff <pr_number>
+
+# Get the file the comment refers to (if it's a review comment with a path)
+# already available from the comment API response (.path field)
+```
+
+For `--all`:
+```bash
+# List all unresolved review threads
+gh api graphql -f query='
+  query($owner:String!, $repo:String!, $pr:Int!) {
+    repository(owner:$owner, name:$repo) {
+      pullRequest(number:$pr) {
+        reviewThreads(first:100) {
+          nodes {
+            id isResolved
+            comments(first:1) {
+              nodes { databaseId body path line author { login } }
+            }
+          }
+        }
+      }
+    }
+  }' -f owner=<owner> -f repo=<repo> -F pr=<pr_number>
+```
+
+---
+
+## Step 2 — Classify the comment
+
+Choose exactly one:
+
+**ACTIONABLE_FIX** — a real problem in the changed files that must be fixed:
+- Wrong value, missing required field, broken reference or link
 - Security issue (wildcard IAM, missing encryption, exposed secret)
-- Deprecated API or field that will break on upgrade
-- Broken link or incorrect file path
-- Typo in code, config, or a shell command
+- Deprecated API or field
+- Typo in code, config, or a command
 - Logic error or unintended behaviour
 
-**INFORMATIONAL**
-The comment asks a question, suggests a future improvement, or flags something out of scope for this PR:
-- "Why did you choose X over Y?"
-- "Consider adding tests in a follow-up"
-- "This pattern works but there is a cleaner alternative"
-- Questions about intent that do not require a code change
+**INFORMATIONAL** — question, out-of-scope suggestion, or future improvement:
+- "Why did you choose X?"
+- "Consider doing Y in a follow-up"
+- Valid point but not blocking this PR
 
-**NOT_APPLICABLE**
-The comment does not require any action:
-- Automated bot status messages (CI pass/fail, coverage report)
+**NOT_APPLICABLE** — no action needed:
+- Bot status messages (CI pass/fail, coverage)
 - Already addressed in a later commit on this branch
-- Duplicate of another open thread
-- Refers to a file or line not changed in this PR
+- Duplicate of another thread
+- Refers to a file not changed in this PR
 
 ---
 
-## Step 2 — If ACTIONABLE_FIX, produce the fix
+## Step 3 — If ACTIONABLE_FIX, apply the fix
 
-Show the exact change needed:
-
-```
-File: <relative/path/to/file>
-
-Before:
-<exact text to replace — copy verbatim from the file>
-
-After:
-<replacement text>
+Read the file referenced in the comment:
+```bash
+cat <file_path>
 ```
 
-If multiple files need changing, repeat the block for each file.
+Make the minimal correct change using the Edit tool. Do not touch unrelated lines.
 
-State the conventional commit message for the fix:
-```
-fix(<scope>): <what was wrong and what was corrected>
+Then commit:
+```bash
+git add <file_path>
+git commit -m "fix(<scope>): <what was wrong and what was corrected>"
+git push
 ```
 
 ---
 
-## Step 3 — Write the thread reply
+## Step 4 — Post a reply on the thread
 
-Write the exact comment to post as a reply on the PR thread.
+For a review comment:
+```bash
+gh api --method POST \
+  repos/{owner}/{repo}/pulls/comments/<comment_id>/replies \
+  --field body="<reply>"
+```
 
-Rules:
-- First-person, concise, no filler phrases
-- Reference the specific line or file where relevant
-- For ACTIONABLE_FIX: describe what was changed and why. End with: ✅ Fixed — thread resolved.
-- For INFORMATIONAL: answer the question or acknowledge the suggestion. Explain why no code change is needed. End with: ℹ️ Thread resolved — no code change needed.
-- For NOT_APPLICABLE: state why this does not apply. End with: ❌ Not applicable — thread resolved.
+For a PR issue comment:
+```bash
+gh pr comment <pr_number> --body "<reply>"
+```
+
+Reply rules:
+- First-person, concise, no filler
+- Reference the specific line or file
+- **ACTIONABLE_FIX**: describe what was changed and why. End with: `✅ Fixed — thread resolved.`
+- **INFORMATIONAL**: answer or acknowledge, explain why no code change. End with: `ℹ️ Thread resolved — no code change needed.`
+- **NOT_APPLICABLE**: state why this does not apply. End with: `❌ Not applicable — thread resolved.`
 
 ---
 
-## Step 4 — Output format
+## Step 5 — Resolve the thread
 
-Respond in this structure so the GitHub Actions workflow can parse and act on it:
+```bash
+# Get the thread node ID (PRRT_ prefix)
+gh api graphql -f query='
+  query($owner:String!, $repo:String!, $pr:Int!) {
+    repository(owner:$owner, name:$repo) {
+      pullRequest(number:$pr) {
+        reviewThreads(first:100) {
+          nodes {
+            id isResolved
+            comments(first:1){ nodes{ databaseId } }
+          }
+        }
+      }
+    }
+  }' -f owner=<owner> -f repo=<repo> -F pr=<pr_number> \
+  --jq '.data.repository.pullRequest.reviewThreads.nodes[]
+        | select(.isResolved==false)
+        | select(.comments.nodes[0].databaseId==<comment_id>)
+        | .id'
+
+# Resolve it
+gh api graphql -f query='
+  mutation($t:ID!) {
+    resolveReviewThread(input:{threadId:$t}) {
+      thread { isResolved }
+    }
+  }' -f t=<thread_node_id>
+```
+
+If the comment is an issue comment (not a review comment), there is no thread to resolve — skip this step.
+
+---
+
+## Step 6 — Confirm
+
+After each comment, output one line:
 
 ```
-CLASSIFICATION: <ACTIONABLE_FIX | INFORMATIONAL | NOT_APPLICABLE>
-
-REASON:
-<one sentence>
-
-FIX:
-<file path, before/after blocks, and commit message — or "none" if no fix>
-
-REPLY:
-<the exact comment to post on the thread>
+[<classification>] #<comment_id> — <one sentence summary of action taken>
 ```
 
-Do not use JSON. Use the labeled sections above so the workflow can extract each part with simple `sed`/`awk` parsing.
+When `--all` mode finishes, print a summary table:
+
+```
+| Comment | Author | Classification | Action |
+|---|---|---|---|
+| #<id> | @<login> | ACTIONABLE_FIX | Fixed: <file>, committed <sha> |
+| #<id> | @<login> | INFORMATIONAL  | Replied, thread resolved |
+| #<id> | @<login> | NOT_APPLICABLE | Replied, thread resolved |
+```
