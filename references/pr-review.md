@@ -374,15 +374,18 @@ terraform {
 - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 ```
 
-Current recommended versions (as of v1.12.0):
-| Action | Recommended |
-|---|---|
-| `actions/checkout` | `v4` |
-| `actions/setup-node` | `v4` |
-| `actions/setup-python` | `v5` |
-| `actions/upload-artifact` | `v4` |
-| `aws-actions/configure-aws-credentials` | `v4` |
-| `hashicorp/setup-terraform` | `v3` |
+Current recommended major versions (as of v1.12.0) — use these as the comment label on your SHA-pinned lines, not as the actual ref:
+
+| Action | Minimum recommended major | Example SHA-pinned usage |
+|---|---|---|
+| `actions/checkout` | `v4` | `actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1` |
+| `actions/setup-node` | `v4` | `actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4.0.2` |
+| `actions/setup-python` | `v5` | `actions/setup-python@0a5c61591373683ec8de3e43c37e6e526f26a9b8 # v5.0.0` |
+| `actions/upload-artifact` | `v4` | `actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1` |
+| `aws-actions/configure-aws-credentials` | `v4` | `aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502 # v4.0.2` |
+| `hashicorp/setup-terraform` | `v3` | `hashicorp/setup-terraform@651471c36a6092792c552e8b1bef71e592b462d8 # v3.1.1` |
+
+Always pin the `uses:` field to the full commit SHA. The major version tag in the comment is for human readability only — the SHA is what actually controls which code runs.
 
 ### Container image hygiene
 
@@ -525,8 +528,8 @@ gh api graphql -f query='
   }
 }' --jq '.data.repository.pullRequest.reviewThreads.nodes[] | select(.isResolved == false) | {id, path}'
 
-# Reply to a comment thread
-gh api repos/<owner>/<repo>/pulls/comments \
+# Reply to a comment thread (include PR number in path; in_reply_to makes it a reply)
+gh api repos/<owner>/<repo>/pulls/<PR>/comments \
   -X POST \
   -F body="<reply text>" \
   -F in_reply_to=<comment-id>
