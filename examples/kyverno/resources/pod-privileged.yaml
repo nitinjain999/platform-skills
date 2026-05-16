@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: debug-pod
+  namespace: production
+spec:
+  containers:
+    - name: debug
+      image: registry.internal.example.com/debug-tools:latest
+      securityContext:
+        privileged: true    # violates disallow-privileged-containers

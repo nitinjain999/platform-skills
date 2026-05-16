@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-05-16
+
+### Added
+
+#### Kyverno Domain
+
+New Domain 20: `Kyverno` — write and maintain Kubernetes-native admission policies using the CEL-based types (`ValidatingPolicy`, `MutatingPolicy`, `GeneratingPolicy`, `ImageValidatingPolicy`) introduced in Kyverno v1.14–v1.15. Covers Audit→Deny promotion, PolicyExceptions, PolicyReport analysis, and migration from legacy `ClusterPolicy` or PodSecurityPolicy. All policies use `apiVersion: policies.kyverno.io/v1`.
+
+- `references/kyverno.md` — all five new policy kinds with namespace-scoped variants, `matchConstraints`/`matchConditions` CEL filtering, `ValidatingPolicy` with `validations[].expression` and `messageExpression`, `MutatingPolicy` with `ApplyConfiguration` (`Object{...}`) and `JSONPatch` (`[JSONPatch{...}]`) patch types, container iteration with `.map()`/`.all()`, `mutateExisting`, `GeneratingPolicy` with `generator.Apply()` and `dyn()` inline resources, `ImageValidatingPolicy` with `verifyImageSignatures()`, Cosign keyless/key-based and Notary attestors, Audit→Deny promotion workflow with PolicyReport queries, PolicyException (`kyverno.io/v2`), kyverno-cli install and test manifest structure, PolicyReport export to CSV, GitHub Actions integration, three full annotated example policies, and a troubleshooting table covering 11 failure modes
+- `/platform-skills:kyverno` (`commands/kyverno.md`) — five modes: `generate` (write CEL-based policy from description, always Audit-first), `test` (write kyverno-test.yaml with pass/fail/skip fixtures), `audit` (rank PolicyReport violations and produce Deny promotion plan), `debug` (diagnose webhook registration, matchConstraints/matchConditions gaps, background scan, CEL errors, PolicyException suppression), `migrate` (legacy ClusterPolicy→new-type translation table, PSP field mapping, Gatekeeper ConstraintTemplate translation)
+- `examples/kyverno/` — two `ValidatingPolicy` examples (`require-team-labels.yaml`, `disallow-privileged-containers.yaml`), one `GeneratingPolicy` example (`generate-default-networkpolicy.yaml`), four test resource fixtures, and a `kyverno-test.yaml` that exercises pass and fail cases for each validate policy
+
 ## [1.10.0] - 2026-05-09
 
 ### Added

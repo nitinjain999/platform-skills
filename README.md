@@ -4,6 +4,14 @@
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Claude Code](https://img.shields.io/badge/Claude-Code%20Skill-purple)](https://claude.ai/code)
+[![GitHub Stars](https://img.shields.io/github/stars/nitinjain999/platform-skills?style=social)](https://github.com/nitinjain999/platform-skills/stargazers)
+
+---
+
+If this handbook saves you time, [give it a star](https://github.com/nitinjain999/platform-skills/stargazers) — it helps others find it.
+Found a gap or a better pattern? [Contributions are welcome](CONTRIBUTING.md) — open an issue, improve a reference guide, or add an example.
+
+---
 
 ## What is this?
 
@@ -33,6 +41,7 @@ Both layers work independently. The plugin is optional.
 | Domain | Reference guide | What it covers |
 |---|---|---|
 | ☸️ Kubernetes | [references/kubernetes.md](references/kubernetes.md) | Cluster baseline, workload patterns, network policy, RBAC, pod security |
+| 🛡️ Kyverno | [references/kyverno.md](references/kyverno.md) | Validate/mutate/generate/verifyImages policies, Audit→Enforce promotion, PolicyException, PolicyReport, kyverno-cli testing, PSP/Gatekeeper migration |
 | 🟥 OpenShift | [references/openshift.md](references/openshift.md) | Routes, SCC compatibility, operator usage, tenant isolation |
 | 🚢 Argo CD | [references/argocd.md](references/argocd.md) | App-of-apps design, ApplicationSet, sync control, promotion flows |
 | 🔄 Flux CD | [references/flux.md](references/flux.md) | Monorepo structure, reconciliation, multi-tenancy, image automation |
@@ -47,6 +56,13 @@ Both layers work independently. The plugin is optional.
 | 🧠 Platform Mindset | [references/platform-mindset.md](references/platform-mindset.md) | DevEx, friction audits, RFC/ADR, incident comms, post-mortems, capacity planning |
 | 🔒 Compliance | [references/compliance.md](references/compliance.md) | SOC 2 Trust Services Criteria in Terraform: IAM, encryption, detection, audit logging, backup, Checkov enforcement |
 | ⛵ Helm | [references/helm.md](references/helm.md) | Chart scaffolding, values design, template patterns, security hardening, lint/validation pipeline, GitOps integration |
+| 🔌 MCP | [references/mcp.md](references/mcp.md) | Model Context Protocol server/client development, TypeScript and Python SDKs, stdio/SSE transports, security, testing |
+| 📊 Observability | [references/observability.md](references/observability.md) | Structured logging, Prometheus metrics, OpenTelemetry tracing, Grafana dashboards, alerting rules, k6 load testing, capacity planning |
+| 📝 Documentation | [references/documentation.md](references/documentation.md) | Docstrings (Google/NumPy/JSDoc), OpenAPI 3.1 specs, doc sites (MkDocs/TypeDoc), developer guides |
+| 🐕 Datadog | [references/datadog.md](references/datadog.md) | Agent Helm setup, APM instrumentation, log management, monitors/dashboards/SLOs as Terraform |
+| 🦖 Dynatrace | [references/dynatrace.md](references/dynatrace.md) | OneAgent Kubernetes Operator, custom metrics, SLOs, dashboards and alerting via Terraform provider |
+| 💬 Conventional Commits | [references/conventional-commits.md](references/conventional-commits.md) | Message structure, type classification, atomic staging, commitlint/husky/semantic-release tooling |
+| 📋 OPA / Conftest | [references/opa.md](references/opa.md) | Rego v1 syntax, rule types, unit tests, fmt/regal/verify validation pipeline, GitHub Actions integration |
 
 ## Core principles
 
@@ -121,6 +137,7 @@ platform-skills/
 ├── references/                         # Deep-dive guides — one per domain
 │   ├── platform-operating-model.md
 │   ├── kubernetes.md
+│   ├── kyverno.md                      # Kyverno admission policies (v1.11.0)
 │   ├── openshift.md
 │   ├── argocd.md
 │   ├── flux.md
@@ -133,11 +150,12 @@ platform-skills/
 │   ├── linux-networking.md
 │   ├── platform-mindset.md
 │   ├── compliance.md                   # SOC 2 controls in Terraform (v1.6.0)
-│   └── helm.md                         # Helm chart patterns, lint pipeline, values design (Unreleased)
+│   └── helm.md                         # Helm chart patterns, lint pipeline, values design
 │
 ├── examples/                           # Working examples and handbook snippets
 │   ├── flux/basic-monorepo/            # Complete Flux CD monorepo structure
 │   ├── kubernetes/                     # Namespace, deployment, network policy, PDB
+│   ├── kyverno/                        # ValidatingPolicy, GeneratingPolicy examples + kyverno-cli test manifest (v1.11.0)
 │   ├── openshift/                      # Route, ResourceQuota, LimitRange
 │   ├── argocd/app-of-apps/             # Root application manifest
 │   ├── aws/iam/                        # Least-privilege IAM policy examples
@@ -178,11 +196,11 @@ platform-skills/
 - [x] v1.8.0 — Dynatrace: OneAgent Kubernetes Operator, custom metrics/SLOs/dashboards via Terraform provider, Davis AI incident investigation via Dynatrace MCP
 - [x] v1.9.0 — Conventional Commits: analyze diffs, generate WHY-focused commit messages, intelligent file staging, commitlint/husky/semantic-release tooling
 - [x] v1.10.0 — OPA / Conftest: generate Rego policies, unit tests, fmt/regal/verify validation pipeline, explain and debug
+- [x] v1.11.0 — Kyverno: ValidatingPolicy/MutatingPolicy/GeneratingPolicy/ImageValidatingPolicy (policies.kyverno.io/v1), CEL expressions, Audit→Deny promotion, PolicyException, PolicyReport analysis, kyverno-cli testing, PSP and Gatekeeper migration
 
 **Planned**
 - [ ] GCP: landing zone, GKE, Workload Identity, and IAM patterns
 - [ ] Service mesh: Istio — traffic management, mTLS, telemetry (counterpart to Linkerd domain)
-- [ ] Policy-as-code: Kyverno and OPA/Gatekeeper cluster policies with compliance mapping
 - [ ] SOC 2 for Kubernetes: Kyverno policies mapped to TSC criteria, pod security admission, `kube-bench` CIS Benchmark integration
 - [ ] OpenShift operator lifecycle: OLM, CatalogSource, operator upgrade patterns
 - [ ] Argo CD ApplicationSet fleet patterns: cluster generators, matrix strategies, progressive rollout

@@ -27,6 +27,7 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:commit](#platform-skillscommit) | Conventional commit message generation |
 | [/platform-skills:observability](#platform-skillsobservability) | Instrument, alert, dashboard, load test, capacity |
 | [/platform-skills:opa](#platform-skillsopa) | OPA/Conftest Rego policy generate, test, validate |
+| [/platform-skills:kyverno](#platform-skillskyverno) | Kyverno policy generate, test, audit, debug, migrate |
 | [/platform-skills:compliance](#platform-skillscompliance) | SOC 2 gap analysis and Terraform remediation |
 | [/platform-skills:datadog](#platform-skillsdatadog) | Datadog setup, APM, monitors, SLOs, incidents |
 | [/platform-skills:dynatrace](#platform-skillsdynatrace) | Dynatrace Operator, OneAgent, SLOs, incidents |
@@ -809,6 +810,152 @@ Diagnoses why a policy is not firing (or firing when it shouldn't). Checks in or
 ```
 ```
 /platform-skills:opa debug — conftest test passes with exit 0 but I expected a failure — [paste policy and input]
+```
+
+---
+
+## `/platform-skills:kyverno`
+
+**What it does:** Generate, test, audit, debug, and migrate Kyverno policies using the new CEL-based policy types (`ValidatingPolicy`, `MutatingPolicy`, `GeneratingPolicy`, `ImageValidatingPolicy` — all `apiVersion: policies.kyverno.io/v1`). Covers `matchConstraints`, `matchConditions`, CEL validations/mutations, `generator.Apply()`, Audit→Deny promotion, PolicyException, PolicyReport analysis, and migration from legacy `ClusterPolicy` or PodSecurityPolicy.
+
+```
+/platform-skills:kyverno [generate|test|audit|debug|migrate] [policy description or file path]
+```
+
+---
+
+### Mode: `generate`
+
+Writes a production-ready Kyverno policy using the new CEL-based types. Always starts in `validationActions: [Audit]` unless Deny is explicitly requested.
+
+**What gets generated:**
+- `apiVersion: policies.kyverno.io/v1` with the appropriate kind (`ValidatingPolicy`, `MutatingPolicy`, `GeneratingPolicy`, or `ImageValidatingPolicy`)
+- `annotations` block: `policies.kyverno.io/title`, `category`, `severity`, `description`
+- `matchConstraints.resourceRules` targeting only the required kinds and operations
+- `matchConditions` with CEL to exclude system namespaces — replaces the old `exclude` block
+- For `ValidatingPolicy`: `validations[].expression` (CEL boolean); `messageExpression` for dynamic messages
+- For `MutatingPolicy`: `mutations[].patchType: ApplyConfiguration` with `Object{...}` CEL for merges; `patchType: JSONPatch` with `[JSONPatch{...}]` CEL for precise path operations
+- For `GeneratingPolicy`: `variables` with `dyn()` for inline resources; `generate[].expression` using `generator.Apply(namespace, [resources])`; `evaluation.synchronize.enabled: true`
+- For `ImageValidatingPolicy`: `matchImageReferences`; `attestors` with Cosign keyless or key-based; `validations` using `verifyImageSignatures()` CEL function
+- kyverno-cli command to dry-run: `kyverno apply <policy.yaml> --resource <manifest.yaml> --detailed-results`
+
+```
+/platform-skills:kyverno generate a ValidatingPolicy that requires all Deployments to have app.kubernetes.io/team and app.kubernetes.io/name labels
+```
+```
+/platform-skills:kyverno generate a ValidatingPolicy that denies privileged containers in all namespaces except kube-system
+```
+```
+/platform-skills:kyverno generate a GeneratingPolicy that creates a default-deny-ingress NetworkPolicy in every new namespace
+```
+```
+/platform-skills:kyverno generate an ImageValidatingPolicy that requires all images to be signed with Cosign keyless (Sigstore)
+```
+
+---
+
+### Mode: `test`
+
+Writes a `kyverno-test.yaml` manifest and resource fixture files to verify a policy with the kyverno CLI.
+
+**Structure generated:**
+- A **passing resource** (result: pass) for each validation
+- A **failing resource** (result: fail) for each validation
+- A **skipped resource** (result: skip) if `matchConditions` exclude a namespace
+- `kyverno-test.yaml` referencing all resources with expected results
+- Command: `kyverno test .`
+
+```
+/platform-skills:kyverno test — [paste ValidatingPolicy YAML] — write the test manifest and resource fixtures
+```
+```
+/platform-skills:kyverno test write tests for my disallow-privileged-containers ValidatingPolicy
+```
+
+---
+
+### Mode: `audit`
+
+Reads PolicyReport data from a running cluster and produces a ranked, actionable violation summary.
+
+**What it does:**
+1. Queries `kubectl get policyreport -A` and `kubectl get clusterpolicyreport` for all failures
+2. Groups violations by policy (highest severity first), then by resource kind
+3. Assesses each violation: fixable in the manifest, or needs a PolicyException?
+4. Shows the `kubectl patch` command to promote each zero-violation policy from Audit to Deny: `kubectl patch validatingpolicy <name> --type merge -p '{"spec":{"validationActions":["Deny"]}}'`
+5. Flags Deny-mode policies with active violations — indicates a suppressed PolicyException needs review
+
+```
+/platform-skills:kyverno audit — here is my policyreport output: [paste JSON or describe violations]
+```
+```
+/platform-skills:kyverno audit we're ready to move require-labels to Deny, what violations remain?
+```
+
+---
+
+### Mode: `debug`
+
+Diagnoses why a Kyverno policy is not behaving as expected.
+
+**Checks in order:**
+1. Webhook not registered (`kubectl get validatingwebhookconfigurations`)
+2. `matchConstraints.resourceRules` not covering the resource kind, apiGroup, or operation
+3. `matchConditions` CEL expression filtering out the resource unexpectedly
+4. `validationActions: [Audit]` — policy reports violations but does not block; check PolicyReport, not admission events
+5. `evaluation.background.enabled: false` — existing resources never evaluated
+6. CEL expression syntax error (check `kubectl describe` events on the resource)
+7. PolicyException silently suppressing a violation
+
+```
+/platform-skills:kyverno debug my ValidatingPolicy is in Audit mode but policyreport shows no violations for existing Deployments
+```
+```
+/platform-skills:kyverno debug my CEL expression blocks every Pod even when it should pass — [paste ValidatingPolicy YAML]
+```
+```
+/platform-skills:kyverno debug CEL evaluation error on admission — [paste policy and the admission event]
+```
+
+---
+
+### Mode: `migrate`
+
+Guides migration from legacy `ClusterPolicy` (`kyverno.io/v1`) or PodSecurityPolicy to the new CEL-based types.
+
+**From legacy ClusterPolicy:**
+
+| Legacy field | New equivalent |
+|---|---|
+| `spec.rules[].match.any[].resources` | `spec.matchConstraints.resourceRules[]` |
+| `spec.rules[].exclude` | `spec.matchConditions` with CEL negation |
+| `validate.pattern` (JMESPath anchors) | `validations[].expression` (CEL boolean) |
+| `validate.deny.conditions` | `validations[].expression` with inverted CEL |
+| `mutate.patchStrategicMerge` | `mutations[].patchType: ApplyConfiguration` with `Object{...}` |
+| `mutate.patchesJSON6902` | `mutations[].patchType: JSONPatch` with `[JSONPatch{...}]` |
+| `generate.data` / `generate.clone` | `generate[].expression` using `generator.Apply()` and `resource.Get()` |
+| `validationFailureAction: Enforce` | `validationActions: [Deny]` |
+| `validationFailureAction: Audit` | `validationActions: [Audit]` |
+
+**From PodSecurityPolicy:**
+- Maps each PSP field to a `ValidatingPolicy` CEL expression
+- Deploys all policies in `[Audit]` mode first
+- Fixes workloads, creates PolicyExceptions for legitimate carve-outs
+- Removes PSPs only after all equivalents are in `[Deny]` with zero violations
+
+**From OPA/Gatekeeper:**
+- Translates ConstraintTemplate Rego logic to `ValidatingPolicy` CEL expressions
+- Maps `input.review.object` → `object`, `deny` rule → `validations[].expression` with inverted logic
+- Runs Gatekeeper and Kyverno policies in parallel for violation-count comparison before decommissioning
+
+```
+/platform-skills:kyverno migrate I'm migrating from PSP — here are my existing PodSecurityPolicies: [paste YAML]
+```
+```
+/platform-skills:kyverno migrate translate this legacy ClusterPolicy to the new ValidatingPolicy type: [paste YAML]
+```
+```
+/platform-skills:kyverno migrate translate this Gatekeeper ConstraintTemplate to a Kyverno ValidatingPolicy: [paste YAML]
 ```
 
 ---

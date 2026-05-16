@@ -1,0 +1,35 @@
+name: kyverno-baseline-test
+policies:
+  - policies/require-team-labels.yaml
+  - policies/disallow-privileged-containers.yaml
+resources:
+  - resources/deployment-with-labels.yaml
+  - resources/deployment-missing-labels.yaml
+  - resources/pod-non-privileged.yaml
+  - resources/pod-privileged.yaml
+results:
+  # require-team-labels
+  - policy: require-team-labels
+    rule: require-team-labels
+    resource: payment-api
+    kind: Deployment
+    result: pass
+
+  - policy: require-team-labels
+    rule: require-team-labels
+    resource: legacy-worker
+    kind: Deployment
+    result: fail
+
+  # disallow-privileged-containers
+  - policy: disallow-privileged-containers
+    rule: disallow-privileged-containers
+    resource: app-pod
+    kind: Pod
+    result: pass
+
+  - policy: disallow-privileged-containers
+    rule: disallow-privileged-containers
+    resource: debug-pod
+    kind: Pod
+    result: fail

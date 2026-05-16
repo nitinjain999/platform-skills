@@ -21,6 +21,7 @@ Match the task to the right layer:
 8. `Linux & Networking`: Diagnose Linux systems and network problems — DNS resolution, load balancer routing, VPC/VNet design, kernel tuning, and connectivity troubleshooting.
 9. `Platform Mindset`: Treat developers as customers. Apply product thinking, friction audits, DevEx metrics, RFC/ADR processes, incident communication, and blameless post-mortems.
 10. `Cross-platform`: Design repo boundaries, ownership, promotion flows, and security controls first.
+11. `Kyverno`: Write and maintain Kubernetes-native admission policies using the CEL-based types — `ValidatingPolicy`, `MutatingPolicy`, `GeneratingPolicy`, `ImageValidatingPolicy` (all `policies.kyverno.io/v1`). Covers `matchConstraints`, `matchConditions`, CEL validations/mutations, `generator.Apply()`, Audit→Deny promotion, PolicyException, and kyverno-cli testing.
 
 If a task spans multiple areas, decide which layer owns the source of truth and keep the other layers consumers of that state.
 
@@ -77,5 +78,6 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:terraform` — full fmt/validate/tflint/security pipeline + blast radius review
 - `/platform-skills:gitops` — Flux CD and Argo CD reconciliation troubleshooting
 - `/platform-skills:linkerd` — Linkerd mTLS, injection, policy, and multi-cluster diagnostics
+- `/platform-skills:kyverno` — Kyverno policy generation, testing, cluster audit, debugging, and PSP/Gatekeeper migration
 - `/platform-skills:linux` — Linux administration, DNS, load balancing, VPC/VNet, and connectivity troubleshooting
 - `/platform-skills:product` — product thinking, friction audits, DevEx, RFC/ADR, incident updates, post-mortems
