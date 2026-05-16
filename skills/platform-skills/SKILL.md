@@ -31,6 +31,7 @@ Match the task to the right layer:
 18. `Conventional Commits`: Analyze git diffs, generate commit messages that explain WHY a change was made, intelligently stage files for atomic commits, and validate messages against the Conventional Commits specification.
 19. `OPA / Conftest`: Generate Rego policies with correct rule types and namespacing, write unit tests, run the full validation pipeline (fmt → regal lint → conftest verify → integration test), explain existing policies, and debug why a rule is not firing.
 20. `Kyverno`: Write and maintain Kubernetes-native admission policies using the CEL-based types — ValidatingPolicy, MutatingPolicy, GeneratingPolicy, ImageValidatingPolicy (all `policies.kyverno.io/v1`). Covers matchConstraints, matchConditions, CEL validations/mutations, generator.Apply(), Audit→Deny promotion, PolicyException, and kyverno-cli testing.
+21. `PR Review`: Comprehensive pre-merge risk review across six dimensions — cost impact, environment drift, ownership and governance gaps, SOC 2 compliance, deprecated API / version hygiene, and rollback feasibility scoring.
 
 If a task spans multiple areas, decide which layer owns the source of truth and keep the other layers consumers of that state.
 
@@ -86,6 +87,7 @@ When asked to generate code, start from the thinnest useful slice that proves th
 - For Conventional Commits — type classification, scope rules, breaking changes, message structure, atomic commits, commitlint, husky, semantic-release, and validation rules — read [references/conventional-commits.md](references/conventional-commits.md).
 - For OPA / Conftest — Rego v1 syntax, rule types, package namespacing, input shapes, unit tests, validation pipeline (fmt/regal/verify), GitHub Actions integration, and troubleshooting — read [references/opa.md](references/opa.md).
 - For Kyverno CEL-based admission policies — ValidatingPolicy, MutatingPolicy, GeneratingPolicy, ImageValidatingPolicy, matchConstraints, matchConditions, Audit→Deny promotion, PolicyException, kyverno-cli testing, and migration from legacy ClusterPolicy — read [references/kyverno.md](references/kyverno.md).
+- For comprehensive PR review — cost impact, environment drift, ownership gaps, SOC 2 compliance, deprecated APIs, version hygiene, rollback feasibility, and bot comment triage — read [references/pr-review.md](references/pr-review.md).
 
 Load only the files needed for the current request.
 
@@ -110,3 +112,4 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:commit` — analyze diff, generate conventional commit message, stage files atomically, validate message
 - `/platform-skills:opa` — generate Rego policies, write unit tests, run fmt/regal/verify pipeline, explain or debug policies
 - `/platform-skills:kyverno` — generate, test, audit, debug, or migrate Kyverno CEL-based admission policies
+- `/platform-skills:pr-review` — comprehensive PR review: cost, drift, ownership, compliance, upgrade, rollback

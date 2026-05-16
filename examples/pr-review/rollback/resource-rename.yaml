@@ -1,0 +1,98 @@
+# SCENARIO: Rollback — Kubernetes resource rename with prune:true GitOps
+#
+# A PR renames a Deployment from "payments-api" to "payments-service".
+# With prune: true in the Flux Kustomization, the old Deployment is deleted
+# and the new one created. Rolling back means re-creating the old resource.
+#
+# Expected output:
+#
+#   [ROLLBACK] Deployment/payments-api → Deployment/payments-service — resource rename
+#     Change: Deployment renamed; Flux will delete payments-api and create payments-service
+#     Reversibility: MANUAL — git revert restores the old name in Git, but Flux will
+#     then delete payments-service and recreate payments-api. Any active connections
+#     drained to payments-service will need to reconnect. Pods terminate during rename.
+#     Blast radius: LOCAL (single namespace)
+#     Rollback procedure:
+#       1. git revert <commit-sha>
+#       2. git push → Flux reconciles: deletes payments-service, creates payments-api
+#       3. Verify: kubectl get deploy -n payments
+#       4. Check dependent Services and Ingress still resolve correctly
+#     Pre-merge requirement:
+#       - Confirm all Services, Ingresses, and HPA objects reference the new name
+#       - Confirm no external tools (monitoring, alerts, RBAC) are hardcoded to old name
+#
+#   [ROLLBACK] Service/payments-api-svc — name unchanged
+#     The Service still points to matchLabels: app: payments-api.
+#     After rename, the selector will match nothing — all traffic drops.
+#     Reversibility: MANUAL
+#     Blast radius: LOCAL → CLUSTER (if other services call payments-api)
+#     Pre-merge requirement: Update Service selector to app: payments-service
+
+# ❌ BEFORE — original name
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payments-api      # ← being renamed in this PR
+  namespace: payments
+  labels:
+    app: payments-api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: payments-api
+  template:
+    metadata:
+      labels:
+        app: payments-api    # ← selector label also changes
+    spec:
+      containers:
+        - name: payments-api
+          image: payments-api:v1.4.2
+---
+# ❌ Service — selector NOT updated in this PR (will break after rename)
+apiVersion: v1
+kind: Service
+metadata:
+  name: payments-api-svc
+  namespace: payments
+spec:
+  selector:
+    app: payments-api      # ← still points to old label — traffic drops after rename
+  ports:
+    - port: 80
+      targetPort: 8080
+---
+# ✅ AFTER — correct rename with Service selector updated
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payments-service
+  namespace: payments
+  labels:
+    app: payments-service
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: payments-service
+  template:
+    metadata:
+      labels:
+        app: payments-service
+    spec:
+      containers:
+        - name: payments-service
+          image: payments-api:v1.4.2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payments-api-svc
+  namespace: payments
+spec:
+  selector:
+    app: payments-service    # ✅ updated to match new label
+  ports:
+    - port: 80
+      targetPort: 8080

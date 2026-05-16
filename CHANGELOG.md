@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.0] - 2026-05-16
+
+### Added
+
+#### PR Review Domain
+
+New Domain 21: `PR Review` — comprehensive pre-merge risk review across six dimensions. Each mode inspects the diff and current file state, reports findings with severity, and recommends concrete fixes.
+
+- `references/pr-review.md` — cost impact (compute, storage, network spend delta with AWS pricing reference), environment drift detection (Kustomize overlay gaps, Helm values sibling mismatches, Terraform workspace drift, GitOps source drift, feature flag drift), ownership and governance (CODEOWNERS gaps, missing team labels, Terraform module README requirements, PR governance checklist), SOC 2 compliance mapping (CC6.1–CC8.1, A1.2 with Terraform patterns and `aws` CLI evidence collection commands), deprecated API / version hygiene (Kubernetes API removal timeline, Terraform provider constraint patterns, GitHub Actions SHA pinning, container digest pinning), rollback feasibility scoring (reversibility matrix: FULL/PARTIAL/MANUAL/NONE, blast radius: LOCAL/CLUSTER/PLATFORM/DATA, pre-merge requirements for high-risk changes, GitOps rollback patterns), and bot comment triage workflow with GH CLI commands for resolving threads
+- `/platform-skills:pr-review` (`commands/pr-review.md`) — six modes: `cost` (spend delta with severity per resource), `drift` (environment alignment across overlays, values files, Terraform workspaces), `ownership` (CODEOWNERS, team labels, module README, PR governance), `compliance` (SOC 2 control impact with remediation and auditor evidence commands), `upgrade` (deprecated Kubernetes APIs, loose Terraform constraints, floating action versions, `:latest` images), `rollback` (reversibility and blast radius score per change with Rollback Risk Score: 🟢/🟡/🔴), `full` (all six modes with Merge Readiness Summary)
+
 ## [1.11.0] - 2026-05-16
 
 ### Added

@@ -1,0 +1,40 @@
+# SCENARIO: Ownership gaps — new directory with no CODEOWNERS entry
+#
+# A PR adds a new top-level directory `platform/` with Terraform modules but
+# no CODEOWNERS rule. Any engineer can merge PRs to this directory with no
+# required reviewer.
+#
+# Expected output:
+#
+#   [OWNERSHIP] platform/ — new top-level directory
+#     Gap: No CODEOWNERS entry covers platform/**. PRs touching this path have
+#     no required reviewer — any team member can self-merge.
+#     Severity: HIGH
+#     Recommendation: Add to .github/CODEOWNERS:
+#       platform/   @platform-team @platform-leads
+#
+#   [OWNERSHIP] platform/eks-cluster/ — new Terraform module
+#     Gap: No README.md in module directory. Purpose, inputs, outputs, and
+#     owning team are undocumented.
+#     Severity: MEDIUM
+#     Recommendation: Add platform/eks-cluster/README.md with: description,
+#     usage example, variable table, output table, and owning team.
+#
+#   [OWNERSHIP] platform/eks-cluster/variables.tf — 4 variables with no description
+#     Gap: cluster_name, node_count, instance_type, region have no description field.
+#     Severity: LOW
+#     Recommendation: Add description = "..." to each variable block.
+
+# ❌ CURRENT .github/CODEOWNERS — missing platform/ entry
+*                   @platform-team
+
+references/         @platform-team
+commands/           @platform-team
+examples/           @platform-team
+.claude-plugin/     @platform-leads
+CHANGELOG.md        @platform-leads
+
+# platform/       <-- NOT PRESENT
+
+# ✅ RECOMMENDED addition
+# platform/       @platform-team @platform-leads

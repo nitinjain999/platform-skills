@@ -1,0 +1,72 @@
+# SCENARIO: Cost impact — replica increase + instance class upgrade
+#
+# A PR bumps a Deployment from 2 to 8 replicas and the underlying node group
+# from t3.medium to m5.xlarge. The /platform-skills:pr-review cost mode would
+# produce the findings below.
+#
+# Expected output (abbreviated):
+#
+#   [COST] payments-api Deployment — replicas increased from 2 to 8
+#     Estimated delta: +$280/month (8× m5.xlarge On-Demand @ $140/month each vs 2×)
+#     Severity: HIGH
+#     Recommendation: Confirm scale requirement. If this is a load test, revert
+#     after. Consider HPA with minReplicas: 2 and maxReplicas: 8 so floor cost
+#     stays low outside peak hours.
+#
+#   [COST] eks-workers NodeGroup — instance type changed t3.medium → m5.xlarge
+#     Estimated delta: +$110/month per node (m5.xlarge $140 vs t3.medium $30)
+#     Severity: HIGH
+#     Recommendation: Validate whether the application actually requires 16 GB RAM.
+#     If memory is the constraint, consider r6i.large (16 GB, $95/month) instead.
+#
+#   [COST] payments-api container — no resource requests set
+#     Estimated delta: unbounded (overprovisioning risk on shared nodes)
+#     Severity: MEDIUM
+#     Recommendation: Set requests.cpu and requests.memory so the scheduler can
+#     bin-pack correctly and Karpenter/Cluster Autoscaler sizes nodes accurately.
+
+# BEFORE (main branch)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payments-api
+  namespace: payments
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payments-api
+  template:
+    metadata:
+      labels:
+        app: payments-api
+    spec:
+      containers:
+        - name: payments-api
+          image: payments-api:v1.4.2
+          # ❌ No resource requests — prevents accurate bin-packing
+          ports:
+            - containerPort: 8080
+---
+# AFTER (PR branch) — what triggers the cost findings
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payments-api
+  namespace: payments
+spec:
+  replicas: 8    # ← increased from 2
+  selector:
+    matchLabels:
+      app: payments-api
+  template:
+    metadata:
+      labels:
+        app: payments-api
+    spec:
+      containers:
+        - name: payments-api
+          image: payments-api:v1.4.2
+          # ❌ Still no resource requests
+          ports:
+            - containerPort: 8080

@@ -55,6 +55,7 @@ REQUIRED_REFERENCES=(
   references/conventional-commits.md
   references/opa.md
   references/kyverno.md
+  references/pr-review.md
 )
 
 for ref in "${REQUIRED_REFERENCES[@]}"; do
@@ -87,6 +88,7 @@ EXAMPLE_DOMAINS=(
   examples/conventional-commits
   examples/opa
   examples/kyverno
+  examples/pr-review
 )
 
 for domain in "${EXAMPLE_DOMAINS[@]}"; do

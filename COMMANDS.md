@@ -1579,6 +1579,64 @@ Runs the full platform health checklist covering Developer Experience, Operation
 
 ---
 
+## `/platform-skills:pr-review`
+
+Comprehensive pre-merge risk review across six dimensions. Each mode inspects the diff and current file state, reports findings with severity, and recommends concrete fixes.
+
+**Modes**
+
+| Mode | What it reviews |
+|---|---|
+| `cost` | Compute, storage, and network spend delta |
+| `drift` | Environment alignment across dev/staging/prod overlays and values files |
+| `ownership` | CODEOWNERS gaps, missing team labels, Terraform module README, PR governance |
+| `compliance` | SOC 2 control impact — IAM, encryption, logging, network, change management |
+| `upgrade` | Deprecated Kubernetes APIs, loose Terraform provider constraints, floating action versions, `:latest` images |
+| `rollback` | Reversibility and blast radius score for every change |
+| `full` | All six modes in sequence with a Merge Readiness Summary |
+
+**Usage**
+
+```
+/platform-skills:pr-review cost [paste gh pr diff output or PR number]
+/platform-skills:pr-review drift
+/platform-skills:pr-review ownership
+/platform-skills:pr-review compliance
+/platform-skills:pr-review upgrade
+/platform-skills:pr-review rollback
+/platform-skills:pr-review full 42
+```
+
+**Example prompts**
+
+```
+/platform-skills:pr-review cost — here is the diff for PR #42: [paste output of gh pr diff 42]
+```
+```
+/platform-skills:pr-review drift — values-dev.yaml changed, check if prod is aligned
+```
+```
+/platform-skills:pr-review compliance — new IAM role added, verify CC6.1 and CC6.2
+```
+```
+/platform-skills:pr-review rollback — we're renaming a Deployment and adding an RDS storage increase
+```
+```
+/platform-skills:pr-review full 42
+```
+
+**Multi-mode workflow**
+
+```
+/platform-skills:pr-review full   # get the complete risk picture
+# fix blockers
+/platform-skills:review           # validate specific manifests before re-review
+```
+
+Reference: `references/pr-review.md`
+
+---
+
 ## Tips for best results
 
 **Paste context** — paste the manifest, error output, plan output, or code block directly after the command. The more concrete the input, the more actionable the output.
