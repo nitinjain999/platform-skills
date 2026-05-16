@@ -65,7 +65,7 @@ Both layers work independently. The plugin is optional.
 | 📋 OPA / Conftest | [references/opa.md](references/opa.md) | Rego v1 syntax, rule types, unit tests, fmt/regal/verify validation pipeline, GitHub Actions integration |
 | 🔍 PR Review | [references/pr-review.md](references/pr-review.md) | Cost impact, environment drift, ownership gaps, SOC 2 compliance, deprecated API / version hygiene, rollback feasibility |
 | 🧵 PR Comment Triage | [commands/triage.md](commands/triage.md) | `/platform-skills:triage` classifies PR comments, applies valid fixes, replies, and resolves review threads |
-| ⚡ KEDA | [references/keda.md](references/keda.md) | ScaledObject, ScaledJob, TriggerAuthentication, Prometheus/SQS/Kafka/Redis/Cron/HTTP/Azure scalers, scale-to-zero, IRSA, GitOps integration, troubleshooting |
+| ⚡ KEDA | [references/keda.md](references/keda.md) | ScaledObject, ScaledJob, TriggerAuthentication, Prometheus/SQS/Kafka/Redis/Cron/HTTP/Azure scalers, scale-to-zero, IRSA, GitOps integration, troubleshooting — `/platform-skills:keda` |
 
 ## Core principles
 

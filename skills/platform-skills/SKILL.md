@@ -1,6 +1,6 @@
 ---
 name: platform-skills
-description: Hands-on guidance for platform and DevOps engineers working with Kubernetes, Terraform, GitOps, GitHub Actions, AWS, Azure, Linkerd, Linux, networking, and compliance. Use when designing or troubleshooting Kubernetes workloads and RBAC, writing Terraform modules, configuring Flux or Argo CD, setting up CI/CD pipelines, managing cloud identity and IAM, handling secrets, diagnosing DNS or VPC connectivity, operating a service mesh, applying product thinking to developer experience, or implementing SOC 2 compliance controls in Terraform — at any scale, for any team size.
+description: Hands-on guidance for platform and DevOps engineers working with Kubernetes, Terraform, GitOps, GitHub Actions, AWS, Azure, Linkerd, Linux, networking, compliance, and KEDA event-driven autoscaling. Use when designing or troubleshooting Kubernetes workloads and RBAC, writing Terraform modules, configuring Flux or Argo CD, setting up CI/CD pipelines, managing cloud identity and IAM, handling secrets, diagnosing DNS or VPC connectivity, operating a service mesh, applying product thinking to developer experience, implementing SOC 2 compliance controls in Terraform, or scaling workloads with KEDA scalers (SQS, Kafka, Prometheus, Cron, HTTP) — at any scale, for any team size.
 ---
 
 # Platform Skills
@@ -33,6 +33,7 @@ Match the task to the right layer:
 20. `Kyverno`: Write and maintain Kubernetes-native admission policies using the CEL-based types — ValidatingPolicy, MutatingPolicy, GeneratingPolicy, ImageValidatingPolicy (all `policies.kyverno.io/v1`). Covers matchConstraints, matchConditions, CEL validations/mutations, generator.Apply(), Audit→Deny promotion, PolicyException, and kyverno-cli testing.
 21. `PR Review`: Comprehensive pre-merge risk review across six dimensions — cost impact, environment drift, ownership and governance gaps, SOC 2 compliance, deprecated API / version hygiene, and rollback feasibility scoring.
 22. `PR Comment Triage`: Triage bot or human PR comments, classify them as ACTIONABLE_FIX / INFORMATIONAL / NOT_APPLICABLE, make the minimal fix when valid, reply on the thread, and resolve it through `gh`.
+23. `KEDA`: Design, generate, debug, and review KEDA ScaledObject and ScaledJob resources. Covers all major scalers (Prometheus, SQS, Kafka, Redis, Cron, HTTP Add-on, Azure Service Bus), TriggerAuthentication with IRSA/Workload Identity, scaling lifecycle tuning, scale-to-zero patterns, and GitOps integration.
 
 If a task spans multiple areas, decide which layer owns the source of truth and keep the other layers consumers of that state.
 
@@ -89,6 +90,7 @@ When asked to generate code, start from the thinnest useful slice that proves th
 - For OPA / Conftest — Rego v1 syntax, rule types, package namespacing, input shapes, unit tests, validation pipeline (fmt/regal/verify), GitHub Actions integration, and troubleshooting — read [references/opa.md](references/opa.md).
 - For Kyverno CEL-based admission policies — ValidatingPolicy, MutatingPolicy, GeneratingPolicy, ImageValidatingPolicy, matchConstraints, matchConditions, Audit→Deny promotion, PolicyException, kyverno-cli testing, and migration from legacy ClusterPolicy — read [references/kyverno.md](references/kyverno.md).
 - For comprehensive PR review — cost impact, environment drift, ownership gaps, SOC 2 compliance, deprecated APIs, version hygiene, rollback feasibility, and bot comment triage — read [references/pr-review.md](references/pr-review.md).
+- For KEDA event-driven autoscaling — ScaledObject, ScaledJob, TriggerAuthentication, IRSA, scalers (Prometheus, SQS, Kafka, Redis, Cron, HTTP Add-on, Azure Service Bus), scaling lifecycle, security patterns, and troubleshooting — read [references/keda.md](references/keda.md).
 
 Load only the files needed for the current request.
 
@@ -115,3 +117,4 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:kyverno` — generate, test, audit, debug, or migrate Kyverno CEL-based admission policies
 - `/platform-skills:pr-review` — comprehensive PR review: cost, drift, ownership, compliance, upgrade, rollback
 - `/platform-skills:triage` — triage a PR comment (bot or human): classify as ACTIONABLE_FIX / INFORMATIONAL / NOT_APPLICABLE, produce the exact fix if needed, and write the thread reply
+- `/platform-skills:keda` — design, generate, debug, or review KEDA ScaledObject/ScaledJob autoscaling
