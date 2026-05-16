@@ -1,6 +1,10 @@
 # Platform Engineering Instructions for GitHub Copilot
+# Version: 1.12.0
+# Source: https://github.com/nitinjain999/platform-skills
+# Scope: project-level — applies to every Copilot Chat in this workspace
+# Upgrade: git pull in the platform-skills clone → copy updated file → commit
 
-You are assisting with platform engineering tasks. Apply these patterns when generating or reviewing code across Kubernetes, OpenShift, Argo CD, Flux CD, AWS, Azure, Terraform, and GitHub Actions.
+You are assisting with platform engineering tasks. Apply these patterns when generating or reviewing code across Kubernetes, OpenShift, Argo CD, Flux CD, AWS, Azure, Terraform, GitHub Actions, Helm, Kyverno, OPA/Conftest, and PR review.
 
 ## Core Principles
 
@@ -26,14 +30,12 @@ When generating infrastructure code, respect these boundaries:
 Always generate workloads with:
 
 ```yaml
-# Required for all Deployments
 resources:
   requests:
     cpu: "100m"
     memory: "128Mi"
   limits:
-    memory: "256Mi"        # Always set memory limit
-    # cpu limit intentionally omitted - causes throttling
+    memory: "256Mi"        # Always set memory limit; omit cpu limit — causes throttling
 
 livenessProbe:
   httpGet:
@@ -51,21 +53,16 @@ readinessProbe:
 
 securityContext:
   runAsNonRoot: true
-  runAsUser: 1000
+  runAsUser: 1000            # Omit on OpenShift — SCC assigns the UID
   allowPrivilegeEscalation: false
   readOnlyRootFilesystem: true
   capabilities:
     drop: ["ALL"]
 ```
 
-For OpenShift: never set `runAsUser` to a specific UID — use `runAsNonRoot: true` only.
-
 ## Flux CD
 
-When generating Flux resources:
-
 ```yaml
-# HelmRelease - always pin chart version
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 spec:
@@ -87,7 +84,6 @@ Troubleshooting order: source → artifact → reconciliation → chart renderin
 ## Argo CD
 
 ```yaml
-# Application - always set project, never use default
 spec:
   project: platform          # Never leave as "default"
   syncPolicy:
@@ -101,70 +97,24 @@ spec:
 
 ## AWS IAM
 
-Never generate wildcard policies. Always scope to specific actions and resources:
-
 ```json
-// ❌ Never generate this
+// ❌ Never generate
 { "Action": "s3:*", "Resource": "*" }
 
-// ✅ Always generate this
+// ✅ Always generate
 {
   "Action": ["s3:GetObject", "s3:ListBucket"],
-  "Resource": [
-    "arn:aws:s3:::my-bucket",
-    "arn:aws:s3:::my-bucket/*"
-  ]
+  "Resource": ["arn:aws:s3:::my-bucket", "arn:aws:s3:::my-bucket/*"]
 }
 ```
 
-Always prefer IRSA over static credentials for EKS pods:
-
-```hcl
-# IAM role for service accounts
-resource "aws_iam_role" "pod" {
-  assume_role_policy = jsonencode({
-    Statement = [{
-      Effect    = "Allow"
-      Principal = { Federated = aws_iam_openid_connect_provider.cluster.arn }
-      Action    = "sts:AssumeRoleWithWebIdentity"
-      Condition = {
-        StringEquals = {
-          "${local.oidc_issuer}:sub" = "system:serviceaccount:${var.namespace}:${var.service_account}"
-        }
-      }
-    }]
-  })
-}
-```
-
-## Azure
-
-Prefer managed identities over service principals. Always use workload identity for AKS pods:
-
-```yaml
-# Pod spec for workload identity
-metadata:
-  labels:
-    azure.workload.identity/use: "true"
-spec:
-  serviceAccountName: my-app-sa  # Annotated with client-id
-```
+Always prefer IRSA (EKS) or workload identity (AKS) over static credentials.
 
 ## Terraform
 
-Module structure:
+Module structure: `main.tf`, `variables.tf` (with validation blocks), `outputs.tf`, `versions.tf`, `README.md`.
 
-```
-module/
-├── main.tf        # Resources
-├── variables.tf   # Inputs with validation blocks
-├── outputs.tf     # Outputs
-├── versions.tf    # Required providers with version constraints
-└── README.md      # Usage examples
-```
-
-Always include validation in variables:
-
+Always include variable validation:
 ```hcl
 variable "environment" {
   type = string
@@ -175,317 +125,67 @@ variable "environment" {
 }
 ```
 
-Always enable KMS encryption and CloudWatch logging for EKS clusters.
+Pipeline order: `terraform fmt -check` → `terraform validate` → `tflint` → `checkov`/`tfsec` → `plan`.
 
 ## GitHub Actions
 
-Always pin actions to SHA, never to mutable tags:
-
 ```yaml
-# ❌ Never generate this
+# ❌ Never
 - uses: actions/checkout@v4
 
-# ✅ Always generate this
+# ✅ Always — pin to full SHA
 - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
-```
 
-Always use minimal permissions:
-
-```yaml
 permissions:
-  contents: read       # Only what is needed
-  id-token: write      # Only if OIDC is required
+  contents: read
+  id-token: write   # only if OIDC is required
 ```
 
 Never use `pull_request_target` with code checkout from forks.
 
-## Troubleshooting Response Structure
+## Helm
 
-When asked to debug or troubleshoot, always respond with:
+Validation pipeline order: `helm lint --strict` → `helm template --debug` → `kubeconform -strict -summary` → `checkov` → `helm test`.
 
-1. **Symptom** - What is observable
-2. **Evidence to collect** - Exact commands to run
-3. **Root cause** - Why this happens
-4. **Fix** - Specific change with justification
-5. **Validation** - How to verify it worked
-6. **Prevention** - How to avoid in future
-7. **Rollback** - How to safely undo
+Never use `helm upgrade --set` to pass secrets. `selectorLabels` must NOT include `app.kubernetes.io/version` — it is immutable after creation.
 
-## SOC 2 Compliance (Terraform)
+## Kyverno (policies.kyverno.io/v1)
 
-When generating Terraform resources that handle data, always apply SOC 2-relevant controls:
-
-**Encryption at rest — always include:**
-```hcl
-# S3
-resource "aws_s3_bucket_server_side_encryption_configuration" "..." {
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm     = "aws:kms"
-      kms_master_key_id = aws_kms_key.s3.arn
-    }
-  }
-}
-
-# RDS
-resource "aws_db_instance" "..." {
-  storage_encrypted = true
-  kms_key_id        = aws_kms_key.rds.arn
-}
-
-# DynamoDB
-resource "aws_dynamodb_table" "..." {
-  server_side_encryption {
-    enabled     = true
-    kms_key_arn = aws_kms_key.dynamodb.arn
-  }
-  point_in_time_recovery { enabled = true }
-}
-```
-
-**ECR — always set immutable tags and scan on push:**
-```hcl
-resource "aws_ecr_repository" "..." {
-  image_tag_mutability = "IMMUTABLE"
-  encryption_configuration { encryption_type = "KMS" }
-  image_scanning_configuration { scan_on_push = true }
-}
-```
-
-**Never generate:**
-- `publicly_accessible = true` on RDS, Redshift, or OpenSearch
-- `encrypted = false` on any storage resource
-- `skip_final_snapshot = true` on production databases
-- `deletion_protection = false` on production databases
-- `is_multi_region_trail = false` on CloudTrail
-- `enable_log_file_validation = false` on CloudTrail
-
-**KMS — always enable rotation:**
-```hcl
-resource "aws_kms_key" "..." {
-  enable_key_rotation = true   # SOC 2 CC6.7
-  deletion_window_in_days = 30
-}
-```
-
-**Checkov:** Always ensure generated Terraform passes `CKV_AWS_7` (KMS rotation), `CKV_AWS_19` (S3 encryption), `CKV_AWS_16` (RDS encryption), and `CKV_AWS_17` (RDS not public).
-
-**Extended data services — always include these attributes:**
-
-```hcl
-# ElastiCache (CC6.7)
-resource "aws_elasticache_replication_group" "..." {
-  at_rest_encryption_enabled = true
-  transit_encryption_enabled = true
-  kms_key_id                 = aws_kms_key.elasticache.arn
-}
-
-# OpenSearch (CC6.7)
-resource "aws_opensearch_domain" "..." {
-  encrypt_at_rest          { enabled = true; kms_key_id = aws_kms_key.opensearch.arn }
-  node_to_node_encryption  { enabled = true }
-  domain_endpoint_options  { enforce_https = true; tls_security_policy = "Policy-Min-TLS-1-2-2019-07" }
-}
-
-# Kinesis (CC6.7)
-resource "aws_kinesis_stream" "..." {
-  encryption_type = "KMS"
-  kms_key_id      = aws_kms_key.kinesis.arn
-}
-
-# EFS (CC6.7)
-resource "aws_efs_file_system" "..." {
-  encrypted  = true
-  kms_key_id = aws_kms_key.efs.arn
-}
-
-# Redshift (CC6.7)
-resource "aws_redshift_cluster" "..." {
-  encrypted           = true
-  kms_key_id          = aws_kms_key.redshift.arn
-  publicly_accessible = false
-  enhanced_vpc_routing = true
-}
-# Always pair with a parameter group enforcing SSL
-resource "aws_redshift_parameter_group" "..." {
-  parameter { name = "require_ssl"; value = "true" }
-}
-```
-
-**Network — always include (CC6.6):**
-
-```hcl
-# VPC flow logs on every production VPC
-resource "aws_flow_log" "..." {
-  vpc_id               = aws_vpc.main.id
-  traffic_type         = "ALL"
-  log_destination_type = "s3"
-  log_destination      = aws_s3_bucket.flow_logs.arn
-}
-
-# WAF on every public-facing ALB or CloudFront distribution
-resource "aws_wafv2_web_acl_association" "..." {
-  resource_arn = aws_lb.main.arn
-  web_acl_arn  = aws_wafv2_web_acl.main.arn
-}
-```
-
-**Detection — always enable (CC7.1):**
-
-```hcl
-resource "aws_guardduty_detector" "..." {
-  enable = true
-  datasources {
-    s3_logs           { enable = true }
-    kubernetes { audit_logs { enable = true } }
-  }
-}
-```
-
-**Audit logging — always include (CC7.2):**
-
-```hcl
-resource "aws_cloudtrail" "..." {
-  is_multi_region_trail      = true   # Never false
-  enable_log_file_validation = true   # Never false
-  kms_key_id                 = aws_kms_key.cloudtrail.arn
-  include_global_service_events = true
-}
-```
-
-**Incident response — SNS topics carrying security events must be encrypted (CC7.3):**
-
-```hcl
-resource "aws_sns_topic" "security_alerts" {
-  kms_master_key_id = aws_kms_key.sns.arn
-}
-```
-
-**Backup — always include on production data stores (A1.2/A1.3):**
-
-```hcl
-# RDS: minimum 35-day retention, deletion protection
-resource "aws_db_instance" "..." {
-  backup_retention_period = 35
-  deletion_protection     = true
-  skip_final_snapshot     = false
-  multi_az                = true
-}
-
-# DynamoDB: always enable PITR
-resource "aws_dynamodb_table" "..." {
-  point_in_time_recovery { enabled = true }
-}
-```
-
-**State — always use encrypted remote backend with locking (CC8.1):**
-
-```hcl
-terraform {
-  backend "s3" {
-    encrypt        = true
-    kms_key_id     = "arn:aws:kms:..."
-    dynamodb_table = "terraform-state-lock"
-  }
-}
-```
-
-**Never generate (extended):**
-- `at_rest_encryption_enabled = false` on ElastiCache
-- `transit_encryption_enabled = false` on ElastiCache
-- `node_to_node_encryption { enabled = false }` on OpenSearch
-- `enforce_https = false` on OpenSearch
-- `encryption_type = "NONE"` on Kinesis
-- `encrypted = false` on EFS
-- `enable = false` on GuardDuty
-- `is_multi_region_trail = false` on CloudTrail
-- `enable_log_file_validation = false` on CloudTrail
-- Image references ending in `:latest` in any resource
-
-## Helm Charts
-
-When generating or reviewing Helm charts, enforce in order:
-`helm lint --strict` → `helm template --debug` → `kubeconform -strict -summary` → `checkov` → `helm test`
+Always use the new CEL-based policy types — never `kyverno.io/v1` ClusterPolicy for new work:
 
 ```yaml
-# values.yaml — always include schema-validated defaults
-# Reference: references/helm.md
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: require-team-labels
+  annotations:
+    policies.kyverno.io/title: Require team labels
+    policies.kyverno.io/severity: medium
+spec:
+  validationActions: [Audit]   # Always start in Audit; promote to Deny after zero violations
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["apps"]
+        apiVersions: ["v1"]
+        resources: ["deployments"]
+        operations: ["CREATE", "UPDATE"]
+  matchConditions:
+    - name: exclude-system-namespaces
+      expression: "!(['kube-system','kube-public','flux-system'].exists(ns, ns == object.metadata.namespace))"
+  validations:
+    - expression: "object.metadata.labels != null && 'app.kubernetes.io/team' in object.metadata.labels"
+      message: "Deployment must have app.kubernetes.io/team label"
 ```
 
-Never use `helm upgrade --set` to pass secrets — use existing secrets references.
+Promotion: `kubectl patch validatingpolicy <name> --type merge -p '{"spec":{"validationActions":["Deny"]}}'` — only after confirmed zero violations in PolicyReport.
 
-## MCP Servers
-
-When scaffolding MCP servers:
-- Use `@modelcontextprotocol/sdk` for TypeScript, `mcp` (FastMCP) for Python
-- Validate all tool inputs with Zod (TypeScript) or Pydantic (Python)
-- SSE transport: create transport inside `/sse` handler, use session map for `/message` routing
-- Always set `BREAKING CHANGE:` footer when `!` is used in commit subject
-
-```typescript
-// ✅ Correct SSE pattern
-app.get("/sse", async (req, res) => {
-  const transport = new SSEServerTransport("/message", res);
-  transports.set(transport.sessionId, transport);
-  await server.connect(transport);
-});
-```
-
-## Observability
-
-When instrumenting services:
-- Structured logs: include `trace_id`, `span_id`, `service`, `env` on every log line
-- Prometheus metrics: expose `/metrics`, use `prom-client` (Node.js) or `prometheus-client` (Python)
-- OpenTelemetry: initialize SDK before any other import; export to OTLP endpoint
-- Alert on RED method: request rate, error rate, duration (p99)
-
-```typescript
-// ✅ OTEL initialization — must be first import
-import { NodeSDK } from "@opentelemetry/sdk-node";
-```
-
-## Datadog
-
-When generating Datadog configuration:
-- Never use `--set datadog.apiKey` or `apiKey:` in values files — use `apiKeyExistingSecret`
-- Always apply Unified Service Tagging: `DD_ENV`, `DD_SERVICE`, `DD_VERSION` on all pods
-- Enable `logInjection: true` in tracer init to correlate logs and traces
-
-```yaml
-# ✅ Secure Helm values
-datadog:
-  apiKeyExistingSecret: "datadog-secret"
-```
-
-```bash
-# ❌ Never
-helm upgrade --install datadog datadog/datadog --set datadog.apiKey="${DD_API_KEY}"
-```
-
-## Dynatrace
-
-When generating Dynatrace configuration:
-- `DynaKube.spec.apiUrl` uses the classic URL (`live.dynatrace.com`) — correct for the Operator
-- `DT_ENVIRONMENT` (MCP server) uses the Platform URL (`apps.dynatrace.com`) — different from apiUrl
-- Store `apiToken` and `dataIngestToken` in a Kubernetes Secret, never in plain Helm values
-
-```yaml
-# ✅ Correct apiUrl for DynaKube CR
-apiUrl: "https://ENVIRONMENT_ID.live.dynatrace.com/api"
-```
+Never generate:
+- `validationFailureAction: Enforce` — use `validationActions: [Deny]` instead
+- `spec.rules[].match.any[].resources` — use `matchConstraints.resourceRules` instead
 
 ## OPA / Conftest (Rego)
 
-When generating Rego policies:
-- Always add `import rego.v1` — required for modern syntax
-- Always add a `# METADATA` block with `title`, `description`, `entrypoint: true`
-- Rules must be named `deny`, `warn`, or `violation` — other names are silently ignored by Conftest
-- Use set comprehensions: `deny contains msg if { ... msg := "..." }` not boolean rules
-- Use `some` for iteration over input objects
-- Run pipeline in order: `conftest fmt --check` → `regal lint` → `conftest verify` → `conftest test`
-
 ```rego
-# ✅ Correct structure
 # METADATA
 # title: IAM least privilege
 # entrypoint: true
@@ -502,96 +202,81 @@ deny contains msg if {
 }
 ```
 
+Always add `import rego.v1`. Rules must be named `deny`, `warn`, or `violation`.
+Pipeline: `conftest fmt --check` → `regal lint` → `conftest verify` → `conftest test`.
+
+## SOC 2 Compliance (Terraform)
+
 Never generate:
-- Rules not named `deny`, `warn`, or `violation`
-- Policies without `import rego.v1`
-- Boolean deny rules without a `msg` string
+- `publicly_accessible = true` on RDS, Redshift, or OpenSearch
+- `encrypted = false` on any storage resource
+- `skip_final_snapshot = true` on production databases
+- `deletion_protection = false` on production databases
+- `is_multi_region_trail = false` on CloudTrail
+- `enable_log_file_validation = false` on CloudTrail
+- `enable = false` on GuardDuty
+- Images tagged `:latest`
+
+Always include:
+```hcl
+resource "aws_kms_key" "..." { enable_key_rotation = true }          # CC6.7
+resource "aws_cloudtrail" "..." {
+  is_multi_region_trail      = true
+  enable_log_file_validation = true
+}                                                                      # CC7.2
+resource "aws_guardduty_detector" "..." { enable = true }             # CC7.1
+resource "aws_db_instance" "..." {
+  backup_retention_period = 35
+  deletion_protection     = true
+}                                                                      # A1.2
+```
 
 ## Conventional Commits
 
-Always generate commit messages following the Conventional Commits 1.0.0 specification:
+Subject line: `<type>(<scope>): <imperative WHY, ≤72 chars, lowercase, no period>`.
+Types: `feat`, `fix`, `refactor`, `chore`, `ci`, `docs`, `test`, `perf`.
+Never add `Co-authored-by: Claude` or any AI attribution.
 
-```
-<type>(<scope>): <imperative subject explaining WHY>
+## PR Review dimensions
 
-<body — optional, explains motivation and approach>
+When reviewing any PR that touches infrastructure, check all six dimensions:
+1. **Cost** — replica count, instance type, storage, NAT Gateways, data transfer
+2. **Drift** — dev/staging/prod overlay and values file alignment
+3. **Ownership** — CODEOWNERS coverage, team labels, Terraform README
+4. **Compliance** — SOC 2 CC6.1–CC8.1 control impact
+5. **Upgrade** — deprecated K8s APIs, loose Terraform provider constraints, `:latest` images
+6. **Rollback** — score each change: FULL / PARTIAL / MANUAL / NONE × LOCAL / CLUSTER / PLATFORM / DATA
 
-<footers — optional>
-```
+## Troubleshooting Structure
 
-**Type selection:**
-- `feat` — new user-facing capability
-- `fix` — corrects broken behavior
-- `refactor` — restructures without behavior change
-- `chore` — deps, build tooling, no production effect
-- `ci` — CI/CD pipeline changes
-- `docs` — documentation only
-- `test` — tests only
-- `perf` — measurable performance improvement
-
-**Rules:**
-- Subject line ≤ 72 characters, imperative mood, lowercase start, no trailing period
-- Use `!` and `BREAKING CHANGE:` footer for breaking changes
-- Focus on WHY, not just what: `fix(auth): reject expired tokens before redirect` not `fix(auth): update token check`
-
-```
-# ✅ Good
-feat(orders): add idempotency key to prevent duplicate charges
-
-# ❌ Bad
-updated orders service
-```
-
-Never generate:
-- Commit messages without a type prefix
-- `Co-authored-by: Claude` or any AI attribution in commit messages
-- Subject lines over 72 characters
+1. **Symptom** — exact error and observable behavior
+2. **Evidence to collect** — exact commands to run
+3. **Root cause** — why this happens
+4. **Fix** — specific change with justification
+5. **Validation** — how to verify it worked
+6. **Prevention** — how to avoid in future
+7. **Rollback** — how to safely undo
 
 ## Reference Files
 
-For deeper patterns, reference these files in this repository:
-
-- `references/kubernetes.md` — Cluster baselines, RBAC, network policy
-- `references/openshift.md` — Routes, SCCs, operators
+- `references/kubernetes.md` — cluster baselines, RBAC, network policy
+- `references/openshift.md` — routes, SCCs, operators
 - `references/flux.md` — GitOps reconciliation, troubleshooting
-- `references/argocd.md` — App design, ApplicationSets
+- `references/argocd.md` — app design, ApplicationSets
 - `references/aws.md` — IAM, EKS, account model
 - `references/azure.md` — AKS, workload identity, RBAC
-- `references/terraform.md` — Module design, state, testing
-- `references/github-actions.md` — Workflow security, OIDC
-- `references/platform-operating-model.md` — Cross-cutting architecture
-- `references/compliance.md` — SOC 2 controls in Terraform, Checkov rules, evidence commands
-- `references/helm.md` — Helm chart scaffolding, template patterns, lint pipeline
-- `references/mcp.md` — MCP protocol, TypeScript/Python SDKs, transports, security
-- `references/observability.md` — Logging, metrics, tracing, alerting, dashboards, load testing
-- `references/documentation.md` — Docstrings, OpenAPI 3.1, doc sites, developer guides
-- `references/datadog.md` — Agent setup, APM, log management, monitors, SLOs
-- `references/dynatrace.md` — Operator, instrumentation, metrics, SLOs, Terraform provider
-- `references/conventional-commits.md` — Commit message spec, types, scopes, tooling, validation
-- `references/opa.md` — Rego v1 syntax, rule types, input shapes, testing, Conftest CLI, Regal, GitHub Actions
-- `examples/` — Working, production-ready code examples
-
----
-
-## Skill Quick Reference
-
-Use these slash commands in Claude Code for repeatable workflows:
-
-| Command | When to use | Examples directory |
-|---------|------------|-------------------|
-| `/platform-skills:debug` | Structured diagnosis for any platform symptom | — |
-| `/platform-skills:review` | Production-readiness check on any manifest, Terraform, or workflow | — |
-| `/platform-skills:terraform` | Full fmt/validate/tflint/security pipeline + blast radius | `examples/terraform/` |
-| `/platform-skills:gitops` | Flux CD or Argo CD not reconciling | `examples/flux/`, `examples/argocd/` |
-| `/platform-skills:helmcheck` | Create, review, or security-audit a Helm chart | `examples/helm/` |
-| `/platform-skills:linkerd` | mTLS, injection, traffic policy, multi-cluster | — |
-| `/platform-skills:linux` | DNS, load balancer, VPC connectivity, kernel issue | — |
-| `/platform-skills:compliance` | SOC 2 gap analysis, control implementation, Checkov remediation | `examples/compliance/` |
-| `/platform-skills:product` | RFC/ADR, DevEx audit, incident communication, post-mortem | — |
-| `/platform-skills:mcp` | Scaffold, review, or debug an MCP server | `examples/mcp/` |
-| `/platform-skills:observability` | Instrument services, alerts, dashboards, load tests, capacity | `examples/observability/` |
-| `/platform-skills:document` | Generate docstrings, OpenAPI specs, doc sites | `examples/documentation/` |
-| `/platform-skills:datadog` | Agent setup, APM, monitors, SLOs, incident investigation | `examples/datadog/` |
-| `/platform-skills:dynatrace` | OneAgent deployment, instrumentation, SLOs, incident investigation | `examples/dynatrace/` |
-| `/platform-skills:commit` | Analyze diff, generate conventional commit message, validate | `examples/conventional-commits/` |
-| `/platform-skills:opa` | Generate Rego policies, write tests, run fmt/regal/verify pipeline | `examples/opa/` |
+- `references/terraform.md` — module design, state, testing
+- `references/github-actions.md` — workflow security, OIDC
+- `references/platform-operating-model.md` — cross-cutting architecture
+- `references/compliance.md` — SOC 2 controls in Terraform
+- `references/helm.md` — chart scaffolding, lint pipeline
+- `references/mcp.md` — MCP protocol, TypeScript/Python SDKs
+- `references/observability.md` — logging, metrics, tracing, alerting
+- `references/documentation.md` — docstrings, OpenAPI 3.1, doc sites
+- `references/datadog.md` — Agent setup, APM, monitors, SLOs
+- `references/dynatrace.md` — Operator, instrumentation, SLOs
+- `references/conventional-commits.md` — commit spec, tooling
+- `references/opa.md` — Rego v1, rule types, testing, Conftest CLI
+- `references/kyverno.md` — CEL policies, Audit→Deny, PolicyException
+- `references/pr-review.md` — cost, drift, ownership, compliance, upgrade, rollback
+- `examples/` — working, production-ready code examples

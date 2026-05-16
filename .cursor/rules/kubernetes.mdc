@@ -1,0 +1,61 @@
+---
+description: Kubernetes and OpenShift workload generation rules — security defaults, resource limits, probes
+globs: ["**/*.yaml", "**/*.yml", "**/deployment*.yaml", "**/pod*.yaml"]
+alwaysApply: false
+---
+
+# Kubernetes & OpenShift Rules
+
+Always generate Deployments with all of the following. Missing any item is a Critical finding.
+
+## Required fields on every container
+
+```yaml
+resources:
+  requests:
+    cpu: "100m"
+    memory: "128Mi"
+  limits:
+    memory: "256Mi"     # Set memory limit. Omit cpu limit — it causes throttling.
+
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 1000       # Omit on OpenShift — SCC assigns the UID
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+livenessProbe:
+  httpGet: { path: /healthz, port: 8080 }
+  initialDelaySeconds: 10
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet: { path: /ready, port: 8080 }
+  initialDelaySeconds: 5
+  periodSeconds: 5
+```
+
+## Required ServiceAccount settings
+
+```yaml
+automountServiceAccountToken: false
+```
+
+## Required pod-level securityContext
+
+```yaml
+spec:
+  securityContext:
+    seccompProfile:
+      type: RuntimeDefault
+```
+
+## Never generate
+
+- `privileged: true`
+- `hostNetwork: true` / `hostPID: true` / `hostIPC: true`
+- `image: myapp:latest` — always pin to a digest or explicit tag
+- Missing `PodDisruptionBudget` for services with `replicas > 1`
+- Missing `NetworkPolicy` for any namespace that handles sensitive data
