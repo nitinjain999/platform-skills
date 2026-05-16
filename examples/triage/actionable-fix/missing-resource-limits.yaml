@@ -1,0 +1,50 @@
+# Example: Deployment with no resource limits — triggers ACTIONABLE_FIX
+#
+# Reviewer comment: "No resource limits set — this pod can consume all node
+# memory and trigger OOM eviction of other workloads."
+#
+# Expected triage fix: add resources.requests and resources.limits.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders
+  namespace: checkout
+  labels:
+    app.kubernetes.io/name: orders
+    app.kubernetes.io/team: checkout
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: orders
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: orders
+    spec:
+      containers:
+        - name: orders
+          image: orders:1.2.3
+          ports:
+            - containerPort: 8080
+          # ❌ Missing resources block — triage adds it:
+          # resources:
+          #   requests:
+          #     cpu: "100m"
+          #     memory: "128Mi"
+          #   limits:
+          #     cpu: "500m"
+          #     memory: "256Mi"
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
