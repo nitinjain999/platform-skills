@@ -23,18 +23,18 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = ">= 3.0"    # ❌ allows major version jumps with breaking changes
+      version = ">= 3.0" # ❌ allows major version jumps with breaking changes
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = ">= 2.0"    # ❌ same issue
+      version = ">= 2.0" # ❌ same issue
     }
   }
-  required_version = ">= 1.0"    # ❌ too loose — any 1.x or 2.x will match
+  required_version = ">= 1.0" # ❌ too loose — any 1.x or 2.x will match
 }
 
 module "eks" {
-  source = "terraform-aws-modules/eks/aws"    # ❌ no version pin — floats to latest
+  source = "terraform-aws-modules/eks/aws" # ❌ no version pin — floats to latest
   # ...
 }
 
@@ -44,18 +44,18 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0"    # ✅ locks to 5.x, won't jump to 6.0
+      version = "~> 5.0" # ✅ locks to 5.x, won't jump to 6.0
     }
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = "~> 2.27"   # ✅ locks to 2.x patch releases
+      version = "~> 2.27" # ✅ locks to 2.x patch releases
     }
   }
-  required_version = "~> 1.7"    # ✅ locks to 1.x
+  required_version = "~> 1.7" # ✅ locks to 1.x
 }
 
 module "eks" {
   source  = "terraform-aws-modules/eks/aws"
-  version = "~> 20.0"    # ✅ pinned to major version
+  version = "~> 20.0" # ✅ pinned to major version
   # ...
 }

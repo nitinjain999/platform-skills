@@ -27,13 +27,13 @@ resource "aws_nat_gateway" "private_a" {
 # ❌ AFTER — PR adds two more, one per additional subnet (costs $96/month total)
 resource "aws_nat_gateway" "private_b" {
   allocation_id = aws_eip.nat_b.id
-  subnet_id     = aws_subnet.public_b.id   # same AZ as an existing private subnet
+  subnet_id     = aws_subnet.public_b.id # same AZ as an existing private subnet
   tags          = { Name = "nat-private-b" }
 }
 
 resource "aws_nat_gateway" "private_c" {
   allocation_id = aws_eip.nat_c.id
-  subnet_id     = aws_subnet.public_c.id   # same AZ as another existing private subnet
+  subnet_id     = aws_subnet.public_c.id # same AZ as another existing private subnet
   tags          = { Name = "nat-private-c" }
 }
 

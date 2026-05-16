@@ -43,7 +43,7 @@ resource "aws_db_instance" "payments" {
   deletion_protection     = true
 
   lifecycle {
-    prevent_destroy = true    # safety net against accidental deletion
+    prevent_destroy = true # safety net against accidental deletion
   }
 }
 
@@ -52,7 +52,7 @@ resource "aws_db_instance" "payments" {
   identifier        = "payments-db"
   engine            = "postgres"
   instance_class    = "db.t3.medium"
-  allocated_storage = 500    # ← irreversible increase
+  allocated_storage = 500 # ← irreversible increase
   storage_encrypted = true
   kms_key_id        = aws_kms_key.rds.arn
 

@@ -32,8 +32,8 @@ resource "aws_iam_role_policy" "app_policy" {
     Version = "2012-10-17"
     Statement = [{
       Effect   = "Allow"
-      Action   = "*"        # ❌ CC6.1 — wildcard action
-      Resource = "*"        # ❌ CC6.1 — wildcard resource
+      Action   = "*" # ❌ CC6.1 — wildcard action
+      Resource = "*" # ❌ CC6.1 — wildcard resource
     }]
   })
 }
@@ -43,7 +43,7 @@ resource "aws_db_instance" "app" {
   engine            = "postgres"
   instance_class    = "db.t3.medium"
   allocated_storage = 20
-  storage_encrypted = false    # ❌ CC6.7 — unencrypted at rest
+  storage_encrypted = false # ❌ CC6.7 — unencrypted at rest
   username          = "admin"
   password          = var.db_password
 }
@@ -81,11 +81,11 @@ resource "aws_db_instance" "app" {
   engine            = "postgres"
   instance_class    = "db.t3.medium"
   allocated_storage = 20
-  storage_encrypted = true            # ✅ CC6.7
+  storage_encrypted = true # ✅ CC6.7
   kms_key_id        = aws_kms_key.rds.arn
   username          = "admin"
   password          = var.db_password
 
-  backup_retention_period = 35        # ✅ A1.2 — minimum 35 days for SOC 2
+  backup_retention_period = 35 # ✅ A1.2 — minimum 35 days for SOC 2
   deletion_protection     = true
 }
