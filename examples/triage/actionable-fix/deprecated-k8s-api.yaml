@@ -1,0 +1,44 @@
+# Example: deprecated Kubernetes API — triggers ACTIONABLE_FIX
+#
+# Bot comment (kubeconform / validate workflow):
+#   "networking.k8s.io/v1beta1 Ingress was removed in Kubernetes 1.22.
+#    This manifest will fail to apply on clusters running 1.22+."
+#
+# Expected triage fix: migrate to networking.k8s.io/v1 with updated backend spec.
+
+# ❌ Before — removed in Kubernetes 1.22
+# apiVersion: networking.k8s.io/v1beta1
+# kind: Ingress
+# metadata:
+#   name: orders-ingress
+# spec:
+#   rules:
+#     - host: orders.example.com
+#       http:
+#         paths:
+#           - path: /
+#             backend:
+#               serviceName: orders
+#               servicePort: 80
+
+# ✅ After — networking.k8s.io/v1 (Kubernetes 1.19+)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: orders-ingress
+  namespace: checkout
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: orders.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix   # required in v1 — was absent in v1beta1
+            backend:
+              service:
+                name: orders
+                port:
+                  number: 80
