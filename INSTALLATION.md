@@ -60,7 +60,7 @@ claude plugin install platform-skills
 
 ```bash
 claude plugin list
-# platform-skills  v1.13.0  enabled
+# platform-skills  v1.14.0  enabled
 ```
 
 **Upgrade:**

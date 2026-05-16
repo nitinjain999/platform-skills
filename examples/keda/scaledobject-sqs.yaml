@@ -1,0 +1,75 @@
+---
+# ScaledObject: AWS SQS trigger with IRSA authentication
+#
+# Scales the orders-processor Deployment based on SQS queue depth.
+# Scale-to-zero when queue is empty; max 20 replicas when busy.
+#
+# Prerequisites:
+# - KEDA installed: helm install keda kedacore/keda -n keda
+# - IRSA role created with sqs:GetQueueAttributes + sqs:GetQueueUrl
+# - KEDA operator SA annotated: eks.amazonaws.com/role-arn=<role-arn>
+
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: keda-sqs-auth
+  namespace: orders
+spec:
+  # IRSA: no static credentials — role assumed via OIDC federation
+  podIdentity:
+    provider: aws
+
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: orders-processor
+  namespace: orders
+spec:
+  scaleTargetRef:
+    name: orders-processor          # Must match Deployment metadata.name exactly
+
+  minReplicaCount: 0                # Scale-to-zero when queue is empty
+  maxReplicaCount: 20
+  pollingInterval: 30               # Check SQS every 30s (each poll = 1 SQS API call)
+  cooldownPeriod: 120               # Wait 2 min after queue drains before scaling to 0
+
+  advanced:
+    restoreToOriginalReplicaCount: true  # Restore to pre-KEDA replica count on deletion
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 300  # Prevent thrashing on variable queue depth
+          policies:
+            - type: Percent
+              value: 25
+              periodSeconds: 60
+
+  triggers:
+    - type: aws-sqs-queue
+      metadata:
+        queueURL: https://sqs.eu-central-1.amazonaws.com/123456789012/orders
+        queueLength: "5"            # Target: 5 messages per replica
+        awsRegion: eu-central-1
+        scaleOnInFlight: "true"     # Count in-flight messages to avoid under-scaling
+        activationQueueLength: "1"  # Don't activate unless at least 1 message exists
+      authenticationRef:
+        name: keda-sqs-auth
+
+---
+# IAM policy for the IRSA role (attach to the KEDA operator role)
+# Only grants what KEDA needs: read queue depth, not consume messages
+#
+# {
+#   "Version": "2012-10-17",
+#   "Statement": [
+#     {
+#       "Effect": "Allow",
+#       "Action": [
+#         "sqs:GetQueueAttributes",
+#         "sqs:GetQueueUrl"
+#       ],
+#       "Resource": "arn:aws:sqs:eu-central-1:123456789012:orders"
+#     }
+#   ]
+# }

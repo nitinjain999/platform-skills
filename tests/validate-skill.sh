@@ -62,6 +62,7 @@ REQUIRED_REFERENCES=(
   references/opa.md
   references/kyverno.md
   references/pr-review.md
+  references/keda.md
 )
 
 for ref in "${REQUIRED_REFERENCES[@]}"; do
@@ -96,6 +97,7 @@ EXAMPLE_DOMAINS=(
   examples/kyverno
   examples/pr-review
   examples/triage
+  examples/keda
 )
 
 for domain in "${EXAMPLE_DOMAINS[@]}"; do
@@ -184,6 +186,57 @@ if [ -d "$TRIAGE_EXAMPLES" ] && [ -f "$TRIAGE_EXAMPLES/README.md" ]; then
   pass "$TRIAGE_EXAMPLES has README.md"
 else
   fail "$TRIAGE_EXAMPLES missing README.md"
+fi
+
+echo ""
+echo "=== KEDA command integration ==="
+
+KEDA_CMD="commands/keda.md"
+KEDA_EXAMPLES="examples/keda"
+
+if [ -f "$KEDA_CMD" ]; then
+  pass "$KEDA_CMD exists"
+else
+  fail "$KEDA_CMD missing"
+fi
+
+for field in "^name: keda$" "^description:" "^argument-hint:"; do
+  if grep -qE "$field" "$KEDA_CMD"; then
+    pass "$KEDA_CMD has '$field'"
+  else
+    fail "$KEDA_CMD missing '$field'"
+  fi
+done
+
+if grep -q '"./commands/keda.md"' "$PLUGIN_JSON"; then
+  pass "commands/keda.md registered in plugin.json"
+else
+  fail "commands/keda.md not registered in plugin.json"
+fi
+
+for doc in SKILL.md skills/platform-skills/SKILL.md README.md; do
+  if grep -q "/platform-skills:keda" "$doc"; then
+    pass "$doc references /platform-skills:keda"
+  else
+    fail "$doc missing /platform-skills:keda"
+  fi
+done
+
+if [ -d "$KEDA_EXAMPLES" ] && [ -f "$KEDA_EXAMPLES/README.md" ]; then
+  pass "$KEDA_EXAMPLES has README.md"
+else
+  fail "$KEDA_EXAMPLES missing README.md"
+fi
+
+if [ -f "$KEDA_EXAMPLES/keda-validate.sh" ]; then
+  pass "$KEDA_EXAMPLES/keda-validate.sh exists"
+  if bash "$KEDA_EXAMPLES/keda-validate.sh" >/dev/null 2>&1; then
+    pass "$KEDA_EXAMPLES/keda-validate.sh passed"
+  else
+    fail "$KEDA_EXAMPLES/keda-validate.sh failed — run it directly for details"
+  fi
+else
+  fail "$KEDA_EXAMPLES/keda-validate.sh missing"
 fi
 
 echo ""

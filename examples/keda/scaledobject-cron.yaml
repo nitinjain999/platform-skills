@@ -1,0 +1,128 @@
+---
+# ScaledObject: Cron-based scheduled scaling
+#
+# Use case: predictable, time-based workloads where replica count should
+# follow a schedule (business hours, batch windows, maintenance periods).
+#
+# Cron scaler does NOT use HPA internally — it drives replicas directly
+# by setting the ScaledObject's desiredReplicas at the scheduled time.
+#
+# Best practices applied:
+# - Multiple non-overlapping windows for fine-grained schedule control
+# - idleReplicaCount: 1 keeps one warm replica outside schedule windows
+#   (avoids cold-start latency on first request after off-hours)
+# - cooldownPeriod ignored for cron trigger — replica count is set directly
+# - restoreToOriginalReplicaCount: true ensures a clean state on deletion
+# - Combined with Prometheus trigger so unexpected traffic spikes still scale up
+
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: checkout-api
+  namespace: checkout
+  annotations:
+    # Document the schedule so the next engineer understands the intent
+    scaledobject.keda.sh/schedule: "weekday 08:00-10:00 Berlin=10r, 10:00-20:00=20r, 20:00-08:00=2r; weekend=2r"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: checkout-api
+
+  minReplicaCount: 1              # Never go below 1 — keep one warm replica
+  maxReplicaCount: 30             # Hard ceiling; prevents runaway scaling
+
+  pollingInterval: 30             # How often KEDA evaluates non-cron triggers
+  cooldownPeriod: 300             # 5-minute cooldown for non-cron triggers
+
+  advanced:
+    restoreToOriginalReplicaCount: true   # On ScaledObject deletion, restore previous replica count
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: 300   # Don't shed replicas too aggressively
+          policies:
+            - type: Percent
+              value: 25
+              periodSeconds: 60
+
+  triggers:
+    # --- Cron triggers ---
+    # KEDA picks the trigger with the highest desiredReplicas (OR-max semantics).
+    # Windows must not overlap within a single trigger type — use separate entries.
+
+    # Weekday morning ramp-up: 08:00–10:00 (Europe/Berlin)
+    - type: cron
+      metadata:
+        timezone: Europe/Berlin
+        start: "0 8 * * 1-5"     # Cron syntax: minute hour dom month dow
+        end: "0 10 * * 1-5"
+        desiredReplicas: "10"
+
+    # Weekday peak hours: 10:00–20:00 (Europe/Berlin)
+    - type: cron
+      metadata:
+        timezone: Europe/Berlin
+        start: "0 10 * * 1-5"
+        end: "0 20 * * 1-5"
+        desiredReplicas: "20"
+
+    # Weekday evening wind-down: 20:00–midnight (Europe/Berlin)
+    - type: cron
+      metadata:
+        timezone: Europe/Berlin
+        start: "0 20 * * 1-5"
+        end: "59 23 * * 1-5"
+        desiredReplicas: "2"
+
+    # Weekend low: all day Saturday and Sunday
+    - type: cron
+      metadata:
+        timezone: Europe/Berlin
+        start: "0 0 * * 6"       # Saturday midnight
+        end: "59 23 * * 0"       # Sunday 23:59
+        desiredReplicas: "2"
+
+    # --- Prometheus trigger (safety net) ---
+    # If traffic spikes outside scheduled windows or exceeds cron desiredReplicas,
+    # the Prometheus trigger takes over and scales beyond the cron floor.
+    # KEDA uses whichever trigger demands the most replicas.
+    - type: prometheus
+      metadata:
+        serverAddress: http://prometheus-operated.monitoring.svc.cluster.local:9090
+        metricName: checkout_request_rate
+        query: sum(rate(http_requests_total{namespace="checkout",service="checkout-api"}[2m]))
+        threshold: "50"           # Replicas = ceil(rate / 50) — scale at 50 req/s per pod
+        activationThreshold: "5"  # Don't activate unless > 5 req/s
+
+---
+# PodDisruptionBudget: protect availability during node drains and rolling updates
+# Without this, Kubernetes may evict all pods simultaneously during scale-down.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: checkout-api
+  namespace: checkout
+spec:
+  minAvailable: 2               # Always keep at least 2 pods running
+  selector:
+    matchLabels:
+      app: checkout-api
+
+---
+# KEDA scales the Deployment but does not control the Deployment's own HPA.
+# Do NOT create a separate HPA targeting checkout-api — KEDA manages that internally.
+#
+# Validation commands:
+#
+#   kubectl get scaledobject checkout-api -n checkout
+#   # Expected: READY=True, ACTIVE=True
+#
+#   kubectl get hpa -n checkout
+#   # KEDA creates: keda-hpa-checkout-api
+#
+#   # Watch replicas change at scheduled boundaries:
+#   watch -n5 kubectl get deployment checkout-api -n checkout
+#
+#   # Check which trigger is currently driving replicas:
+#   kubectl describe scaledobject checkout-api -n checkout | grep -A5 "Trigger Authentications"

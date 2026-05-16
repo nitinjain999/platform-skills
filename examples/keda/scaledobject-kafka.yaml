@@ -1,0 +1,95 @@
+---
+# ScaledObject: Apache Kafka trigger with SASL/TLS authentication
+#
+# Scales the event-processor Deployment based on consumer group lag.
+# Scale-to-zero when lag is 0; scale up when messages accumulate.
+#
+# Secret management: do NOT commit Kafka credentials to Git.
+# Use External Secrets Operator to render the Secret from your vault:
+#
+#   apiVersion: external-secrets.io/v1beta1
+#   kind: ExternalSecret
+#   metadata:
+#     name: kafka-credentials
+#     namespace: events
+#   spec:
+#     refreshInterval: 1h
+#     secretStoreRef:
+#       name: vault-backend          # or aws-secretsmanager, etc.
+#       kind: ClusterSecretStore
+#     target:
+#       name: kafka-credentials      # name of the Kubernetes Secret to create
+#     data:
+#       - secretKey: sasl
+#         remoteRef:
+#           key: platform/kafka/keda-consumer
+#           property: sasl
+#       - secretKey: username
+#         remoteRef:
+#           key: platform/kafka/keda-consumer
+#           property: username
+#       - secretKey: password
+#         remoteRef:
+#           key: platform/kafka/keda-consumer
+#           property: password
+#       - secretKey: tls
+#         remoteRef:
+#           key: platform/kafka/keda-consumer
+#           property: tls
+#
+# The Secret 'kafka-credentials' is created at runtime by ESO — never commit it.
+# See references/keda.md → "Storing TriggerAuthentication in Git safely".
+
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: keda-kafka-auth
+  namespace: events
+spec:
+  secretTargetRef:
+    - parameter: sasl
+      name: kafka-credentials        # Rendered by ExternalSecret at runtime
+      key: sasl
+    - parameter: username
+      name: kafka-credentials
+      key: username
+    - parameter: password
+      name: kafka-credentials
+      key: password
+    - parameter: tls
+      name: kafka-credentials
+      key: tls
+
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: event-processor
+  namespace: events
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: event-processor
+
+  minReplicaCount: 0
+  maxReplicaCount: 10
+  pollingInterval: 15
+  cooldownPeriod: 60
+
+  advanced:
+    restoreToOriginalReplicaCount: true
+
+  triggers:
+    - type: kafka
+      metadata:
+        bootstrapServers: kafka.kafka.svc.cluster.local:9093
+        consumerGroup: event-processor-group
+        topic: platform-events
+        lagThreshold: "20"            # Target: 20 messages of lag per replica
+        activationLagThreshold: "5"   # Don't activate unless lag > 5
+        offsetResetPolicy: latest     # latest | earliest
+        saslType: scram_sha512
+        tls: enable
+      authenticationRef:
+        name: keda-kafka-auth
