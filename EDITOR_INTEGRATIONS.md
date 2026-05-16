@@ -1,409 +1,306 @@
 # Using Platform Skills in Your Editor
 
-This guide covers how to bring `platform-skills` guidance into the three most common AI-assisted development environments: **GitHub Copilot** (VSCode / JetBrains / CLI), **Cursor**, and **VSCode with Claude Code**.
+Platform skills works with any editor and any AI assistant. Pick your setup below.
 
-Each section covers: setup, daily usage, and how to upgrade when a new version is released.
-
----
-
-## Which tool should I use?
-
-| Scenario | Recommended setup |
-|---|---|
-| Already using GitHub Copilot | [GitHub Copilot](#github-copilot) — use `copilot-instructions.md` as the context file |
-| Using Cursor | [Cursor](#cursor) — use `.cursorrules` or the `@docs` feature |
-| Want interactive architecture + troubleshooting | [VSCode + Claude Code](#vscode--claude-code) — install the plugin |
-| Team on Copilot, individual on Claude | Run both — Copilot for completions, Claude for design decisions |
+**No Claude required** — all options below work with GitHub Copilot alone.
 
 ---
 
-## GitHub Copilot
+## Quick start — 2 minutes, any OS
 
-### How it works
-
-GitHub Copilot reads `.github/copilot-instructions.md` from your repository root and applies it as workspace context for all completions and chat responses. This repository ships a pre-built `copilot-instructions.md` that encodes the platform engineering rules.
-
-### Setup — Option A: Clone the repo and copy the instructions file
+The fastest way to get platform engineering rules into any Copilot Chat session:
 
 ```bash
-# Clone platform-skills
+# 1. Clone platform-skills
 git clone https://github.com/nitinjain999/platform-skills.git
 
-# Copy the Copilot instructions file into your project
+# 2. Copy the instructions file into your project
+# macOS / Linux
+cp platform-skills/.github/copilot-instructions.md your-project/.github/copilot-instructions.md
+
+# Windows (Command Prompt)
+copy platform-skills\.github\copilot-instructions.md your-project\.github\copilot-instructions.md
+
+# Windows (PowerShell)
+Copy-Item platform-skills\.github\copilot-instructions.md your-project\.github\copilot-instructions.md
+
+# 3. Commit it so every team member gets it automatically
+cd your-project
+git add .github/copilot-instructions.md
+git commit -m "chore: add platform-skills copilot instructions"
+git push
+```
+
+Done. Open Copilot Chat in any editor — the rules are active.
+
+---
+
+## GitHub Copilot in VSCode
+
+### Project level — one file, all team members
+
+Copilot reads `.github/copilot-instructions.md` from your repository root automatically.
+Every developer who opens the repo gets the platform rules with zero setup.
+
+**Setup:**
+
+```bash
+mkdir -p your-project/.github
 cp platform-skills/.github/copilot-instructions.md your-project/.github/copilot-instructions.md
 ```
 
-Commit the file to your repository so every team member gets it automatically.
+Commit and push. That's it.
 
-### Setup — Option B: Reference directly on GitHub (Copilot Enterprise)
+**Using it in Copilot Chat:**
 
-If your organization uses GitHub Copilot Enterprise with knowledge bases, add this repository as a knowledge base source:
+Open the Copilot Chat panel (`Ctrl+Shift+I` on Windows/Linux, `Cmd+Shift+I` on macOS):
 
-1. Go to **GitHub organization settings → Copilot → Knowledge bases**
-2. Add `https://github.com/nitinjain999/platform-skills` as a source
-3. Copilot Enterprise will index `references/` and `examples/` and make them available to `@github` chat
-
-### Setup — Option C: Use the `.github/copilot-instructions.md` file from the repo directly
-
-In VSCode with the GitHub Copilot Chat extension:
-
-1. Open the command palette → **GitHub Copilot: Open Chat**
-2. Type `@workspace` to scope responses to your repo
-3. The instructions file is picked up automatically from `.github/copilot-instructions.md`
-
-### Daily usage
-
-**Completions** — Copilot will apply the platform rules as you type. For example, generating a `Deployment` will include `resources`, `securityContext`, and probes by default.
-
-**Copilot Chat in VSCode:**
-
-```text
-@workspace Using references/terraform.md, generate a Terraform module layout
-for an EKS cluster with clear separation between reusable modules and
-environment state.
+```
+Review this Deployment for production readiness
 ```
 
-```text
-@workspace Review this GitHub Actions workflow using .github/copilot-instructions.md.
-Flag OIDC gaps, unsafe permissions, and floating action versions.
+```
+Generate a Terraform module for an EKS cluster with KMS encryption and least-privilege IAM
 ```
 
-```text
-@workspace Using examples/kubernetes/deployment-baseline.yaml, generate a
-production-ready Deployment for a Node.js service. Apply the security
-context and resource rules from copilot-instructions.md.
+```
+My Flux Kustomization is stuck NotReady — context deadline exceeded. How do I debug it?
 ```
 
-**Copilot CLI:**
+```
+Write a ValidatingPolicy that requires team labels on all Deployments
+```
 
+The rules apply automatically — no need to mention "platform-skills" in the prompt.
+
+### Global level — applies to every project on your machine
+
+Add the instructions as a global VSCode setting so it fires in every workspace, not just repos that have the file committed.
+
+**Step 1: Create the global instructions file**
+
+macOS / Linux:
 ```bash
-gh copilot suggest "write a Kyverno ValidatingPolicy that requires team labels on all Deployments"
-gh copilot explain "what does prune: true do in a Flux Kustomization"
+mkdir -p ~/.vscode
+cp platform-skills/.github/copilot-instructions.md ~/.vscode/platform-skills-copilot.md
 ```
+
+Windows (PowerShell):
+```powershell
+New-Item -ItemType Directory -Force "$env:USERPROFILE\.vscode"
+Copy-Item platform-skills\.github\copilot-instructions.md "$env:USERPROFILE\.vscode\platform-skills-copilot.md"
+```
+
+**Step 2: Wire it into VSCode settings**
+
+Open VSCode → `Ctrl+Shift+P` / `Cmd+Shift+P` → **Open User Settings (JSON)** → add:
+
+```json
+{
+  "github.copilot.chat.codeGeneration.instructions": [
+    {
+      "file": "${userHome}/.vscode/platform-skills-copilot.md"
+    }
+  ]
+}
+```
+
+Reload VSCode (`Ctrl+Shift+P` → **Developer: Reload Window**).
+The rules now apply in every project, regardless of whether the repo has `.github/copilot-instructions.md`.
 
 ### Upgrade
 
-When a new version of `platform-skills` is released, pull the updated `copilot-instructions.md`:
-
 ```bash
-# Pull latest from platform-skills
+# Pull latest
 cd platform-skills && git pull origin main
 
-# Copy the updated file to your project
+# Update project level
 cp .github/copilot-instructions.md your-project/.github/copilot-instructions.md
+cd your-project && git add .github/copilot-instructions.md
+git commit -m "chore: update platform-skills to v$(grep 'Version:' .github/copilot-instructions.md | head -1 | awk '{print $3}')"
 
-# Commit the update
-cd your-project
-git add .github/copilot-instructions.md
-git commit -m "chore: update platform-skills copilot-instructions to v<VERSION>"
+# Update global level
+# macOS / Linux
+cp platform-skills/.github/copilot-instructions.md ~/.vscode/platform-skills-copilot.md
+# Windows (PowerShell)
+Copy-Item platform-skills\.github\copilot-instructions.md "$env:USERPROFILE\.vscode\platform-skills-copilot.md"
 ```
 
-To check what changed between versions, read [CHANGELOG.md](CHANGELOG.md) — each release lists what rules or domains were added.
+---
+
+## GitHub Copilot in JetBrains (IntelliJ, GoLand, PyCharm, WebStorm)
+
+Works identically to VSCode — Copilot reads `.github/copilot-instructions.md` from the project root.
+
+**Setup:**
+1. Install the **GitHub Copilot** plugin from the JetBrains marketplace
+2. Copy `platform-skills/.github/copilot-instructions.md` into your project's `.github/` folder
+3. Open **Tools → GitHub Copilot → Open Chat** and ask questions as normal
+
+No global setting is needed — the project-level file is sufficient.
 
 ---
 
 ## Cursor
 
-### How it works
+### Project level
 
-Cursor supports two integration points for external knowledge:
-
-1. **`.cursorrules`** — a file in your project root that Cursor reads as global instructions for all AI responses in that workspace
-2. **`@docs`** — Cursor can index a URL and make it available as a `@docs` reference in chat
-
-### Setup — Option A: `.cursorrules` file
+Cursor reads `.cursorrules` from your project root, and `.cursor/rules/*.mdc` for scoped rules (Cursor 0.44+).
 
 ```bash
-# Clone platform-skills
-git clone https://github.com/nitinjain999/platform-skills.git
-
-# Generate a .cursorrules file from the skill definition
-cat platform-skills/SKILL.md platform-skills/.github/copilot-instructions.md > your-project/.cursorrules
+# Copy the Cursor-specific rules file (NOT the Copilot file — different format)
+cp platform-skills/.cursorrules your-project/.cursorrules
 ```
 
-Or copy the pre-built rules file directly:
+Commit it so all team members get it.
+
+For scoped rules that fire only on specific file types:
 
 ```bash
-cp platform-skills/.cursorrules your-project/.cursorrules 2>/dev/null || \
-  cp platform-skills/SKILL.md your-project/.cursorrules
-```
-
-Commit `.cursorrules` to your repo so all team members get it.
-
-### Setup — Option B: Index with `@docs`
-
-1. Open Cursor → **Settings → Features → Docs**
-2. Add a new doc source:
-   - **Name:** `platform-skills`
-   - **URL:** `https://github.com/nitinjain999/platform-skills`
-3. Cursor will crawl and index `references/` and `examples/`
-4. In any chat, type `@docs platform-skills` to scope responses to the handbook
-
-### Setup — Option C: Cursor Rules (`.cursor/rules/`)
-
-Cursor 0.44+ supports per-directory rules. Add one rule per domain:
-
-```bash
+# macOS / Linux
 mkdir -p your-project/.cursor/rules
+cp platform-skills/.cursor/rules/*.mdc your-project/.cursor/rules/
 
-# Platform-wide rules
-cp platform-skills/SKILL.md your-project/.cursor/rules/platform-skills.mdc
-
-# Or individual domain rules
-cp platform-skills/references/terraform.md your-project/.cursor/rules/terraform.mdc
-cp platform-skills/references/kubernetes.md your-project/.cursor/rules/kubernetes.mdc
+# Windows (PowerShell)
+New-Item -ItemType Directory -Force your-project\.cursor\rules
+Copy-Item platform-skills\.cursor\rules\*.mdc your-project\.cursor\rules\
 ```
 
-### Daily usage
+### Global level — every Cursor workspace
 
-**With `.cursorrules`:**
+```bash
+# macOS / Linux
+mkdir -p ~/.cursor/rules
+cp platform-skills/.cursor/rules/platform-skills.mdc ~/.cursor/rules/platform-skills.mdc
 
-Open any file and start a Cursor chat. The rules are applied automatically.
-
-```text
-Generate a Helm values file for a production payment service. Apply the
-security and resource defaults from the platform rules.
+# Windows (PowerShell)
+New-Item -ItemType Directory -Force "$env:USERPROFILE\.cursor\rules"
+Copy-Item platform-skills\.cursor\rules\platform-skills.mdc "$env:USERPROFILE\.cursor\rules\platform-skills.mdc"
 ```
 
-```text
-Review this Terraform for blast radius. What resources get replaced?
+In Cursor settings (`Ctrl+Shift+J`), confirm Rules for AI is enabled under **Features**.
+
+### Using it in Cursor Chat
+
+```
+Review this Terraform module for blast radius and IAM least privilege
 ```
 
-**With `@docs`:**
-
-```text
+```
 @docs platform-skills How should I structure a Flux monorepo with three environments?
 ```
 
-```text
-@docs platform-skills What CEL expression checks that a Deployment has a team label?
 ```
-
-**Inline with `@` reference:**
-
-```text
-@platform-skills Write a Kyverno MutatingPolicy that adds default resource limits
-to any container that omits them.
-```
-
-### Upgrade
-
-```bash
-# Pull latest platform-skills
-cd platform-skills && git pull origin main
-
-# Regenerate .cursorrules
-cat SKILL.md .github/copilot-instructions.md > your-project/.cursorrules
-
-# Or re-index docs in Cursor:
-# Settings → Features → Docs → platform-skills → Re-index
-
-# Commit
-cd your-project
-git add .cursorrules
-git commit -m "chore: update platform-skills cursor rules to v<VERSION>"
+Generate a Kyverno ValidatingPolicy that requires team labels on all Deployments
 ```
 
 ---
 
-## VSCode + Claude Code
+## Neovim, Emacs, or any other editor
 
-### How it works
-
-Claude Code is a terminal-first AI coding assistant. When the `platform-skills` plugin is installed, Claude automatically loads the skill definition and reference guides as context for platform questions. This gives you interactive architecture review, structured troubleshooting, and slash commands directly in the terminal or VSCode extension.
-
-### Setup
-
-**Step 1: Install Claude Code**
+For editors without a native Copilot extension, use the GitHub Copilot CLI:
 
 ```bash
-npm install -g @anthropic-ai/claude-code
+# Install
+npm install -g @githubnext/github-copilot-cli
+
+# Ask platform engineering questions from the terminal
+gh copilot suggest "write a Kyverno ValidatingPolicy that requires team labels on all Deployments"
+gh copilot explain "what does prune: true do in a Flux Kustomization"
 ```
 
-Or download from https://claude.ai/code.
-
-**Step 2: Install the platform-skills plugin**
+The `copilot-instructions.md` file is not used by the CLI — paste context directly into your prompt instead:
 
 ```bash
-# Add the marketplace and install
-claude plugin marketplace add https://github.com/nitinjain999/platform-skills
-claude plugin install platform-skills
+gh copilot suggest "$(cat your-deployment.yaml) — review this for production readiness"
 ```
-
-**Step 3: Install the VSCode extension**
-
-1. Open VSCode
-2. Press `Ctrl+Shift+X` / `Cmd+Shift+X` to open Extensions
-3. Search for **Claude Code**
-4. Click **Install**
-
-**Step 4: Verify**
-
-```bash
-claude plugin list
-# Should show: platform-skills@platform-skills  Version: 1.12.0  Status: enabled
-```
-
-### Daily usage
-
-Open the integrated terminal in VSCode (`Ctrl+`` ` ``/ `Cmd+`` ` ``) and run:
-
-```bash
-cd your-project
-claude
-```
-
-**Slash commands** (type at the start of any message):
-
-```text
-/platform-skills:review
-[paste your Kubernetes manifest or Terraform file]
-```
-
-```text
-/platform-skills:pr-review full
-[paste gh pr diff output]
-```
-
-```text
-/platform-skills:debug
-My Flux Kustomization is stuck in NotReady after merging a PR.
-Here is the manifest: [paste]
-```
-
-```text
-/platform-skills:terraform
-[paste Terraform plan output]
-```
-
-See [COMMANDS.md](COMMANDS.md) for all available slash commands and their modes.
-
-**From the VSCode Claude Code extension:**
-
-1. Click the Claude Code icon in the Activity Bar
-2. Ask in the chat panel — the plugin is already active
-3. Reference files directly: `Review @deployment.yaml for production readiness`
-
-### Upgrade
-
-```bash
-# Update the marketplace cache
-claude plugin marketplace update platform-skills
-
-# Reinstall to get the latest version
-claude plugin install platform-skills@platform-skills
-
-# Verify
-claude plugin list | grep platform-skills
-# Should show the latest version
-```
-
-To check what changed: read [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
-## JetBrains IDEs (IntelliJ, GoLand, PyCharm, etc.)
+## Example prompts that work well
 
-### GitHub Copilot in JetBrains
+Once the instructions file is active, these prompts produce structured, platform-engineering-quality answers in Copilot Chat:
 
-The `.github/copilot-instructions.md` file works the same way as in VSCode:
+**Kubernetes:**
+```
+Review this Deployment — flag any missing security context, resource limits, or probe issues
+```
 
-1. Install the **GitHub Copilot** JetBrains plugin from the marketplace
-2. Ensure `.github/copilot-instructions.md` is present in your project root (see [GitHub Copilot](#github-copilot) setup above)
-3. Use **Tools → GitHub Copilot → Open Chat** and interact as you would in VSCode
+**Terraform:**
+```
+Review this IAM policy for wildcard actions and missing condition keys
+```
+```
+What is the blast radius of changing this aws_db_subnet_group?
+```
 
-### Claude Code in JetBrains
+**GitOps:**
+```
+My HelmRelease is stuck in upgrade retries exhausted — how do I diagnose it?
+```
 
-1. Install the **Claude Code** plugin from the JetBrains marketplace
-2. The terminal-installed plugin (`claude plugin install platform-skills`) is shared — no separate install needed
-3. Open the Claude Code tool window and use slash commands as normal
+**GitHub Actions:**
+```
+Review this workflow — flag any actions not pinned to a SHA, unsafe permissions, or OIDC gaps
+```
+
+**Helm:**
+```
+Review this values.yaml for the ingress-nginx chart — are resource limits set?
+```
+
+**Kyverno:**
+```
+Write a MutatingPolicy that adds default resource limits to any container missing them
+```
+
+**PR review:**
+```
+Review this diff for rollback feasibility — we are renaming a Deployment and adding an RDS storage increase
+```
 
 ---
 
-## Neovim / Emacs / other editors
+## File reference
 
-For editors without a native Copilot or Claude extension, use Claude Code from the terminal alongside your editor:
-
-```bash
-# Open Claude in a split terminal
-claude
-```
-
-The `platform-skills` plugin is active regardless of which editor you use. Paste file contents into the Claude session and ask for review, generation, or debugging.
-
-For Neovim with `copilot.vim` or `copilot.lua`, the `.github/copilot-instructions.md` file is picked up automatically as workspace context.
+| File | Purpose | Who uses it |
+|---|---|---|
+| `.github/copilot-instructions.md` | Platform rules for Copilot Chat | VSCode Copilot, JetBrains Copilot, GitHub.com Copilot |
+| `.cursorrules` | Cursor-native rules (all files) | Cursor |
+| `.cursor/rules/platform-skills.mdc` | Cursor always-on umbrella rule | Cursor 0.44+ |
+| `.cursor/rules/kubernetes.mdc` | Scoped to `*.yaml` / `*.yml` | Cursor 0.44+ |
+| `.cursor/rules/terraform.mdc` | Scoped to `*.tf` / `*.tfvars` | Cursor 0.44+ |
 
 ---
 
 ## Upgrade reference
 
-| Tool | Upgrade command |
+| Setup | Command |
 |---|---|
-| Claude Code plugin | `claude plugin marketplace update platform-skills && claude plugin install platform-skills@platform-skills` |
-| Copilot instructions | `git pull` in platform-skills clone → copy updated `copilot-instructions.md` to project |
-| Cursor `.cursorrules` | `git pull` in platform-skills clone → regenerate `.cursorrules` → commit |
-| Cursor `@docs` | Settings → Features → Docs → platform-skills → Re-index |
+| Project Copilot | `git pull` in platform-skills clone → copy `copilot-instructions.md` → commit |
+| Global VSCode | `git pull` → copy to `~/.vscode/platform-skills-copilot.md` |
+| Cursor project | `git pull` → copy `.cursorrules` and `.cursor/rules/*.mdc` → commit |
+| Cursor global | `git pull` → copy `.cursor/rules/platform-skills.mdc` to `~/.cursor/rules/` |
 
-### How to know when to upgrade
-
-- Watch [GitHub releases](https://github.com/nitinjain999/platform-skills/releases) — subscribe with the **Watch → Releases only** button
-- Read [CHANGELOG.md](CHANGELOG.md) before upgrading — each entry lists what domains, commands, and examples were added
-
-### Version pinning
-
-If your team wants to pin to a specific version rather than always using latest:
-
-```bash
-# Pin copilot-instructions to a specific tag
-git clone --branch v1.12.0 https://github.com/nitinjain999/platform-skills.git
-
-# Pin Claude Code plugin to a specific version (not yet supported natively — install from pinned clone)
-git clone --branch v1.12.0 https://github.com/nitinjain999/platform-skills.git pinned-platform-skills
-claude plugin install ./pinned-platform-skills
-```
+Check [CHANGELOG.md](CHANGELOG.md) to see what changed before upgrading.
 
 ---
 
 ## Troubleshooting
 
-### Copilot is not applying the platform rules
+**Copilot Chat is not applying the rules**
+- Confirm `.github/copilot-instructions.md` exists at the root of the open workspace folder
+- In VSCode: open the file, check it is not empty
+- Reload: `Ctrl+Shift+P` / `Cmd+Shift+P` → **Developer: Reload Window**
 
-1. Confirm `.github/copilot-instructions.md` exists in your project root
-2. In VSCode, open the file and verify it is not empty
-3. Reload the Copilot extension: Command Palette → **Developer: Reload Window**
-4. If using Copilot Enterprise knowledge bases, trigger a re-index from your organization settings
+**Global instructions not applying**
+- Confirm the path in `settings.json` is correct — use `${userHome}` not `~` in the JSON value
+- Open **User Settings (JSON)** and verify the `codeGeneration.instructions` key exists
 
-### Cursor `@docs` returns stale content
+**Cursor rules not loading**
+- Confirm `.cursorrules` is in the workspace root, not a subdirectory
+- For `.mdc` files: Cursor 0.44+ required — check **Help → About** for your version
 
-Go to **Settings → Features → Docs → platform-skills → Re-index**. Cursor indexes on demand, not on every update.
-
-### Claude Code plugin shows wrong version
-
-```bash
-claude plugin list    # check current version
-claude plugin marketplace update platform-skills
-claude plugin install platform-skills@platform-skills
-claude plugin list    # verify updated
-```
-
-### Claude answers too generically
-
-Include more context in your prompt:
-- paste the actual file or manifest
-- specify the cloud provider and tool versions
-- describe the exact error or risk you are investigating
-
-### The skill is not activating automatically
-
-Ask explicitly: *"Using platform-skills, review this Terraform module"*. Automatic activation works best when you paste actual Kubernetes, Terraform, or GitOps file content — plain English questions may not trigger it.
-
----
-
-## Related docs
-
-- [README.md](README.md) — handbook overview and domain table
-- [INSTALLATION.md](INSTALLATION.md) — Claude Code plugin installation detail
-- [VSCODE_INTEGRATION.md](VSCODE_INTEGRATION.md) — VSCode-specific patterns
-- [COMMANDS.md](COMMANDS.md) — all slash commands and modes
-- [HOW_IT_WORKS.md](HOW_IT_WORKS.md) — how the skill and agent work under the hood
-- [GETTING_STARTED.md](GETTING_STARTED.md) — first steps for new users
+**Answers feel too generic**
+- Paste the actual file or manifest into the chat — the more concrete the input, the better the output
+- Specify versions: `kubernetes 1.29`, `terraform aws provider 5.x`, `flux v2.3`
