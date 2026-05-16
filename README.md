@@ -155,7 +155,7 @@ platform-skills/
 ├── examples/                           # Working examples and handbook snippets
 │   ├── flux/basic-monorepo/            # Complete Flux CD monorepo structure
 │   ├── kubernetes/                     # Namespace, deployment, network policy, PDB
-│   ├── kyverno/                        # ClusterPolicy examples + kyverno-cli test manifest (v1.11.0)
+│   ├── kyverno/                        # ValidatingPolicy, GeneratingPolicy examples + kyverno-cli test manifest (v1.11.0)
 │   ├── openshift/                      # Route, ResourceQuota, LimitRange
 │   ├── argocd/app-of-apps/             # Root application manifest
 │   ├── aws/iam/                        # Least-privilege IAM policy examples
@@ -196,7 +196,7 @@ platform-skills/
 - [x] v1.8.0 — Dynatrace: OneAgent Kubernetes Operator, custom metrics/SLOs/dashboards via Terraform provider, Davis AI incident investigation via Dynatrace MCP
 - [x] v1.9.0 — Conventional Commits: analyze diffs, generate WHY-focused commit messages, intelligent file staging, commitlint/husky/semantic-release tooling
 - [x] v1.10.0 — OPA / Conftest: generate Rego policies, unit tests, fmt/regal/verify validation pipeline, explain and debug
-- [x] v1.11.0 — Kyverno: validate/mutate/generate/verifyImages policies, Audit→Enforce promotion, PolicyException, PolicyReport analysis, kyverno-cli testing, PSP and Gatekeeper migration
+- [x] v1.11.0 — Kyverno: ValidatingPolicy/MutatingPolicy/GeneratingPolicy/ImageValidatingPolicy (policies.kyverno.io/v1), CEL expressions, Audit→Deny promotion, PolicyException, PolicyReport analysis, kyverno-cli testing, PSP and Gatekeeper migration
 
 **Planned**
 - [ ] GCP: landing zone, GKE, Workload Identity, and IAM patterns
