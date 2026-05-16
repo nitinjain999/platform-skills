@@ -224,8 +224,7 @@ spec:
                 cpu: 500m
                 memory: 512Mi
               limits:
-                cpu: 2
-                memory: 2Gi
+                memory: 2Gi             # Omit cpu limit — it causes throttling
         restartPolicy: Never
   minReplicaCount: 0
   maxReplicaCount: 10               # Max concurrent jobs
