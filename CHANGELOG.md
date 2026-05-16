@@ -11,22 +11,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Triage Command
+
+New command `/platform-skills:triage` — triages any PR comment (from a bot, CI tool, or human reviewer) using the `gh` CLI directly inside Claude Code. No workflow or secrets required.
+
+- `commands/triage.md` — full skill definition with two modes:
+  - `<PR number> <comment ID>` — triage one specific comment
+  - `--all <PR number>` — triage every unresolved thread on a PR in one pass
+- Classifies each comment as `ACTIONABLE_FIX`, `INFORMATIONAL`, or `NOT_APPLICABLE`
+- For `ACTIONABLE_FIX`: reads the referenced file, applies the minimal fix with the Edit tool, commits and pushes to the PR branch
+- Posts a reply on the thread explaining the decision with classification-specific closing lines
+- Resolves the thread via `gh api graphql` `resolveReviewThread` mutation
+- Prints a summary table when running `--all` mode
+- `examples/triage/` — 11 fully documented scenarios:
+  - `actionable-fix/` — wildcard IAM (SOC 2 CC6.1), missing resource limits, deprecated `networking.k8s.io/v1beta1` API, wrong liveness probe path, hardcoded secret reference
+  - `informational/` — replica count question, PDB follow-up suggestion, KMS rotation evidence request
+  - `not-applicable/` — CI status bot message, already-fixed-in-later-commit, comment on file not in PR diff
+
 #### Review Bot Comment Mode
 
-Enhanced the `/platform-skills:review` command with automated PR comment support.
+Enhanced `/platform-skills:review` with structured output for automated PR comment workflows.
 
-- `commands/review.md` — adds `--bot` flag and structured GitHub-flavoured markdown output format for PR comment workflows
+- `commands/review.md` — adds `--bot` flag and GitHub-flavoured markdown output format
 - Defines `MERGE_READY / NEEDS_FIX / BLOCKED` result values based on finding severity
-- Uses `<!-- platform-skills-review -->` HTML marker so GitHub Actions can find and update the existing comment on re-push instead of posting a new one each time
+- Uses `<!-- platform-skills-review -->` HTML marker for idempotent comment updates on re-push
 - Severity table with emoji labels (🔴 Critical, 🟡 Improvement, 🔵 Note) and file/line references
 
 #### Wiki
 
 - Full GitHub wiki published at https://github.com/nitinjain999/platform-skills/wiki
 - 50 pages covering all 18 commands and 24 domains
-- Navigation index, Quick Start, Installation, Editor Integrations, How It Works, Contributing pages
+- Navigation index, Quick Start, Installation, Editor Integrations, How It Works, Contributing
 - One page per command with Claude Code slash syntax, Copilot Chat prompts, and what gets checked
-- One page per domain with key patterns, code examples, and links to reference guides
+- One page per domain with key patterns, code examples, and links to the full reference guide
 
 ## [1.12.0] - 2026-05-16
 
