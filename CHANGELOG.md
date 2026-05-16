@@ -73,7 +73,7 @@ Enhanced `/platform-skills:review` with structured output for automated PR comme
 #### Wiki
 
 - Full GitHub wiki published at https://github.com/nitinjain999/platform-skills/wiki
-- 50 pages covering all 19 commands and 24 domains
+- 50 pages covering all 20 commands and 25 domains
 - Navigation index, Quick Start, Installation, Editor Integrations, How It Works, Contributing
 - One page per command with Claude Code slash syntax, Copilot Chat prompts, and what gets checked
 - One page per domain with key patterns, code examples, and links to the full reference guide

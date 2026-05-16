@@ -36,6 +36,7 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:product](#platform-skillsproduct) | DevEx, RFC/ADR, post-mortems, capacity, cost |
 | [/platform-skills:pr-review](#platform-skillspr-review) | Comprehensive PR risk review |
 | [/platform-skills:triage](#platform-skillstriage) | Triage and resolve PR comments |
+| [/platform-skills:keda](#platform-skillskeda) | KEDA ScaledObject/ScaledJob — generate, debug, review, scale |
 
 ---
 
@@ -1666,6 +1667,73 @@ Triage a PR review or issue comment from a bot, CI tool, or human reviewer. The 
 | `NOT_APPLICABLE` | Status message, duplicate, already fixed, or outside this PR; explain and resolve |
 
 Reference: `commands/triage.md` and `examples/triage/README.md`
+
+---
+
+## `/platform-skills:keda`
+
+Design, generate, debug, and review KEDA (Kubernetes Event-Driven Autoscaling) ScaledObject and ScaledJob resources.
+
+**Modes**
+
+| Mode | What it does |
+|---|---|
+| `generate` | Write a production-ready ScaledObject or ScaledJob from a description |
+| `debug` | Diagnose why a ScaledObject is not scaling as expected |
+| `review` | Correctness, security, and operational safety review |
+| `scale` | Design a scaling strategy for a workload from requirements |
+
+**Usage**
+
+```
+/platform-skills:keda generate
+/platform-skills:keda generate SQS queue, scale-to-zero, IRSA auth, max 20 replicas
+/platform-skills:keda generate cron schedule weekday 08:00-20:00 Europe/Berlin, safety-net Prometheus trigger
+/platform-skills:keda debug
+/platform-skills:keda review
+[paste ScaledObject YAML]
+/platform-skills:keda scale
+```
+
+**Generate examples**
+
+```
+/platform-skills:keda generate
+```
+*Generates a ScaledObject for the orders-processor Deployment using SQS. Uses IRSA (no static credentials), scale-to-zero, activationQueueLength to prevent flapping, and HPA stabilization.*
+
+```
+/platform-skills:keda generate cron schedule checkout-api 08:00-20:00 Europe/Berlin
+```
+*Generates a ScaledObject with weekday/weekend Cron windows plus a Prometheus safety-net trigger for unexpected spikes.*
+
+```
+/platform-skills:keda generate ScaledJob SQS batch one-job-per-message
+```
+*Generates a ScaledJob with `restartPolicy: Never`, `activeDeadlineSeconds`, and security hardening.*
+
+**Debug checklist**
+
+The debug mode works through this checklist in order:
+
+1. Is the ScaledObject `Active: true`? — check `kubectl describe scaledobject`
+2. Is the HPA showing `<unknown>` targets? — metrics adapter connection
+3. Is `activationThreshold` / `activationQueueLength` too high?
+4. Is `minReplicaCount: 1` preventing scale-to-zero?
+5. Is a Cron trigger keeping a replica floor?
+6. Has `cooldownPeriod` elapsed?
+7. Is there an existing HPA conflict?
+
+**Key rules enforced**
+
+- Never inline credentials in ScaledObject — always `TriggerAuthentication`
+- Prefer IRSA over static access keys
+- Never create your own HPA for a KEDA-managed Deployment
+- Always set `timezone` explicitly on Cron triggers
+- Never overlap Cron windows
+- Set `restoreToOriginalReplicaCount: true`
+
+Reference: `commands/keda.md`, `references/keda.md`, and `examples/keda/`
 
 ---
 

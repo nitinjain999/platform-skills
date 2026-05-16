@@ -66,7 +66,8 @@ Generate a production-ready Helm chart for a Node.js service with HPA and Networ
 | Full install + troubleshooting | [INSTALLATION.md](INSTALLATION.md) |
 | Understand how the skill works | [HOW_IT_WORKS.md](HOW_IT_WORKS.md) |
 | Learn the ownership model | [GETTING_STARTED.md](GETTING_STARTED.md) |
-| See all 19 commands with examples | [COMMANDS.md](COMMANDS.md) |
+| See all 20 commands with examples | [COMMANDS.md](COMMANDS.md) |
 | Triage PR review comments | `/platform-skills:triage` |
+| Scale workloads with KEDA | `/platform-skills:keda` |
 | Browse reference guides | [references/](references/) |
 | Copy working examples | [examples/](examples/) |

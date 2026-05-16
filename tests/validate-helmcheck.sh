@@ -322,7 +322,7 @@ else
   fail "$HOW missing"
 fi
 
-for cmd in "helmcheck" "review" "terraform" "debug" "gitops" "compliance" "product" "mcp" "observability" "document" "datadog" "dynatrace" "commit" "opa" "kyverno" "pr-review"; do
+for cmd in "helmcheck" "review" "terraform" "debug" "gitops" "linkerd" "linux" "compliance" "product" "mcp" "observability" "document" "datadog" "dynatrace" "commit" "opa" "kyverno" "pr-review" "triage" "keda"; do
   if grep -q "platform-skills:$cmd" "$HOW"; then
     pass "$HOW references /platform-skills:$cmd"
   else

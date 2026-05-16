@@ -4,14 +4,17 @@
 # Use case: predictable, time-based workloads where replica count should
 # follow a schedule (business hours, batch windows, maintenance periods).
 #
-# Cron scaler does NOT use HPA internally — it drives replicas directly
-# by setting the ScaledObject's desiredReplicas at the scheduled time.
+# Cron scaler feeds a desiredReplicas metric into the KEDA-managed HPA —
+# KEDA still creates keda-hpa-checkout-api as with every other scaler.
+# At the window boundary the metric value changes, the HPA re-evaluates,
+# and replicas scale accordingly. cooldownPeriod still applies after a
+# window end: KEDA waits for it before the HPA allows scale-down.
 #
 # Best practices applied:
 # - Multiple non-overlapping windows for fine-grained schedule control
-# - idleReplicaCount: 1 keeps one warm replica outside schedule windows
+# - minReplicaCount: 1 keeps one warm replica outside schedule windows
 #   (avoids cold-start latency on first request after off-hours)
-# - cooldownPeriod ignored for cron trigger — replica count is set directly
+# - cooldownPeriod: 300 — HPA waits 5 min after window end before scaling down
 # - restoreToOriginalReplicaCount: true ensures a clean state on deletion
 # - Combined with Prometheus trigger so unexpected traffic spikes still scale up
 
