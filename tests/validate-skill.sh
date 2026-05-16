@@ -212,8 +212,12 @@ for cmd_file in commands/*.md; do
   # Check common example directory names for this command
   for dir_candidate in "examples/${cmd_name}" "examples/${cmd_name}-networking" "examples/conventional-commits"; do
     if [ "$dir_candidate" = "examples/commit-networking" ]; then continue; fi
-    if [ -d "$dir_candidate" ] && [ -f "${dir_candidate}/README.md" ]; then
-      pass "${dir_candidate}/README.md exists"
+    if [ -d "$dir_candidate" ]; then
+      if [ -f "${dir_candidate}/README.md" ]; then
+        pass "${dir_candidate}/README.md exists"
+      else
+        fail "${dir_candidate}/ exists but is missing README.md"
+      fi
     fi
   done
 done

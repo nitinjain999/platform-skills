@@ -36,13 +36,13 @@ done
 echo ""
 echo "=== Security patterns ==="
 
-find "$GHA_DIR" -name "*.yml" -o -name "*.yaml" | sort | while read -r workflow; do
+while IFS= read -r workflow; do
   name="${workflow#$GHA_DIR/}"
 
-  # Actions must NOT use mutable tags — must be pinned to SHA
-  # Pattern: uses: owner/repo@v1.2.3 or @branch (not @sha256...)
-  if grep -qE "uses: [a-zA-Z0-9_/-]+@v[0-9]" "$workflow" 2>/dev/null; then
-    fail "$name: action(s) pinned to mutable version tag — pin to full SHA instead (uses: owner/repo@<sha>  # vX.Y.Z)"
+  # Actions must NOT use mutable refs — must be pinned to full SHA
+  # Rejects: @v1, @v1.2.3 (semver tags) and @main, @master, @develop (branch names)
+  if grep -qE "uses: [a-zA-Z0-9_/-]+@(v[0-9]|main|master|develop)" "$workflow" 2>/dev/null; then
+    fail "$name: action(s) pinned to mutable ref — pin to full SHA instead (uses: owner/repo@<sha>  # vX.Y.Z)"
   else
     pass "$name: no mutable version tag pins detected"
   fi
@@ -78,7 +78,7 @@ find "$GHA_DIR" -name "*.yml" -o -name "*.yaml" | sort | while read -r workflow;
       pass "$name: OIDC configured without static credentials"
     fi
   fi
-done
+done < <(find "$GHA_DIR" \( -name "*.yml" -o -name "*.yaml" \) | sort)
 
 echo ""
 echo "=== Secrets handling ==="

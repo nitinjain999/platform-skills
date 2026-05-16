@@ -45,6 +45,12 @@ else
   # Check it looks like a git SHA (40 hex chars)
   if echo "$MARKETPLACE_SHA" | grep -qE "^[0-9a-f]{40}$"; then
     pass "marketplace.json source.sha is a full 40-char SHA: ${MARKETPLACE_SHA:0:8}..."
+    # Verify the SHA exists in this repo's history (warns if stale)
+    if git cat-file -e "${MARKETPLACE_SHA}^{commit}" 2>/dev/null; then
+      pass "marketplace.json source.sha exists in git history"
+    else
+      echo "  WARN: marketplace.json source.sha ${MARKETPLACE_SHA:0:8}... not found in local git history — verify before publishing"
+    fi
   else
     fail "marketplace.json source.sha '$MARKETPLACE_SHA' does not look like a full git SHA"
   fi
@@ -133,21 +139,31 @@ done < <(grep -oE 'references/[a-z-]+\.md' SKILL.md | sort -u)
 
 # ---------------------------------------------------------------------------
 echo ""
-echo "=== Domain coverage: README, SKILL, examples, references, commands ==="
+echo "=== Domain coverage: README.md mentions, SKILL.md reference, examples/ directory ==="
 
-# For each domain represented by a reference file, check the five coverage points
+# Cross-cutting docs with no per-domain example directory or command — skip coverage checks
+SKIP_DOMAINS="platform-operating-model|platform-mindset|secrets|pr-review"
+
 for ref in references/*.md; do
   domain="$(basename "$ref" .md)"
-  # Skip the operating model — it's a cross-cutting doc, not a command domain
-  [ "$domain" = "platform-operating-model" ] && continue
-  [ "$domain" = "platform-mindset" ] && continue
-  [ "$domain" = "secrets" ] && continue
-  [ "$domain" = "pr-review" ] && continue  # pr-review is checked by command name
+  echo "$domain" | grep -qE "^($SKIP_DOMAINS)$" && continue
 
   if grep -qi "$domain" README.md; then
     pass "README.md mentions $domain"
   else
     fail "README.md missing any mention of $domain"
+  fi
+
+  if grep -qi "$domain" SKILL.md; then
+    pass "SKILL.md references $domain"
+  else
+    fail "SKILL.md does not reference $domain"
+  fi
+
+  if [ -d "examples/$domain" ]; then
+    pass "examples/$domain/ directory exists"
+  else
+    echo "  INFO: examples/$domain/ does not exist (may be in progress)"
   fi
 done
 

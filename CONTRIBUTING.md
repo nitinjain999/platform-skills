@@ -212,7 +212,7 @@ Follow this checklist when adding a net-new domain (e.g. a new command + referen
 ### 4. Examples — `examples/<domain>/`
 
 - [ ] Directory exists with at least one non-README asset file
-- [ ] `README.md` has `Status: Stable` (or Beta/Draft) on line 2 or 3
+- [ ] `README.md` has a `Status: Stable` (or Beta/Draft/Experimental) line near the top
 - [ ] `README.md` includes a files table, quick-start section, and See Also links
 - [ ] Optional but encouraged: `<domain>-validate.sh` offline validator script
 - [ ] If validator script added: register it in `tests/validate-skill.sh` VALIDATE_SCRIPTS array

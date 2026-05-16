@@ -50,8 +50,8 @@ if command -v yamllint >/dev/null 2>&1; then
     | sort)
 else
   echo "  INFO: yamllint not found — skipping YAML lint (install: pip install yamllint)"
-  # Fallback: check YAML files parse with python if available
-  if command -v python3 >/dev/null 2>&1; then
+  # Fallback: check YAML files parse with python if available and PyYAML is installed
+  if command -v python3 >/dev/null 2>&1 && python3 -c "import yaml" >/dev/null 2>&1; then
     while IFS= read -r f; do
       if grep -q "YOUR_\|PLACEHOLDER\|<REPLACE" "$f" 2>/dev/null; then
         continue
@@ -61,12 +61,13 @@ else
       else
         fail "$f is invalid YAML"
       fi
-    done < <(find . -name "*.yaml" -o -name "*.yml" \
-      | grep -v ".git/" \
-      | grep -v "node_modules/" \
+    done < <(find . \( -name "*.yaml" -o -name "*.yml" \) \
+      ! -path "./.git/*" \
+      ! -path "./node_modules/*" \
+      ! -path "*/templates/*" \
       | sort)
   else
-    echo "  INFO: python3 not found — YAML validation skipped entirely"
+    echo "  INFO: python3/PyYAML not found — YAML validation skipped entirely"
   fi
 fi
 

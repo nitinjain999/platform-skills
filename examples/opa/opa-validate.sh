@@ -30,7 +30,7 @@ fi
 echo ""
 echo "=== Rego policy content checks ==="
 
-find "$OPA_DIR" -name "*.rego" | sort | while read -r policy; do
+while IFS= read -r policy; do
   name="$(basename "$policy")"
 
   # Must use rego.v1
@@ -65,7 +65,7 @@ find "$OPA_DIR" -name "*.rego" | sort | while read -r policy; do
   if grep -q "input.request" "$policy"; then
     fail "$name uses input.request — check if this should be input.review (Gatekeeper) or input.resource (Conftest)"
   fi
-done
+done < <(find "$OPA_DIR" -name "*.rego" | sort)
 
 echo ""
 echo "=== Test fixtures ==="

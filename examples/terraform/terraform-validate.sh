@@ -28,9 +28,13 @@ done
 echo ""
 echo "=== Module structure best practices ==="
 
-# versions.tf must pin provider versions
+# versions.tf must have required_providers with version constraints
 if grep -q "required_providers" "$EKS_DIR/versions.tf" 2>/dev/null; then
-  pass "versions.tf has required_providers block"
+  if grep -qE "version\s*=\s*\"[~>=<]" "$EKS_DIR/versions.tf" 2>/dev/null; then
+    pass "versions.tf has required_providers with version constraints"
+  else
+    fail "versions.tf has required_providers but no version constraints — pin providers with version = \"~> X.Y\""
+  fi
 else
   fail "versions.tf missing required_providers block"
 fi

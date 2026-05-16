@@ -46,13 +46,12 @@ for policy in "$KYVERNO_DIR"/policies/*.yaml; do
     fail "$name missing valid kind (ValidatingPolicy, MutatingPolicy, GeneratingPolicy, or ImageValidatingPolicy)"
   fi
 
-  # Must start in Audit mode, not Deny
+  # Must start in Audit mode — Deny requires explicit promotion from Audit
   if grep -q "validationActions" "$policy"; then
-    if grep -q "validationActions:.*Deny" "$policy" || grep -q "Deny" "$policy"; then
-      # Allowed if also Audit is present or it's a deliberate Deny-only policy
-      pass "$name has validationActions (contains Deny — confirm this is intentional)"
+    if grep -q "Audit" "$policy"; then
+      pass "$name uses Audit mode"
     else
-      pass "$name uses Audit mode (safe default)"
+      echo "  WARN: $name uses Deny without Audit — confirm Audit→Deny promotion was intentional"
     fi
   fi
 
