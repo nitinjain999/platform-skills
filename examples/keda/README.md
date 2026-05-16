@@ -9,6 +9,7 @@ Working examples for KEDA (Kubernetes Event-Driven Autoscaling) ScaledObject and
 | [scaledobject-sqs.yaml](scaledobject-sqs.yaml) | AWS SQS + IRSA | Scale a Deployment based on SQS queue depth |
 | [scaledobject-prometheus.yaml](scaledobject-prometheus.yaml) | Prometheus + Cron | Scale on HTTP request rate with business-hours floor |
 | [scaledobject-kafka.yaml](scaledobject-kafka.yaml) | Kafka SASL/TLS | Scale on consumer group lag |
+| [scaledobject-cron.yaml](scaledobject-cron.yaml) | Cron + Prometheus safety net | Scheduled scaling with weekday/weekend windows + spike protection |
 | [scaledjob-sqs.yaml](scaledjob-sqs.yaml) | AWS SQS + IRSA | Create one Job per SQS message (batch processing) |
 
 ## Quick start

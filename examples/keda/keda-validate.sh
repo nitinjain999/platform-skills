@@ -18,6 +18,7 @@ MANIFESTS=(
   scaledobject-sqs.yaml
   scaledobject-prometheus.yaml
   scaledobject-kafka.yaml
+  scaledobject-cron.yaml
   scaledjob-sqs.yaml
 )
 
@@ -136,6 +137,35 @@ if [ -f "$KAFKA_FILE" ]; then
     pass "scaledobject-kafka.yaml uses authenticationRef for SASL/TLS credentials"
   else
     fail "scaledobject-kafka.yaml missing authenticationRef"
+  fi
+fi
+
+# Cron: verify timezone, multiple windows, safety-net trigger, and restoreToOriginalReplicaCount
+CRON_FILE="$SCRIPT_DIR/scaledobject-cron.yaml"
+if [ -f "$CRON_FILE" ]; then
+  if grep -q "timezone:" "$CRON_FILE"; then
+    pass "scaledobject-cron.yaml has explicit timezone"
+  else
+    fail "scaledobject-cron.yaml missing explicit timezone (UTC assumption is a bug)"
+  fi
+
+  CRON_WINDOW_COUNT=$(grep -c "type: cron" "$CRON_FILE" || true)
+  if [ "$CRON_WINDOW_COUNT" -ge 2 ]; then
+    pass "scaledobject-cron.yaml has multiple cron windows ($CRON_WINDOW_COUNT)"
+  else
+    fail "scaledobject-cron.yaml should define multiple non-overlapping time windows"
+  fi
+
+  if grep -qE "type: prometheus|type: aws-sqs|type: kafka|type: redis" "$CRON_FILE"; then
+    pass "scaledobject-cron.yaml has safety-net trigger alongside Cron"
+  else
+    fail "scaledobject-cron.yaml missing safety-net trigger — unexpected spikes will not scale up"
+  fi
+
+  if grep -q "restoreToOriginalReplicaCount" "$CRON_FILE"; then
+    pass "scaledobject-cron.yaml has restoreToOriginalReplicaCount"
+  else
+    fail "scaledobject-cron.yaml missing restoreToOriginalReplicaCount"
   fi
 fi
 

@@ -441,17 +441,71 @@ triggers:
 
 ### Cron (scheduled scaling)
 
+Use when replica count should follow a predictable time-based pattern. Cron does not use HPA internally — KEDA sets the replica count directly at the scheduled boundary.
+
 ```yaml
 triggers:
   - type: cron
     metadata:
-      timezone: Europe/Berlin      # IANA timezone
+      timezone: Europe/Berlin      # IANA timezone — always explicit, never rely on UTC
       start: "0 8 * * 1-5"        # Scale up: 08:00 Mon-Fri
       end: "0 20 * * 1-5"         # Scale down: 20:00 Mon-Fri
-      desiredReplicas: "5"
+      desiredReplicas: "10"
 ```
 
-Cron scaler always runs alongside other triggers. KEDA picks the maximum of all trigger desired replica counts.
+#### Multiple non-overlapping windows
+
+Define a separate trigger entry for each time band. Overlapping windows produce undefined behavior.
+
+```yaml
+triggers:
+  # Weekday morning ramp-up
+  - type: cron
+    metadata:
+      timezone: Europe/Berlin
+      start: "0 8 * * 1-5"
+      end: "0 10 * * 1-5"
+      desiredReplicas: "5"
+
+  # Weekday peak
+  - type: cron
+    metadata:
+      timezone: Europe/Berlin
+      start: "0 10 * * 1-5"
+      end: "0 20 * * 1-5"
+      desiredReplicas: "20"
+
+  # Weekday evening wind-down
+  - type: cron
+    metadata:
+      timezone: Europe/Berlin
+      start: "0 20 * * 1-5"
+      end: "59 23 * * 1-5"
+      desiredReplicas: "3"
+```
+
+#### Best practices
+
+| Practice | Reason |
+|---|---|
+| Always set `timezone` explicitly | KEDA defaults to UTC — business-hours windows in other timezones will fire at wrong times |
+| Always pair with a queue/Prometheus trigger | Cron only handles scheduled load; unexpected spikes need a real-time trigger as safety net |
+| Keep `minReplicaCount: 1` | Outside any scheduled window KEDA returns to `minReplicaCount`; use 1 to keep a warm pod |
+| Set `restoreToOriginalReplicaCount: true` | On ScaledObject deletion, restores the previous replica count instead of leaving it at the last cron value |
+| Annotate the schedule intent | Future engineers should not need to decode cron syntax to understand the scaling intent |
+
+#### Outside scheduled windows
+
+When no cron window is active, KEDA scales back to `minReplicaCount`. If other triggers (Prometheus, SQS) are also defined, KEDA uses whichever trigger demands the most replicas — the cron floor and event-driven ceiling work together.
+
+```
+08:00                      20:00
+  │────── cron: 20 replicas ────│
+  │                             │ ← event spike: Prometheus takes over → 30 replicas
+  │                             │────── cron inactive: back to minReplicaCount: 1 ────
+```
+
+See [examples/keda/scaledobject-cron.yaml](../examples/keda/scaledobject-cron.yaml) for a full working example with weekday/weekend windows, a Prometheus safety-net trigger, and a PodDisruptionBudget.
 
 ### Azure Service Bus
 

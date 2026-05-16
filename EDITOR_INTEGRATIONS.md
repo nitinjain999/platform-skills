@@ -226,7 +226,7 @@ gh copilot suggest "$(cat your-deployment.yaml) — review this for production r
 
 ## Skill commands in Copilot Chat
 
-Platform skills ships 18 command workflows. In Claude Code they are slash commands (`/platform-skills:review`). In Copilot Chat you phrase them as natural language — the instructions file makes Copilot apply the same structured output.
+Platform skills ships 19 command workflows. In Claude Code they are slash commands (`/platform-skills:review`). In Copilot Chat you phrase them as natural language — the instructions file makes Copilot apply the same structured output.
 
 ### review — production-readiness check on any file
 
@@ -373,6 +373,41 @@ Explain this Rego policy rule by rule in plain English. Map each input field to 
 
 ```
 My deny rule produces no output when I run conftest test. What are the common causes and how do I check each?
+```
+
+---
+
+### keda — event-driven autoscaling
+
+**Generate a ScaledObject:**
+```
+Generate a KEDA ScaledObject for the orders-processor Deployment. Trigger: AWS SQS queue at https://sqs.eu-central-1.amazonaws.com/123456789/orders. Scale to zero when empty, max 20 replicas. Use IRSA for authentication — no static credentials.
+```
+
+**Cron-based scheduled scaling:**
+```
+Generate a KEDA ScaledObject for the checkout-api Deployment that scales on a schedule: 10 replicas weekday 08:00–20:00 Europe/Berlin, 2 replicas outside those hours. Add a Prometheus safety-net trigger for unexpected traffic spikes. Apply all KEDA best practices.
+```
+
+**Multiple triggers (queue + schedule):**
+```
+Generate a KEDA ScaledObject with two triggers: SQS queue depth (scale at 5 messages/replica) and a Cron floor of 3 replicas during business hours (08:00–18:00 Mon-Fri, Europe/London). Explain the OR-max semantics.
+```
+
+**Debug why a ScaledObject isn't scaling:**
+```
+My KEDA ScaledObject shows Active: false and the Deployment stays at 0 replicas. The SQS queue has 50 messages. Give me the diagnostic commands in order and the most likely causes.
+```
+
+**Review for security and safety:**
+```
+Review this ScaledObject and TriggerAuthentication for security issues. Check: are static credentials used instead of IRSA? Is the IAM policy least-privilege? Is activationQueueLength set? Is there an HPA conflict?
+[paste YAML]
+```
+
+**ScaledJob for batch processing:**
+```
+Generate a KEDA ScaledJob that processes SQS messages as batch Kubernetes Jobs — one Job per message. Use IRSA, set activeDeadlineSeconds to prevent zombie jobs, and apply container security hardening.
 ```
 
 ---
@@ -533,6 +568,7 @@ Audit our developer experience using the SPACE framework. Engineers spend 45 min
 | `.cursor/rules/platform-skills.mdc` | Cursor always-on umbrella rule | Cursor 0.44+ |
 | `.cursor/rules/kubernetes.mdc` | Scoped to `*.yaml` / `*.yml` | Cursor 0.44+ |
 | `.cursor/rules/terraform.mdc` | Scoped to `*.tf` / `*.tfvars` | Cursor 0.44+ |
+| `.cursor/rules/keda.mdc` | Scoped to `scaledobject*.yaml`, `scaledjob*.yaml`, `keda*.yaml` | Cursor 0.44+ |
 
 ---
 
