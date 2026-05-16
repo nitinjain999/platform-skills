@@ -440,7 +440,7 @@ triggers:
 
 ### Cron (scheduled scaling)
 
-Use when replica count should follow a predictable time-based pattern. The Cron scaler feeds a `desiredReplicas` metric into the KEDA-managed HPA — KEDA still creates and owns the HPA as with every other scaler. At the window boundary the metric value changes, the HPA re-evaluates, and replicas scale up or down. `cooldownPeriod` therefore still applies after the window end: KEDA waits for it to elapse before the HPA allows scale-down.
+Use when replica count should follow a predictable time-based pattern. The Cron scaler feeds a `desiredReplicas` metric into the KEDA-managed HPA — KEDA still creates and owns the HPA as with every other scaler. At the window boundary the metric value changes, and the HPA re-evaluates to scale up or down. If you want to delay or smooth scale-down after the window ends, configure `advanced.horizontalPodAutoscalerConfig.behavior.scaleDown` on the ScaledObject. `cooldownPeriod` is a separate KEDA setting used after triggers become inactive, primarily affecting scaling back toward `minReplicaCount`/0; it is not the knob the HPA uses to wait before scaling down.
 
 ```yaml
 triggers:
