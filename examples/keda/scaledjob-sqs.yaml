@@ -1,0 +1,79 @@
+---
+# ScaledJob: AWS SQS trigger for batch processing
+#
+# Creates one Job per SQS message (or group of messages).
+# Use for batch workloads where each message requires a dedicated pod.
+# Unlike ScaledObject, ScaledJob does not use HPA — KEDA manages Jobs directly.
+
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: keda-sqs-auth
+  namespace: reports
+spec:
+  podIdentity:
+    provider: aws                   # IRSA — no static credentials
+
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledJob
+metadata:
+  name: report-generator
+  namespace: reports
+spec:
+  jobTargetRef:
+    parallelism: 1
+    completions: 1
+    backoffLimit: 2                 # Retry failed job pods twice
+    activeDeadlineSeconds: 3600     # Kill jobs that run > 1 hour (prevent zombie jobs)
+    template:
+      metadata:
+        labels:
+          app: report-generator
+      spec:
+        serviceAccountName: report-generator
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          fsGroup: 1000
+        containers:
+          - name: report-generator
+            image: myregistry.io/report-generator:1.2.0
+            env:
+              - name: SQS_QUEUE_URL
+                value: https://sqs.eu-central-1.amazonaws.com/123456789012/reports
+              - name: AWS_REGION
+                value: eu-central-1
+            resources:
+              requests:
+                cpu: 500m
+                memory: 512Mi
+              limits:
+                cpu: 2
+                memory: 2Gi
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+        restartPolicy: Never
+
+  minReplicaCount: 0
+  maxReplicaCount: 10               # Max concurrent report jobs at any time
+  pollingInterval: 30
+  successfulJobsHistoryLimit: 3     # Keep 3 completed job objects for debugging
+  failedJobsHistoryLimit: 5
+
+  scalingStrategy:
+    strategy: accurate              # Re-query queue on every poll for precise job count
+    customScalingQueueLengthDeduction: 0
+    customScalingRunningJobPercentage: "1.0"
+
+  triggers:
+    - type: aws-sqs-queue
+      metadata:
+        queueURL: https://sqs.eu-central-1.amazonaws.com/123456789012/reports
+        queueLength: "1"            # 1 message = 1 job
+        awsRegion: eu-central-1
+        scaleOnInFlight: "false"    # Don't count in-flight — each job processes exactly one message
+        activationQueueLength: "1"
+      authenticationRef:
+        name: keda-sqs-auth

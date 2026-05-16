@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.14.0] - 2026-05-16
+
+### Added
+
+#### KEDA — Kubernetes Event-Driven Autoscaling
+
+New Domain 23: `KEDA` — design, generate, debug, and review event-driven autoscaling with KEDA v2.14.
+
+- `references/keda.md` — comprehensive reference guide covering:
+  - KEDA vs HPA decision matrix (when to use each)
+  - Architecture (operator, metrics adapter, webhook)
+  - Helm installation with resource limits
+  - `ScaledObject` spec: minReplicaCount, maxReplicaCount, pollingInterval, cooldownPeriod, advanced HPA behavior overrides, scale-to-zero with cold-start guidance
+  - `ScaledJob` spec: batch processing per message with scaling strategies (accurate/default/custom)
+  - `TriggerAuthentication` and `ClusterTriggerAuthentication`: Kubernetes Secret reference, IRSA (AWS), Azure Workload Identity, GCP Workload Identity
+  - Scalers with full metadata reference: Prometheus, AWS SQS, Apache Kafka (SASL/TLS), Redis List, Cron, Azure Service Bus, HTTP Add-on
+  - Scaling lifecycle and tuning table (pollingInterval/cooldownPeriod by scenario)
+  - Security patterns: least-privilege IAM per scaler, namespace-scoped vs cluster-scoped auth, RBAC for ScaledObject management
+  - GitOps integration: Flux Kustomization with health checks, Argo CD ordering, ExternalSecret pairing
+  - Troubleshooting: 7 common failure patterns with diagnostic commands and exact fixes
+  - Observability: KEDA Prometheus metrics, Grafana dashboard import
+  - Version compatibility matrix and upgrade checklist
+- `/platform-skills:keda` (`commands/keda.md`) — four modes:
+  - `generate` — write a production-ready ScaledObject or ScaledJob from a description
+  - `debug` — diagnose scaling failures with a structured checklist
+  - `review` — correctness, security, and operational safety review
+  - `scale` — design the scaling strategy for a workload from requirements
+- `examples/keda/` — four working examples:
+  - `scaledobject-sqs.yaml` — SQS queue trigger with IRSA, scale-to-zero, HPA stabilization
+  - `scaledobject-prometheus.yaml` — HTTP request rate trigger with Cron floor for business hours
+  - `scaledobject-kafka.yaml` — Kafka consumer lag trigger with SASL/TLS auth
+  - `scaledjob-sqs.yaml` — batch ScaledJob (one Job per SQS message) with security hardening
+
 ## [1.13.0] - 2026-05-16
 
 ### Added

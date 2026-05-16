@@ -1,0 +1,51 @@
+---
+# ScaledObject: Prometheus trigger
+#
+# Scales the api-gateway Deployment based on HTTP request rate.
+# No external auth needed — Prometheus is cluster-internal.
+# Keeps minimum 2 replicas during business hours via Cron trigger.
+
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: api-gateway
+  namespace: platform
+spec:
+  scaleTargetRef:
+    name: api-gateway
+
+  minReplicaCount: 1                # Keep at least 1 replica at all times
+  maxReplicaCount: 30
+  pollingInterval: 30
+  cooldownPeriod: 300               # 5 min cooldown prevents rapid scale-down
+
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleUp:
+          stabilizationWindowSeconds: 0      # Fast scale-up on traffic spike
+          policies:
+            - type: Percent
+              value: 100
+              periodSeconds: 15
+        scaleDown:
+          stabilizationWindowSeconds: 300    # Slow scale-down
+
+  triggers:
+    # Primary trigger: HTTP request rate from Prometheus
+    - type: prometheus
+      metadata:
+        serverAddress: http://prometheus-operated.monitoring.svc.cluster.local:9090
+        metricName: http_request_rate
+        # rate() over 2 minutes smooths out short spikes
+        query: sum(rate(http_requests_total{namespace="platform",service="api-gateway"}[2m]))
+        threshold: "100"            # Target: 100 req/s per replica
+        activationThreshold: "10"   # Don't activate unless rate > 10 req/s
+
+    # Secondary trigger: ensure minimum 3 replicas during business hours
+    - type: cron
+      metadata:
+        timezone: Europe/Berlin
+        start: "0 8 * * 1-5"       # 08:00 Mon-Fri
+        end: "0 20 * * 1-5"        # 20:00 Mon-Fri
+        desiredReplicas: "3"

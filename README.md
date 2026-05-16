@@ -65,6 +65,7 @@ Both layers work independently. The plugin is optional.
 | 📋 OPA / Conftest | [references/opa.md](references/opa.md) | Rego v1 syntax, rule types, unit tests, fmt/regal/verify validation pipeline, GitHub Actions integration |
 | 🔍 PR Review | [references/pr-review.md](references/pr-review.md) | Cost impact, environment drift, ownership gaps, SOC 2 compliance, deprecated API / version hygiene, rollback feasibility |
 | 🧵 PR Comment Triage | [commands/triage.md](commands/triage.md) | `/platform-skills:triage` classifies PR comments, applies valid fixes, replies, and resolves review threads |
+| ⚡ KEDA | [references/keda.md](references/keda.md) | ScaledObject, ScaledJob, TriggerAuthentication, Prometheus/SQS/Kafka/Redis/Cron/HTTP/Azure scalers, scale-to-zero, IRSA, GitOps integration, troubleshooting |
 
 ## Core principles
 
@@ -153,7 +154,8 @@ platform-skills/
 │   ├── platform-mindset.md
 │   ├── compliance.md                   # SOC 2 controls in Terraform (v1.6.0)
 │   ├── helm.md                         # Helm chart patterns, lint pipeline, values design
-│   └── pr-review.md                    # PR review: cost, drift, ownership, compliance, upgrade, rollback (v1.12.0)
+│   ├── pr-review.md                    # PR review: cost, drift, ownership, compliance, upgrade, rollback (v1.12.0)
+│   └── keda.md                         # KEDA event-driven autoscaling (v1.14.0)
 │
 ├── examples/                           # Working examples and handbook snippets
 │   ├── flux/basic-monorepo/            # Complete Flux CD monorepo structure
@@ -167,6 +169,7 @@ platform-skills/
 │   ├── github-actions/                 # CI/CD, Flux sync, container build workflows
 │   ├── helm/web-service/               # Production Helm chart: Deployment, HPA, PDB, NetworkPolicy, schema
 │   ├── triage/                         # PR comment triage scenarios and fixtures (v1.13.0)
+│   ├── keda/                           # ScaledObject, ScaledJob, TriggerAuthentication examples (v1.14.0)
 │   └── compliance/                     # SOC 2 Terraform examples (v1.6.0)
 │       ├── checkov-config.yaml         # Checkov config grouped by SOC 2 criterion
 │       ├── iam/                        # CC6.1/CC6.2: IAM, IRSA, OIDC, SCPs
@@ -203,6 +206,7 @@ platform-skills/
 - [x] v1.11.0 — Kyverno: ValidatingPolicy/MutatingPolicy/GeneratingPolicy/ImageValidatingPolicy (policies.kyverno.io/v1), CEL expressions, Audit→Deny promotion, PolicyException, PolicyReport analysis, kyverno-cli testing, PSP and Gatekeeper migration
 - [x] v1.12.0 — PR Review: cost impact, environment drift, ownership and governance gaps, SOC 2 compliance, deprecated API / version hygiene, rollback feasibility scoring
 - [x] v1.13.0 — PR Comment Triage: classify bot or human review comments, apply valid fixes, reply, and resolve threads with `gh`
+- [x] v1.14.0 — KEDA: ScaledObject, ScaledJob, TriggerAuthentication, scalers (Prometheus/SQS/Kafka/Redis/Cron/HTTP/Azure Service Bus), scale-to-zero, IRSA, GitOps integration, troubleshooting
 
 **Planned**
 - [ ] GCP: landing zone, GKE, Workload Identity, and IAM patterns
