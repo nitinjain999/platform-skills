@@ -1,32 +1,36 @@
 # SCENARIO: Compliance — wildcard IAM and unencrypted RDS (CC6.1, CC6.7)
 #
-# Expected output:
+# Expected pr-review compliance output:
 #
 #   [COMPLIANCE] CC6.1 — Logical access
-#     Finding: aws_iam_role_policy.app_policy uses Action: "*" and Resource: "*"
-#     File: compliance/iam-wildcard.tf
-#     Severity: CRITICAL — grants full AWS access to the application role;
-#     violates least privilege and will block SOC 2 CC6.1 audit evidence.
+#     Finding: aws_iam_role_policy.app_policy_before uses Action: "*" Resource: "*"
+#     Severity: CRITICAL — grants full AWS access; violates least privilege
 #     Remediation: Replace with explicit actions scoped to required services.
-#     See fix below.
-#     Auditor evidence: aws iam simulate-principal-policy --policy-source-arn <role-arn> \
+#     Auditor evidence: aws iam simulate-principal-policy --policy-source-arn <arn> \
 #       --action-names "s3:*" --resource-arns "*"
 #
 #   [COMPLIANCE] CC6.7 — Encryption
-#     Finding: aws_db_instance.app storage_encrypted = false
-#     File: compliance/iam-wildcard.tf
-#     Severity: CRITICAL — RDS data at rest unencrypted; fails CC6.7.
-#     Remediation: Set storage_encrypted = true and provide a kms_key_id.
-#     Note: enabling encryption on an existing unencrypted instance requires
-#     a snapshot → restore cycle (Reversibility: NONE — see rollback mode).
+#     Finding: aws_db_instance.app_before storage_encrypted = false
+#     Severity: CRITICAL — RDS data at rest unencrypted
+#     Remediation: Set storage_encrypted = true and provide kms_key_id.
 #     Auditor evidence: aws rds describe-db-instances \
 #       --query 'DBInstances[*].{ID:DBInstanceIdentifier,Encrypted:StorageEncrypted}'
 
-# ❌ BEFORE — violates CC6.1 and CC6.7
+variable "db_password" {
+  description = "RDS master password"
+  type        = string
+  sensitive   = true
+}
 
-resource "aws_iam_role_policy" "app_policy" {
-  name = "app-policy"
-  role = aws_iam_role.app.id
+variable "assets_bucket" {
+  description = "S3 bucket name for application assets"
+  type        = string
+}
+
+# ❌ BEFORE — violates CC6.1 and CC6.7
+resource "aws_iam_role_policy" "app_policy_before" {
+  name = "app-policy-before"
+  role = "app-role"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -38,21 +42,22 @@ resource "aws_iam_role_policy" "app_policy" {
   })
 }
 
-resource "aws_db_instance" "app" {
-  identifier        = "payments-db"
+resource "aws_db_instance" "app_before" {
+  identifier        = "payments-db-before"
   engine            = "postgres"
   instance_class    = "db.t3.medium"
   allocated_storage = 20
   storage_encrypted = false # ❌ CC6.7 — unencrypted at rest
   username          = "admin"
   password          = var.db_password
+
+  skip_final_snapshot = true
 }
 
 # ✅ AFTER — CC6.1 and CC6.7 compliant
-
 resource "aws_iam_role_policy" "app_policy" {
   name = "app-s3-read"
-  role = aws_iam_role.app.id
+  role = "app-role"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -88,4 +93,5 @@ resource "aws_db_instance" "app" {
 
   backup_retention_period = 35 # ✅ A1.2 — minimum 35 days for SOC 2
   deletion_protection     = true
+  skip_final_snapshot     = false
 }
