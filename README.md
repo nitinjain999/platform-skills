@@ -40,28 +40,28 @@ Both layers work independently. The plugin is optional.
 
 | Domain | Reference guide | What it covers |
 |---|---|---|
-| ☸️ Kubernetes | [references/kubernetes.md](references/kubernetes.md) | Cluster baseline, workload patterns, network policy, RBAC, pod security |
-| 🛡️ Kyverno | [references/kyverno.md](references/kyverno.md) | Validate/mutate/generate/verifyImages policies, Audit→Enforce promotion, PolicyException, PolicyReport, kyverno-cli testing, PSP/Gatekeeper migration |
-| 🟥 OpenShift | [references/openshift.md](references/openshift.md) | Routes, SCC compatibility, operator usage, tenant isolation |
-| 🚢 Argo CD | [references/argocd.md](references/argocd.md) | App-of-apps design, ApplicationSet, sync control, promotion flows |
-| 🔄 Flux CD | [references/flux.md](references/flux.md) | Monorepo structure, reconciliation, multi-tenancy, image automation |
-| ☁️ AWS | [references/aws.md](references/aws.md) | IAM least-privilege, IRSA, EKS, resource tagging, cost allocation |
-| 🌐 Azure | [references/azure.md](references/azure.md) | Workload identity, AKS, RBAC, resource tagging, Azure Policy |
-| 🏗️ Terraform | [references/terraform.md](references/terraform.md) | Module design, state management, testing, CI/CD integration |
-| 🚀 GitHub Actions | [references/github-actions.md](references/github-actions.md) | Security hardening, OIDC, SHA pinning, reusable workflows |
+| <img src="https://cdn.simpleicons.org/kubernetes/326CE5" width="16" height="16" alt="Kubernetes"> Kubernetes | [references/kubernetes.md](references/kubernetes.md) | Cluster baseline, workload patterns, network policy, RBAC, pod security |
+| 🛡️ Kyverno | [references/kyverno.md](references/kyverno.md) | Validate/mutate/generate/verifyImages policies, Audit→Deny promotion, PolicyException, PolicyReport, kyverno-cli testing, PSP/Gatekeeper migration |
+| <img src="https://cdn.simpleicons.org/redhatopenshift/EE0000" width="16" height="16" alt="OpenShift"> OpenShift | [references/openshift.md](references/openshift.md) | Routes, SCC compatibility, operator usage, tenant isolation |
+| <img src="https://cdn.simpleicons.org/argo/EF7B4D" width="16" height="16" alt="Argo CD"> Argo CD | [references/argocd.md](references/argocd.md) | App-of-apps design, ApplicationSet, sync control, promotion flows |
+| <img src="https://cdn.simpleicons.org/flux/5468FF" width="16" height="16" alt="Flux CD"> Flux CD | [references/flux.md](references/flux.md) | Monorepo structure, reconciliation, multi-tenancy, image automation |
+| <img src="https://cdn.simpleicons.org/amazonaws/FF9900" width="16" height="16" alt="AWS"> AWS | [references/aws.md](references/aws.md) | IAM least-privilege, IRSA, EKS, resource tagging, cost allocation |
+| <img src="https://cdn.simpleicons.org/microsoftazure/0078D4" width="16" height="16" alt="Azure"> Azure | [references/azure.md](references/azure.md) | Workload identity, AKS, RBAC, resource tagging, Azure Policy |
+| <img src="https://cdn.simpleicons.org/terraform/844FBA" width="16" height="16" alt="Terraform"> Terraform | [references/terraform.md](references/terraform.md) | Module design, state management, testing, CI/CD integration |
+| <img src="https://cdn.simpleicons.org/githubactions/2088FF" width="16" height="16" alt="GitHub Actions"> GitHub Actions | [references/github-actions.md](references/github-actions.md) | Security hardening, OIDC, SHA pinning, reusable workflows |
 | 🗺️ Platform model | [references/platform-operating-model.md](references/platform-operating-model.md) | Ownership boundaries, promotion flows, cross-tool design |
 | 🔐 Secrets | [references/secrets.md](references/secrets.md) | External Secrets Operator, Sealed Secrets, provider setup, troubleshooting |
-| 🔗 Linkerd | [references/linkerd.md](references/linkerd.md) | mTLS, proxy injection, AuthorizationPolicy, observability, multi-cluster |
-| 🐧 Linux & Networking | [references/linux-networking.md](references/linux-networking.md) | Linux admin, DNS, load balancing, VPC/VNet design, connectivity troubleshooting |
+| <img src="https://cdn.simpleicons.org/linkerd/2BEDA7" width="16" height="16" alt="Linkerd"> Linkerd | [references/linkerd.md](references/linkerd.md) | mTLS, proxy injection, AuthorizationPolicy, observability, multi-cluster |
+| <img src="https://cdn.simpleicons.org/linux/FCC624" width="16" height="16" alt="Linux"> Linux & Networking | [references/linux-networking.md](references/linux-networking.md) | Linux admin, DNS, load balancing, VPC/VNet design, connectivity troubleshooting |
 | 🧠 Platform Mindset | [references/platform-mindset.md](references/platform-mindset.md) | DevEx, friction audits, RFC/ADR, incident comms, post-mortems, capacity planning |
 | 🔒 Compliance | [references/compliance.md](references/compliance.md) | SOC 2 Trust Services Criteria in Terraform: IAM, encryption, detection, audit logging, backup, Checkov enforcement |
-| ⛵ Helm | [references/helm.md](references/helm.md) | Chart scaffolding, values design, template patterns, security hardening, lint/validation pipeline, GitOps integration |
+| <img src="https://cdn.simpleicons.org/helm/0F1689" width="16" height="16" alt="Helm"> Helm | [references/helm.md](references/helm.md) | Chart scaffolding, values design, template patterns, security hardening, lint/validation pipeline, GitOps integration |
 | 🔌 MCP | [references/mcp.md](references/mcp.md) | Model Context Protocol server/client development, TypeScript and Python SDKs, stdio/SSE transports, security, testing |
-| 📊 Observability | [references/observability.md](references/observability.md) | Structured logging, Prometheus metrics, OpenTelemetry tracing, Grafana dashboards, alerting rules, k6 load testing, capacity planning |
+| <img src="https://cdn.simpleicons.org/prometheus/E6522C" width="16" height="16" alt="Prometheus"> Observability | [references/observability.md](references/observability.md) | Structured logging, Prometheus metrics, OpenTelemetry tracing, Grafana dashboards, alerting rules, k6 load testing, capacity planning |
 | 📝 Documentation | [references/documentation.md](references/documentation.md) | Docstrings (Google/NumPy/JSDoc), OpenAPI 3.1 specs, doc sites (MkDocs/TypeDoc), developer guides |
-| 📈 Datadog | [references/datadog.md](references/datadog.md) | Agent Helm setup, APM instrumentation, log management, monitors/dashboards/SLOs as Terraform |
-| 🔭 Dynatrace | [references/dynatrace.md](references/dynatrace.md) | OneAgent Kubernetes Operator, custom metrics, SLOs, dashboards and alerting via Terraform provider |
-| 💬 Conventional Commits | [references/conventional-commits.md](references/conventional-commits.md) | Message structure, type classification, atomic staging, commitlint/husky/semantic-release tooling |
+| <img src="https://cdn.simpleicons.org/datadog/632CA6" width="16" height="16" alt="Datadog"> Datadog | [references/datadog.md](references/datadog.md) | Agent Helm setup, APM instrumentation, log management, monitors/dashboards/SLOs as Terraform |
+| <img src="https://cdn.simpleicons.org/dynatrace/1496FF" width="16" height="16" alt="Dynatrace"> Dynatrace | [references/dynatrace.md](references/dynatrace.md) | OneAgent Kubernetes Operator, custom metrics, SLOs, dashboards and alerting via Terraform provider |
+| <img src="https://cdn.simpleicons.org/git/F05032" width="16" height="16" alt="Git"> Conventional Commits | [references/conventional-commits.md](references/conventional-commits.md) | Message structure, type classification, atomic staging, commitlint/husky/semantic-release tooling |
 | 📋 OPA / Conftest | [references/opa.md](references/opa.md) | Rego v1 syntax, rule types, unit tests, fmt/regal/verify validation pipeline, GitHub Actions integration |
 | 🔍 PR Review | [references/pr-review.md](references/pr-review.md) | Cost impact, environment drift, ownership gaps, SOC 2 compliance, deprecated API / version hygiene, rollback feasibility |
 
