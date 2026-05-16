@@ -4,6 +4,14 @@
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Claude Code](https://img.shields.io/badge/Claude-Code%20Skill-purple)](https://claude.ai/code)
+[![GitHub Stars](https://img.shields.io/github/stars/nitinjain999/platform-skills?style=social)](https://github.com/nitinjain999/platform-skills/stargazers)
+
+---
+
+If this handbook saves you time, [give it a star](https://github.com/nitinjain999/platform-skills/stargazers) — it helps others find it.
+Found a gap or a better pattern? [Contributions are welcome](CONTRIBUTING.md) — open an issue, improve a reference guide, or add an example.
+
+---
 
 ## What is this?
 
