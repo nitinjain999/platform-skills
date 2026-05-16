@@ -54,6 +54,7 @@ REQUIRED_REFERENCES=(
   references/dynatrace.md
   references/conventional-commits.md
   references/opa.md
+  references/kyverno.md
 )
 
 for ref in "${REQUIRED_REFERENCES[@]}"; do
@@ -85,6 +86,7 @@ EXAMPLE_DOMAINS=(
   examples/dynatrace
   examples/conventional-commits
   examples/opa
+  examples/kyverno
 )
 
 for domain in "${EXAMPLE_DOMAINS[@]}"; do

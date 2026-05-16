@@ -7,8 +7,8 @@
   "plugins": [
     {
       "name": "platform-skills",
-      "version": "1.10.0",
-      "description": "Practical guidance for platform engineers: Kubernetes, Helm, Terraform, GitOps, GitHub Actions, AWS, Azure, Linkerd, Linux, networking, MCP server development, observability (Prometheus/OpenTelemetry/Grafana), code documentation (OpenAPI/docstrings), SOC 2 compliance for Terraform, Datadog, Dynatrace, and conventional commit message generation. Covers troubleshooting, security-first patterns, DevEx, RFC/ADR, compliance controls, and working examples — at any scale.",
+      "version": "1.11.0",
+      "description": "Practical guidance for platform engineers: Kubernetes, Helm, Terraform, GitOps, GitHub Actions, AWS, Azure, Linkerd, Linux, networking, MCP server development, observability (Prometheus/OpenTelemetry/Grafana), code documentation (OpenAPI/docstrings), SOC 2 compliance for Terraform, Datadog, Dynatrace, conventional commit message generation, OPA/Conftest Rego policies, and Kyverno admission policies (validate/mutate/generate/verifyImages, Audit→Enforce promotion, PolicyException, PSP/Gatekeeper migration). Covers troubleshooting, security-first patterns, DevEx, RFC/ADR, compliance controls, and working examples — at any scale.",
       "author": {
         "name": "Nitin Jain"
       },
@@ -79,7 +79,13 @@
         "rego",
         "conftest",
         "regal",
-        "policy-as-code"
+        "policy-as-code",
+        "kyverno",
+        "admission-policy",
+        "admission-webhook",
+        "pod-security",
+        "policy-exception",
+        "policy-report"
       ],
       "source": {
         "source": "url",

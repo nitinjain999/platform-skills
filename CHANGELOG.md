@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.0] - 2026-05-16
+
+### Added
+
+#### Kyverno Domain
+
+New Domain 20: `Kyverno` — write and maintain Kubernetes-native admission policies covering all four rule types (validate, mutate, generate, verifyImages), drive Audit→Enforce promotion safely, manage PolicyExceptions, analyse PolicyReports, and migrate from PodSecurityPolicy or OPA/Gatekeeper.
+
+- `references/kyverno.md` — ClusterPolicy vs Policy scope, match/exclude block design (any/all, by kind/namespace/label/user), all four rule types with annotated examples, anchor syntax (`?*`, `=(field)`, `+(field)`), CEL expressions (Kyverno >= 1.11), patchStrategicMerge vs patchesJSON6902, generate with `synchronize: true` and namespace templating, verifyImages with Cosign keyless and key-based attestors, auto-generated rule behaviour, Audit→Enforce promotion workflow with PolicyReport queries, PolicyException design, JMESPath context variables and apiCall, kyverno-cli install and test manifest structure, PolicyReport export to CSV, GitHub Actions integration workflow, three full annotated ClusterPolicy examples (require-team-labels, disallow-privileged-containers, require-readonly-rootfs), and a troubleshooting table covering 11 common failure modes
+- `/platform-skills:kyverno` (`commands/kyverno.md`) — five modes: `generate` (write ClusterPolicy/Policy from description, always Audit-first), `test` (write kyverno-test.yaml with pass/fail/skip fixtures), `audit` (rank PolicyReport violations and produce Enforce promotion plan), `debug` (diagnose webhook registration, match/exclude gaps, background scan, CEL errors, PolicyException suppression), `migrate` (PSP field-by-field mapping and Gatekeeper ConstraintTemplate translation)
+- `examples/kyverno/` — three working ClusterPolicies (`require-team-labels.yaml`, `disallow-privileged-containers.yaml`, `generate-default-networkpolicy.yaml`), four test resource fixtures, and a `kyverno-test.yaml` that exercises pass and fail cases for each validate policy
+
 ## [1.10.0] - 2026-05-09
 
 ### Added

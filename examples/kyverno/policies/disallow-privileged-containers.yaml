@@ -1,0 +1,40 @@
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: disallow-privileged-containers
+  annotations:
+    policies.kyverno.io/title: Disallow privileged containers
+    policies.kyverno.io/category: Pod Security
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/description: >-
+      Privileged containers run with unrestricted host access equivalent to root on
+      the node. They must not be used in production workloads.
+spec:
+  validationActions:
+    - Deny
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ['']
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [pods]
+  matchConditions:
+    - name: exclude-system-namespaces
+      expression: "!(object.metadata.namespace in ['kube-system'])"
+  validations:
+    - expression: >-
+        object.spec.containers.all(c,
+          !has(c.securityContext) ||
+          !has(c.securityContext.privileged) ||
+          c.securityContext.privileged == false
+        ) &&
+        (!has(object.spec.initContainers) ||
+          object.spec.initContainers.all(c,
+            !has(c.securityContext) ||
+            !has(c.securityContext.privileged) ||
+            c.securityContext.privileged == false
+          )
+        )
+      message: >-
+        Privileged containers are not allowed.
+        Remove securityContext.privileged: true from all containers and initContainers.

@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: legacy-worker
+  namespace: production
+  labels:
+    app: legacy-worker    # missing app.kubernetes.io/name and app.kubernetes.io/team
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: legacy-worker
+  template:
+    metadata:
+      labels:
+        app: legacy-worker
+    spec:
+      containers:
+        - name: worker
+          image: registry.internal.example.com/legacy-worker:0.9.1
+          resources:
+            limits:
+              cpu: "200m"
+              memory: "128Mi"

@@ -1,0 +1,32 @@
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: require-team-labels
+  annotations:
+    policies.kyverno.io/title: Require team labels
+    policies.kyverno.io/category: Best Practices
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/description: >-
+      All Deployments must carry app.kubernetes.io/name and app.kubernetes.io/team
+      labels so workloads are attributable to an owning team.
+spec:
+  validationActions:
+    - Audit
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [apps]
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [deployments]
+  matchConditions:
+    - name: exclude-system-namespaces
+      expression: >-
+        !(object.metadata.namespace in ['kube-system', 'kube-public'])
+  validations:
+    - expression: >-
+        has(object.metadata.labels) &&
+        'app.kubernetes.io/name' in object.metadata.labels &&
+        'app.kubernetes.io/team' in object.metadata.labels
+      messageExpression: >-
+        "Deployment " + object.metadata.name +
+        " is missing required labels app.kubernetes.io/name and/or app.kubernetes.io/team."

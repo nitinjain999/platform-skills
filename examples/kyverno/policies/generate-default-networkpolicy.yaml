@@ -1,0 +1,51 @@
+apiVersion: policies.kyverno.io/v1
+kind: GeneratingPolicy
+metadata:
+  name: generate-default-networkpolicy
+  annotations:
+    policies.kyverno.io/title: Generate default deny-ingress NetworkPolicy
+    policies.kyverno.io/category: Network Security
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/description: >-
+      Automatically creates a default-deny-ingress NetworkPolicy in every new
+      namespace so workloads are isolated until explicit NetworkPolicies allow traffic.
+spec:
+  evaluation:
+    synchronize:
+      enabled: true
+    generateExisting:
+      enabled: true
+    orphanDownstreamOnPolicyDelete:
+      enabled: false
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ['']
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [namespaces]
+  matchConditions:
+    - name: exclude-system-namespaces
+      expression: >-
+        !(object.metadata.name in ['kube-system', 'kube-public', 'kube-node-lease'])
+  variables:
+    - name: nsName
+      expression: "object.metadata.name"
+    - name: networkPolicy
+      expression: >-
+        [
+          {
+            "kind": dyn("NetworkPolicy"),
+            "apiVersion": dyn("networking.k8s.io/v1"),
+            "metadata": dyn({
+              "name": "default-deny-ingress",
+              "namespace": string(variables.nsName),
+              "labels": dyn({"app.kubernetes.io/managed-by": "kyverno"})
+            }),
+            "spec": dyn({
+              "podSelector": dyn({}),
+              "policyTypes": dyn(["Ingress"])
+            })
+          }
+        ]
+  generate:
+    - expression: "generator.Apply(variables.nsName, variables.networkPolicy)"
