@@ -92,7 +92,7 @@ resource "aws_db_instance" "..." {
 terraform {
   backend "s3" {
     encrypt        = true
-    kms_key_id     = "arn:aws:kms:..."
+    kms_key_id     = var.kms_key_arn
     dynamodb_table = "terraform-state-lock"
   }
 }
