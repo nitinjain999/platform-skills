@@ -1,5 +1,7 @@
 # KEDA Examples
 
+Status: Stable
+
 Working examples for KEDA (Kubernetes Event-Driven Autoscaling) ScaledObject and ScaledJob configurations.
 
 ## Files
