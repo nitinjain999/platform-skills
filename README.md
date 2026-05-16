@@ -63,6 +63,7 @@ Both layers work independently. The plugin is optional.
 | 🦖 Dynatrace | [references/dynatrace.md](references/dynatrace.md) | OneAgent Kubernetes Operator, custom metrics, SLOs, dashboards and alerting via Terraform provider |
 | 💬 Conventional Commits | [references/conventional-commits.md](references/conventional-commits.md) | Message structure, type classification, atomic staging, commitlint/husky/semantic-release tooling |
 | 📋 OPA / Conftest | [references/opa.md](references/opa.md) | Rego v1 syntax, rule types, unit tests, fmt/regal/verify validation pipeline, GitHub Actions integration |
+| 🔍 PR Review | [references/pr-review.md](references/pr-review.md) | Cost impact, environment drift, ownership gaps, SOC 2 compliance, deprecated API / version hygiene, rollback feasibility |
 
 ## Core principles
 
@@ -150,7 +151,8 @@ platform-skills/
 │   ├── linux-networking.md
 │   ├── platform-mindset.md
 │   ├── compliance.md                   # SOC 2 controls in Terraform (v1.6.0)
-│   └── helm.md                         # Helm chart patterns, lint pipeline, values design
+│   ├── helm.md                         # Helm chart patterns, lint pipeline, values design
+│   └── pr-review.md                    # PR review: cost, drift, ownership, compliance, upgrade, rollback (v1.12.0)
 │
 ├── examples/                           # Working examples and handbook snippets
 │   ├── flux/basic-monorepo/            # Complete Flux CD monorepo structure
@@ -197,6 +199,7 @@ platform-skills/
 - [x] v1.9.0 — Conventional Commits: analyze diffs, generate WHY-focused commit messages, intelligent file staging, commitlint/husky/semantic-release tooling
 - [x] v1.10.0 — OPA / Conftest: generate Rego policies, unit tests, fmt/regal/verify validation pipeline, explain and debug
 - [x] v1.11.0 — Kyverno: ValidatingPolicy/MutatingPolicy/GeneratingPolicy/ImageValidatingPolicy (policies.kyverno.io/v1), CEL expressions, Audit→Deny promotion, PolicyException, PolicyReport analysis, kyverno-cli testing, PSP and Gatekeeper migration
+- [x] v1.12.0 — PR Review: cost impact, environment drift, ownership and governance gaps, SOC 2 compliance, deprecated API / version hygiene, rollback feasibility scoring
 
 **Planned**
 - [ ] GCP: landing zone, GKE, Workload Identity, and IAM patterns

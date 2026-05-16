@@ -55,6 +55,7 @@ REQUIRED_REFERENCES=(
   references/conventional-commits.md
   references/opa.md
   references/kyverno.md
+  references/pr-review.md
 )
 
 for ref in "${REQUIRED_REFERENCES[@]}"; do

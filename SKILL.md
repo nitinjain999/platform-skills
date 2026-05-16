@@ -22,6 +22,7 @@ Match the task to the right layer:
 9. `Platform Mindset`: Treat developers as customers. Apply product thinking, friction audits, DevEx metrics, RFC/ADR processes, incident communication, and blameless post-mortems.
 10. `Cross-platform`: Design repo boundaries, ownership, promotion flows, and security controls first.
 11. `Kyverno`: Write and maintain Kubernetes-native admission policies using the CEL-based types — `ValidatingPolicy`, `MutatingPolicy`, `GeneratingPolicy`, `ImageValidatingPolicy` (all `policies.kyverno.io/v1`). Covers `matchConstraints`, `matchConditions`, CEL validations/mutations, `generator.Apply()`, Audit→Deny promotion, PolicyException, and kyverno-cli testing.
+12. `PR Review`: Comprehensive pre-merge risk review across six dimensions — cost impact, environment drift, ownership and governance gaps, SOC 2 compliance, deprecated API / version hygiene, and rollback feasibility scoring.
 
 If a task spans multiple areas, decide which layer owns the source of truth and keep the other layers consumers of that state.
 
@@ -66,6 +67,7 @@ When asked to generate code, start from the thinnest useful slice that proves th
 - For Linkerd service mesh, mTLS, observability, traffic management, and multi-cluster, read [references/linkerd.md](references/linkerd.md).
 - For Linux administration, DNS, load balancing, VPC/VNet design, kernel tuning, and network troubleshooting, read [references/linux-networking.md](references/linux-networking.md).
 - For product mindset, developer experience, friction audits, RFC/ADR, incident communication, post-mortems, and capacity planning, read [references/platform-mindset.md](references/platform-mindset.md).
+- For comprehensive PR review — cost impact, environment drift, ownership gaps, SOC 2 compliance, deprecated APIs, version hygiene, rollback feasibility, and bot comment triage — read [references/pr-review.md](references/pr-review.md).
 
 Load only the files needed for the current request.
 
@@ -81,3 +83,4 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:kyverno` — Kyverno policy generation, testing, cluster audit, debugging, and PSP/Gatekeeper migration
 - `/platform-skills:linux` — Linux administration, DNS, load balancing, VPC/VNet, and connectivity troubleshooting
 - `/platform-skills:product` — product thinking, friction audits, DevEx, RFC/ADR, incident updates, post-mortems
+- `/platform-skills:pr-review` — comprehensive PR review: cost, drift, ownership, compliance, upgrade, rollback
