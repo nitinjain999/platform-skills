@@ -214,7 +214,7 @@ else
   fail "commands/keda.md not registered in plugin.json"
 fi
 
-for doc in SKILL.md skills/platform-skills/SKILL.md README.md; do
+for doc in SKILL.md skills/platform-skills/SKILL.md COMMANDS.md HOW_IT_WORKS.md README.md GETTING_STARTED.md QUICKSTART.md; do
   if grep -q "/platform-skills:keda" "$doc"; then
     pass "$doc references /platform-skills:keda"
   else

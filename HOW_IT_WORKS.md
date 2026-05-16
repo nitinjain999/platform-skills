@@ -107,6 +107,7 @@ Slash commands are predefined workflows. Use them instead of writing a long prom
 | `/platform-skills:kyverno` | Generate, test, audit, debug, or migrate Kyverno admission policies |
 | `/platform-skills:pr-review` | Comprehensive PR review: cost, drift, ownership, compliance, upgrade, rollback |
 | `/platform-skills:triage` | Triage a PR comment, fix valid findings, reply, and resolve the thread |
+| `/platform-skills:keda` | KEDA ScaledObject/ScaledJob — generate, debug, review, or design a scaling strategy |
 
 Invoke a command by typing it at the start of your message:
 

@@ -440,7 +440,7 @@ triggers:
 
 ### Cron (scheduled scaling)
 
-Use when replica count should follow a predictable time-based pattern. Cron does not use HPA internally — KEDA sets the replica count directly at the scheduled boundary.
+Use when replica count should follow a predictable time-based pattern. The Cron scaler feeds a `desiredReplicas` metric into the KEDA-managed HPA — KEDA still creates and owns the HPA as with every other scaler. At the window boundary the metric value changes, and the HPA re-evaluates to scale up or down. If you want to delay or smooth scale-down after the window ends, configure `advanced.horizontalPodAutoscalerConfig.behavior.scaleDown` on the ScaledObject. `cooldownPeriod` is a separate KEDA setting used after triggers become inactive, primarily affecting scaling back toward `minReplicaCount`/0; it is not the knob the HPA uses to wait before scaling down.
 
 ```yaml
 triggers:
@@ -490,6 +490,7 @@ triggers:
 | Always set `timezone` explicitly | KEDA defaults to UTC — business-hours windows in other timezones will fire at wrong times |
 | Always pair with a queue/Prometheus trigger | Cron only handles scheduled load; unexpected spikes need a real-time trigger as safety net |
 | Keep `minReplicaCount: 1` | Outside any scheduled window KEDA returns to `minReplicaCount`; use 1 to keep a warm pod |
+| Set `cooldownPeriod` appropriately and tune HPA scale-down stabilization when needed | `cooldownPeriod` is a KEDA cooldown setting, not an HPA behavior setting. To avoid premature downscale on short gaps between cron windows, tune `advanced.horizontalPodAutoscalerConfig.behavior.scaleDown.stabilizationWindowSeconds` |
 | Set `restoreToOriginalReplicaCount: true` | On ScaledObject deletion, restores the previous replica count instead of leaving it at the last cron value |
 | Annotate the schedule intent | Future engineers should not need to decode cron syntax to understand the scaling intent |
 
