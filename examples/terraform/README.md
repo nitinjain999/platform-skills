@@ -1,8 +1,8 @@
 # Terraform Examples
 
-This directory contains reference implementations for Terraform module patterns and best practices.
+Status: Stable
 
-Status: `eks-cluster/` is runnable today. `multi-env-structure/` is a reference layout. Testing and CI/CD sections below point to handbook patterns rather than committed subdirectories.
+Reference implementations for Terraform module patterns and best practices. `eks-cluster/` is a runnable production EKS module. `multi-env-structure/` is a reference layout. Testing and CI/CD sections point to handbook patterns.
 
 ## Examples
 

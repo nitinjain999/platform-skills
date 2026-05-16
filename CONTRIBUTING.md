@@ -163,28 +163,91 @@ Reviewers may:
 
 ## What We're Looking For
 
-### High Priority (v1.7.0 targets)
+### High Priority
 
-- **SOC 2 for Kubernetes** — Kyverno `ClusterPolicy` resources mapped to SOC 2 Trust Services Criteria (privileged containers, required labels, image tag mutability, non-root enforcement); `kube-bench` CIS Benchmark integration; pod security admission evidence commands. Backs up `references/compliance.md` with a Kubernetes layer.
+- **SOC 2 for Kubernetes** — Kyverno `ValidatingPolicy` resources mapped to SOC 2 Trust Services Criteria (privileged containers, required labels, image tag mutability, non-root enforcement); `kube-bench` CIS Benchmark integration; pod security admission evidence commands. Backs up `references/compliance.md` with a Kubernetes layer.
 - **HIPAA and PCI-DSS control mapping** — extend `references/compliance.md` with HIPAA §164.3xx and PCI-DSS Req 1–12 mapped to existing Terraform patterns. Most controls overlap with SOC 2; the work is mapping, evidence commands, and a per-framework readiness checklist.
 - **Linkerd examples** — working `examples/linkerd/` assets (HTTPRoute canary split, `AuthorizationPolicy` + `MeshTLSAuthentication`, PodMonitor) to back up `references/linkerd.md`
 
-### Medium Priority (v1.8.0 targets)
+### Medium Priority
 
 - **Azure compliance** — SOC 2 controls in Terraform for Azure: Azure Policy assignments (CIS benchmark initiative), Defender for Cloud standards, Monitor diagnostic settings for audit logging, Azure Backup. Mirrors the AWS compliance domain.
-- **Observability patterns** — Prometheus `ServiceMonitor` / `PodMonitor`, Grafana dashboard-as-code, Loki log pipeline, alerting rules with runbook annotations
-- **Cost optimisation patterns** — AWS Compute Optimizer integration in Terraform, resource tagging enforcement with Config rules, showback via Cost and Usage Report
-- **Policy-as-code** — OPA/Gatekeeper `ConstraintTemplate` and Kyverno `ClusterPolicy` examples with SOC 2 and CIS Benchmark annotations
-- **Testing strategies** — `terratest` module tests, `kubeconform` + `conftest` in CI, contract testing for Helm values
+- **GCP patterns** — landing zone, GKE, Workload Identity, and IAM examples
+- **Istio** — traffic management, mTLS, and telemetry (counterpart to the Linkerd domain)
+- **Argo CD ApplicationSet fleet patterns** — cluster generators, matrix strategies, progressive rollout examples
 
 ### Lower Priority (But Still Welcome)
 
-- **GCP patterns** — landing zone, GKE, Workload Identity, and IAM examples
-- **Istio** — traffic management, mTLS, and telemetry (counterpart to the Linkerd domain)
-- **Migration guides** — Flux v1 → v2, Helm 2 → 3, EKS 1.27 → 1.30
+- **Migration guides** — Flux v1 → v2, EKS 1.28 → 1.31 upgrade paths
 - **Multi-cloud networking** — Transit Gateway, VNet peering, PrivateLink, cross-cloud DNS
 - **Alternative approaches** to existing patterns with documented trade-offs
-- **Argo CD ApplicationSet** — cluster generator, matrix strategy, and progressive rollout examples
+- **OpenShift operator lifecycle** — OLM, CatalogSource, operator upgrade patterns
+
+## Adding a New Domain
+
+Follow this checklist when adding a net-new domain (e.g. a new command + reference + examples):
+
+### 1. Reference guide — `references/<domain>.md`
+
+- [ ] File exists at `references/<domain>.md`
+- [ ] Follows Problem → Evidence → Fix → Prevention → Rollback structure
+- [ ] Includes decision matrix or ownership table where applicable
+- [ ] References related domains with relative links
+- [ ] Added to `REQUIRED_REFERENCES` array in `tests/validate-skill.sh`
+
+### 2. Command file — `commands/<domain>.md`
+
+- [ ] File exists at `commands/<domain>.md`
+- [ ] Has YAML frontmatter: `name:`, `description:`, `argument-hint:`
+- [ ] Defines at least one `## Mode:` section
+- [ ] Registered in `.claude-plugin/plugin.json` commands array
+- [ ] Run `tests/validate-skill.sh` to confirm registration
+
+### 3. SKILL.md (both copies)
+
+- [ ] `SKILL.md` (root) references `references/<domain>.md`
+- [ ] `SKILL.md` lists `/platform-skills:<domain>` in the slash commands section
+- [ ] Synced: `cp SKILL.md skills/platform-skills/SKILL.md`
+
+### 4. Examples — `examples/<domain>/`
+
+- [ ] Directory exists with at least one non-README asset file
+- [ ] `README.md` has a `Status: Stable` (or Beta/Draft/Experimental) line near the top
+- [ ] `README.md` includes a files table, quick-start section, and See Also links
+- [ ] Optional but encouraged: `<domain>-validate.sh` offline validator script
+- [ ] If validator script added: register it in `tests/validate-skill.sh` VALIDATE_SCRIPTS array
+- [ ] Domain directory added to `EXAMPLE_DOMAINS` in `tests/validate-skill.sh`
+
+### 5. Documentation updates
+
+- [ ] `COMMANDS.md` — add row to ToC table and add full `### /platform-skills:<domain>` section
+- [ ] `HOW_IT_WORKS.md` — add row to slash-command table
+- [ ] `GETTING_STARTED.md` — increment command count, add row to command table
+- [ ] `QUICKSTART.md` — increment command count (`See all N commands`)
+- [ ] `README.md` — add domain to the domain table (lines ~40–75)
+- [ ] `EDITOR_INTEGRATIONS.md` — add `### <domain>` section with 4–6 Copilot Chat prompts, update command count
+- [ ] `.github/copilot-instructions.md` — add domain section with key patterns and never-generate list; update version to next release
+- [ ] `CHANGELOG.md` — add bullet under the upcoming release version
+
+### 6. Cursor rules (optional)
+
+- [ ] If the domain has specific file types, add `.cursor/rules/<domain>.mdc`
+- [ ] Register the `.mdc` globs in the `EDITOR_INTEGRATIONS.md` file reference table
+
+### 7. CI validation
+
+- [ ] `bash tests/validate-skill.sh` — all checks pass
+- [ ] `bash tests/validate-helmcheck.sh` — all checks pass
+- [ ] `bash tests/handbook-consistency.sh` — all checks pass
+- [ ] `bash tests/release-consistency.sh` — all checks pass
+- [ ] `bash tests/validate-ci.sh` — all checks pass
+
+### 8. Wiki (post-merge)
+
+- [ ] Create `Command-<Domain>.md` page in the wiki
+- [ ] Create `Domain-<Domain>.md` page in the wiki
+- [ ] Update `Home.md` and `Commands.md` command count
+- [ ] Add rows to `Home.md` Commands table, `Domains.md` table
 
 ## Documentation Standards
 
