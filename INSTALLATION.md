@@ -15,6 +15,10 @@ Works in VSCode, JetBrains, Cursor, and any editor with Copilot support.
 # Clone platform-skills
 git clone https://github.com/nitinjain999/platform-skills.git
 
+# Create .github directory in your project (if it doesn't exist)
+mkdir -p your-project/.github                                           # macOS / Linux
+# New-Item -ItemType Directory -Force your-project\.github             # Windows PowerShell
+
 # Copy the instructions file into your project
 # macOS / Linux
 cp platform-skills/.github/copilot-instructions.md your-project/.github/copilot-instructions.md

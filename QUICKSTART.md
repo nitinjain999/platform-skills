@@ -8,6 +8,7 @@ Copy one file into your project and commit it:
 
 ```bash
 git clone https://github.com/nitinjain999/platform-skills.git
+mkdir -p your-project/.github
 cp platform-skills/.github/copilot-instructions.md your-project/.github/copilot-instructions.md
 cd your-project && git add .github/copilot-instructions.md && git commit -m "chore: add platform-skills copilot instructions" && git push
 ```

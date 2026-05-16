@@ -14,7 +14,14 @@ The fastest way to get platform engineering rules into any Copilot Chat session:
 # 1. Clone platform-skills
 git clone https://github.com/nitinjain999/platform-skills.git
 
-# 2. Copy the instructions file into your project
+# 2. Create the .github directory in your project (if it doesn't exist)
+# macOS / Linux
+mkdir -p your-project/.github
+
+# Windows (PowerShell)
+New-Item -ItemType Directory -Force your-project\.github
+
+# 3. Copy the instructions file into your project
 # macOS / Linux
 cp platform-skills/.github/copilot-instructions.md your-project/.github/copilot-instructions.md
 
@@ -24,7 +31,7 @@ copy platform-skills\.github\copilot-instructions.md your-project\.github\copilo
 # Windows (PowerShell)
 Copy-Item platform-skills\.github\copilot-instructions.md your-project\.github\copilot-instructions.md
 
-# 3. Commit it so every team member gets it automatically
+# 4. Commit it so every team member gets it automatically
 cd your-project
 git add .github/copilot-instructions.md
 git commit -m "chore: add platform-skills copilot instructions"
@@ -198,11 +205,11 @@ Generate a Kyverno ValidatingPolicy that requires team labels on all Deployments
 
 ## Neovim, Emacs, or any other editor
 
-For editors without a native Copilot extension, use the GitHub Copilot CLI:
+For editors without a native Copilot extension, use `gh copilot` via the GitHub CLI:
 
 ```bash
-# Install
-npm install -g @githubnext/github-copilot-cli
+# Install GitHub CLI (https://cli.github.com) then add the Copilot extension
+gh extension install github/gh-copilot
 
 # Ask platform engineering questions from the terminal
 gh copilot suggest "write a Kyverno ValidatingPolicy that requires team labels on all Deployments"
