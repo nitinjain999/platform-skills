@@ -33,7 +33,7 @@ Both layers work independently. The plugin is optional.
 | Copy a working example | [examples/](examples/) |
 | Install as a Claude plugin | [Installation](#installation) |
 | Learn how to use each slash command | [COMMANDS.md](COMMANDS.md) |
-| Set up VSCode with or without Claude | [VSCODE_INTEGRATION.md](VSCODE_INTEGRATION.md) |
+| Set up VSCode, Copilot, or Cursor | [EDITOR_INTEGRATIONS.md](EDITOR_INTEGRATIONS.md) |
 | Contribute a pattern | [CONTRIBUTING.md](CONTRIBUTING.md) |
 
 ## Domains
@@ -129,7 +129,7 @@ cd platform-skills
 claude plugin install .
 ```
 
-For VS Code workflows with Claude or with Copilot only, see [VSCODE_INTEGRATION.md](VSCODE_INTEGRATION.md).
+For VSCode, Copilot, Cursor, and JetBrains setup — project level and global level — see [EDITOR_INTEGRATIONS.md](EDITOR_INTEGRATIONS.md).
 
 ## Repository structure
 

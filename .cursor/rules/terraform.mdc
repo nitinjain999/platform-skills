@@ -1,0 +1,107 @@
+---
+description: Terraform module and resource generation rules — blast radius, IAM least privilege, SOC 2 defaults
+globs: ["**/*.tf", "**/*.tfvars"]
+alwaysApply: false
+---
+
+# Terraform Rules
+
+## Module structure
+
+Every Terraform module must have: `main.tf`, `variables.tf`, `outputs.tf`, `versions.tf`, `README.md`.
+
+## Variable validation — always include
+
+```hcl
+variable "environment" {
+  type = string
+  validation {
+    condition     = contains(["dev", "staging", "production"], var.environment)
+    error_message = "environment must be dev, staging, or production"
+  }
+}
+```
+
+## Pipeline order — enforce all gates before plan
+
+`terraform fmt -check` → `terraform validate` → `tflint` → `checkov`/`tfsec` → `plan`
+
+## IAM — never generate wildcards
+
+```hcl
+# ❌ Never
+statement {
+  actions   = ["*"]
+  resources = ["*"]
+}
+
+# ✅ Always
+statement {
+  actions   = ["s3:GetObject", "s3:ListBucket"]
+  resources = ["arn:aws:s3:::my-bucket", "arn:aws:s3:::my-bucket/*"]
+}
+```
+
+## Tagging — always enforce at provider level
+
+```hcl
+provider "aws" {
+  default_tags {
+    tags = { env = var.environment, team = var.team, managed-by = "terraform" }
+  }
+}
+```
+
+## SOC 2 — never generate
+
+- `publicly_accessible = true` on RDS, Redshift, OpenSearch
+- `encrypted = false` on any storage (S3, EBS, RDS, DynamoDB, ElastiCache, EFS)
+- `is_multi_region_trail = false` on CloudTrail
+- `enable_log_file_validation = false` on CloudTrail
+- `skip_final_snapshot = true` on production databases
+- `deletion_protection = false` on production databases
+- `enable = false` on GuardDuty
+- `:latest` image tags in any resource
+
+## SOC 2 — always generate on data resources
+
+```hcl
+resource "aws_kms_key" "..." {
+  enable_key_rotation     = true   # CC6.7
+  deletion_window_in_days = 30
+}
+
+resource "aws_cloudtrail" "..." {
+  is_multi_region_trail      = true   # CC7.2
+  enable_log_file_validation = true
+  kms_key_id                 = aws_kms_key.cloudtrail.arn
+}
+
+resource "aws_db_instance" "..." {
+  storage_encrypted       = true
+  backup_retention_period = 35    # A1.2
+  deletion_protection     = true
+  skip_final_snapshot     = false
+  multi_az                = true
+}
+```
+
+## State backend — always encrypt
+
+```hcl
+terraform {
+  backend "s3" {
+    encrypt        = true
+    kms_key_id     = var.kms_key_arn
+    dynamodb_table = "terraform-state-lock"
+  }
+}
+```
+
+## Blast radius note
+
+Before every destructive operation, state:
+- What gets replaced (forces new resource)
+- What downstream resources depend on it
+- Mid-apply failure impact
+- Rollback path

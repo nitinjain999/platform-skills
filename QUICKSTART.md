@@ -1,78 +1,71 @@
-# Platform Skills - Quick Start
+# Quick Start
 
-## Step 1: Confirm Claude Code
+Get platform-skills running in 2 minutes.
+
+## If you use GitHub Copilot (no Claude needed)
+
+Copy one file into your project and commit it:
 
 ```bash
-claude --version
+git clone https://github.com/nitinjain999/platform-skills.git
+mkdir -p your-project/.github
+cp platform-skills/.github/copilot-instructions.md your-project/.github/copilot-instructions.md
+cd your-project && git add .github/copilot-instructions.md && git commit -m "chore: add platform-skills copilot instructions" && git push
 ```
 
-If Claude Code is not installed, visit: https://claude.ai/code
+Open Copilot Chat in VSCode (`Ctrl+Shift+I` / `Cmd+Shift+I`) and ask questions — the rules are active.
 
-## Step 2: Install the Plugin
+→ Full setup for Copilot, Cursor, JetBrains, and global vs project level: [EDITOR_INTEGRATIONS.md](EDITOR_INTEGRATIONS.md)
 
-### From Marketplace
+---
 
-Add the marketplace, then install:
+## If you use Claude Code
+
+Install the plugin:
 
 ```bash
 claude plugin marketplace add https://github.com/nitinjain999/platform-skills
 claude plugin install platform-skills
 ```
 
-### From Local Clone
-
-Use this if you want the repo immediately or need local customization:
+Open Claude in your project:
 
 ```bash
-git clone https://github.com/nitinjain999/platform-skills.git
-cd platform-skills
-claude plugin install .
+cd your-project && claude
 ```
 
-## Step 3: Use It
+→ Full install options, verification, and troubleshooting: [INSTALLATION.md](INSTALLATION.md)
 
-Open Claude Code in your project:
+---
 
-```bash
-cd your-project
-claude
+## First prompts to try
+
+```
+Review this Deployment for production readiness — flag security context, resource limits, and probe issues.
 ```
 
-Then ask a concrete prompt:
-
-```text
-Review this Terraform layout for EKS and tell me what should stay in Terraform versus GitOps.
+```
+My Flux Kustomization is stuck NotReady. Help me debug it step by step.
 ```
 
-```text
-My Argo CD application is out of sync after a merge. Help me find the most likely cause first.
+```
+Review this Terraform IAM policy for wildcard actions and SOC 2 gaps.
 ```
 
-```text
-Review this GitHub Actions workflow for deployment security issues.
+```
+Generate a production-ready Helm chart for a Node.js service with HPA and NetworkPolicy.
 ```
 
-## Upgrade
+---
 
-When a new version is released:
+## Where to go next
 
-```bash
-claude plugin marketplace update
-claude plugin install platform-skills
-claude plugin list  # confirm new version
-```
-
-## VS Code Workflow
-
-- Use the Claude Code extension for chat and inline help inside VS Code.
-- Use GitHub Copilot for code completion.
-- Use Claude plus `platform-skills` for architecture, troubleshooting, and review.
-
-See [VSCODE_INTEGRATION.md](VSCODE_INTEGRATION.md) for the full workflow.
-
-## Need More?
-
-- [GETTING_STARTED.md](GETTING_STARTED.md)
-- [INSTALLATION.md](INSTALLATION.md)
-- [README.md](README.md)
-- [examples/](examples/)
+| I want to… | Go to |
+|---|---|
+| Use with Copilot, Cursor, or any IDE | [EDITOR_INTEGRATIONS.md](EDITOR_INTEGRATIONS.md) |
+| Full install + troubleshooting | [INSTALLATION.md](INSTALLATION.md) |
+| Understand how the skill works | [HOW_IT_WORKS.md](HOW_IT_WORKS.md) |
+| Learn the ownership model | [GETTING_STARTED.md](GETTING_STARTED.md) |
+| See all 18 commands with examples | [COMMANDS.md](COMMANDS.md) |
+| Browse reference guides | [references/](references/) |
+| Copy working examples | [examples/](examples/) |

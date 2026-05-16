@@ -1,229 +1,171 @@
-# Getting Started with Claude and Platform Skills
+# Getting Started
 
-This guide is for people who are new to Claude and want to start using this repository quickly.
+## Who this is for
 
-## What This Repository Is
+**Platform engineers and developers** who want to understand how to use the handbook effectively — which tool owns what, how to ask good questions, and where to look for patterns.
 
-`platform-skills` is a platform engineering handbook covering 21 domains: Terraform, Kubernetes, OpenShift, Flux / Argo CD, GitHub Actions, AWS / Azure, Linkerd, Linux & Networking, Platform Mindset, Cross-platform, Compliance (SOC 2), Helm, MCP, Observability, Documentation, Datadog, Dynatrace, Conventional Commits, OPA / Conftest, Kyverno, and PR Review. You can browse it directly on GitHub, clone it for templates, or install it as a Claude plugin for interactive guidance. The handbook works without installing the plugin.
+If you are still setting up, start with [QUICKSTART.md](QUICKSTART.md) or [INSTALLATION.md](INSTALLATION.md) first, then come back here.
 
-It helps with:
+---
 
-- Kubernetes and OpenShift platform patterns
-- Flux or Argo CD GitOps design and troubleshooting
-- Terraform module and environment structure
-- AWS and Azure platform decisions
-- GitHub Actions workflow design and review
-- Linkerd service mesh: mTLS, traffic management, and multi-cluster
-- Linux administration, DNS, load balancing, and VPC/VNet networking
-- Developer experience, RFC/ADR drafting, incident communication, and post-mortems
+## Part 1 — For platform engineers
 
-You can use it in four ways:
+### The ownership model
 
-1. Read the examples and references directly on GitHub.
-2. Install it from the Claude marketplace.
-3. Clone locally for templates and patterns.
-4. Install from local clone so Claude can reference your customized version.
+Do not ask about tools in isolation. Ask from the platform point of view. Every infrastructure decision belongs to exactly one layer:
 
-## Fastest Path
+| Layer | Owns |
+|---|---|
+| **Terraform** | Cloud resources, cluster bootstrap, IAM, networking, secrets backends |
+| **Kubernetes / OpenShift** | Workload specs, RBAC, network policy, resource limits |
+| **Flux / Argo CD** | In-cluster state, HelmReleases, workload promotion |
+| **GitHub Actions** | CI validation, artifact publish, promotion triggers |
 
-If you want the shortest route, use the marketplace install:
+**Critical rules:**
 
-```bash
-claude plugin marketplace add https://github.com/nitinjain999/platform-skills
-claude plugin install platform-skills
+- Choose **either** Flux **or** Argo CD for a given ownership boundary — never both against the same boundary without a migration plan
+- Terraform bootstraps; Flux/Argo CD reconciles. Flux does not manage cloud resources
+- GitHub Actions does not store long-lived environment truth in workflow YAML
+
+### Where to look in this repo
+
+Start here based on your task:
+
+| Task | File |
+|---|---|
+| Ownership boundaries and repo topology | [references/platform-operating-model.md](references/platform-operating-model.md) |
+| Kubernetes baseline patterns | [references/kubernetes.md](references/kubernetes.md) |
+| Terraform module and state design | [references/terraform.md](references/terraform.md) |
+| Flux GitOps patterns | [references/flux.md](references/flux.md) |
+| Argo CD patterns | [references/argocd.md](references/argocd.md) |
+| AWS platform guidance | [references/aws.md](references/aws.md) |
+| Azure platform guidance | [references/azure.md](references/azure.md) |
+| GitHub Actions security | [references/github-actions.md](references/github-actions.md) |
+| SOC 2 controls in Terraform | [references/compliance.md](references/compliance.md) |
+| Helm chart patterns | [references/helm.md](references/helm.md) |
+| Kyverno admission policies | [references/kyverno.md](references/kyverno.md) |
+| OPA / Conftest Rego policies | [references/opa.md](references/opa.md) |
+| PR review dimensions | [references/pr-review.md](references/pr-review.md) |
+
+Examples under `examples/` are meant to be adapted, not copied blindly into production.
+
+### Good prompts
+
+Include: what you are trying to do, which platform, which tool owns the change, the actual file or error, and the desired end state.
+
 ```
-
-Then open Claude in your project:
-
-```bash
-cd your-project
-claude
-```
-
-If you also want the handbook content locally, clone the repo separately:
-
-```bash
-git clone https://github.com/nitinjain999/platform-skills.git
-cd platform-skills
-```
-
-Then:
-
-1. Read [README.md](README.md).
-2. Read [SKILL.md](SKILL.md).
-3. Pick the reference that matches your task under `references/`.
-4. Copy or adapt an example from `examples/`.
-
-## Install from Claude Marketplace (Recommended)
-
-Add the marketplace, then install:
-
-```bash
-claude plugin marketplace add https://github.com/nitinjain999/platform-skills
-claude plugin install platform-skills
-```
-
-This is the easiest way to get started. Claude will automatically reference these patterns while you work.
-
-To update to the latest version:
-
-```bash
-claude plugin update platform-skills
-```
-
-To uninstall:
-
-```bash
-claude plugin uninstall platform-skills
-```
-
-If marketplace installation is not available in your environment yet, use the local clone method below.
-
-## Install from Local Clone (For Customization)
-
-If you want to customize the patterns or test unreleased changes:
-
-```bash
-# Clone the repository
-git clone https://github.com/nitinjain999/platform-skills.git
-cd platform-skills
-
-# Install from local clone
-claude plugin install .
-```
-
-**Use local install when:**
-- You're customizing patterns for your organization
-- You want to test unreleased changes
-- You need to modify reference guides
-
-**Use marketplace install when:**
-- You want the easiest setup
-- You want automatic updates
-- You're onboarding teammates
-
-## How to Think About It
-
-Do not ask Claude about every tool in isolation. Ask from the platform point of view.
-
-Use this rough ownership model:
-
-1. `Terraform` creates cloud foundations, clusters, identity, networking, and shared services.
-2. `Kubernetes` or `OpenShift` defines the runtime rules and workload model.
-3. `Flux` or `Argo CD` reconciles in-cluster state after bootstrap.
-4. `GitHub Actions` validates, packages, and promotes changes.
-
-Important rule:
-
-- Choose either `Flux` or `Argo CD` for a given ownership boundary unless you are explicitly planning a migration.
-
-## What to Ask Claude
-
-Good prompts are concrete. Include:
-
-- What you are trying to do
-- Which platform you use
-- Which tool owns the change
-- What error or risk you see
-- What constraints matter
-
-Good examples:
-
-```text
 Review this Terraform layout for a multi-environment EKS platform. I want clear separation between reusable modules and live environment state.
+[paste layout]
 ```
 
-```text
-My Argo CD application is out of sync after a merge. Help me debug the likely cause and tell me what evidence to collect first.
+```
+My Argo CD application is out of sync after a merge. Here is the manifest and sync status. What is the most likely root cause and what evidence should I collect first?
 ```
 
-```text
+```
 I run OpenShift on AWS. Should ingress, cert-manager, and observability be managed by Terraform or GitOps?
 ```
 
-```text
-Review this GitHub Actions workflow for security issues. It assumes AWS OIDC and deploys to Kubernetes after PR merge.
+```
+Review this GitHub Actions workflow for OIDC, least privilege, and unsafe trigger choices.
+[paste workflow]
 ```
 
-## Where to Look in This Repo
+### Common mistakes to avoid
 
-Start here based on your need:
-
-- [SKILL.md](SKILL.md): the core operating model
-- [references/platform-operating-model.md](references/platform-operating-model.md): ownership boundaries and repo topology
-- [references/terraform.md](references/terraform.md): Terraform module and environment guidance
-- [references/kubernetes.md](references/kubernetes.md): Kubernetes baseline guidance
-- [references/openshift.md](references/openshift.md): OpenShift-specific patterns
-- [references/flux.md](references/flux.md): Flux GitOps patterns
-- [references/argocd.md](references/argocd.md): Argo CD patterns
-- [references/aws.md](references/aws.md): AWS platform guidance
-- [references/azure.md](references/azure.md): Azure platform guidance
-- [references/github-actions.md](references/github-actions.md): CI/CD and workflow guidance
-
-Examples live under `examples/` and are meant to be adapted, not copied blindly into production.
-
-## First Tasks for a New User
-
-If you are unsure where to begin, start with one of these:
-
-1. Ask Claude to review your Terraform structure.
-2. Ask Claude to review your GitOps repo layout.
-3. Ask Claude to review a GitHub Actions workflow for security and promotion flow.
-4. Ask Claude whether a change belongs in Terraform, Kubernetes/OpenShift, or GitOps.
-
-## Common Mistakes
-
-Avoid these early mistakes:
-
-- Mixing Terraform and GitOps ownership for the same resource set
+- Mixing Terraform and GitOps ownership for the same resource
 - Using both Flux and Argo CD against the same boundary without a migration plan
-- Asking broad questions without sharing the actual repo layout, YAML, workflow, or error
+- Asking broad questions without sharing the actual file, YAML, or error
 - Treating examples in this repo as complete production systems without adapting them
 - Putting environment truth into GitHub Actions workflow YAML
 
-## A Simple Workflow
+### Simple workflow loop
 
-Use this loop:
+1. Identify the platform problem
+2. Identify the owning layer
+3. Open the matching reference file
+4. Ask for a concrete recommendation or review
+5. Apply the smallest useful change first
+6. Validate before expanding the pattern
 
-1. Start with the platform problem.
-2. Identify the owning layer.
-3. Open the matching reference file.
-4. Ask Claude for a concrete recommendation or review.
-5. Apply the smallest useful change first.
-6. Validate before expanding the pattern.
+---
 
-## How the Agent and Skills Actually Work
+## Part 2 — For new Claude users
 
-If you want to understand what is happening under the hood — how Claude uses skills, what activates them, how the review workflow is structured, and what the agent can and cannot do — read [HOW_IT_WORKS.md](HOW_IT_WORKS.md) first.
+### How Claude uses this skill
 
-## If You Are Completely New to Claude
+When you install platform-skills as a Claude plugin, Claude automatically loads the right reference guide based on what you are working on. You do not need to tell Claude which file to read — it activates from context (the file types you paste, the tools you mention, the error text).
 
-Keep your first sessions simple.
+You can also invoke any workflow explicitly:
 
-Good pattern:
-
-```text
-I am new to this repo. I use Azure + AKS + Argo CD + GitHub Actions.
-Help me decide:
-1. what Terraform should own
-2. what Argo CD should own
-3. what GitHub Actions should do
-4. which reference files in this repo I should read first
+```
+Using the kyverno workflow, generate a ValidatingPolicy that requires team labels
 ```
 
-Claude works best when you give it:
+```
+Using the pr-review rollback workflow, score the feasibility of this change
+```
 
-- your current architecture
-- the files you are working on
-- the exact error text
+### How to get concrete answers
+
+Claude works best with concrete input. Always include:
+
+- the actual file or manifest (not a description of it)
+- the exact error message
+- the cluster, environment, or cloud provider
 - the desired end state
 
-## Next Step
+**Too vague:**
+```
+How do I fix my Flux reconciliation?
+```
 
-After this guide, read:
+**Concrete — gets a useful answer:**
+```
+My Flux Kustomization `apps` is stuck in NotReady with: "context deadline exceeded". I merged 20 minutes ago. Here is the output of `flux get kustomizations -A`:
+[paste output]
+```
 
-1. [README.md](README.md)
-2. [SKILL.md](SKILL.md)
-3. the one reference file closest to your current task
+### What the skill cannot do
 
-That is enough to start using `platform-skills` productively.
+- It cannot run `kubectl`, `terraform`, or `git` commands on your behalf — it explains what to run
+- It cannot see your cluster or cloud account — paste the relevant output
+- It works best on one concrete problem at a time, not "review everything"
+
+### All 18 command workflows
+
+See [COMMANDS.md](COMMANDS.md) for every command with modes and example prompts:
+
+| Command | Use it for |
+|---|---|
+| `review` | Production-readiness check on any manifest, Terraform, workflow |
+| `debug` | Structured troubleshooting for any platform symptom |
+| `terraform` | Blast radius, IAM least privilege, SOC 2, state impact |
+| `gitops` | Flux / Argo CD reconciliation issues |
+| `helmcheck` | Scaffold, review, or security-audit a Helm chart |
+| `kyverno` | Generate, test, audit, or migrate Kyverno policies |
+| `opa` | Generate, test, or debug OPA/Conftest Rego policies |
+| `compliance` | SOC 2 gap analysis, control implementation, audit evidence |
+| `pr-review` | Cost, drift, ownership, compliance, upgrade, rollback |
+| `observability` | Instrument, alert, dashboard, load test, capacity |
+| `commit` | Conventional commit message generation and validation |
+| `linkerd` | mTLS, proxy injection, policy, multi-cluster diagnostics |
+| `linux` | DNS, load balancer, VPC, process, disk, networking |
+| `datadog` | Agent setup, APM, monitors, SLOs, incident investigation |
+| `dynatrace` | Operator, instrumentation, SLOs, Davis AI investigation |
+| `document` | Docstrings, OpenAPI specs, docs sites, guides |
+| `mcp` | Scaffold, review, or debug an MCP server |
+| `product` | DevEx audit, RFC/ADR, incident update, post-mortem |
+
+### How the agent and skill system work
+
+If you want to understand what is happening under the hood — how Claude loads skills, what activates them, and what the agent can and cannot do — read [HOW_IT_WORKS.md](HOW_IT_WORKS.md).
+
+---
+
+## Next step
+
+1. [QUICKSTART.md](QUICKSTART.md) — if you have not installed yet
+2. [README.md](README.md) — domain table and repo overview
+3. The one reference file closest to your current task
+4. [COMMANDS.md](COMMANDS.md) — when you want to explore specific workflows
