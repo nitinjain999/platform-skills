@@ -1,6 +1,8 @@
 # Platform Skills - VS Code Integration Guide
 
-This guide shows how to use `platform-skills` in Visual Studio Code in two supported ways:
+> **Looking for Copilot, Cursor, or multi-editor setup?** See [EDITOR_INTEGRATIONS.md](EDITOR_INTEGRATIONS.md) for a comprehensive guide covering GitHub Copilot, Cursor, VSCode + Claude Code, JetBrains, and Neovim — including setup, daily usage, and upgrade instructions for each tool.
+
+This guide covers the two most common VSCode patterns in more depth:
 
 1. with Claude Code
 2. without Claude, using GitHub Copilot plus the handbook

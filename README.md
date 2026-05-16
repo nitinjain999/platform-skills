@@ -34,6 +34,7 @@ Both layers work independently. The plugin is optional.
 | Install as a Claude plugin | [Installation](#installation) |
 | Learn how to use each slash command | [COMMANDS.md](COMMANDS.md) |
 | Set up VSCode with or without Claude | [VSCODE_INTEGRATION.md](VSCODE_INTEGRATION.md) |
+| Use platform-skills with Copilot, Cursor, or VSCode | [EDITOR_INTEGRATIONS.md](EDITOR_INTEGRATIONS.md) |
 | Contribute a pattern | [CONTRIBUTING.md](CONTRIBUTING.md) |
 
 ## Domains
