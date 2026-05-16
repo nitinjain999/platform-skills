@@ -226,7 +226,7 @@ gh copilot suggest "$(cat your-deployment.yaml) — review this for production r
 
 ## Skill commands in Copilot Chat
 
-Platform skills ships 19 command workflows. In Claude Code they are slash commands (`/platform-skills:review`). In Copilot Chat you phrase them as natural language — the instructions file makes Copilot apply the same structured output.
+Platform skills ships 20 command workflows. In Claude Code they are slash commands (`/platform-skills:review`). In Copilot Chat you phrase them as natural language — the instructions file makes Copilot apply the same structured output.
 
 ### review — production-readiness check on any file
 
@@ -555,6 +555,152 @@ Draft an RFC for migrating from Argo CD to Flux CD. 15 teams affected, GitOps re
 
 ```
 Audit our developer experience using the SPACE framework. Engineers spend 45 minutes to get a new service to production on day 1.
+```
+
+---
+
+### linkerd — mTLS, proxy injection, traffic policy
+
+```
+linkerd viz edges shows plaintext between orders-service and payments-service. How do I diagnose why mTLS is not working?
+```
+
+```
+Generate a Linkerd Server and ServerAuthorization policy that restricts the payments-service to only accept traffic from the checkout namespace.
+```
+
+```
+My pods are not getting Linkerd proxy injected after I added the annotation. What are the most common causes and how do I check each?
+```
+
+```
+I need to configure Linkerd traffic splits for a canary deployment — 90% to v1, 10% to v2. Generate the TrafficSplit manifest.
+```
+
+---
+
+### linux — DNS, load balancer, VPC, process, disk, networking
+
+```
+A pod cannot resolve payments-service.checkout.svc.cluster.local. Walk me through the DNS resolution path and give exact dig commands to find the break.
+```
+
+```
+ALB returning 502 — target group shows healthy. What is the most likely cause and how do I confirm it?
+```
+
+```
+A node shows high iowait. Give me the commands to identify which process and disk are causing it and how to interpret the output.
+```
+
+```
+A VPC peering connection is established but traffic between the two VPCs is dropped. What is the diagnostic order and what are the most common causes?
+```
+
+---
+
+### datadog — Agent, APM, monitors, dashboards, SLOs
+
+```
+APM traces are missing for the payments-service. The agent shows healthy. What are the common causes and evidence commands?
+```
+
+```
+Generate a Datadog monitor for p99 latency on the checkout service. Alert at 500ms, recover at 300ms. Use burn-rate alerting for the SLO.
+```
+
+```
+Write a Datadog SLO definition for the orders API: 99.9% availability over 30 days, error budget burn-rate alerts.
+```
+
+```
+The Datadog Agent on EKS is not collecting Kubernetes state metrics. How do I diagnose and fix the kube-state-metrics integration?
+```
+
+---
+
+### dynatrace — OneAgent, instrumentation, SLOs, Davis AI
+
+```
+OneAgent is not injecting into pods in the checkout namespace. How do I diagnose the injection failure?
+```
+
+```
+Write a Dynatrace SLO definition for the orders service: 99.9% availability, 200ms response time target.
+```
+
+```
+Davis AI shows a problem with high failure rate on checkout-service. Walk me through the evidence collection and root cause steps.
+```
+
+```
+Generate the DynaKube CR to deploy Dynatrace OneAgent on EKS with CSI driver mode and cloud-native full-stack injection.
+```
+
+---
+
+### document — docstrings, OpenAPI, docs sites, guides
+
+```
+Add Google-style docstrings to all public functions in this Python module. Include parameters, return types, exceptions, and a usage example.
+[paste module]
+```
+
+```
+Generate an OpenAPI 3.1 spec for this FastAPI service. Extract shared schemas into components/schemas and add security schemes.
+[paste routes or codebase path]
+```
+
+```
+Set up a MkDocs documentation site for this Python library. Generate the mkdocs.yml, nav structure, and a Getting Started page.
+```
+
+```
+Write a developer getting-started guide for onboarding to this platform. Target: engineers new to the team, no prior Kubernetes experience.
+```
+
+---
+
+### mcp — scaffold, review, debug MCP servers
+
+```
+Scaffold a TypeScript MCP server that exposes two tools: one to list files in a directory and one to read a file. Use the official @modelcontextprotocol/sdk.
+```
+
+```
+Review this MCP server implementation for security issues — input validation, path traversal risks, and error handling.
+[paste server code]
+```
+
+```
+My MCP server tool is returning the wrong schema. How do I debug the tool registration and validate the schema against the MCP spec?
+```
+
+```
+Generate a Python MCP server using the fastmcp library that wraps the GitHub REST API. Include authentication via personal access token.
+```
+
+---
+
+### triage — classify, fix, reply to, and resolve PR comments
+
+```
+Triage PR comment #123456789 on PR 42. Classify as ACTIONABLE_FIX / INFORMATIONAL / NOT_APPLICABLE. If actionable, apply the minimal fix, commit, and resolve the thread.
+```
+
+```
+Triage all unresolved comments on PR 42 in one pass.
+/platform-skills:triage --all 42
+```
+
+```
+This reviewer comment says my IAM policy uses wildcards. Is it a valid finding? If yes, fix it with least-privilege scoping.
+[paste comment text and policy]
+```
+
+```
+Reply to this PR comment explaining why the current replica count is correct, then resolve the thread.
+[paste comment text]
 ```
 
 ---

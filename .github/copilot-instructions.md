@@ -1,10 +1,10 @@
 # Platform Engineering Instructions for GitHub Copilot
-# Version: 1.12.0
+# Version: 1.14.0
 # Source: https://github.com/nitinjain999/platform-skills
 # Scope: project-level — applies to every Copilot Chat in this workspace
 # Upgrade: git pull in the platform-skills clone → copy updated file → commit
 
-You are assisting with platform engineering tasks. Apply these patterns when generating or reviewing code across Kubernetes, OpenShift, Argo CD, Flux CD, AWS, Azure, Terraform, GitHub Actions, Helm, Kyverno, OPA/Conftest, and PR review.
+You are assisting with platform engineering tasks. Apply these patterns when generating or reviewing code across Kubernetes, OpenShift, Argo CD, Flux CD, AWS, Azure, Terraform, GitHub Actions, Helm, Kyverno, OPA/Conftest, KEDA, and PR review.
 
 ## Core Principles
 
@@ -257,6 +257,47 @@ When reviewing any PR that touches infrastructure, check all six dimensions:
 6. **Prevention** — how to avoid in future
 7. **Rollback** — how to safely undo
 
+## KEDA (Kubernetes Event-Driven Autoscaling)
+
+```yaml
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: orders-processor
+  namespace: orders
+spec:
+  scaleTargetRef:
+    name: orders-processor
+  minReplicaCount: 1
+  maxReplicaCount: 20
+  cooldownPeriod: 300
+  triggers:
+    - type: aws-sqs-queue
+      metadata:
+        queueURL: https://sqs.eu-central-1.amazonaws.com/123456789/orders
+        queueLength: "5"
+        awsRegion: eu-central-1
+        activationQueueLength: "1"
+      authenticationRef:
+        name: keda-sqs-auth
+```
+
+Always:
+- Use `podIdentity.provider: aws` (IRSA) over static credentials — never put AWS keys in a Secret referenced by TriggerAuthentication when IRSA is available
+- Set `activationQueueLength` to avoid scaling from 0 on a single stray message
+- Set `minReplicaCount: 1` for latency-sensitive services (scale-to-zero means cold starts)
+- Pair Cron triggers with a real-time trigger (Prometheus / SQS) as a safety net for unexpected load
+- Never create your own HPA for a Deployment managed by KEDA — KEDA creates and owns it
+
+`cooldownPeriod` is KEDA's own wait after triggers go inactive before reducing desired replicas toward `minReplicaCount` — it is a KEDA field, not an HPA field. The HPA's scale-down delay is `advanced.horizontalPodAutoscalerConfig.behavior.scaleDown.stabilizationWindowSeconds`.
+
+Never generate:
+- Static credentials (`accessKey` / `secretKey`) in TriggerAuthentication when IRSA is available
+- A ScaledObject and a manual HPA targeting the same Deployment
+- `cpu` limits on ScaledJob containers — they cause throttling
+
+Reference: `references/keda.md`
+
 ## Reference Files
 
 - `references/kubernetes.md` — cluster baselines, RBAC, network policy
@@ -279,4 +320,5 @@ When reviewing any PR that touches infrastructure, check all six dimensions:
 - `references/opa.md` — Rego v1, rule types, testing, Conftest CLI
 - `references/kyverno.md` — CEL policies, Audit→Deny, PolicyException
 - `references/pr-review.md` — cost, drift, ownership, compliance, upgrade, rollback
+- `references/keda.md` — KEDA ScaledObject/ScaledJob, TriggerAuthentication, scalers, Cron, security, troubleshooting
 - `examples/` — working, production-ready code examples

@@ -89,3 +89,63 @@ Apply these defaults:
 - Policy: Run Terraform and Kubernetes policy checks in CI before merge.
 - Observability: Platform repos should define baseline metrics, logs, alerts, and ownership metadata.
 - Governance: Use CODEOWNERS and protected branches to separate approval paths for foundations versus app delivery.
+
+## Secrets ownership
+
+Secrets span every layer. Keep ownership clean:
+
+| Layer | Owns | Does NOT Own |
+|---|---|---|
+| Terraform | Secrets backends (Vault, AWS Secrets Manager), KMS keys, IAM policies for secret access | Secret values, application-level credentials |
+| External Secrets Operator / Secrets Store CSI | Rendering secrets into Kubernetes from the secrets backend at runtime | Managing the backing store or rotating credentials |
+| Kubernetes | `Secret` objects created by ESO/CSI — ephemeral, never committed to Git | Long-lived secrets in Git |
+| Application | Reading secrets via env vars or mounted files — never logging or serialising them | Anything in the platform layer |
+
+Decision rules:
+- Secret values never appear in Git, Terraform state, or CI logs.
+- Use ESO `ExternalSecret` or Secrets Store CSI `SecretProviderClass` — not `kubectl create secret` in pipelines.
+- Rotate via the secrets backend, not by patching Kubernetes Secrets directly.
+- See `references/secrets.md` for ESO patterns and Vault integration examples.
+
+## Observability ownership
+
+Define which layer owns each signal so gaps don't fall between teams:
+
+| Signal | Owner | Tool examples |
+|---|---|---|
+| Cluster infrastructure metrics (node CPU, memory, disk) | Platform team | kube-state-metrics, node-exporter, CloudWatch, Azure Monitor |
+| Workload RED metrics (rate, error, duration) | Application team | Prometheus client libs, OpenTelemetry SDK |
+| Distributed traces | Application team | OpenTelemetry, Datadog APM, Dynatrace |
+| Structured logs | Application team | JSON to stdout; platform routes to log aggregator |
+| Alerting rules and SLOs | Joint ownership — platform defines baseline, app teams own service-level alerts | Prometheus alertmanager, Datadog monitors, Dynatrace Davis |
+| Dashboards | Application team per service; platform team for shared infrastructure boards | Grafana, Datadog, Dynatrace |
+
+Platform team responsibility:
+- Provision and operate the observability stack (Prometheus, Grafana, Loki, or Datadog/Dynatrace agents).
+- Publish a baseline `PrometheusRule` and `ServiceMonitor` template for new services.
+- Own the alertmanager / notification routing configuration.
+
+See `references/observability.md` for instrumentation patterns.
+
+## Cost allocation and tagging
+
+Enforce tagging at the Terraform layer before resources are created:
+
+```hcl
+# Required on every aws_* resource
+locals {
+  required_tags = {
+    "env"        = var.environment          # dev | staging | production
+    "team"       = var.team                 # platform | checkout | payments
+    "service"    = var.service_name         # human-readable service identifier
+    "managed-by" = "terraform"
+    "repo"       = var.repo_url
+  }
+}
+```
+
+Decision rules:
+- Enforce with a Checkov or tfsec custom rule in CI — fail the plan if required tags are missing.
+- Map tags to cost allocation keys in AWS Cost Explorer or Azure Cost Management.
+- Use a Kyverno `MutatingPolicy` to enforce matching labels (`app.kubernetes.io/team`, `app.kubernetes.io/part-of`) on Kubernetes workloads so cost can be attributed at the namespace or workload level.
+- Review cost impact as part of every infrastructure PR — see `references/pr-review.md` → cost mode.

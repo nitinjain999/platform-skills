@@ -1,0 +1,7 @@
+fix(auth): handle token expiry on silent refresh
+
+When the access token expires during a background refresh, the service
+was returning 401 instead of retrying with the refresh token. This caused
+session loss on long-lived tabs where the user hadn't interacted for >1h.
+
+Resolves: #142

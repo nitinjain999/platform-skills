@@ -93,4 +93,20 @@ for pattern in "${STALE_LINK_PATTERNS[@]}"; do
   fi
 done
 
+echo "Checking command count consistency..."
+EXPECTED_COUNT=20
+COUNT_DOCS=(
+  "GETTING_STARTED.md"
+  "QUICKSTART.md"
+  "CHANGELOG.md"
+)
+for doc in "${COUNT_DOCS[@]}"; do
+  if grep -q "$EXPECTED_COUNT command" "$doc" || grep -q "all $EXPECTED_COUNT" "$doc" || grep -q "$EXPECTED_COUNT workflow" "$doc"; then
+    echo "✅ $doc references $EXPECTED_COUNT commands"
+  else
+    echo "❌ $doc does not reference $EXPECTED_COUNT commands — stale count?"
+    exit 1
+  fi
+done
+
 echo "✅ Handbook consistency checks passed"
