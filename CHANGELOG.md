@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.17.0] - 2026-05-20
+
+### Added
+
+- Closing `## Closing — Log learnings` section added to `commands/triage.md`, `commands/supply-chain.md`, and `commands/runtime-security.md` — each workflow now ends with an explicit step to log errors and learnings via `/platform-skills:self-improve log` immediately after completing work, preventing context loss across sessions
+- PostToolUse hook in `.claude/settings.json` (local, not committed) prompts incremental learning capture after every `git commit`
+
+### Changed
+
+- Promoted 10 learnings from v1.16.0 session to `CLAUDE.md` and reference guides (`references/supply-chain.md`, `references/runtime-security.md`, `references/kyverno.md`) as permanent agent rules
+
 ## [1.16.0] - 2026-05-20
 
 ### Added
