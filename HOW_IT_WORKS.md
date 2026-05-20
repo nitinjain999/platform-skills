@@ -112,6 +112,7 @@ Slash commands are predefined workflows. Use them instead of writing a long prom
 | `/platform-skills:supply-chain` | Sign images, generate SBOMs, run CVE gates, enforce image signatures, generate SLSA provenance |
 | `/platform-skills:runtime-security` | Deploy Falco with eBPF, write custom rules, route alerts, debug rule firing, bridge to Kyverno |
 | `/platform-skills:chaos` | Install Litmus Chaos or Chaos Mesh, generate fault experiments, schedule chaos, run GameDay, debug, report |
+| `/platform-skills:dora` | Instrument DORA metrics, generate Grafana dashboards, benchmark against performance bands, debug metric gaps |
 
 Invoke a command by typing it at the start of your message:
 

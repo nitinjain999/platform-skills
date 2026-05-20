@@ -67,6 +67,7 @@ REQUIRED_REFERENCES=(
   references/supply-chain.md
   references/runtime-security.md
   references/chaos.md
+  references/dora.md
 )
 
 for ref in "${REQUIRED_REFERENCES[@]}"; do
@@ -106,6 +107,7 @@ EXAMPLE_DOMAINS=(
   examples/supply-chain
   examples/runtime-security
   examples/chaos
+  examples/dora
 )
 
 for domain in "${EXAMPLE_DOMAINS[@]}"; do
@@ -244,6 +246,7 @@ VALIDATE_SCRIPTS=(
   "examples/supply-chain/supply-chain-validate.sh"
   "examples/runtime-security/runtime-security-validate.sh"
   "examples/chaos/chaos-validate.sh"
+  "examples/dora/dora-validate.sh"
 )
 
 for script in "${VALIDATE_SCRIPTS[@]}"; do

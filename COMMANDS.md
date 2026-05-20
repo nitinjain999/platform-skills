@@ -39,6 +39,7 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:keda](#platform-skillskeda) | KEDA ScaledObject/ScaledJob — generate, debug, review, scale |
 | [/platform-skills:self-improve](#platform-skillsself-improve) | Bootstrap, log, review, or promote agent self-improvement entries |
 | [/platform-skills:chaos](#platform-skillschaos) | Install Litmus Chaos or Chaos Mesh, generate fault experiments, schedule chaos, run GameDay, debug, report |
+| [/platform-skills:dora](#platform-skillsdora) | Instrument DORA metrics, generate Grafana dashboards, benchmark against performance bands, debug metric gaps |
 
 ---
 
@@ -1905,6 +1906,41 @@ Litmus Chaos and Chaos Mesh fault injection, steady-state hypothesis, GameDay wo
 ```
 
 Reference: `references/chaos.md` and `examples/chaos/`
+
+---
+
+## `/platform-skills:dora`
+
+GitHub Actions + Prometheus instrumentation for all four DORA metrics — Deployment Frequency, Lead Time for Changes, Change Failure Rate, and MTTR.
+
+**Modes:**
+
+| Mode | What it does |
+|---|---|
+| `instrument` | Generate GitHub Actions steps to push deploy and incident events to Prometheus Pushgateway |
+| `dashboard` | Generate a Grafana dashboard with four DORA panels and Elite/High/Medium/Low threshold bands |
+| `benchmark` | Classify current metric values against 2023 DORA performance bands; identify weakest metric |
+| `debug` | Diagnose missing deployment events, missing MTTR, CFR stuck at 0%, or metrics stopping at a date |
+
+**Usage:**
+
+```
+/platform-skills:dora instrument [workflow-file]
+/platform-skills:dora dashboard
+/platform-skills:dora benchmark [metric-values]
+/platform-skills:dora debug [metric-name]
+```
+
+**Examples:**
+
+```
+/platform-skills:dora instrument .github/workflows/deploy.yml
+/platform-skills:dora dashboard
+/platform-skills:dora benchmark "deploy_freq=2, lead_time=3600, cfr=8, mttr=7200"
+/platform-skills:dora debug mttr
+```
+
+Reference: `references/dora.md` and `examples/dora/`
 
 ---
 
