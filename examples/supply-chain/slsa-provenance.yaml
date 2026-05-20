@@ -49,7 +49,7 @@ jobs:
     # generator_container_slsa3.yml produces SLSA L2 on standard GitHub-hosted runners.
     # L3 requires hermetic builds and is not supported on ubuntu-latest.
     # Pin to a full SHA for production: gh api repos/slsa-framework/slsa-github-generator/git/ref/tags/v2.0.0
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.0.0
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@5a775b367a56d5bd118a224a811bba288150a563  # v2.0.0
     with:
       image: ghcr.io/<org>/<image>
       digest: ${{ needs.build.outputs.digest }}

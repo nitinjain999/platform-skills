@@ -1,6 +1,6 @@
-# GitHub Actions workflow: generate SBOM with Syft and attest it to the image digest.
-# Run after sign-and-push or add these steps to the same job.
-# The digest is required — run this after the image is pushed to the registry.
+# GitHub Actions workflow: generate SBOM with Syft and attest it to the image.
+# Triggered by workflow_run from build-sign-push; references the image by tag.
+# To attest by digest (preferred), plumb the pushed digest as a workflow_run output.
 name: sbom-attest
 
 on:
@@ -28,7 +28,7 @@ jobs:
       - name: Generate SBOM with Syft
         uses: anchore/sbom-action@61119d458adab75f756bc0b9e4bde25725f86a7a  # v0.20.0
         with:
-          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ github.event.workflow_run.head_sha }}
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@:${{ github.event.workflow_run.head_sha }}
           format: spdx-json
           output-file: sbom.spdx.json
 
@@ -37,4 +37,4 @@ jobs:
           cosign attest --yes \
             --predicate sbom.spdx.json \
             --type spdxjson \
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ github.event.workflow_run.head_sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@:${{ github.event.workflow_run.head_sha }}

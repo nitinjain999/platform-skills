@@ -112,7 +112,7 @@ Steps:
 3. For Grype (alternative), show:
    ```yaml
    - name: Scan with Grype
-     uses: anchore/scan-action@v6
+     uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2  # v7.4.0
      with:
        image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
        fail-build: true
@@ -138,10 +138,10 @@ Steps:
      validationActions: [Audit]   # switch to [Deny] after all images are signing
      matchConstraints:
        resourceRules:
-       - apiGroups: ["apps"]
+       - apiGroups: [""]
          apiVersions: ["v1"]
          operations: ["CREATE", "UPDATE"]
-         resources: ["deployments", "statefulsets", "daemonsets"]
+         resources: ["pods"]
      matchImageReferences:
      - glob: "ghcr.io/<org>/*"
      validations:
@@ -182,7 +182,7 @@ Steps:
        steps:
          - name: Build and push image
            id: build
-           uses: docker/build-push-action@v6
+           uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355  # v6.10.0
            with:
              push: true
              tags: ghcr.io/<org>/<image>:${{ github.sha }}
@@ -193,7 +193,7 @@ Steps:
          actions: read
          id-token: write
          packages: write
-       uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.1.0
+       uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@5a775b367a56d5bd118a224a811bba288150a563  # v2.0.0
        with:
          image: ghcr.io/<org>/<image>
          digest: ${{ needs.build.outputs.digest }}

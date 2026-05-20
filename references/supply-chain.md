@@ -198,7 +198,7 @@ jobs:
       actions: read
       id-token: write
       packages: write
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.0.0
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@5a775b367a56d5bd118a224a811bba288150a563  # v2.0.0
     # Pin to a specific release SHA for production. Get SHA via:
     # gh api repos/slsa-framework/slsa-github-generator/git/ref/tags/v2.0.0
     with:
