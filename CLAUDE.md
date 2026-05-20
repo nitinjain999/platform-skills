@@ -332,3 +332,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for:
 ---
 
 Built with ❤️ by platform engineers, for platform engineers.
+
+## Agent Rules
+
+Rules promoted from `.learnings/` — apply to every session in this project.
+
+- Log errors and learnings at the point of discovery — never defer to end of session.
+- Dispatch all independent tool calls in a single message block — sequential calls only when output feeds the next.
+- Run `bash scripts/handbook-consistency.sh` locally before every push to catch version/status/path check failures.
