@@ -98,7 +98,7 @@ Configure Falcosidekick to route Falco alerts to Slack, webhooks, or other outpu
 Steps:
 1. Install Falcosidekick alongside Falco:
    ```bash
-   helm install falco falcosecurity/falco \
+   helm upgrade --install falco falcosecurity/falco \
      --namespace falco \
      --create-namespace \
      --set falcosidekick.enabled=true \
@@ -138,11 +138,13 @@ Checklist (work through in order):
    ```
 2. **Is the rule loaded?**
    ```bash
-   kubectl exec -n falco daemonset/falco -- falco --list-rules | grep "<rule name>"
+   kubectl logs -n falco -l app.kubernetes.io/name=falco | grep -i "Loading rules"
+   kubectl exec -n falco daemonset/falco -- cat /etc/falco/rules.d/custom-rules.yaml 2>/dev/null \
+     || kubectl exec -n falco daemonset/falco -- ls /etc/falco/
    ```
 3. **Is the condition correct?** Test the event type:
    ```bash
-   kubectl exec -n falco daemonset/falco -- falco --validate /etc/falco/custom-rules.yaml
+   kubectl exec -n falco daemonset/falco -- falco --validate /etc/falco/rules.d/custom-rules.yaml
    ```
 4. **Is the event being generated?** Use event-generator for syscall rules:
    ```bash
@@ -151,7 +153,8 @@ Checklist (work through in order):
 5. **Is the priority too low?** If `falcosidekick.config.slack.minimumpriority: error`, rules with `priority: WARNING` are silently dropped. Adjust priority or threshold.
 6. **Is there a macro override?** Check if a built-in macro like `never_true` is shadowing your condition:
    ```bash
-   kubectl exec -n falco daemonset/falco -- falco --list-macros | grep "<macro name>"
+   kubectl exec -n falco daemonset/falco -- cat /etc/falco/falco_rules.yaml | grep -A3 "macro: <macro name>"
+   kubectl exec -n falco daemonset/falco -- ls /etc/falco/rules.d/
    ```
 
 Reference: `references/runtime-security.md` → Troubleshooting
