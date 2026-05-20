@@ -93,6 +93,7 @@
     "./commands/keda.md",
     "./commands/self-improve.md",
     "./commands/supply-chain.md",
-    "./commands/runtime-security.md"
+    "./commands/runtime-security.md",
+    "./commands/chaos.md"
   ]
 }

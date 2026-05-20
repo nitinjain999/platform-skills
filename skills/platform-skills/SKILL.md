@@ -97,6 +97,7 @@ When asked to generate code, start from the thinnest useful slice that proves th
 - For agent self-improvement patterns — `.learnings/` directory, WAL protocol, VFM scoring, ADL Protocol, working buffer, and proactive agent behavior — read [references/agent-self-improve.md](references/agent-self-improve.md).
 - For supply chain security — Cosign keyless signing, Syft SBOM generation and attestation, Trivy/Grype CVE scanning, SLSA Level 2 provenance, and Kyverno ImageValidatingPolicy enforcement — read [references/supply-chain.md](references/supply-chain.md).
 - For Kubernetes runtime security — Falco eBPF deployment on EKS/GKE, custom rule authoring, Falcosidekick alert routing, and bridging Falco signals to Kyverno admission enforcement — read [references/runtime-security.md](references/runtime-security.md).
+- For Chaos Engineering — Litmus Chaos v3 and Chaos Mesh v2 fault injection, steady-state hypothesis, blast radius scoping, GameDay workflow, and DORA feedback loop — read [references/chaos.md](references/chaos.md).
 
 Load only the files needed for the current request.
 
@@ -127,3 +128,4 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:self-improve` — bootstrap `.learnings/` directory, log learnings/errors/feature requests, review recurring patterns, and promote entries to project memory
 - `/platform-skills:supply-chain` — sign images, generate and attest SBOMs, run CVE severity gates, enforce image signatures in Kubernetes, and generate SLSA Level 2 provenance
 - `/platform-skills:runtime-security` — deploy Falco with eBPF, write custom rules, route alerts, debug why a rule is not firing, and bridge Falco signals to Kyverno admission enforcement
+- `/platform-skills:chaos` — install Litmus Chaos or Chaos Mesh, generate fault experiments, schedule recurring chaos, run structured GameDay, debug stuck experiments, report results

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+#### Chaos Engineering (Domain 27)
+
+- `references/chaos.md` — comprehensive reference covering: decision matrix (Litmus Chaos v3 vs Chaos Mesh v2), fault taxonomy (pod/node/network/stress), steady-state hypothesis pattern (httpProbe and promProbe), blast radius scoping rules, ChaosEngine and NetworkChaos YAML, GitOps integration via ChaosSchedule, rollback semantics, DORA feedback loop, and troubleshooting for stuck experiments and RBAC gaps
+- `commands/chaos.md` — slash command `/platform-skills:chaos` with six modes: `install`, `experiment`, `schedule`, `gameday`, `debug`, `report`
+- `examples/chaos/` — eight working examples and one validator:
+  - `litmus-install-values.yaml` — Helm values for Litmus Chaos v3
+  - `chaos-mesh-install-values.yaml` — Helm values for Chaos Mesh v2
+  - `pod-delete-experiment.yaml` — Litmus ChaosEngine targeting a Deployment with HTTP probe
+  - `network-loss-experiment.yaml` — Chaos Mesh NetworkChaos with 20% packet loss
+  - `cpu-stress-experiment.yaml` — Litmus pod-cpu-hog with Prometheus steady-state probe
+  - `chaos-schedule.yaml` — weekly pod-delete ChaosSchedule (staging only)
+  - `gameday-runbook.md` — structured GameDay template (steady-state → blast radius → inject → observe → verdict → DORA impact)
+  - `chaos-validate.sh` — domain validator
+
 ## [1.18.0] - 2026-05-20
 
 ### Added

@@ -38,6 +38,7 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:triage](#platform-skillstriage) | Triage and resolve PR comments |
 | [/platform-skills:keda](#platform-skillskeda) | KEDA ScaledObject/ScaledJob — generate, debug, review, scale |
 | [/platform-skills:self-improve](#platform-skillsself-improve) | Bootstrap, log, review, or promote agent self-improvement entries |
+| [/platform-skills:chaos](#platform-skillschaos) | Install Litmus Chaos or Chaos Mesh, generate fault experiments, schedule chaos, run GameDay, debug, report |
 
 ---
 
@@ -1863,6 +1864,47 @@ Detect and respond to in-container threats at the syscall level using Falco.
 - Test every custom rule with `falco-event-generator` before production
 
 Reference: `references/runtime-security.md` and `examples/runtime-security/`
+
+---
+
+## `/platform-skills:chaos`
+
+Litmus Chaos and Chaos Mesh fault injection, steady-state hypothesis, GameDay workflow, and DORA feedback loop.
+
+**Modes:**
+
+| Mode | What it does |
+|---|---|
+| `install` | Helm install for Litmus Chaos or Chaos Mesh with namespace isolation and RBAC |
+| `experiment` | Generate a fault experiment (ChaosEngine or Chaos Mesh CRD) from a description |
+| `schedule` | Wrap an experiment in a recurring schedule (ChaosSchedule or Chaos Mesh Schedule CRD) |
+| `gameday` | Structured GameDay runbook: steady-state → blast radius → inject → observe → verdict → DORA impact |
+| `debug` | Diagnose failed or stuck experiments — ChaosResult, chaos-runner logs, RBAC gaps |
+| `report` | Summarize blast radius, steady-state probe timeline, recovery time, and DORA delta |
+
+**Usage:**
+
+```
+/platform-skills:chaos install [litmus|chaos-mesh] [namespace]
+/platform-skills:chaos experiment [fault-class] [target-workload]
+/platform-skills:chaos schedule [experiment-name] [interval]
+/platform-skills:chaos gameday
+/platform-skills:chaos debug [experiment-name]
+/platform-skills:chaos report [experiment-name]
+```
+
+**Examples:**
+
+```
+/platform-skills:chaos install litmus
+/platform-skills:chaos experiment pod-delete my-service
+/platform-skills:chaos schedule pod-delete weekly
+/platform-skills:chaos gameday
+/platform-skills:chaos debug pod-delete-engine
+/platform-skills:chaos report pod-delete-engine
+```
+
+Reference: `references/chaos.md` and `examples/chaos/`
 
 ---
 

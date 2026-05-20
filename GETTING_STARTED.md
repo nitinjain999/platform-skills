@@ -161,6 +161,7 @@ See [COMMANDS.md](COMMANDS.md) for every command with modes and example prompts:
 | `self-improve` | Bootstrap `.learnings/` workspace, log errors and learnings, resume after interruption, promote to project memory |
 | `supply-chain` | Sign images, generate SBOMs, run CVE gates, enforce image signatures, generate SLSA provenance |
 | `runtime-security` | Deploy Falco with eBPF, write custom rules, route alerts, debug rule firing, bridge to Kyverno |
+| `chaos` | Install Litmus Chaos or Chaos Mesh, generate fault experiments, schedule chaos, run GameDay, debug, report |
 
 ### How the agent and skill system work
 

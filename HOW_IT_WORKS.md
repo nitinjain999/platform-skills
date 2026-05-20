@@ -111,6 +111,7 @@ Slash commands are predefined workflows. Use them instead of writing a long prom
 | `/platform-skills:self-improve` | Bootstrap `.learnings/` workspace, log errors/learnings, resume after interruption, review patterns, promote to project memory |
 | `/platform-skills:supply-chain` | Sign images, generate SBOMs, run CVE gates, enforce image signatures, generate SLSA provenance |
 | `/platform-skills:runtime-security` | Deploy Falco with eBPF, write custom rules, route alerts, debug rule firing, bridge to Kyverno |
+| `/platform-skills:chaos` | Install Litmus Chaos or Chaos Mesh, generate fault experiments, schedule chaos, run GameDay, debug, report |
 
 Invoke a command by typing it at the start of your message:
 
