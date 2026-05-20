@@ -95,6 +95,8 @@ When asked to generate code, start from the thinnest useful slice that proves th
 - For comprehensive PR review — cost impact, environment drift, ownership gaps, SOC 2 compliance, deprecated APIs, version hygiene, rollback feasibility, and bot comment triage — read [references/pr-review.md](references/pr-review.md).
 - For KEDA event-driven autoscaling — ScaledObject, ScaledJob, TriggerAuthentication, IRSA, scalers (Prometheus, SQS, Kafka, Redis, Cron, HTTP Add-on, Azure Service Bus), scaling lifecycle, security patterns, and troubleshooting — read [references/keda.md](references/keda.md).
 - For agent self-improvement patterns — `.learnings/` directory, WAL protocol, VFM scoring, ADL Protocol, working buffer, and proactive agent behavior — read [references/agent-self-improve.md](references/agent-self-improve.md).
+- For supply chain security — Cosign keyless signing, Syft SBOM generation and attestation, Trivy/Grype CVE scanning, SLSA Level 2 provenance, and Kyverno ImageValidatingPolicy enforcement — read [references/supply-chain.md](references/supply-chain.md).
+- For Kubernetes runtime security — Falco eBPF deployment on EKS/GKE, custom rule authoring, Falcosidekick alert routing, and bridging Falco signals to Kyverno admission enforcement — read [references/runtime-security.md](references/runtime-security.md).
 
 Load only the files needed for the current request.
 
