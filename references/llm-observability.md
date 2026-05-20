@@ -281,6 +281,7 @@ done
 | Evaluations not linked to spans | Wrong `span` argument | Use `span=LLMObs.export_span()` inside the decorated function, not outside |
 | `dd-llmo-eval-bootstrap` returns empty | No recent traces with `ml_app` tag | Ensure `DD_LLMOBS_ML_APP` was set when generating the traces |
 | Experiment analysis shows no difference | Cohort tags not applied | Verify `experiment.variant` tag is set on LLM spans before calling `annotate()` |
+| Node.js spans not recorded | `apiKey`/`site` inside `llmobs:` block | These keys are not valid inside `llmobs:`; supply via `DD_API_KEY`/`DD_SITE` env vars or top-level `tracer.init()` config |
 
 ---
 

@@ -395,7 +395,7 @@ resource "datadog_synthetics_test" "orders_api" {
 - Use `DD_API_KEY_SECRET_NAME` to reference secret by name in the Helm chart
 - Enable `datadog.logs.containerCollectAll: true` only if log volume is manageable — filter noisy sources
 - Redact PII in log pipeline processing rules before ingestion
-- Scope APP keys to the minimum permissions needed (Monitors Write, Dashboards Write)
+- Scope APP keys to the minimum permissions needed (Monitors Write, Dashboards Write) — API keys (`DD_API_KEY`) are unscoped ingestion credentials; only APP keys carry permission scopes
 
 ---
 

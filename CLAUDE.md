@@ -339,4 +339,7 @@ Rules promoted from `.learnings/` — apply to every session in this project.
 
 - Log errors and learnings at the point of discovery — never defer to end of session.
 - Dispatch all independent tool calls in a single message block — sequential calls only when output feeds the next.
-- Run `bash scripts/handbook-consistency.sh` locally before every push to catch version/status/path check failures.
+- Run `bash tests/handbook-consistency.sh` locally before every push to catch version/status/path check failures.
+- Never invent SDK method names or env var names; verify against SDK source or official docs before writing.
+- Use `awk "BEGIN { exit !(...) }"` for float comparison in CI scripts, not `bc` (absent from Alpine/minimal images).
+- Update installed plugins with the fully-qualified form: `claude plugin update name@owner`.
