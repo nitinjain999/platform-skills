@@ -83,6 +83,7 @@ def fetch_product_docs(query: str) -> list[dict]:
 // requires: dd-trace >= 5.20.0
 import tracer from "dd-trace";
 
+// DD_API_KEY, DD_SITE, DD_ENV, DD_SERVICE, DD_VERSION set via environment variables
 tracer.init({
   service: "orders-assistant",
   env: process.env.DD_ENV ?? "production",
@@ -90,44 +91,34 @@ tracer.init({
   llmobs: {
     mlApp: "orders-assistant",
     agentlessEnabled: true,  // set false if running the Datadog Agent
-    apiKey: process.env.DD_API_KEY,
-    site: process.env.DD_SITE ?? "datadoghq.eu",
   },
 });
 
-const { LLMObs } = tracer;
+const llmobs = tracer.llmobs;
 
-// Manually start an LLM span for an OpenAI call
+// Trace an LLM call using tracer.llmobs.trace()
 async function generateOrderSummary(order) {
-  const span = LLMObs.startLLMSpan({
-    spanName: "generate_order_summary",
-    modelProvider: "openai",
-    modelName: "gpt-4o",
-  });
+  return llmobs.trace(
+    { kind: "llm", name: "generate_order_summary", modelProvider: "openai", modelName: "gpt-4o" },
+    async (span) => {
+      const response = await openaiClient.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: `Summarise this order: ${JSON.stringify(order)}` }],
+      });
 
-  try {
-    const response = await openaiClient.chat.completions.create({
-      model: "gpt-4o",
-      messages: [{ role: "user", content: `Summarise this order: ${JSON.stringify(order)}` }],
-    });
+      llmobs.annotate(span, {
+        inputData: [{ role: "user", content: `Summarise this order: ${JSON.stringify(order)}` }],
+        outputData: [{ role: "assistant", content: response.choices[0].message.content }],
+        metrics: {
+          inputTokens: response.usage.prompt_tokens,
+          outputTokens: response.usage.completion_tokens,
+          totalTokens: response.usage.total_tokens,
+        },
+      });
 
-    LLMObs.annotate(span, {
-      inputData: [{ role: "user", content: `Summarise this order: ${JSON.stringify(order)}` }],
-      outputData: [{ role: "assistant", content: response.choices[0].message.content }],
-      metrics: {
-        inputTokens: response.usage.prompt_tokens,
-        outputTokens: response.usage.completion_tokens,
-        totalTokens: response.usage.total_tokens,
-      },
-    });
-
-    return response.choices[0].message.content;
-  } catch (err) {
-    span.setTag("error", err);
-    throw err;
-  } finally {
-    span.finish();
-  }
+      return response.choices[0].message.content;
+    }
+  );
 }
 ```
 
@@ -171,14 +162,15 @@ def answer_question(question: str, context: str) -> str:
     # Quality: is the answer grammatically correct and complete?
     quality_score = evaluate_quality(answer)
 
+    span_ctx = LLMObs.export_span()
     LLMObs.submit_evaluation(
-        span_context=LLMObs.export_span(),   # link score to this span
+        span=span_ctx,
         label="faithfulness",
         metric_type="score",
         value=faithfulness_score,            # float 0.0–1.0
     )
     LLMObs.submit_evaluation(
-        span_context=LLMObs.export_span(),
+        span=span_ctx,
         label="quality",
         metric_type="score",
         value=quality_score,
@@ -279,8 +271,8 @@ done
 |---------|----------|-----|
 | Spans not appearing in LLMObs UI | Check `DD_LLMOBS_ML_APP` is set | Without `ml_app`, spans are discarded by LLMObs ingest |
 | `agentless_enabled=True` but no data | Verify `DD_API_KEY` and `DD_SITE` are set | Agentless mode sends directly to Datadog intake — no Agent needed |
-| Token counts missing | `annotate()` metrics block absent | Pass `inputTokens`, `outputTokens`, `totalTokens` to `annotate()` |
-| Evaluations not linked to spans | Wrong `span_context` | Use `LLMObs.export_span()` inside the decorated function, not outside |
+| Token counts missing | `annotate()` metrics block absent | Python: pass `input_tokens`, `output_tokens`, `total_tokens`; Node.js: `inputTokens`, `outputTokens`, `totalTokens` |
+| Evaluations not linked to spans | Wrong `span` argument | Use `span=LLMObs.export_span()` inside the decorated function, not outside |
 | `dd-llmo-eval-bootstrap` returns empty | No recent traces with `ml_app` tag | Ensure `DD_LLMOBS_ML_APP` was set when generating the traces |
 | Experiment analysis shows no difference | Cohort tags not applied | Verify `experiment.variant` tag is set on LLM spans before calling `annotate()` |
 
@@ -288,7 +280,7 @@ done
 
 ## Security
 
-- Never log raw prompt content containing PII — use `DD_LLMOBS_OBFUSCATION_LLM_SPAN_PROMPT_COMPLETION_SAMPLE_RATE=0` in production if prompts contain user data
+- Never pass raw PII in prompt or completion content — use a `span_processor` callback in `LLMObs.enable()` to redact content before it leaves the process, or omit the `LLMObs.annotate()` call for high-sensitivity inputs
 - Scope the API key used by agentless mode to `LLM Observability Write` only — it does not need Monitors Write or Logs Write
 - Store the API key in a Kubernetes Secret or AWS Secrets Manager, referenced via `DD_API_KEY` from `secretKeyRef`
 
