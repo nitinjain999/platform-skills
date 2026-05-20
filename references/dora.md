@@ -9,7 +9,7 @@ DORA (DevOps Research and Assessment) metrics are the four evidence-based indica
 | Metric | Definition | What counts | What does NOT count |
 |---|---|---|---|
 | Deployment Frequency | How often code is deployed to production | Every successful deploy to production environment | Deploys to staging/dev, failed deploys |
-| Lead Time for Changes | Time from first commit to production deploy | Merge commit timestamp → deploy timestamp | PR review time alone, deploy to non-prod |
+| Lead Time for Changes | Time from first commit to production deploy | First commit timestamp → deploy timestamp | PR review time alone, deploy to non-prod |
 | Change Failure Rate | % of deploys causing a production incident | Incidents opened within 1h of deploy | Incidents from infra failures unrelated to deploy |
 | MTTR | Time from incident detected to service restored | Incident open → incident resolved | Time to deploy the fix (already in Lead Time) |
 
@@ -41,9 +41,10 @@ Add this step to your production deploy workflow, after the deploy succeeds:
 ```yaml
 - name: Record deployment metric
   run: |
-    cat <<EOF | curl --data-binary @- http://pushgateway:9091/metrics/job/dora/instance/${{ github.repository }}
+    REPO="${{ github.repository }}"
+    cat <<EOF | curl --data-binary @- http://pushgateway:9091/metrics/job/dora/instance/${REPO//\//_}
     # TYPE dora_deployment_timestamp gauge
-    dora_deployment_timestamp{repo="${{ github.repository }}",env="production"} $(date +%s)
+    dora_deployment_timestamp{repo="${REPO}",env="production"} $(date +%s)
     EOF
 ```
 
@@ -54,12 +55,13 @@ Lead time requires knowing the first commit timestamp for the batch being deploy
 ```yaml
 - name: Record lead time metric
   run: |
+    REPO="${{ github.repository }}"
     FIRST_COMMIT_TS=$(git log --reverse --format="%ct" origin/main..HEAD | head -1)
     DEPLOY_TS=$(date +%s)
     LEAD_TIME=$((DEPLOY_TS - FIRST_COMMIT_TS))
-    cat <<EOF | curl --data-binary @- http://pushgateway:9091/metrics/job/dora/instance/${{ github.repository }}
+    cat <<EOF | curl --data-binary @- http://pushgateway:9091/metrics/job/dora/instance/${REPO//\//_}
     # TYPE dora_lead_time_seconds gauge
-    dora_lead_time_seconds{repo="${{ github.repository }}",env="production"} ${LEAD_TIME}
+    dora_lead_time_seconds{repo="${REPO}",env="production"} ${LEAD_TIME}
     EOF
 ```
 
@@ -76,22 +78,24 @@ groups:
   - name: dora
     rules:
       # Deployment frequency (deploys per day, 30d rolling)
+      # changes() counts how many times the timestamp gauge changed value — one change per deploy push.
       - record: dora:deployment_frequency:rate30d
-        expr: count_over_time(dora_deployment_timestamp[30d]) / 30
+        expr: changes(dora_deployment_timestamp{env="production"}[30d]) / 30
 
-      # Lead time (median seconds from first commit to deploy)
+      # Lead time (p50 seconds from first commit to deploy, 30d rolling)
       - record: dora:lead_time_seconds:p50
-        expr: quantile(0.5, dora_lead_time_seconds)
+        expr: quantile_over_time(0.5, dora_lead_time_seconds{env="production"}[30d])
 
       # Change failure rate (%)
+      # changes() on each gauge counts distinct incident/deploy events, not scrape samples.
       - record: dora:change_failure_rate:ratio30d
         expr: |
-          count_over_time(dora_incident_caused_by_deploy[30d])
-          / count_over_time(dora_deployment_timestamp[30d]) * 100
+          changes(dora_incident_caused_by_deploy{env="production"}[30d])
+          / changes(dora_deployment_timestamp{env="production"}[30d]) * 100
 
-      # MTTR (median seconds from incident open to close)
+      # MTTR (p50 seconds from incident open to close, 30d rolling)
       - record: dora:mttr_seconds:p50
-        expr: quantile(0.5, dora_incident_duration_seconds)
+        expr: quantile_over_time(0.5, dora_incident_duration_seconds{env="production"}[30d])
 ```
 
 **Notes:**

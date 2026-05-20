@@ -199,7 +199,7 @@ platform-skills/
 
 ## Roadmap
 
-**Current release: v1.19.0** — 26 commands, 30 domain reference guides, 50+ wiki pages.
+**Current release: v1.19.0** — 25 commands, 30 domain reference guides, 50+ wiki pages.
 
 Full version history is in [CHANGELOG.md](CHANGELOG.md).
 

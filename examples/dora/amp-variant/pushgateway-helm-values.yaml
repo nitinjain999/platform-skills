@@ -43,5 +43,5 @@ podAnnotations:
 # default: 5 minutes — increase for teams that deploy less frequently.
 extraArgs:
   - --push.disable-consistency-check
-  # Uncomment to set TTL on pushed metrics (requires pushgateway >= 1.6.0):
-  # - --metric.tls-config.insecure-skip-verify=false
+  # Uncomment to set a TTL on pushed metric groups (requires pushgateway >= 1.6.0):
+  # - --push.ttl=10m

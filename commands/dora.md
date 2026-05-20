@@ -29,10 +29,10 @@ Steps:
 
 3. Generate GitHub Actions steps for each event type:
    - **Deploy event**: push `dora_deployment_timestamp` and `dora_lead_time_seconds` to Pushgateway
-   - **Incident triggered** (PagerDuty/OpsGenie webhook): push `dora_incident_caused_by_deploy` and `dora_incident_duration_seconds` (start)
-   - **Incident resolved**: push `dora_incident_duration_seconds` (final value)
+   - **Incident triggered** (PagerDuty/OpsGenie webhook): push `dora_incident_start_timestamp`
+   - **Incident resolved**: push `dora_incident_duration_seconds` and `dora_incident_caused_by_deploy`
 
-4. Output: exact YAML to append to the existing workflow, using the Pushgateway job name convention `job/dora/instance/<repo>`.
+4. Output: exact YAML to append to the existing workflow, using the Pushgateway job name convention `job/dora/instance/<repo-owner_repo-name>`. Sanitize `owner/repo` → `owner_repo` to avoid breaking Pushgateway path segments.
 
    Example deploy event step:
    ```yaml
@@ -41,18 +41,18 @@ Steps:
      env:
        PUSHGATEWAY_URL: ${{ secrets.PUSHGATEWAY_URL }}
        REPO: ${{ github.repository }}
-       SHA: ${{ github.sha }}
      run: |
        DEPLOY_TS=$(date +%s)
-       COMMIT_TS=$(git log -1 --format=%ct $SHA)
-       LEAD_TIME=$((DEPLOY_TS - COMMIT_TS))
-       cat <<EOF | curl --data-binary @- "${PUSHGATEWAY_URL}/metrics/job/dora/instance/${REPO//\//_}"
-       # HELP dora_deployment_timestamp Unix timestamp of the deploy event.
+       # Lead time from first commit in this batch — requires fetch-depth: 0 in checkout.
+       FIRST_COMMIT_TS=$(git log --reverse --format="%ct" origin/main..HEAD | head -1)
+       FIRST_COMMIT_TS=${FIRST_COMMIT_TS:-$DEPLOY_TS}
+       LEAD_TIME=$((DEPLOY_TS - FIRST_COMMIT_TS))
+       INSTANCE="${REPO//\//_}"
+       cat <<EOF | curl --data-binary @- "${PUSHGATEWAY_URL}/metrics/job/dora/instance/${INSTANCE}"
        # TYPE dora_deployment_timestamp gauge
-       dora_deployment_timestamp{repo="${REPO}",sha="${SHA}"} ${DEPLOY_TS}
-       # HELP dora_lead_time_seconds Seconds from first commit to deploy.
+       dora_deployment_timestamp{repo="${REPO}",env="production"} ${DEPLOY_TS}
        # TYPE dora_lead_time_seconds gauge
-       dora_lead_time_seconds{repo="${REPO}",sha="${SHA}"} ${LEAD_TIME}
+       dora_lead_time_seconds{repo="${REPO}",env="production"} ${LEAD_TIME}
        EOF
    ```
 

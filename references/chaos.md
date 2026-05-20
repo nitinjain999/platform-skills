@@ -125,11 +125,11 @@ probe:
   type: promProbe
   promProbe/inputs:
     endpoint: http://prometheus.monitoring.svc.cluster.local:9090
-    query: rate(http_requests_total{status=~"5.."}[1m]) < 0.01
+    query: (rate(http_requests_total{status=~"5.."}[1m]) < bool 0.01)
     comparator:
       type: float
       criteria: ==
-      value: "1"    # PromQL bool expression returns 1 when true (rate < 0.01 is healthy), 0 when false
+      value: "1"    # bool modifier returns 1 when condition is true, 0 when false
   mode: Edge
 ```
 

@@ -63,6 +63,14 @@ jobs:
           DEPLOY_SHA: ${{ github.event.client_payload.deploy_sha }}
           REPO: ${{ github.repository }}
         run: |
+          if [[ -z "${TRIGGERED_AT}" || -z "${RESOLVED_AT}" ]]; then
+            echo "ERROR: triggered_at or resolved_at missing from payload" >&2
+            exit 1
+          fi
+          if ! [[ "${TRIGGERED_AT}" =~ ^[0-9]+$ && "${RESOLVED_AT}" =~ ^[0-9]+$ ]]; then
+            echo "ERROR: triggered_at and resolved_at must be Unix timestamps (integers)" >&2
+            exit 1
+          fi
           DURATION=$(( RESOLVED_AT - TRIGGERED_AT ))
           if [[ "${DURATION}" -lt 0 ]]; then
             echo "ERROR: resolved_at (${RESOLVED_AT}) is before triggered_at (${TRIGGERED_AT})" >&2
@@ -84,4 +92,4 @@ jobs:
           echo "### DORA Incident Metrics" >> "${GITHUB_STEP_SUMMARY}"
           echo "- Event type: ${{ github.event.client_payload.event_type }}" >> "${GITHUB_STEP_SUMMARY}"
           echo "- Incident ID: ${{ github.event.client_payload.incident_id }}" >> "${GITHUB_STEP_SUMMARY}"
-          echo "- Source: ${{ github.event_type }}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Source: ${{ github.event_name }}" >> "${GITHUB_STEP_SUMMARY}"
