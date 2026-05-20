@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.19.0] - 2026-05-20
+
 ### Added
 
 #### Chaos Engineering (Domain 27)
@@ -27,12 +29,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `references/dora.md` — comprehensive reference covering: the four DORA metrics with exact definitions, 2023 performance bands (Elite/High/Medium/Low), GitHub Actions + Prometheus Pushgateway open-source instrumentation pattern, all four Prometheus recording rules, PagerDuty and OpsGenie incident webhook integration for MTTR, SaaS decision matrix (Sleuth, LinearB, Cortex, open-source), five anti-pattern detections (commits vs deploys, all alerts vs customer incidents, partial outages, staging vs production, PR open vs first commit), chaos engineering cross-reference for high change failure rate, and agent platform rules
 - `commands/dora.md` — slash command `/platform-skills:dora` with four modes: `instrument`, `dashboard`, `benchmark`, `debug`
-- `examples/dora/` — five working examples and one validator:
+- `examples/dora/` — five working examples, one validator, and an AMP variant:
   - `deployment-event-step.yaml` — GitHub Actions step pushing deploy timestamp and lead time to Pushgateway
   - `incident-webhook-handler.yaml` — full GitHub Actions workflow triggered by PagerDuty/OpsGenie webhook for MTTR tracking
   - `prometheus-recording-rules.yaml` — all four DORA Prometheus recording rules
   - `grafana-dashboard.json` — Grafana dashboard with four DORA panels and Elite/High/Medium/Low threshold bands
   - `dora-validate.sh` — domain validator
+  - `amp-variant/` — Amazon Managed Prometheus variant: `amp-workspace.tf` (Terraform module provisioning AMP workspace + recording rules via `terraform-aws-modules/managed-service-prometheus/aws`), `pushgateway-helm-values.yaml`, `prometheus-agent-values.yaml` (SigV4/IRSA remote_write), `amp-recording-rules-deploy.sh` (AWS CLI fallback), `grafana-amp-datasource.yaml`, `grafana-amg-datasource.json`
 
 ## [1.18.0] - 2026-05-20
 
