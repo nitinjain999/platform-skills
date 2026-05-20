@@ -156,3 +156,39 @@ kubectl describe pod <app-pod> | grep -E "DD_ENV|DD_SERVICE|DD_VERSION|DD_TRACE"
 ```
 
 Provide: symptom → root cause hypothesis → evidence command → fix → validation
+
+## Mode: pup
+
+Perform Datadog operations via the `pup` CLI — log search, metric queries, monitor management, and post-deploy gates.
+
+Requires `pup` installed and `DD_API_KEY`, `DD_APP_KEY`, `DD_SITE` set in shell. See `references/datadog.md` → pup CLI for install and config.
+
+Steps:
+1. Classify the request:
+   - **search** — search logs for a service/time range
+   - **query** — fetch a metric time series
+   - **monitors** — list, mute, unmute, or resolve a monitor
+   - **gate** — generate a post-deploy quality gate script
+2. Generate the exact `pup` command with flags
+3. For scripting/gate use cases, generate a bash script using the scripting pattern from `references/datadog.md` → pup CLI
+4. Include jq expression to extract the value of interest from `--format json` output
+
+Reference: `references/datadog.md` → pup CLI
+
+## Mode: llmo
+
+Instrument an AI application with Datadog LLM Observability, bootstrap evaluators, analyze experiments, or root-cause LLM failures.
+
+Steps:
+1. Classify the request:
+   - **instrument** — add LLMObs spans to a Python or Node.js LLM application
+   - **evaluate** — attach evaluation scores to spans and set up a CI quality gate
+   - **rca** — root-cause a failing LLM trace using `dd-llmo-eval-trace-rca`
+   - **experiment** — compare model/prompt variants using `dd-llmo-experiment-analyzer`
+2. For **instrument**: ask for language (Python/Node.js) and LLM provider (OpenAI/Anthropic/Bedrock); generate `LLMObs.enable()` init and `@llm` / `llmobs.trace()` call for the main LLM call; add `DD_LLMOBS_ML_APP` and `DD_LLMOBS_AGENTLESS_ENABLED` to the Deployment env vars
+3. For **evaluate**: generate `LLMObs.submit_evaluation()` calls (kwarg `span=LLMObs.export_span()`) after each LLM span; generate a pup-based CI gate querying `ml_obs.evaluations.<label>` metric
+4. For **rca**: instruct user to invoke `/dd-llmo-eval-trace-rca` with the failing trace ID; provide the manual `pup apm traces get` fallback
+5. For **experiment**: generate `experiment.name`, `experiment.variant`, `experiment.cohort` tag annotations; instruct user to invoke `/dd-llmo-experiment-analyzer`; provide manual pup comparison fallback
+6. Always set `DD_LLMOBS_ML_APP` — spans without this tag are silently discarded
+
+Reference: `references/llm-observability.md`
