@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.16.0] - 2026-05-20
+
+### Added
+
+#### Supply Chain Security — Domain 25
+
+New Domain 25: `Supply Chain Security` — secure the build pipeline and image lifecycle.
+
+- `references/supply-chain.md` — comprehensive reference covering:
+  - Cosign keyless signing (Sigstore/Rekor, OIDC-based, no key management)
+  - SBOM generation and OCI attestation with Syft
+  - CVE scanning with Trivy and Grype, severity gate strategy
+  - SLSA Level 2 vs Level 3 provenance requirements
+  - Kyverno `ImageValidatingPolicy` for admission enforcement
+  - Gap classification table and recommended rollout order
+- `commands/supply-chain.md` — slash command `/platform-skills:supply-chain` with six modes: `audit`, `sign`, `sbom`, `scan`, `enforce`, `slsa`
+- `examples/supply-chain/` — five working GitHub Actions workflows and one Kyverno policy:
+  - `sign-and-push.yaml` — build → Cosign keyless sign → push
+  - `sbom-attest.yaml` — Syft SBOM generation and Cosign attestation
+  - `trivy-gate.yaml` — Trivy scan with CRITICAL+HIGH severity gate and GitHub Security tab upload
+  - `kyverno-verify-image.yaml` — `ImageValidatingPolicy` blocking unsigned images (Audit mode)
+  - `slsa-provenance.yaml` — SLSA Level 2 provenance via `slsa-github-generator`
+  - `supply-chain-validate.sh` — domain validator
+
+#### Runtime Security — Domain 26
+
+New Domain 26: `Runtime Security` — detect in-container threats with Falco.
+
+- `references/runtime-security.md` — comprehensive reference covering:
+  - Falco architecture: eBPF probe, rules engine, alert output
+  - Driver comparison: `modern_ebpf` vs `ebpf` vs `kmod` (kmod never on managed K8s)
+  - EKS and GKE installation with eBPF (Bottlerocket, COS, Fargate caveats)
+  - Built-in ruleset overview and noise reduction approach
+  - Custom rule syntax: condition fields, lists, macros
+  - Falcosidekick alert routing: Slack, webhook, SNS, PagerDuty
+  - Falco → Kyverno bridge pattern for blocking flagged workload re-admission
+  - Resource sizing and CPU limit guidance (do not set CPU limits)
+- `commands/runtime-security.md` — slash command `/platform-skills:runtime-security` with five modes: `install`, `rules`, `alerts`, `debug`, `harden`
+- `examples/runtime-security/` — four working Helm values and one Kyverno policy:
+  - `falco-values.yaml` — Falco Helm values with eBPF driver and resource limits
+  - `falco-custom-rules.yaml` — shell-in-container, privilege escalation, unexpected outbound
+  - `falcosidekick-values.yaml` — Slack + webhook routing with deduplication
+  - `falco-kyverno-bridge.yaml` — `ValidatingPolicy` blocking Falco-flagged workload re-admission
+  - `runtime-security-validate.sh` — domain validator
+
 ## [1.15.0] - 2026-05-20
 
 ### Added
