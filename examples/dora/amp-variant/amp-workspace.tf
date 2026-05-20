@@ -34,12 +34,6 @@ variable "workspace_alias" {
   default     = "dora-platform"
 }
 
-variable "retention_period_in_days" {
-  description = "Metric retention in days. null = AMP default (150 days)"
-  type        = number
-  default     = null
-}
-
 variable "kms_key_arn" {
   description = "KMS key ARN for workspace encryption. null = AWS-managed key"
   type        = string
@@ -63,9 +57,8 @@ module "amp" {
   source  = "terraform-aws-modules/managed-service-prometheus/aws"
   version = "~> 3.0"
 
-  workspace_alias          = var.workspace_alias
-  retention_period_in_days = var.retention_period_in_days
-  kms_key_arn              = var.kms_key_arn
+  workspace_alias = var.workspace_alias
+  kms_key_arn     = var.kms_key_arn
 
   # Deploy the DORA recording rules from the shared rules file.
   # The module encodes the YAML to base64 before calling the AMP API.
