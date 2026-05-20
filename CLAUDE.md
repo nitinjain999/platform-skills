@@ -332,3 +332,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for:
 ---
 
 Built with ❤️ by platform engineers, for platform engineers.
+
+## Agent Rules
+
+- `ImageValidatingPolicy`: always target `apiGroups: [""]` / `resources: ["pods"]`, not `apps` workloads
+- When adding a new domain, add `Status: Stable` to its `examples/*/README.md`
+- After bumping plugin version, update the version string in `INSTALLATION.md`
+- New reference files must appear as markdown links in SKILL.md "Pick the Right Reference Files" section
+- `validate-skill.sh` checks for literal path strings in SKILL.md, not just file existence

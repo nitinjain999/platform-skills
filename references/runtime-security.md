@@ -286,3 +286,9 @@ See `examples/runtime-security/falco-kyverno-bridge.yaml` for the full policy wi
 | No events on GKE | Wrong driver for COS | Set `driver.kind: modern_ebpf` |
 | `failed to load module` | Using kmod driver on managed K8s | Switch to `driver.kind: modern_ebpf` |
 | Custom rules not loaded | Wrong mount path | Rules load from `/etc/falco/rules.d/`, not `/etc/falco/` |
+
+## Platform Rules
+
+- Use `fd.rport` (destination port) not `fd.sport` (source port) in Falco outbound connection rules
+- Never set `limits.cpu` on Falco DaemonSet — kernel event processing is bursty; throttling causes missed events
+- Use `driver.kind: modern_ebpf` for EKS AL2023 and GKE COS (Linux 5.8+, BTF enabled)

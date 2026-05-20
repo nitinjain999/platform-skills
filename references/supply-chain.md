@@ -299,3 +299,8 @@ For full `ImageValidatingPolicy` syntax, CEL expressions, and kyverno-cli testin
 4. **Enforce** — Kyverno `ImageValidatingPolicy` in Audit mode
 5. **SLSA** — add Level 2 provenance attestation
 6. **Enforce → Deny** — harden admission after all images are signed
+
+## Platform Rules
+
+- Always pin GitHub Actions to full 40-char SHA; never use floating tags (e.g. `@v6`, `@v3`)
+- Verify `anchore/scan-action` current major version before pinning — it is at v7.x, not v6

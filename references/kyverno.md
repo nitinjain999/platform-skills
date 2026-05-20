@@ -801,3 +801,8 @@ spec:
 | PolicyException not taking effect | PolicyException still uses `kyverno.io/v2` — check the rule name matches | Verify `spec.exceptions[].ruleNames` matches the rule name in the policy's `validations` |
 | `resource.Get()` in GeneratingPolicy returns empty | Source resource does not exist or RBAC missing for background controller | Confirm source resource exists; check Kyverno RBAC for `get` on that resource type |
 | Legacy `ClusterPolicy` coexists with new types | Both APIs work in parallel — no conflict | Migration is optional until v1.20; convert incrementally |
+
+## Platform Rules
+
+- `ImageValidatingPolicy`: target `apiGroups: [""]` / `resources: ["pods"]` to cover all workload types; Kyverno autogen does not extend `ImageValidatingPolicy` by default
+- Audit→Deny promotion sequence applies to pre-emptive policies; reactive policies (e.g. Falco→Kyverno bridge where violation is already confirmed) should start at `validationActions: [Deny]`
