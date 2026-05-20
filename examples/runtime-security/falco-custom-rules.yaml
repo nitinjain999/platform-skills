@@ -44,7 +44,7 @@
   condition: >
     outbound
     and container
-    and not fd.sport in (80, 443, 8080, 8443, 5432, 6379, 9200)
+    and not fd.rport in (80, 443, 8080, 8443, 5432, 6379, 9200)
     and not container.image.repository in (allowed_network_images)
   output: >
     Unexpected outbound connection from container

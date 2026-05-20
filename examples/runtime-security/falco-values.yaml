@@ -5,6 +5,8 @@ driver:
   kind: modern_ebpf
 
 falco:
+  # Deprecated: grpc/grpc_output are deprecated in Falco chart; Falcosidekick uses http output instead.
+  # Keep enabled only if you have direct gRPC consumers. For Falcosidekick, these are not needed.
   grpc:
     enabled: true
   grpc_output:

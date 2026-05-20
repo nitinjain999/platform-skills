@@ -6,6 +6,8 @@ falcosidekick:
 
   webui:
     enabled: true           # dashboard at port 2802
+    # IMPORTANT: set credentials before exposing — default is admin:admin
+    # user: ""              # set via: --set falcosidekick.webui.user=<login:password>
 
   config:
     debug: false
