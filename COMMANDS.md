@@ -1048,10 +1048,10 @@ Runs through the full SOC 2 readiness checklist. For each item: pass / fail / un
 
 ## `/platform-skills:datadog`
 
-**What it does:** End-to-end Datadog coverage — Agent deployment on Kubernetes, APM instrumentation, monitors, dashboards, SLOs, and live incident investigation via the Datadog MCP server.
+**What it does:** End-to-end Datadog coverage — Agent deployment on Kubernetes, APM instrumentation, monitors, dashboards, SLOs, live incident investigation via the Datadog MCP server, pup CLI operations, and LLM Observability instrumentation and evaluation.
 
 ```
-/platform-skills:datadog [setup|instrument|monitor|dashboard|slo|investigate|debug] [service or description]
+/platform-skills:datadog [setup|instrument|monitor|dashboard|slo|investigate|debug|pup|llmo] [service or description]
 ```
 
 ---
@@ -1158,6 +1158,30 @@ Diagnoses Datadog data gaps without the MCP server. Classifies: Agent unhealthy,
 ```
 ```
 /platform-skills:datadog debug monitor is stuck in "No Data" — the service is definitely running
+```
+
+---
+
+### `pup` mode
+
+Scripted Datadog operations via the `pup` CLI — log search, metric queries, monitor management, and post-deploy quality gates.
+
+```
+/platform-skills:datadog pup search error logs for orders-service in the last 30 minutes
+/platform-skills:datadog pup query p99 latency for orders-service over the last hour
+/platform-skills:datadog pup mute the high error rate monitor for orders-service for 1 hour
+/platform-skills:datadog pup generate a post-deploy gate script that fails CI if error rate exceeds 5%
+```
+
+### `llmo` mode
+
+Instrument an AI application with Datadog LLM Observability, bootstrap evaluators, or root-cause LLM failures.
+
+```
+/platform-skills:datadog llmo instrument my Python OpenAI app with LLMObs — I need faithfulness scoring
+/platform-skills:datadog llmo add evaluation scores to my Node.js LLM spans and set up a CI quality gate
+/platform-skills:datadog llmo root-cause this failing trace — trace ID 8f3a2b1c9d4e5f6a
+/platform-skills:datadog llmo compare gpt-4o vs gpt-4o-mini on my orders-assistant over the last 7 days
 ```
 
 ---
