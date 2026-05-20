@@ -1,7 +1,7 @@
 ---
 name: self-improve
-description: Bootstrap and operate a self-improving agent workspace. Scaffolds .learnings/ and memory/ directories, captures errors and learnings during a session, detects recurring patterns, and promotes stable entries to project memory (CLAUDE.md, AGENTS.md, or references/). Also implements the Proactive Agent pillars — WAL protocol, working buffer, VFM scoring, ADL decision logic, heartbeat, and reverse prompting. Use when asked to "remember this lesson", "set up agent memory", "log that error", "promote learnings", or "enable proactive mode".
-argument-hint: "[init|log|review|promote] [description or file path]"
+description: Bootstrap and operate a self-improving agent workspace. Scaffolds .learnings/ and memory/ directories, captures errors and learnings during a session, detects recurring patterns, and promotes stable entries to project memory (CLAUDE.md, AGENTS.md, or references/). Also implements the Proactive Agent pillars — WAL protocol, working buffer, SESSION-STATE, daily notes, VBR, VFM scoring, ADL decision logic, heartbeat, and reverse prompting. Use when asked to "remember this lesson", "set up agent memory", "log that error", "promote learnings", "capture session state", or "enable proactive mode".
+argument-hint: "[init|log|review|promote|resume|state] [description or file path]"
 ---
 
 Bootstrap and operate a self-improving, proactive agent workspace.
@@ -20,16 +20,19 @@ Steps:
      FEATURE_REQUESTS.md
    memory/
      working-buffer.md
+     SESSION-STATE.md
    ```
 3. Seed each file with the correct header and an example entry marked `Status: example`
-4. Check `.gitignore` — ask the user whether these files should be committed or gitignored
+4. Check `.gitignore` — ask the user whether these files should be committed or gitignored; recommend gitignoring `memory/` entirely (daily notes grow fast)
 5. If a `.claude/settings.json` exists, offer to add the PostToolUse hook for automatic error capture
 6. Print the bootstrap summary:
    ```
-   ✓ .learnings/LEARNINGS.md   — positive learnings
-   ✓ .learnings/ERRORS.md      — mistakes and root causes
+   ✓ .learnings/LEARNINGS.md        — positive learnings
+   ✓ .learnings/ERRORS.md           — mistakes and root causes
    ✓ .learnings/FEATURE_REQUESTS.md — recurring unmet needs
-   ✓ memory/working-buffer.md  — WAL scratchpad and task state
+   ✓ memory/working-buffer.md       — WAL scratchpad and task state
+   ✓ memory/SESSION-STATE.md        — always-on session capture
+   ✓ memory/YYYY-MM-DD.md           — daily notes (created on first use)
    ```
 7. Remind the user to run `/platform-skills:self-improve review` after a few sessions to promote recurring patterns
 
@@ -65,17 +68,20 @@ Reference: `references/agent-self-improve.md` → Entry format, Recurring Patter
 Resume an incomplete task after context compaction or session interruption.
 
 Steps:
-1. Read `memory/working-buffer.md`
-2. Identify the last completed step (last `[x]` marker)
-3. Verify the actual state of affected resources before continuing:
+1. Read `memory/working-buffer.md` — identify current task and last `[x]` step
+2. Read `memory/SESSION-STATE.md` — reload corrections, preferences, and decisions
+3. Read today's `memory/YYYY-MM-DD.md` — reload recent session exchanges
+4. Verify the actual state of affected resources before continuing:
    - Files: check they exist and have expected content
    - Kubernetes: `kubectl get <resource> -n <namespace>`
    - Terraform: `terraform state list`
    - Git: `git log --oneline -5`
-4. Resume from the first `[ ]` step — do not re-run already-committed steps
-5. If a WAL entry shows `Status: PENDING`, determine whether the operation completed (check the resource) and update to `COMMITTED` or `ROLLED_BACK` accordingly
+5. Resume from the first `[ ]` step — do not re-run already-committed steps
+6. If a WAL entry shows `Status: PENDING`, determine whether the operation completed (check the resource) and update to `COMMITTED` or `ROLLED_BACK` accordingly
 
-Reference: `references/agent-self-improve.md` → Compaction Recovery
+Never ask "where were we?" — the buffer and session state answer that.
+
+Reference: `references/agent-self-improve.md` → Compaction Recovery, SESSION-STATE
 
 ## Mode: review
 
@@ -125,6 +131,31 @@ Steps:
 
 Reference: `references/agent-self-improve.md` → Entry lifecycle, Promotion targets
 
+## Mode: state
+
+Capture a correction, preference, decision, or proper noun to `memory/SESSION-STATE.md`.
+
+Steps:
+1. Classify the signal:
+   - **Correction** — user ruled something out or redirected approach
+   - **Preference** — stated preference for this project or session
+   - **Decision** — a choice was made between options
+   - **Proper noun** — cluster name, team name, account ID, service name
+2. Append to the correct section in `memory/SESSION-STATE.md`:
+   ```markdown
+   - YYYY-MM-DD — <one sentence capturing what was said or decided>
+   ```
+3. Update the `Last updated:` timestamp at the top of the file
+4. Confirm: "Captured to `memory/SESSION-STATE.md`"
+
+**When to invoke proactively (without being asked):**
+- User corrects an assumption mid-session
+- User states a preference ("I prefer X", "don't do Y here")
+- A decision is reached between two approaches
+- A non-obvious proper noun appears that isn't in project docs
+
+Reference: `references/agent-self-improve.md` → SESSION-STATE, Compaction Recovery
+
 ## Proactive Agent Protocols
 
 These protocols run automatically when the proactive agent pattern is active. No explicit mode is required.
@@ -153,8 +184,32 @@ Destructive operations requiring a WAL entry: deleting files, `git reset --hard`
 Maintain `memory/working-buffer.md` as a live task scratchpad:
 - Write at task start with the plan and steps
 - Update after each significant step with `[x]` progress markers
+- At ~60% context: write a compaction-ready summary proactively — do not wait for a compaction event
 - Read at session start to resume after compaction
 - Do not delete the buffer at session end if the task is incomplete
+
+### SESSION-STATE
+
+Maintain `memory/SESSION-STATE.md` as always-on session capture. Write to it **before responding** whenever:
+- The user corrects an assumption or rules out an approach
+- A preference is stated
+- A decision is made between options
+- A non-obvious proper noun or fact is encountered
+
+This file is the second read in compaction recovery (after working-buffer, before daily notes).
+
+### Daily Notes
+
+Write notable exchanges, discoveries, and outcomes to `memory/YYYY-MM-DD.md` (today's date). One file per day, append-only. Read today's file at session start alongside the working buffer.
+
+### Verify Before Reporting (VBR)
+
+Before reporting a task as complete:
+- Run the validation command (CI check, test suite, `kubectl get`, `terraform plan`)
+- Read the file that was changed to confirm the edit landed
+- Text change ≠ behavior change — test actual outcomes
+
+Never claim a fix is done based on the intent to fix it. Evidence required.
 
 ### ADL Protocol
 

@@ -32,12 +32,14 @@ Bootstrap with `/platform-skills:self-improve init` or copy from `examples/agent
   FEATURE_REQUESTS.md  # Recurring unmet needs — FEAT-YYYYMMDD-NNN
 memory/
   working-buffer.md    # WAL scratchpad (see Part 2)
+  SESSION-STATE.md     # Always-on session capture (see Part 2)
+  YYYY-MM-DD.md        # Daily notes — rolling per-day log (see Part 2)
 ```
 
 Add to `.gitignore` if these are personal/local notes:
 ```
 .learnings/
-memory/working-buffer.md
+memory/
 ```
 
 Or commit them if they are team-shared project memory.
@@ -168,14 +170,79 @@ Update `Status` to `COMMITTED` after success. Update to `ROLLED_BACK` if aborted
 - At task start (outline the plan)
 - After each significant step
 - Before any destructive operation (WAL entry)
+- When context reaches ~60% — write a compaction-ready summary proactively
 - At session end if the task is incomplete
 
 **Compaction Recovery steps:**
-1. Read `memory/working-buffer.md`
-2. Identify last completed step
-3. Verify the state of affected resources (`kubectl get`, `terraform state list`, `git log --oneline -5`)
-4. Resume from the first incomplete step
-5. Do not re-run already-committed steps
+1. Read `memory/working-buffer.md` — current task steps and WAL
+2. Read `memory/SESSION-STATE.md` — corrections, preferences, decisions from this session
+3. Read today's `memory/YYYY-MM-DD.md` daily note — recent exchanges
+4. Verify the state of affected resources (`kubectl get`, `terraform state list`, `git log --oneline -5`)
+5. Resume from the first incomplete step — do not re-run already-committed steps
+
+### SESSION-STATE.md — Always-on session capture
+
+`memory/SESSION-STATE.md` is a lightweight, always-on capture file. Unlike the working buffer (which tracks task steps), SESSION-STATE captures *session-level knowledge*: corrections the user has given, preferences expressed, decisions made, and proper nouns encountered. Write to it **before responding** when any of these occur — not only before destructive operations.
+
+**What to capture:**
+
+| Signal | Example |
+|---|---|
+| User correction | "don't use that approach" → log the constraint |
+| Preference stated | "I prefer X over Y for this project" |
+| Decision made | "we decided to use Kyverno not OPA" |
+| Proper noun encountered | cluster names, team names, account IDs |
+| Non-obvious fact | "this repo does X differently from the norm" |
+
+**SESSION-STATE.md format:**
+
+```markdown
+# Session State
+
+Last updated: YYYY-MM-DD HH:MM
+
+## Corrections and constraints
+- <date> — <what the user corrected or ruled out>
+
+## Preferences
+- <date> — <stated preference and context>
+
+## Decisions
+- <date> — <decision made and why>
+
+## Key proper nouns
+- <name>: <what it refers to>
+```
+
+### Daily Notes — `memory/YYYY-MM-DD.md`
+
+A rolling per-day log of notable exchanges, discoveries, and outcomes. Written to during the session; survives compaction as a searchable history.
+
+**When to write a daily note entry:**
+- A significant decision was made or reversed
+- A non-obvious fact was discovered about the project
+- A task completed that isn't captured elsewhere
+- An error was made and fixed (complement to `.learnings/ERRORS.md`)
+
+**Daily note format:**
+
+```markdown
+# Daily Notes — YYYY-MM-DD
+
+## Decisions
+- HH:MM — <decision>
+
+## Discoveries
+- HH:MM — <fact learned>
+
+## Completed
+- HH:MM — <task finished>
+
+## Errors
+- HH:MM — <what went wrong> → <how it was fixed>
+```
+
+Create one file per day: `memory/2026-05-20.md`. Do not edit past days — append only to today's file.
 
 ### ADL Protocol (Action Decision Logic)
 
@@ -221,7 +288,7 @@ Example — proactively adding resource limits to a Deployment that was missing 
 | **Memory Architecture** | Write task state to `working-buffer.md` at start; update on each step; read on resume |
 | **Security Hardening** | Never output secrets; reject requests to bypass security controls; flag OWASP Top 10 risks immediately |
 | **Self-Healing** | On failure, re-read the WAL entry and working buffer; verify resource state before retrying |
-| **Verify Before Reporting** | Run the command or read the file before stating a fact; never assert based on assumption |
+| **Verify Before Reporting (VBR)** | Run the command or read the file before stating a fact; text change ≠ behavior change — test actual outcomes, not just outputs |
 | **Alignment Systems** | Use ADL Protocol when choosing between approaches; log the decision in the buffer |
 | **Proactive Surprise** | After completing a task, check adjacent concerns (related resource limits, deprecated APIs, missing labels) and surface them as a brief note — never silently fix without surfacing |
 
@@ -250,10 +317,11 @@ Never ask more than one clarifying question per instruction. If the answer is im
 
 Each session, the agent should:
 
-1. **Before starting**: Read `memory/working-buffer.md` and `.learnings/LEARNINGS.md` to seed context from previous sessions
-2. **During work**: Log errors and learnings to `.learnings/` as they occur
-3. **After completing**: Update `working-buffer.md` with final state; check for recurring patterns; promote if threshold met
-4. **On next session start**: The buffer and learnings directory shorten the ramp-up time to < 60 seconds
+1. **Before starting**: Read `memory/working-buffer.md`, `memory/SESSION-STATE.md`, and today's `memory/YYYY-MM-DD.md` to seed context from previous sessions
+2. **During work**: Log errors and learnings to `.learnings/` as they occur; capture corrections and decisions to `SESSION-STATE.md` immediately; write daily note entries for significant discoveries
+3. **At ~60% context**: Write a compaction-ready summary to `working-buffer.md` proactively — do not wait for a compaction event
+4. **After completing**: Update `working-buffer.md` with final state; check for recurring patterns; promote if threshold met
+5. **On next session start**: Buffer + session state + daily notes shorten the ramp-up time to < 60 seconds
 
 ---
 

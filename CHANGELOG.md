@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.18.0] - 2026-05-20
+
+### Added
+
+#### Self-Improvement: SESSION-STATE, Daily Notes, VBR, Context Threshold
+
+Four improvements to the proactive agent pattern in Domain 24:
+
+- **SESSION-STATE.md** — always-on capture file (`memory/SESSION-STATE.md`) for corrections, preferences, decisions, and proper nouns. Written before responding when any of these occur (not only before destructive ops). Second read in compaction recovery after working-buffer.
+- **Daily Notes** — rolling per-day log (`memory/YYYY-MM-DD.md`) of notable exchanges, discoveries, completed tasks, and errors. Survives compaction as a searchable history. Third read in compaction recovery.
+- **Context threshold trigger** — working buffer is written proactively at ~60% context, not only at task boundaries. Prevents silent context loss mid-task.
+- **Verify Before Reporting (VBR)** — explicit protocol: run the validation command and read the changed file before reporting done. Text change ≠ behavior change; test actual outcomes.
+- Updated compaction recovery order in `commands/self-improve.md` `resume` mode: working-buffer → SESSION-STATE → daily notes → resource verification. "Never ask where were we?" rule added.
+- New `state` mode in `commands/self-improve.md` — explicit slash command for capturing session state entries
+- Example scaffold updated: `memory/SESSION-STATE.md` and `memory/YYYY-MM-DD.md` templates added to `examples/agent-self-improve/memory/`
+- `.gitignore` recommendation updated: gitignore `memory/` entirely (daily notes grow fast)
+
 ## [1.17.0] - 2026-05-20
 
 ### Added
