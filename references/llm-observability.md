@@ -35,8 +35,12 @@ LLMObs spans nest inside regular APM traces — one `dd-trace` init handles both
 
 ```python
 # requirements: ddtrace>=2.10.0
+import os
+import openai
 from ddtrace.llmobs import LLMObs
 from ddtrace.llmobs.decorators import llm, workflow, task, tool, retrieval
+
+openai_client = openai.OpenAI()
 
 LLMObs.enable(
     ml_app="orders-assistant",       # groups all spans in the LLMObs UI
@@ -62,14 +66,15 @@ def generate_order_summary(order: dict) -> str:
 # Trace a multi-step workflow
 @workflow(name="order_processing_workflow")
 def process_order(order_id: str) -> dict:
-    order = fetch_order(order_id)          # retrieval step
+    order = fetch_order(order_id)          # your data-fetch function  # type: ignore[name-defined]
     summary = generate_order_summary(order) # LLM step
     return {"order_id": order_id, "summary": summary}
 
 # Trace a retrieval step (RAG)
 @retrieval(name="fetch_product_docs")
 def fetch_product_docs(query: str) -> list[dict]:
-    results = vector_db.search(query, top_k=5)
+    # Replace with your vector DB client (Pinecone, Weaviate, pgvector, etc.)
+    results = vector_db.search(query, top_k=5)  # type: ignore[name-defined]
     LLMObs.annotate(
         input_data=query,
         output_data=[{"id": r.id, "score": r.score, "text": r.text} for r in results],
@@ -152,6 +157,7 @@ The `dd-llmo-eval-bootstrap` skill analyzes production LLM traces and generates 
 ```python
 # After a generation span, score the output and submit
 from ddtrace.llmobs import LLMObs
+from ddtrace.llmobs.decorators import llm
 
 @llm(model_provider="openai", model_name="gpt-4o", name="answer_question")
 def answer_question(question: str, context: str) -> str:
@@ -281,7 +287,7 @@ done
 ## Security
 
 - Never pass raw PII in prompt or completion content — use a `span_processor` callback in `LLMObs.enable()` to redact content before it leaves the process, or omit the `LLMObs.annotate()` call for high-sensitivity inputs
-- Scope the API key used by agentless mode to `LLM Observability Write` only — it does not need Monitors Write or Logs Write
-- Store the API key in a Kubernetes Secret or AWS Secrets Manager, referenced via `DD_API_KEY` from `secretKeyRef`
+- Scope the APP key used for management APIs (`pup`, Terraform provider) to `LLM Observability Write` only — it does not need Monitors Write or Logs Write; API keys (`DD_API_KEY`) are unscoped ingestion credentials and should be rotated separately
+- Store both `DD_API_KEY` and `DD_APP_KEY` in a Kubernetes Secret or AWS Secrets Manager, referenced via `secretKeyRef` — never hardcode them
 
 ---
