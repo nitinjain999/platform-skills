@@ -396,3 +396,135 @@ resource "datadog_synthetics_test" "orders_api" {
 - Enable `datadog.logs.containerCollectAll: true` only if log volume is manageable — filter noisy sources
 - Redact PII in log pipeline processing rules before ingestion
 - Scope APP keys to the minimum permissions needed (Monitors Write, Dashboards Write)
+
+---
+
+## pup CLI
+
+`pup` is a Rust-based CLI from Datadog Labs for scripting Datadog API interactions — monitors, logs, metrics, and more — without the GUI or Terraform.
+
+### Install
+
+```bash
+# macOS
+brew install datadog/datadog-labs/pup
+
+# Linux (x86_64)
+curl -sSL https://github.com/DataDog/datadog-agent/releases/latest/download/pup-linux-amd64 \
+  -o /usr/local/bin/pup && chmod +x /usr/local/bin/pup
+```
+
+### Configure
+
+```bash
+export DD_API_KEY="<your-api-key>"
+export DD_APP_KEY="<your-app-key>"
+export DD_SITE="datadoghq.eu"   # or datadoghq.com
+```
+
+Or use a profile file at `~/.config/pup/profiles.yaml`:
+
+```yaml
+default:
+  api_key: "${DD_API_KEY}"
+  app_key: "${DD_APP_KEY}"
+  site: datadoghq.eu
+```
+
+### Common Operations
+
+```bash
+# List all monitors currently in ALERT state
+pup monitors list --status alert
+
+# Get details of a specific monitor
+pup monitors get --id 12345678
+
+# Search logs for errors in the last 30 minutes
+pup logs search \
+  --query "service:orders-service status:error" \
+  --from "now-30m" --to "now"
+
+# Query a time series metric
+pup metrics query \
+  --query "avg:trace.web.request{service:orders-service}" \
+  --from "now-1h" --to "now"
+
+# Mute a monitor (during a deploy window)
+pup monitors mute --id 12345678 --end "$(date -u -d '+1 hour' +%s)"
+
+# Unmute after deploy
+pup monitors unmute --id 12345678
+```
+
+### Scripting Pattern (deploy gate)
+
+```bash
+#!/usr/bin/env bash
+# post-deploy: fail CI if error rate exceeds 5% within 5 minutes of deploy
+set -euo pipefail
+
+THRESHOLD=5
+SERVICE="orders-service"
+ENV="production"
+
+sleep 300  # wait 5 minutes
+
+ERROR_RATE=$(pup metrics query \
+  --query "100 * sum:trace.web.request.errors{service:${SERVICE},env:${ENV}}.as_count() / sum:trace.web.request.hits{service:${SERVICE},env:${ENV}}.as_count()" \
+  --from "now-5m" --to "now" \
+  --format json | jq '.series[0].pointlist[-1][1]')
+
+if (( $(echo "$ERROR_RATE > $THRESHOLD" | bc -l) )); then
+  echo "❌ Post-deploy error rate ${ERROR_RATE}% exceeds threshold ${THRESHOLD}%"
+  exit 1
+fi
+echo "✅ Post-deploy error rate ${ERROR_RATE}% is within threshold"
+```
+
+### Troubleshooting
+
+| Symptom | Fix |
+|---------|-----|
+| `401 Unauthorized` | Check `DD_API_KEY` and `DD_APP_KEY` are set and valid for your site |
+| `403 Forbidden` | APP key lacks required scope — add Monitors Read or Logs Read |
+| `pup: command not found` | Check `brew link pup` or verify `/usr/local/bin` is in `PATH` |
+| Empty results from `logs search` | Adjust `--from`/`--to` range; verify service tag matches log pipeline |
+
+---
+
+## Datadog Labs Claude Skills
+
+Datadog Labs publishes Claude skills that complement the official MCP server. Install them with:
+
+```bash
+claude plugin marketplace add https://github.com/datadog-labs/dd-pup
+claude plugin marketplace add https://github.com/datadog-labs/dd-apm
+claude plugin marketplace add https://github.com/datadog-labs/dd-logs
+claude plugin marketplace add https://github.com/datadog-labs/dd-monitors
+claude plugin marketplace add https://github.com/datadog-labs/dd-docs
+claude plugin install dd-pup dd-apm dd-logs dd-monitors dd-docs
+```
+
+### Skill Capabilities
+
+| Skill | Invocation | What it does |
+|-------|-----------|--------------|
+| `dd-pup` | `/dd-pup` | Installs and configures the pup CLI; wraps common pup operations |
+| `dd-apm` | `/dd-apm` | Query APM data — traces, service maps, error rates, latency percentiles |
+| `dd-logs` | `/dd-logs` | Search, filter, archive, and analyse Datadog logs through pup |
+| `dd-monitors` | `/dd-monitors` | Create, update, mute, and resolve Datadog monitors through pup |
+| `dd-docs` | `/dd-docs` | Look up Datadog documentation via the LLM-optimised docs index |
+
+### When to use Labs skills vs the official MCP server
+
+| Use case | Recommended |
+|----------|-------------|
+| Interactive incident investigation (live session) | Official MCP server |
+| Scripting, CI/CD gates, automation | `pup` CLI + `dd-pup` skill |
+| Querying APM data from editor without browser | `dd-apm` skill |
+| Log search and analysis in editor | `dd-logs` skill |
+| Monitor management without Terraform | `dd-monitors` skill |
+| Looking up Datadog documentation | `dd-docs` skill |
+
+> **Note**: Labs skills use the `pup` CLI under the hood — ensure `DD_API_KEY`, `DD_APP_KEY`, and `DD_SITE` are set in your shell before invoking them.
