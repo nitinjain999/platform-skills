@@ -477,7 +477,8 @@ ERROR_RATE=$(pup metrics query \
   --format json | jq '.series[0].pointlist[-1][1] // 0')
 
 # If no data points returned (service dark), ERROR_RATE=0 — gate passes
-if (( $(echo "$ERROR_RATE > $THRESHOLD" | bc -l) )); then
+# awk handles float comparison without requiring bc (works in Alpine/minimal CI images)
+if awk "BEGIN { exit !($ERROR_RATE > $THRESHOLD) }"; then
   echo "❌ Post-deploy error rate ${ERROR_RATE}% exceeds threshold ${THRESHOLD}%"
   exit 1
 fi
