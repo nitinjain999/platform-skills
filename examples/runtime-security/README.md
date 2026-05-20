@@ -1,5 +1,7 @@
 # Runtime Security Examples
 
+Status: Stable
+
 Working examples for the `/platform-skills:runtime-security` skill.
 
 ## Files

@@ -1,5 +1,7 @@
 # Supply Chain Security Examples
 
+Status: Stable
+
 Working examples for the `/platform-skills:supply-chain` skill.
 
 ## Files
