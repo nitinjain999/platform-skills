@@ -406,12 +406,13 @@ resource "datadog_synthetics_test" "orders_api" {
 ### Install
 
 ```bash
-# macOS
+# macOS (verify tap name at https://github.com/datadog-labs/pup)
 brew install datadog/datadog-labs/pup
 
-# Linux (x86_64)
-curl -sSL https://github.com/DataDog/datadog-agent/releases/latest/download/pup-linux-amd64 \
-  -o /usr/local/bin/pup && chmod +x /usr/local/bin/pup
+# Linux — check https://github.com/datadog-labs/pup/releases for the latest binary
+# Example (verify URL before running):
+# curl -sSL https://github.com/datadog-labs/pup/releases/latest/download/pup-linux-amd64 \
+#   -o /usr/local/bin/pup && chmod +x /usr/local/bin/pup
 ```
 
 ### Configure
@@ -451,7 +452,9 @@ pup metrics query \
   --from "now-1h" --to "now"
 
 # Mute a monitor (during a deploy window)
-pup monitors mute --id 12345678 --end "$(date -u -d '+1 hour' +%s)"
+# macOS: $(( $(date +%s) + 3600 ))
+# Linux: $(date -u -d '+1 hour' +%s)
+pup monitors mute --id 12345678 --end "$(( $(date +%s) + 3600 ))"
 
 # Unmute after deploy
 pup monitors unmute --id 12345678
@@ -473,8 +476,9 @@ sleep 300  # wait 5 minutes
 ERROR_RATE=$(pup metrics query \
   --query "100 * sum:trace.web.request.errors{service:${SERVICE},env:${ENV}}.as_count() / sum:trace.web.request.hits{service:${SERVICE},env:${ENV}}.as_count()" \
   --from "now-5m" --to "now" \
-  --format json | jq '.series[0].pointlist[-1][1]')
+  --format json | jq '.series[0].pointlist[-1][1] // 0')
 
+# If no data points returned (service dark), ERROR_RATE=0 — gate passes
 if (( $(echo "$ERROR_RATE > $THRESHOLD" | bc -l) )); then
   echo "❌ Post-deploy error rate ${ERROR_RATE}% exceeds threshold ${THRESHOLD}%"
   exit 1
