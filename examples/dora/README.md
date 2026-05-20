@@ -18,6 +18,21 @@ Working examples for tracking the four DORA metrics — Deployment Frequency, Le
 | `prometheus-recording-rules.yaml` | All four DORA Prometheus recording rules |
 | `grafana-dashboard.json` | Grafana dashboard JSON with four DORA panels and threshold bands |
 | `dora-validate.sh` | Domain validator |
+| `amp-variant/` | AMP-specific replacements — see below |
+
+## Amazon Managed Prometheus (AMP)
+
+AMP has no public Pushgateway endpoint. Use the files in [`amp-variant/`](amp-variant/) alongside the standard files:
+
+| amp-variant file | What it does |
+|---|---|
+| `pushgateway-helm-values.yaml` | Deploys in-cluster Pushgateway (GitHub Actions still pushes here) |
+| `prometheus-agent-values.yaml` | Prometheus Agent: scrapes Pushgateway, remote_writes to AMP via SigV4/IRSA |
+| `amp-recording-rules-deploy.sh` | AWS CLI script to create/update DORA rules in AMP (replaces `kubectl apply`) |
+| `grafana-amp-datasource.yaml` | Grafana datasource ConfigMap for self-hosted Grafana → AMP (SigV4) |
+| `grafana-amg-datasource.json` | Datasource config for Amazon Managed Grafana |
+
+The `deployment-event-step.yaml`, `incident-webhook-handler.yaml`, `prometheus-recording-rules.yaml`, and `grafana-dashboard.json` files are **unchanged** — only the infrastructure wiring differs.
 
 ## Usage
 

@@ -1,0 +1,45 @@
+# Grafana datasource ConfigMap — self-hosted Grafana connecting to AMP via SigV4.
+#
+# Prerequisites:
+#   - Grafana Helm chart >= 7.0.0 with sidecar.datasources.enabled: true
+#   - grafana.ini: [auth.sigv4] enabled = true  (set via Helm values grafana.ini key)
+#   - Grafana pod ServiceAccount annotated with IRSA role that has AmazonPrometheusQueryAccess
+#
+# Helm values to enable SigV4 in Grafana:
+#   grafana.ini:
+#     auth.sigv4:
+#       enabled: true
+#   serviceAccount:
+#     annotations:
+#       eks.amazonaws.com/role-arn: arn:aws:iam::<account-id>:role/grafana-amp-query
+#
+# Replace <workspace-id> and <region> with your AMP workspace values.
+# Apply: kubectl apply -f examples/dora/amp-variant/grafana-amp-datasource.yaml
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-amp-datasource
+  namespace: monitoring
+  labels:
+    grafana_datasource: "1"    # sidecar picks up ConfigMaps with this label
+data:
+  amp-datasource.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: AMP
+        type: prometheus
+        uid: amp-dora
+        access: proxy
+        url: https://aps-workspaces.eu-central-1.amazonaws.com/workspaces/<workspace-id>/api/v1/
+        isDefault: false
+        jsonData:
+          sigV4Auth: true
+          sigV4Region: eu-central-1
+          # sigV4AuthType options: default (uses pod IAM role via IRSA),
+          # workspace_iam_arn (explicit role ARN), keys (static — avoid in prod)
+          sigV4AuthType: default
+          httpMethod: POST
+          timeInterval: 30s
+        version: 1
+        editable: false

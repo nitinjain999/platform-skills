@@ -38,24 +38,53 @@ fi
 
 # ---------------------------------------------------------------------------
 # JSON validation — prefer jq, fall back to python3
+# Covers grafana-dashboard.json and amp-variant/*.json
 # ---------------------------------------------------------------------------
-json_file="${SCRIPT_DIR}/grafana-dashboard.json"
-filename="$(basename "${json_file}")"
+validate_json() {
+  local json_file="$1"
+  local filename
+  filename="$(basename "${json_file}")"
+  if command -v jq &>/dev/null; then
+    if jq . "${json_file}" &>/dev/null; then
+      pass "${filename}"
+    else
+      fail "${filename}" "jq reported invalid JSON"
+    fi
+  elif command -v python3 &>/dev/null; then
+    if python3 -c "import json, sys; json.load(sys.stdin)" < "${json_file}" &>/dev/null; then
+      pass "${filename}"
+    else
+      fail "${filename}" "python3 reported invalid JSON"
+    fi
+  else
+    echo "WARNING: neither jq nor python3 found — skipping JSON validation" >&2
+  fi
+}
 
-if command -v jq &>/dev/null; then
-  if jq . "${json_file}" &>/dev/null; then
-    pass "${filename}"
+validate_json "${SCRIPT_DIR}/grafana-dashboard.json"
+
+# ---------------------------------------------------------------------------
+# AMP variant — YAML and JSON files
+# ---------------------------------------------------------------------------
+AMP_DIR="${SCRIPT_DIR}/amp-variant"
+if [[ -d "$AMP_DIR" ]]; then
+  if ! command -v yq &>/dev/null; then
+    echo "WARNING: yq not found — skipping amp-variant YAML validation" >&2
   else
-    fail "${filename}" "jq reported invalid JSON"
+    for yaml_file in "${AMP_DIR}"/*.yaml; do
+      [[ -e "$yaml_file" ]] || continue
+      filename="amp-variant/$(basename "${yaml_file}")"
+      if yq eval 'true' "${yaml_file}" &>/dev/null; then
+        pass "${filename}"
+      else
+        fail "${filename}" "yq reported invalid YAML"
+      fi
+    done
   fi
-elif command -v python3 &>/dev/null; then
-  if python3 -c "import json, sys; json.load(sys.stdin)" < "${json_file}" &>/dev/null; then
-    pass "${filename}"
-  else
-    fail "${filename}" "python3 reported invalid JSON"
-  fi
-else
-  echo "WARNING: neither jq nor python3 found — skipping JSON validation" >&2
+  for json_file in "${AMP_DIR}"/*.json; do
+    [[ -e "$json_file" ]] || continue
+    validate_json "${json_file}"
+  done
 fi
 
 # ---------------------------------------------------------------------------

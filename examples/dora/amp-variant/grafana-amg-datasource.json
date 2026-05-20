@@ -1,0 +1,28 @@
+{
+  "name": "AMP",
+  "type": "prometheus",
+  "uid": "amp-dora",
+  "url": "https://aps-workspaces.eu-central-1.amazonaws.com/workspaces/<workspace-id>/api/v1/",
+  "access": "proxy",
+  "isDefault": false,
+  "jsonData": {
+    "httpMethod": "POST",
+    "timeInterval": "30s",
+    "sigV4Auth": true,
+    "sigV4Region": "eu-central-1",
+    "sigV4AuthType": "default"
+  },
+  "secureJsonData": {},
+  "version": 1,
+  "editable": false,
+  "_comment": [
+    "Amazon Managed Grafana (AMG) handles SigV4 automatically when the workspace",
+    "has AMP listed as a data source. Import this JSON via the AMG console:",
+    "  Grafana Console → Configuration → Data Sources → Add data source → Amazon Managed Service for Prometheus",
+    "  OR use the AMG API:",
+    "  aws grafana create-workspace-api-key ... and POST to /api/datasources",
+    "",
+    "Replace <workspace-id> with your AMP workspace ID.",
+    "Replace eu-central-1 with your AMP workspace region."
+  ]
+}
