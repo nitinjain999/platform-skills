@@ -63,7 +63,8 @@ Both layers work independently. The plugin is optional.
 | 🔌 MCP | [references/mcp.md](references/mcp.md) | Model Context Protocol server/client development, TypeScript and Python SDKs, stdio/SSE transports, security, testing |
 | <img src="https://cdn.simpleicons.org/prometheus/E6522C" width="16" height="16" alt="Prometheus"> Observability | [references/observability.md](references/observability.md) | Structured logging, Prometheus metrics, OpenTelemetry tracing, Grafana dashboards, alerting rules, k6 load testing, capacity planning |
 | 📝 Documentation | [references/documentation.md](references/documentation.md) | Docstrings (Google/NumPy/JSDoc), OpenAPI 3.1 specs, doc sites (MkDocs/TypeDoc), developer guides |
-| <img src="https://cdn.simpleicons.org/datadog/632CA6" width="16" height="16" alt="Datadog"> Datadog | [references/datadog.md](references/datadog.md) | Agent Helm setup, APM instrumentation, log management, monitors/dashboards/SLOs as Terraform |
+| <img src="https://cdn.simpleicons.org/datadog/632CA6" width="16" height="16" alt="Datadog"> Datadog | [references/datadog.md](references/datadog.md) | Agent Helm setup, APM instrumentation, log management, monitors/dashboards/SLOs as Terraform, pup CLI, Datadog Labs skills |
+| 🤖 LLM Observability | [references/llm-observability.md](references/llm-observability.md) | Datadog LLMObs instrumentation (Python/Node.js), eval bootstrap, trace RCA, experiment analysis |
 | <img src="https://cdn.simpleicons.org/dynatrace/1496FF" width="16" height="16" alt="Dynatrace"> Dynatrace | [references/dynatrace.md](references/dynatrace.md) | OneAgent Kubernetes Operator, custom metrics, SLOs, dashboards and alerting via Terraform provider |
 | <img src="https://cdn.simpleicons.org/git/F05032" width="16" height="16" alt="Git"> Conventional Commits | [references/conventional-commits.md](references/conventional-commits.md) | Message structure, type classification, atomic staging, commitlint/husky/semantic-release tooling |
 | 📋 OPA / Conftest | [references/opa.md](references/opa.md) | Rego v1 syntax, rule types, unit tests, fmt/regal/verify validation pipeline, GitHub Actions integration |
@@ -164,7 +165,8 @@ platform-skills/
 │   ├── compliance.md                   # SOC 2 controls in Terraform (v1.6.0)
 │   ├── helm.md                         # Helm chart patterns, lint pipeline, values design
 │   ├── pr-review.md                    # PR review: cost, drift, ownership, compliance, upgrade, rollback (v1.12.0)
-│   └── keda.md                         # KEDA event-driven autoscaling (v1.14.0)
+│   ├── keda.md                         # KEDA event-driven autoscaling (v1.14.0)
+│   └── llm-observability.md                # Datadog LLMObs: instrumentation, evals, trace RCA (v1.20.0)
 │
 ├── examples/                           # Working examples and handbook snippets
 │   ├── flux/basic-monorepo/            # Complete Flux CD monorepo structure
@@ -199,7 +201,7 @@ platform-skills/
 
 ## Roadmap
 
-**Current release: v1.19.0** — 25 commands, 30 domain reference guides, 50+ wiki pages.
+**Current release: v1.20.0** — 25 commands, 31 domain reference guides, 50+ wiki pages.
 
 Full version history is in [CHANGELOG.md](CHANGELOG.md).
 
