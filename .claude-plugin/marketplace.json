@@ -7,7 +7,7 @@
   "plugins": [
     {
       "name": "platform-skills",
-      "version": "1.14.0",
+      "version": "1.15.0",
       "description": "Practical guidance for platform engineers: Kubernetes, Helm, Terraform, GitOps, GitHub Actions, AWS, Azure, Linkerd, Linux, networking, MCP server development, observability (Prometheus/OpenTelemetry/Grafana), code documentation (OpenAPI/docstrings), SOC 2 compliance for Terraform, Datadog, Dynatrace, conventional commit message generation, OPA/Conftest Rego policies, Kyverno admission policies (ValidatingPolicy/MutatingPolicy/GeneratingPolicy/ImageValidatingPolicy, CEL expressions, Audit→Deny promotion), comprehensive PR review (cost impact, environment drift, ownership governance, compliance, deprecated API upgrade, rollback feasibility), PR comment triage, and KEDA event-driven autoscaling (ScaledObject, ScaledJob, TriggerAuthentication, Prometheus/SQS/Kafka/Redis/Cron/HTTP/Azure scalers, scale-to-zero, IRSA). Covers troubleshooting, security-first patterns, DevEx, RFC/ADR, compliance controls, and working examples — at any scale.",
       "author": {
         "name": "Nitin Jain"

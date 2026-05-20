@@ -108,6 +108,7 @@ Slash commands are predefined workflows. Use them instead of writing a long prom
 | `/platform-skills:pr-review` | Comprehensive PR review: cost, drift, ownership, compliance, upgrade, rollback |
 | `/platform-skills:triage` | Triage a PR comment, fix valid findings, reply, and resolve the thread |
 | `/platform-skills:keda` | KEDA ScaledObject/ScaledJob — generate, debug, review, or design a scaling strategy |
+| `/platform-skills:self-improve` | Bootstrap `.learnings/` workspace, log errors/learnings, resume after interruption, review patterns, promote to project memory |
 
 Invoke a command by typing it at the start of your message:
 

@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.15.0] - 2026-05-20
+
+### Added
+
+#### Agent Self-Improvement — Domain 24
+
+New Domain 24: `Agent Self-Improvement` — bootstrap and operate self-improving, proactive agent workspaces.
+
+- `references/agent-self-improve.md` — comprehensive reference guide covering:
+  - `.learnings/` directory layout and entry lifecycle (LRN/ERR/FEAT)
+  - WAL Protocol (append-only log, write-ahead before action)
+  - Working Buffer pattern for mid-session state persistence
+  - VFM Scoring (Value-Frequency Matrix) for evaluating unsolicited proactive actions
+  - ADL Protocol (Action Decision Logic) for choosing between competing implementation approaches
+  - Six Operating Pillars for proactive agent behavior
+  - Heartbeat pattern for session continuity
+  - Reverse Prompting to surface agent knowledge gaps
+- `commands/self-improve.md` — slash command definition for `/platform-skills:self-improve` with five modes: `init`, `log`, `resume`, `review`, `promote`
+- `examples/agent-self-improve/` — ready-to-copy workspace scaffold:
+  - `README.md` — overview and copy commands
+  - `.learnings/LEARNINGS.md` — positive learnings template
+  - `.learnings/ERRORS.md` — error log template
+  - `.learnings/FEATURE_REQUESTS.md` — feature request template
+  - `memory/working-buffer.md` — WAL scratchpad template
+- Updated `SKILL.md` (root and `skills/platform-skills/`) with Domain 24 entry, reference bullet, and `/platform-skills:self-improve` slash command
+- Updated `README.md` with Domain 26 badge and domain table row
+- Updated `COMMANDS.md` with ToC entry and full command reference section
+
 ## [1.14.0] - 2026-05-16
 
 ### Added
@@ -73,7 +101,7 @@ Enhanced `/platform-skills:review` with structured output for automated PR comme
 #### Wiki
 
 - Full GitHub wiki published at https://github.com/nitinjain999/platform-skills/wiki
-- 50 pages covering all 20 commands and 25 domains
+- 50 pages covering all 21 commands and 25 domains
 - Navigation index, Quick Start, Installation, Editor Integrations, How It Works, Contributing
 - One page per command with Claude Code slash syntax, Copilot Chat prompts, and what gets checked
 - One page per domain with key patterns, code examples, and links to the full reference guide
