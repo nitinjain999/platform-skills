@@ -1,0 +1,35 @@
+# Falcosidekick Helm values: Slack + webhook alert routing.
+# Pass to Falco Helm chart via --set falcosidekick.enabled=true -f falcosidekick-values.yaml
+# or merge into falco-values.yaml.
+falcosidekick:
+  enabled: true
+
+  webui:
+    enabled: true           # dashboard at port 2802
+
+  config:
+    debug: false
+
+    # Slack output — substitute webhook URL
+    slack:
+      webhookurl: ""        # set via --set falcosidekick.config.slack.webhookurl=<url>
+      channel: "#platform-security-alerts"
+      minimumpriority: warning
+      messageformat: >
+        :rotating_light: *{{ .Rule }}* ({{ .Priority }})
+        *Container:* `{{ index .OutputFields "container.name" }}`
+        *Image:* `{{ index .OutputFields "container.image.repository" }}`
+        *Pod:* `{{ index .OutputFields "k8s.pod.name" }}` in `{{ index .OutputFields "k8s.ns.name" }}`
+        *Cmdline:* `{{ index .OutputFields "proc.cmdline" }}`
+
+    # Webhook output — for custom alert handlers or SIEM integration
+    webhook:
+      address: ""           # set via --set falcosidekick.config.webhook.address=<url>
+      minimumpriority: error
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 256Mi         # cpu limit intentionally omitted
