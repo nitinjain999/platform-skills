@@ -1,0 +1,25 @@
+# Litmus Chaos v3 — Helm values
+# Installs: chaos-operator, chaos-exporter, workflow-controller, chaos-center
+portal:
+  server:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 128Mi
+      limits:
+        memory: 256Mi
+  frontend:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        memory: 128Mi
+
+mongodb:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi

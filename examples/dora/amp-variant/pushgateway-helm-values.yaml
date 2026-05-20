@@ -1,0 +1,47 @@
+# Prometheus Pushgateway — Helm values for in-cluster deployment.
+# AMP has no public Pushgateway endpoint, so the Pushgateway runs in-cluster
+# and a Prometheus Agent scrapes it and remote_writes to AMP.
+#
+# Chart: prometheus-community/prometheus-pushgateway
+# Version: >= 2.4.0
+# Install:
+#   helm upgrade --install pushgateway prometheus-community/prometheus-pushgateway \
+#     --namespace monitoring --create-namespace \
+#     -f examples/dora/amp-variant/pushgateway-helm-values.yaml
+
+replicaCount: 1
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 128Mi
+
+# Expose only inside the cluster — GitHub Actions runners must be able to reach
+# this address. For self-hosted runners in the same VPC this works directly.
+# For GitHub-hosted runners, expose via an internal load balancer or use an
+# HTTPS tunnel (e.g., Tailscale, AWS PrivateLink endpoint to the cluster).
+service:
+  type: ClusterIP
+  port: 9091
+
+# Persistence keeps metrics across pod restarts. Use a small PVC.
+persistentVolume:
+  enabled: true
+  size: 1Gi
+  storageClass: ""    # use cluster default
+
+# Annotate for Prometheus scrape discovery
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "9091"
+  prometheus.io/path: "/metrics"
+
+# Time-to-live on pushed metric groups.
+# Set to longer than your deploy cadence to avoid gaps in Prometheus.
+# default: 5 minutes — increase for teams that deploy less frequently.
+extraArgs:
+  - --push.disable-consistency-check
+  # Uncomment to set a TTL on pushed metric groups (requires pushgateway >= 1.6.0):
+  # - --push.ttl=10m

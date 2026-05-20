@@ -66,6 +66,8 @@ REQUIRED_REFERENCES=(
   references/agent-self-improve.md
   references/supply-chain.md
   references/runtime-security.md
+  references/chaos.md
+  references/dora.md
 )
 
 for ref in "${REQUIRED_REFERENCES[@]}"; do
@@ -104,6 +106,8 @@ EXAMPLE_DOMAINS=(
   examples/agent-self-improve
   examples/supply-chain
   examples/runtime-security
+  examples/chaos
+  examples/dora
 )
 
 for domain in "${EXAMPLE_DOMAINS[@]}"; do
@@ -241,6 +245,8 @@ VALIDATE_SCRIPTS=(
   "examples/compliance/compliance-validate.sh"
   "examples/supply-chain/supply-chain-validate.sh"
   "examples/runtime-security/runtime-security-validate.sh"
+  "examples/chaos/chaos-validate.sh"
+  "examples/dora/dora-validate.sh"
 )
 
 for script in "${VALIDATE_SCRIPTS[@]}"; do

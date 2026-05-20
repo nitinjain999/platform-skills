@@ -1,0 +1,95 @@
+name: DORA Incident Webhook Handler
+
+# Triggered by PagerDuty or OpsGenie via GitHub repository_dispatch API.
+# Configure your alerting tool to POST to:
+#   POST https://api.github.com/repos/<owner>/<repo>/dispatches
+# with body:
+#   { "event_type": "pagerduty-webhook", "client_payload": { "event_type": "incident.triggered", "incident_id": "...", "triggered_at": "<unix-ts>" } }
+# For resolved events set "event_type": "incident.resolved" and add "resolved_at" and "deploy_sha" fields.
+
+on:
+  repository_dispatch:
+    types:
+      - pagerduty-webhook
+      - opsgenie-webhook
+
+permissions:
+  contents: read
+
+jobs:
+  handle-incident-event:
+    name: Push DORA incident metrics
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate payload
+        run: |
+          INCIDENT_EVENT="${{ github.event.client_payload.event_type }}"
+          if [[ "$INCIDENT_EVENT" != "incident.triggered" && "$INCIDENT_EVENT" != "incident.resolved" ]]; then
+            echo "Unhandled incident event type: ${INCIDENT_EVENT} — skipping"
+            exit 0
+          fi
+          echo "Processing incident event: ${INCIDENT_EVENT}"
+
+      # -----------------------------------------------------------------------
+      # incident.triggered — record incident start timestamp
+      # -----------------------------------------------------------------------
+      - name: Push incident start timestamp
+        if: github.event.client_payload.event_type == 'incident.triggered'
+        env:
+          PUSHGATEWAY_URL: ${{ secrets.PUSHGATEWAY_URL }}
+          INCIDENT_ID: ${{ github.event.client_payload.incident_id }}
+          TRIGGERED_AT: ${{ github.event.client_payload.triggered_at }}
+          REPO: ${{ github.repository }}
+        run: |
+          cat <<EOF | curl --silent --show-error --data-binary @- \
+            "${PUSHGATEWAY_URL}/metrics/job/dora_incident/instance/${INCIDENT_ID}"
+          # TYPE dora_incident_start_timestamp gauge
+          dora_incident_start_timestamp{repo="${REPO}",incident_id="${INCIDENT_ID}",env="production"} ${TRIGGERED_AT}
+          EOF
+          echo "Pushed dora_incident_start_timestamp for incident ${INCIDENT_ID}"
+
+      # -----------------------------------------------------------------------
+      # incident.resolved — compute duration, record MTTR contributor,
+      #                     and flag which deploy caused the incident
+      # -----------------------------------------------------------------------
+      - name: Push incident resolution metrics
+        if: github.event.client_payload.event_type == 'incident.resolved'
+        env:
+          PUSHGATEWAY_URL: ${{ secrets.PUSHGATEWAY_URL }}
+          INCIDENT_ID: ${{ github.event.client_payload.incident_id }}
+          TRIGGERED_AT: ${{ github.event.client_payload.triggered_at }}
+          RESOLVED_AT: ${{ github.event.client_payload.resolved_at }}
+          DEPLOY_SHA: ${{ github.event.client_payload.deploy_sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          if [[ -z "${TRIGGERED_AT}" || -z "${RESOLVED_AT}" ]]; then
+            echo "ERROR: triggered_at or resolved_at missing from payload" >&2
+            exit 1
+          fi
+          if ! [[ "${TRIGGERED_AT}" =~ ^[0-9]+$ && "${RESOLVED_AT}" =~ ^[0-9]+$ ]]; then
+            echo "ERROR: triggered_at and resolved_at must be Unix timestamps (integers)" >&2
+            exit 1
+          fi
+          DURATION=$(( RESOLVED_AT - TRIGGERED_AT ))
+          if [[ "${DURATION}" -lt 0 ]]; then
+            echo "ERROR: resolved_at (${RESOLVED_AT}) is before triggered_at (${TRIGGERED_AT})" >&2
+            exit 1
+          fi
+          echo "Incident ${INCIDENT_ID} duration: ${DURATION}s"
+
+          cat <<EOF | curl --silent --show-error --data-binary @- \
+            "${PUSHGATEWAY_URL}/metrics/job/dora_incident/instance/${INCIDENT_ID}"
+          # TYPE dora_incident_duration_seconds gauge
+          dora_incident_duration_seconds{repo="${REPO}",incident_id="${INCIDENT_ID}",env="production"} ${DURATION}
+          # TYPE dora_incident_caused_by_deploy gauge
+          dora_incident_caused_by_deploy{repo="${REPO}",incident_id="${INCIDENT_ID}",deploy_sha="${DEPLOY_SHA}",env="production"} 1
+          EOF
+          echo "Pushed dora_incident_duration_seconds and dora_incident_caused_by_deploy"
+
+      - name: Summary
+        run: |
+          echo "### DORA Incident Metrics" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Event type: ${{ github.event.client_payload.event_type }}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Incident ID: ${{ github.event.client_payload.incident_id }}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Source: ${{ github.event_name }}" >> "${GITHUB_STEP_SUMMARY}"

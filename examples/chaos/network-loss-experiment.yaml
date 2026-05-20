@@ -1,0 +1,20 @@
+# Chaos Mesh NetworkChaos: 20% packet loss for 60s
+# Target: pods with label app=my-service in namespace my-namespace
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: network-loss-20pct
+  namespace: my-namespace
+spec:
+  action: loss
+  mode: all
+  selector:
+    namespaces:
+    - my-namespace
+    labelSelectors:
+      app: my-service
+  loss:
+    loss: "20"
+    correlation: "25"
+  duration: 60s
+  direction: to

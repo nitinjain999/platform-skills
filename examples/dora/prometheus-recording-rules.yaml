@@ -1,0 +1,23 @@
+groups:
+  - name: dora
+    interval: 5m
+    rules:
+      # Deployment frequency: average deploys per day over 30-day window.
+      # changes() counts distinct value changes on the timestamp gauge — one per deploy push.
+      - record: dora:deployment_frequency:rate30d
+        expr: changes(dora_deployment_timestamp{env="production"}[30d]) / 30
+
+      # Lead time: p50 seconds from first commit to production deploy, 30d rolling.
+      - record: dora:lead_time_seconds:p50
+        expr: quantile_over_time(0.5, dora_lead_time_seconds{env="production"}[30d])
+
+      # Change failure rate: % of deploys that caused a production incident.
+      # changes() counts distinct incident/deploy events, not scrape samples.
+      - record: dora:change_failure_rate:ratio30d
+        expr: |
+          changes(dora_incident_caused_by_deploy{env="production"}[30d])
+          / changes(dora_deployment_timestamp{env="production"}[30d]) * 100
+
+      # MTTR: p50 seconds from incident open to incident resolved, 30d rolling.
+      - record: dora:mttr_seconds:p50
+        expr: quantile_over_time(0.5, dora_incident_duration_seconds{env="production"}[30d])

@@ -1,0 +1,24 @@
+# Append this step to your production deploy workflow.
+# Requires: PUSHGATEWAY_URL secret set in repository settings.
+# Requires: actions/checkout with fetch-depth: 0 (full history for lead time calculation).
+- name: Record DORA deployment event
+  if: success()
+  env:
+    PUSHGATEWAY_URL: ${{ secrets.PUSHGATEWAY_URL }}
+    REPO: ${{ github.repository }}
+  run: |
+    DEPLOY_TS=$(date +%s)
+    # Lead time: time from first commit in this batch to deploy.
+    # Uses full git history (requires fetch-depth: 0 in checkout step).
+    FIRST_COMMIT_TS=$(git log --reverse --format="%ct" origin/main..HEAD | head -1)
+    FIRST_COMMIT_TS=${FIRST_COMMIT_TS:-$DEPLOY_TS}  # fallback if no commits ahead of main
+    LEAD_TIME=$((DEPLOY_TS - FIRST_COMMIT_TS))
+    # Sanitize REPO: replace '/' with '_' to avoid breaking Pushgateway path segments.
+    INSTANCE="${REPO//\//_}"
+    cat <<EOF | curl --silent --show-error --data-binary @- \
+      "${PUSHGATEWAY_URL}/metrics/job/dora/instance/${INSTANCE}"
+    # TYPE dora_deployment_timestamp gauge
+    dora_deployment_timestamp{repo="${REPO}",env="production"} ${DEPLOY_TS}
+    # TYPE dora_lead_time_seconds gauge
+    dora_lead_time_seconds{repo="${REPO}",env="production"} ${LEAD_TIME}
+    EOF
