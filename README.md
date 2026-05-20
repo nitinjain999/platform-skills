@@ -71,6 +71,10 @@ Both layers work independently. The plugin is optional.
 | 🧵 PR Comment Triage | [commands/triage.md](commands/triage.md) | `/platform-skills:triage` classifies PR comments, applies valid fixes, replies, and resolves review threads |
 | ⚡ KEDA | [references/keda.md](references/keda.md) | ScaledObject, ScaledJob, TriggerAuthentication, Prometheus/SQS/Kafka/Redis/Cron/HTTP/Azure scalers, scale-to-zero, IRSA, GitOps integration, troubleshooting — `/platform-skills:keda` |
 | 🤖 Agent Self-Improvement | [references/agent-self-improve.md](references/agent-self-improve.md) | `.learnings/` directory setup, LRN/ERR/FEAT entry lifecycle, WAL protocol, working buffer, VFM scoring, ADL decision logic, Six Operating Pillars, heartbeat, reverse prompting, proactive agent behavior — `/platform-skills:self-improve` |
+| 🔗 Supply Chain Security | [references/supply-chain.md](references/supply-chain.md) | Cosign keyless signing, Syft SBOM generation and attestation, Trivy/Grype CVE scanning with severity gates, SLSA Level 2 provenance, Kyverno ImageValidatingPolicy enforcement — `/platform-skills:supply-chain` |
+| 🦅 Runtime Security | [references/runtime-security.md](references/runtime-security.md) | Falco eBPF deployment on EKS/GKE, custom rule authoring, Falcosidekick alert routing, rule debugging, bridging Falco signals to Kyverno admission enforcement — `/platform-skills:runtime-security` |
+| 💥 Chaos Engineering | [references/chaos.md](references/chaos.md) | Litmus Chaos v3 and Chaos Mesh v2 fault injection, steady-state hypothesis (httpProbe/promProbe), blast radius scoping, GameDay workflow, recurring schedules, DORA feedback loop — `/platform-skills:chaos` |
+| 📊 DORA Metrics | [references/dora.md](references/dora.md) | Deployment Frequency, Lead Time, Change Failure Rate, MTTR — GitHub Actions + Prometheus Pushgateway instrumentation, recording rules, Grafana dashboards, SaaS decision matrix, anti-pattern detection — `/platform-skills:dora` |
 
 ## Core principles
 
@@ -195,7 +199,7 @@ platform-skills/
 
 ## Roadmap
 
-**Current release: v1.14.0** — 20 commands, 25 domain reference guides, 50+ wiki pages.
+**Current release: v1.19.0** — 26 commands, 30 domain reference guides, 50+ wiki pages.
 
 Full version history is in [CHANGELOG.md](CHANGELOG.md).
 
