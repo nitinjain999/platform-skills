@@ -1,0 +1,47 @@
+# Litmus ChaosSchedule: weekly pod-delete in staging
+# Runs at most once every 168h (1 week)
+# WARNING: only use in staging environments — never production without a change window
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosSchedule
+metadata:
+  name: pod-delete-weekly
+  namespace: staging
+spec:
+  schedule:
+    repeat:
+      properties:
+        minChaosInterval: "168h"
+  engineTemplateSpec:
+    appinfo:
+      appns: staging
+      applabel: "app=my-service"
+      appkind: deployment
+    chaosServiceAccount: litmus-admin
+    jobCleanUpPolicy: retain
+    experiments:
+    - name: pod-delete
+      spec:
+        components:
+          env:
+          - name: TOTAL_CHAOS_DURATION
+            value: "60"
+          - name: CHAOS_INTERVAL
+            value: "15"
+          - name: FORCE
+            value: "false"
+          - name: PODS_AFFECTED_PERC
+            value: "50"
+        probe:
+        - name: check-api-health
+          type: httpProbe
+          httpProbe/inputs:
+            url: http://my-service.staging.svc.cluster.local/healthz
+            method:
+              get:
+                criteria: ==
+                responseCode: "200"
+          mode: Continuous
+          runProperties:
+            probeTimeout: 5000
+            interval: 2000
+            attempt: 3

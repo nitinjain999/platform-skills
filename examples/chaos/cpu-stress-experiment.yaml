@@ -1,0 +1,46 @@
+# Litmus ChaosEngine: pod-cpu-hog with Prometheus steady-state probe
+# Target: Deployment with label app=my-service in namespace my-namespace
+# Consumes 60% CPU for 60s; Prometheus probe checks error rate < 1%
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosEngine
+metadata:
+  name: cpu-stress-engine
+  namespace: my-namespace
+spec:
+  appinfo:
+    appns: my-namespace
+    applabel: "app=my-service"
+    appkind: deployment
+  chaosServiceAccount: litmus-admin
+  jobCleanUpPolicy: retain
+  experiments:
+  - name: pod-cpu-hog
+    spec:
+      components:
+        env:
+        - name: TOTAL_CHAOS_DURATION
+          value: "60"
+        - name: CPU_CORES
+          value: "1"
+        - name: CPU_LOAD
+          value: "60"
+        - name: PODS_AFFECTED_PERC
+          value: "50"
+      probe:
+      - name: check-error-rate
+        type: promProbe
+        promProbe/inputs:
+          endpoint: http://prometheus-server.monitoring.svc.cluster.local:9090
+          query: >
+            rate(http_requests_total{namespace="my-namespace",status=~"5.."}[1m])
+            /
+            rate(http_requests_total{namespace="my-namespace"}[1m]) < 0.01
+          comparator:
+            type: float
+            criteria: ==
+            value: "1"
+        mode: Edge
+        runProperties:
+          probeTimeout: 10000
+          interval: 5000
+          attempt: 3

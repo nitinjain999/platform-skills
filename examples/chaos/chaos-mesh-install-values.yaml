@@ -1,0 +1,28 @@
+# Chaos Mesh v2 — Helm values
+controllerManager:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+chaosDaemon:
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+  # runtime: containerd is required for EKS/GKE — change to docker for Docker-based clusters
+  runtime: containerd
+  socketPath: /run/containerd/containerd.sock
+
+dashboard:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+  securityMode: false    # set true for production with auth
