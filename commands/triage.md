@@ -171,3 +171,14 @@ When `--all` mode finishes, print a summary table:
 | #<id> | @<login> | INFORMATIONAL  | Replied, thread resolved |
 | #<id> | @<login> | NOT_APPLICABLE | Replied, thread resolved |
 ```
+
+---
+
+## Closing — Log learnings
+
+After completing triage (single comment or `--all`), log any errors or learnings that surfaced:
+
+- Each ACTIONABLE_FIX that required a non-obvious correction → log as `ERR` in `.learnings/ERRORS.md`
+- Any pattern or shortcut that worked well → log as `LRN` in `.learnings/LEARNINGS.md`
+
+Use `/platform-skills:self-improve log` for each entry worth keeping. Do not defer — log while the context is fresh.

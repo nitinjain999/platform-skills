@@ -194,3 +194,14 @@ Steps:
 4. Remediation workflow: fix the workload → remove the label → re-admit
 
 Reference: `references/runtime-security.md` → Kyverno bridge, `references/kyverno.md` → ValidatingPolicy
+
+---
+
+## Closing — Log learnings
+
+After completing any runtime-security mode, log findings while context is fresh:
+
+- Incorrect Falco field, wrong driver, or broken rule condition discovered → log as `ERR` in `.learnings/ERRORS.md`
+- A rule pattern, operator, or configuration approach that worked → log as `LRN` in `.learnings/LEARNINGS.md`
+
+Use `/platform-skills:self-improve log` for each entry. Do not defer to end of session.
