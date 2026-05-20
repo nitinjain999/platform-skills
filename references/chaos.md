@@ -129,7 +129,7 @@ probe:
     comparator:
       type: float
       criteria: ==
-      value: "1"
+      value: "1"    # PromQL bool expression returns 1 when true (rate < 0.01 is healthy), 0 when false
   mode: Edge
 ```
 
