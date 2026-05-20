@@ -9,6 +9,9 @@ Production-ready Datadog monitors, dashboards, and SLOs managed as Terraform cod
 | Example | Type | Description |
 |---------|------|-------------|
 | [terraform/monitors.tf](terraform/) | Terraform | Error rate monitor, p99 latency monitor, and 30-day availability SLO |
+| [llm-observability/llmobs-python.py](llm-observability/llmobs-python.py) | Python | LLMObs instrumentation with `@llm`, `@workflow`, `@retrieval` decorators and faithfulness evaluation |
+| [llm-observability/llmobs-nodejs.js](llm-observability/llmobs-nodejs.js) | Node.js | LLMObs instrumentation with `llmobs.trace()` and evaluation submission |
+| [llm-observability/evaluator-bootstrap.py](llm-observability/evaluator-bootstrap.py) | Python | Faithfulness and quality evaluator stubs generated from production trace patterns |
 
 ## Quick Start
 
@@ -100,5 +103,6 @@ sed -i 's/orders-service/my-service/g' terraform/monitors.tf
 
 ## See Also
 
-- [references/datadog.md](../../references/datadog.md) — Agent setup, APM, log management, monitors, dashboards, SLOs, synthetic tests, MCP server
+- [references/datadog.md](../../references/datadog.md) — Agent setup, APM, log management, monitors, dashboards, SLOs, synthetic tests, MCP server, pup CLI, Datadog Labs skills
+- [references/llm-observability.md](../../references/llm-observability.md) — LLMObs instrumentation, eval bootstrap, trace RCA, experiment analysis
 - `/platform-skills:datadog` — setup, instrument, monitor, dashboard, SLO, investigate incidents

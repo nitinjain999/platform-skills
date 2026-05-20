@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.20.0] - 2026-05-20
+
+### Added
+
+#### Datadog Labs + LLM Observability
+
+- `references/datadog.md` — two new sections: **pup CLI** (install, config, common operations, scripting post-deploy gates, troubleshooting table) and **Datadog Labs Claude Skills** (dd-pup, dd-apm, dd-logs, dd-monitors, dd-docs — install commands, capability table, when-to-use decision matrix)
+- `references/llm-observability.md` — new reference covering: LLMObs vs traditional APM decision matrix, Python instrumentation (`@llm`, `@workflow`, `@retrieval` decorators, `LLMObs.annotate()`), Node.js instrumentation (`llmobs.trace()` callback, `llmobs.annotate()`), environment variables, eval bootstrap workflow, `submit_evaluation()` pattern, pup-based CI quality gate, trace RCA with `dd-llmo-eval-trace-rca`, experiment analysis with `dd-llmo-experiment-analyzer`, manual pup fallback commands, troubleshooting table, and security guidance
+- `commands/datadog.md` — two new modes: **pup** (log search, metric query, monitor management, post-deploy gate generation) and **llmo** (instrument/evaluate/rca/experiment classification flow)
+- `examples/datadog/llm-observability/llmobs-python.py` — complete Python LLMObs example with `@llm`, `@workflow`, `@retrieval` decorators and faithfulness evaluation
+- `examples/datadog/llm-observability/llmobs-nodejs.js` — complete Node.js LLMObs example with `llmobs.trace()` and evaluation submission
+- `examples/datadog/llm-observability/evaluator-bootstrap.py` — faithfulness and quality evaluator stubs with LLM-as-judge pattern
+
 ## [1.19.0] - 2026-05-20
 
 ### Added

@@ -68,6 +68,7 @@ REQUIRED_REFERENCES=(
   references/runtime-security.md
   references/chaos.md
   references/dora.md
+  references/llm-observability.md
 )
 
 for ref in "${REQUIRED_REFERENCES[@]}"; do
@@ -108,6 +109,7 @@ EXAMPLE_DOMAINS=(
   examples/runtime-security
   examples/chaos
   examples/dora
+  examples/datadog/llm-observability
 )
 
 for domain in "${EXAMPLE_DOMAINS[@]}"; do
