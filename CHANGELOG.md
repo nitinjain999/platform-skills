@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Self-Improvement: SESSION-STATE, Daily Notes, VBR, Context Threshold
 
-Four improvements to the proactive agent pattern in Domain 24, inspired by the proactive-agent reference skill:
+Four improvements to the proactive agent pattern in Domain 24:
 
 - **SESSION-STATE.md** — always-on capture file (`memory/SESSION-STATE.md`) for corrections, preferences, decisions, and proper nouns. Written before responding when any of these occur (not only before destructive ops). Second read in compaction recovery after working-buffer.
 - **Daily Notes** — rolling per-day log (`memory/YYYY-MM-DD.md`) of notable exchanges, discoveries, completed tasks, and errors. Survives compaction as a searchable history. Third read in compaction recovery.
