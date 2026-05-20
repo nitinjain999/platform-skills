@@ -1789,6 +1789,83 @@ Reference: `commands/self-improve.md`, `references/agent-self-improve.md`, and `
 
 ---
 
+## `/platform-skills:supply-chain`
+
+Secure the software supply chain from build pipeline to running container.
+
+**Modes**
+
+| Mode | What it does |
+|---|---|
+| `audit` | Review an existing pipeline for supply chain security gaps |
+| `sign` | Walk through Cosign keyless signing setup (Sigstore/Rekor, no key management) |
+| `sbom` | Generate and attest an SBOM with Syft |
+| `scan` | Trivy or Grype CVE scan with configurable severity gate |
+| `enforce` | Generate Kyverno `ImageValidatingPolicy` to block unsigned images at admission |
+| `slsa` | SLSA Level 2 provenance via `slsa-github-generator` GitHub Actions reusable workflow |
+
+**Usage**
+
+```
+/platform-skills:supply-chain audit
+/platform-skills:supply-chain sign
+/platform-skills:supply-chain sbom
+/platform-skills:supply-chain scan
+/platform-skills:supply-chain enforce
+/platform-skills:supply-chain slsa
+[paste workflow YAML or describe your registry/CI setup]
+```
+
+**Key rules enforced**
+
+- Never store signing keys in CI — use keyless (OIDC + Rekor) only
+- Always sign the digest (`@sha256:…`), never the tag
+- Pin all action versions to SHA, not tag
+- Gate on CRITICAL+HIGH by default; document exceptions
+- Deploy Kyverno `ImageValidatingPolicy` in Audit mode first, then Deny
+
+Reference: `references/supply-chain.md` and `examples/supply-chain/`
+
+---
+
+## `/platform-skills:runtime-security`
+
+Detect and respond to in-container threats at the syscall level using Falco.
+
+**Modes**
+
+| Mode | What it does |
+|---|---|
+| `install` | Deploy Falco on EKS/GKE with eBPF driver via Helm |
+| `rules` | Write and unit-test custom Falco rules |
+| `alerts` | Configure Falcosidekick to route alerts to Slack, PagerDuty, or webhook |
+| `debug` | Diagnose why a Falco rule is not firing |
+| `harden` | Map Falco alert metadata to Kyverno admission enforcement |
+
+**Usage**
+
+```
+/platform-skills:runtime-security install
+/platform-skills:runtime-security rules
+[describe the threat you want to detect]
+/platform-skills:runtime-security alerts
+/platform-skills:runtime-security debug
+[paste kubectl logs output from Falco pod]
+/platform-skills:runtime-security harden
+```
+
+**Key rules enforced**
+
+- Always use eBPF driver on managed Kubernetes — never kernel module
+- Never run Falco as a sidecar — must be a DaemonSet
+- Do not set CPU limits on Falco DaemonSet — event processing is bursty
+- Set `minimumpriority: warning` for Slack routing; suppress DEBUG/INFO noise
+- Test every custom rule with `falco-event-generator` before production
+
+Reference: `references/runtime-security.md` and `examples/runtime-security/`
+
+---
+
 ## Tips for best results
 
 **Paste context** — paste the manifest, error output, plan output, or code block directly after the command. The more concrete the input, the more actionable the output.
