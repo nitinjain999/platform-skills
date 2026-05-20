@@ -1,0 +1,40 @@
+# GitHub Actions workflow: generate SBOM with Syft and attest it to the image digest.
+# Run after sign-and-push or add these steps to the same job.
+# The digest is required — run this after the image is pushed to the registry.
+name: sbom-attest
+
+on:
+  workflow_run:
+    workflows: [build-sign-push]
+    types: [completed]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: <org>/<image>
+
+jobs:
+  sbom:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write   # required for Cosign attest OIDC token exchange with Fulcio
+
+    steps:
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@11086d9f32b178aa24e93c2b86eba3ef4b16b68a  # v3.8.1
+
+      - name: Generate SBOM with Syft
+        uses: anchore/sbom-action@61119d458adab75f756bc0b9e4bde25725f86a7a  # v0.20.0
+        with:
+          image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ github.event.workflow_run.head_sha }}
+          format: spdx-json
+          output-file: sbom.spdx.json
+
+      - name: Attest SBOM to image digest
+        run: |
+          cosign attest --yes \
+            --predicate sbom.spdx.json \
+            --type spdxjson \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ github.event.workflow_run.head_sha }}

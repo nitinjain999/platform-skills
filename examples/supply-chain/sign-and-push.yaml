@@ -1,0 +1,48 @@
+# GitHub Actions workflow: build container image, sign with Cosign keyless, push to GHCR.
+# Substitute <org> and <image> with your values.
+# Cosign v2 keyless signing uses OIDC — no private key to store or rotate.
+name: build-sign-push
+
+on:
+  push:
+    branches: [main]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: <org>/<image>
+
+jobs:
+  build-sign-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write   # required for Cosign keyless OIDC token exchange with Fulcio
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Log in to GHCR
+        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567  # v3.3.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push image
+        id: build
+        uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355  # v6.10.0
+        with:
+          context: .
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@11086d9f32b178aa24e93c2b86eba3ef4b16b68a  # v3.8.1
+
+      - name: Sign image digest with Cosign keyless
+        # Always sign the digest (@sha256:...), never the tag — tags are mutable
+        run: |
+          cosign sign --yes \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
