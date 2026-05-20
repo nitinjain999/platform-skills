@@ -452,9 +452,7 @@ pup metrics query \
   --from "now-1h" --to "now"
 
 # Mute a monitor (during a deploy window)
-# macOS: $(( $(date +%s) + 3600 ))
-# Linux: $(date -u -d '+1 hour' +%s)
-pup monitors mute --id 12345678 --end "$(( $(date +%s) + 3600 ))"
+pup monitors mute --id 12345678 --end "$(( $(date +%s) + 3600 ))"  # epoch +1h, macOS and Linux
 
 # Unmute after deploy
 pup monitors unmute --id 12345678
@@ -513,12 +511,12 @@ claude plugin install dd-pup dd-apm dd-logs dd-monitors dd-docs
 ### Skill Capabilities
 
 | Skill | Invocation | What it does |
-|-------|-----------|--------------|
+|-------|------------|--------------|
 | `dd-pup` | `/dd-pup` | Installs and configures the pup CLI; wraps common pup operations |
 | `dd-apm` | `/dd-apm` | Query APM data — traces, service maps, error rates, latency percentiles |
-| `dd-logs` | `/dd-logs` | Search, filter, archive, and analyse Datadog logs through pup |
+| `dd-logs` | `/dd-logs` | Search, filter, archive, and analyze Datadog logs through pup |
 | `dd-monitors` | `/dd-monitors` | Create, update, mute, and resolve Datadog monitors through pup |
-| `dd-docs` | `/dd-docs` | Look up Datadog documentation via the LLM-optimised docs index |
+| `dd-docs` | `/dd-docs` | Look up Datadog documentation via the LLM-optimized docs index |
 
 ### When to use Labs skills vs the official MCP server
 
@@ -532,3 +530,5 @@ claude plugin install dd-pup dd-apm dd-logs dd-monitors dd-docs
 | Looking up Datadog documentation | `dd-docs` skill |
 
 > **Note**: Labs skills use the `pup` CLI under the hood — ensure `DD_API_KEY`, `DD_APP_KEY`, and `DD_SITE` are set in your shell before invoking them.
+
+---
