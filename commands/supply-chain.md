@@ -36,11 +36,9 @@ Steps:
 2. Generate the signing workflow step:
    ```yaml
    - name: Install Cosign
-     uses: sigstore/cosign-installer@v3.8.1   # pin to SHA in production
+     uses: sigstore/cosign-installer@11086d9f32b178aa24e93c2b86eba3ef4b16b68a  # v3.8.1
 
    - name: Sign image
-     env:
-       COSIGN_EXPERIMENTAL: "1"   # enables keyless / OIDC flow
      run: |
        cosign sign --yes \
          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
@@ -58,7 +56,7 @@ Steps:
 Key rules:
 - Never store signing keys in CI secrets — use keyless only
 - Always sign the digest, not the tag
-- Pin `cosign-installer` to a SHA: `sigstore/cosign-installer@11086d9`
+- Pin `cosign-installer` to a full SHA, e.g.: `sigstore/cosign-installer@11086d9f32b178aa24e93c2b86eba3ef4b16b68a`
 
 Reference: `references/supply-chain.md` → Keyless signing, Rekor transparency log
 
@@ -67,10 +65,10 @@ Reference: `references/supply-chain.md` → Keyless signing, Rekor transparency 
 Generate a Software Bill of Materials with Syft and attest it as an OCI artifact alongside the image.
 
 Steps:
-1. Add the SBOM generation step after build, before push:
+1. Add the SBOM generation step after build and push (digest is only available after registry push):
    ```yaml
    - name: Generate SBOM
-     uses: anchore/sbom-action@v0.20.0
+     uses: anchore/sbom-action@61119d458adab75f756bc0b9e4bde25725f86a7a  # v0.20.0
      with:
        image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
        format: spdx-json
@@ -101,7 +99,7 @@ Steps:
 1. Add Trivy scan step:
    ```yaml
    - name: Scan image for vulnerabilities
-     uses: aquasecurity/trivy-action@0.30.0
+     uses: aquasecurity/trivy-action@18f2135c0b15d26b3a4c2efded75e06b6f0e4884  # v0.30.0
      with:
        image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
        format: table
@@ -137,6 +135,7 @@ Steps:
    metadata:
      name: require-signed-images
    spec:
+     validationActions: [Audit]   # switch to [Deny] after all images are signing
      matchConstraints:
        resourceRules:
        - apiGroups: ["apps"]
@@ -158,7 +157,7 @@ Steps:
 3. Show audit-first deployment:
    ```yaml
    spec:
-     failurePolicy: Audit   # start here, move to Enforce after validation
+     validationActions: [Audit]   # start here, switch to [Deny] after validation
    ```
 4. Cross-reference: `/platform-skills:kyverno` for full ImageValidatingPolicy guidance
 
@@ -174,8 +173,12 @@ Steps:
    ```yaml
    jobs:
      build:
+       runs-on: ubuntu-latest
        outputs:
          digest: ${{ steps.build.outputs.digest }}
+       permissions:
+         contents: read
+         packages: write
        steps:
          - name: Build and push image
            id: build
