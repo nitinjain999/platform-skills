@@ -1,5 +1,4 @@
 # Chaos Engineering Examples
-
 Status: Stable
 
 Working examples for the `/platform-skills:chaos` skill.
