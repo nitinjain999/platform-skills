@@ -1,0 +1,22 @@
+groups:
+  - name: dora
+    interval: 5m
+    rules:
+      # Deployment frequency: average deploys per day over 30-day window
+      - record: dora:deployment_frequency:rate30d
+        expr: count_over_time(dora_deployment_timestamp[30d]) / 30
+
+      # Lead time: p50 seconds from first commit to production deploy
+      - record: dora:lead_time_seconds:p50
+        expr: quantile(0.5, dora_lead_time_seconds)
+
+      # Change failure rate: % of deploys that caused a production incident
+      # Incident window: 1 hour after deploy
+      - record: dora:change_failure_rate:ratio30d
+        expr: |
+          count_over_time(dora_incident_caused_by_deploy[30d])
+          / count_over_time(dora_deployment_timestamp[30d]) * 100
+
+      # MTTR: p50 seconds from incident open to incident resolved
+      - record: dora:mttr_seconds:p50
+        expr: quantile(0.5, dora_incident_duration_seconds)

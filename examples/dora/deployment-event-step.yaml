@@ -1,0 +1,20 @@
+# Append this step to your production deploy workflow.
+# Requires: PUSHGATEWAY_URL secret set in repository settings.
+- name: Record DORA deployment event
+  if: success()
+  env:
+    PUSHGATEWAY_URL: ${{ secrets.PUSHGATEWAY_URL }}
+    REPO: ${{ github.repository }}
+    RUN_ID: ${{ github.run_id }}
+  run: |
+    DEPLOY_TS=$(date +%s)
+    # Lead time: time from merge commit to deploy
+    MERGE_TS=$(git log -1 --format="%ct" ${{ github.sha }})
+    LEAD_TIME=$((DEPLOY_TS - MERGE_TS))
+    cat <<EOF | curl --silent --show-error --data-binary @- \
+      "${PUSHGATEWAY_URL}/metrics/job/dora/instance/${REPO}"
+    # TYPE dora_deployment_timestamp gauge
+    dora_deployment_timestamp{repo="${REPO}",env="production",run_id="${RUN_ID}"} ${DEPLOY_TS}
+    # TYPE dora_lead_time_seconds gauge
+    dora_lead_time_seconds{repo="${REPO}",env="production"} ${LEAD_TIME}
+    EOF
