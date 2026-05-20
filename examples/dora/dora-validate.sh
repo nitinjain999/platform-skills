@@ -85,6 +85,14 @@ if [[ -d "$AMP_DIR" ]]; then
     [[ -e "$json_file" ]] || continue
     validate_json "${json_file}"
   done
+  # Verify the Terraform file is present (syntax validation requires terraform init;
+  # we only check existence here so the validator passes without network access).
+  tf_file="${AMP_DIR}/amp-workspace.tf"
+  if [[ -f "$tf_file" ]]; then
+    pass "amp-variant/amp-workspace.tf"
+  else
+    fail "amp-variant/amp-workspace.tf" "file missing"
+  fi
 fi
 
 # ---------------------------------------------------------------------------
