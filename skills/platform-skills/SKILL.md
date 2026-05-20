@@ -1,6 +1,6 @@
 ---
 name: platform-skills
-description: Hands-on guidance for platform and DevOps engineers working with Kubernetes, Terraform, GitOps, GitHub Actions, AWS, Azure, Linkerd, Linux, networking, compliance, KEDA event-driven autoscaling, and self-improving agent patterns. Use when designing or troubleshooting Kubernetes workloads and RBAC, writing Terraform modules, configuring Flux or Argo CD, setting up CI/CD pipelines, managing cloud identity and IAM, handling secrets, diagnosing DNS or VPC connectivity, operating a service mesh, applying product thinking to developer experience, implementing SOC 2 compliance controls in Terraform, scaling workloads with KEDA scalers (SQS, Kafka, Prometheus, Cron, HTTP), or bootstrapping .learnings/ directories, WAL protocol, VFM scoring, and proactive agent behavior — at any scale, for any team size.
+description: Hands-on guidance for platform and DevOps engineers working with Kubernetes, Terraform, GitOps, GitHub Actions, AWS, Azure, Linkerd, Linux, networking, compliance, KEDA event-driven autoscaling, and self-improving agent patterns. Use when designing or troubleshooting Kubernetes workloads and RBAC, writing Terraform modules, configuring Flux or Argo CD, setting up CI/CD pipelines, managing cloud identity and IAM, handling secrets, diagnosing DNS or VPC connectivity, operating a service mesh, applying product thinking to developer experience, implementing SOC 2 compliance controls in Terraform, scaling workloads with KEDA scalers (SQS, Kafka, Prometheus, Cron, HTTP), or bootstrapping .learnings/ directories, WAL protocol, VFM scoring, and proactive agent behavior — at any scale, for any team size, supply chain security (Cosign, Syft, Trivy, SLSA, image signing enforcement), and Kubernetes runtime security (Falco eBPF, custom rules, Falcosidekick alert routing)
 ---
 
 # Platform Skills
@@ -35,6 +35,8 @@ Match the task to the right layer:
 22. `PR Comment Triage`: Triage bot or human PR comments, classify them as ACTIONABLE_FIX / INFORMATIONAL / NOT_APPLICABLE, make the minimal fix when valid, reply on the thread, and resolve it through `gh`.
 23. `KEDA`: Design, generate, debug, and review KEDA ScaledObject and ScaledJob resources. Covers all major scalers (Prometheus, SQS, Kafka, Redis, Cron, HTTP Add-on, Azure Service Bus), TriggerAuthentication with IRSA/Workload Identity, scaling lifecycle tuning, scale-to-zero patterns, and GitOps integration.
 24. `Agent Self-Improvement`: Bootstrap and operate self-improving, proactive agent workspaces. Covers `.learnings/` directory setup, LRN/ERR/FEAT entry lifecycle, recurring pattern detection, promotion to project memory, WAL protocol, working buffer, VFM scoring, ADL decision logic, Six Operating Pillars, heartbeat, and reverse prompting.
+25. `Supply Chain Security`: Secure the build pipeline and image lifecycle with Cosign keyless signing (Sigstore/Rekor), Syft SBOM generation and attestation, Trivy/Grype CVE scanning with severity gates, SLSA Level 2 provenance, and Kyverno ImageValidatingPolicy admission enforcement. All open-source, no license cost.
+26. `Runtime Security`: Detect in-container threats at the syscall level with Falco (eBPF driver, CNCF, no license cost). Covers eBPF driver deployment on EKS/GKE, custom rule authoring, Falcosidekick alert routing to Slack/PagerDuty/webhook, rule debugging, and bridging runtime signals to Kyverno admission enforcement.
 
 If a task spans multiple areas, decide which layer owns the source of truth and keep the other layers consumers of that state.
 
@@ -121,3 +123,5 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:triage` — triage a PR comment (bot or human): classify as ACTIONABLE_FIX / INFORMATIONAL / NOT_APPLICABLE, produce the exact fix if needed, and write the thread reply
 - `/platform-skills:keda` — design, generate, debug, or review KEDA ScaledObject/ScaledJob autoscaling
 - `/platform-skills:self-improve` — bootstrap `.learnings/` directory, log learnings/errors/feature requests, review recurring patterns, and promote entries to project memory
+- `/platform-skills:supply-chain` — sign images, generate and attest SBOMs, run CVE severity gates, enforce image signatures in Kubernetes, and generate SLSA Level 2 provenance
+- `/platform-skills:runtime-security` — deploy Falco with eBPF, write custom rules, route alerts, debug why a rule is not firing, and bridge Falco signals to Kyverno admission enforcement
