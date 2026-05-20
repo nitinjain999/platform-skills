@@ -35,6 +35,11 @@ GitHub Actions OIDC token
 ### Sign in CI
 
 ```yaml
+# Job-level permissions required for keyless signing
+permissions:
+  id-token: write   # required for Cosign OIDC token exchange with Fulcio
+  packages: write   # required to push to GHCR
+
 - name: Install Cosign
   uses: sigstore/cosign-installer@11086d9f32b178aa24e93c2b86eba3ef4b16b68a  # v3.8.1
 
@@ -72,6 +77,11 @@ An SBOM (Software Bill of Materials) lists every package inside the image. Attes
 ### Generate and attest
 
 ```yaml
+# Job-level permissions required for cosign attest
+permissions:
+  id-token: write   # required for Cosign OIDC token exchange with Fulcio
+  packages: write   # required to push attestation to GHCR
+
 - name: Generate SBOM
   uses: anchore/sbom-action@61119d458adab75f756bc0b9e4bde25725f86a7a  # v0.20.0
   with:
@@ -129,7 +139,7 @@ Both tools scan container images for CVEs. Use Trivy for new setups; use Grype i
 
 ```yaml
 - name: Scan with Grype
-  uses: anchore/scan-action@v6
+  uses: anchore/scan-action@16910d14a7731ecfd3ac9785e39a479f53cca83c  # v3.9.0
   with:
     image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.build.outputs.digest }}
     fail-build: true
@@ -172,6 +182,9 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
       - name: Build and push
         id: build
         uses: docker/build-push-action@48aba3b46d1b1fec4febb7c5d0c644b249a11355  # v6.10.0
@@ -185,7 +198,9 @@ jobs:
       actions: read
       id-token: write
       packages: write
-    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.1.0
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.0.0
+    # Pin to a specific release SHA for production. Get SHA via:
+    # gh api repos/slsa-framework/slsa-github-generator/git/ref/tags/v2.0.0
     with:
       image: ghcr.io/<org>/<image>
       digest: ${{ needs.build.outputs.digest }}
@@ -216,9 +231,13 @@ apiVersion: policies.kyverno.io/v1
 kind: ImageValidatingPolicy
 metadata:
   name: require-signed-images
-  namespace: production
+  annotations:
+    policies.kyverno.io/title: Require Signed Images
+    policies.kyverno.io/description: >
+      Block admission of images not signed via Sigstore keyless signing from GitHub Actions.
+      Apply to selected namespaces using matchConditions.
 spec:
-  validationActions: [Audit]   # switch to [Deny] after all images are signing
+  validationActions: [Audit]   # switch to [Deny] after all images are signed
   matchConstraints:
     resourceRules:
     - apiGroups: [""]
@@ -227,24 +246,30 @@ spec:
       resources: ["pods"]
   matchImageReferences:
   - glob: "ghcr.io/<org>/*"
+  attestors:
+  - name: cosign
+    cosign:
+      keyless:
+        identities:
+        - issuer: "https://token.actions.githubusercontent.com"
+          subjectRegExp: "https://github.com/<org>/.*/.github/workflows/.*@refs/heads/main"
+        ctlog:
+          url: https://rekor.sigstore.dev
   validations:
-  - expression: >
-      images.containers.map(image, verifyImageSignatures(image, [{"keyless": {
-        "url": "https://fulcio.sigstore.dev",
-        "rekor": {"url": "https://rekor.sigstore.dev"},
-        "identities": [{"issuer": "https://token.actions.githubusercontent.com",
-          "subjectRegExp": "https://github.com/<org>/.*/.github/workflows/.*@refs/heads/main"}]
-      }}])).all(e, e > 0)
-    message: "Image must be signed via Sigstore keyless signing from GitHub Actions (main branch)"
+  - expression: >-
+      images.containers.map(image,
+        verifyImageSignatures(image, [attestors.cosign])
+      ).all(e, e > 0)
+    message: "Image must be signed via Sigstore keyless signing from GitHub Actions (main branch)."
 ```
 
-**Note:** Targeting `pods` in the core API group ensures all workloads are covered, including those created by Jobs, CronJobs, and bare pod specs. Kyverno's autogen can extend coverage to higher-level controllers but is not enabled by default for ImageValidatingPolicy.
+**Note:** `ImageValidatingPolicy` is cluster-scoped — there is no `namespace` field in metadata. Targeting `pods` in the core API group ensures all workloads are covered, including those created by Jobs, CronJobs, and bare pod specs. Kyverno's autogen can extend coverage to higher-level controllers but is not enabled by default for ImageValidatingPolicy.
 
 ### Deployment strategy
 
 1. Start with `validationActions: [Audit]` — monitor violations without blocking
 2. Review audit events: `kubectl get policyreport -A`
-3. Move to `validationActions: [Deny]` once all images in scope are signing
+3. Move to `validationActions: [Deny]` once all images in scope are signed
 
 ### Cross-reference
 
@@ -273,4 +298,4 @@ For full `ImageValidatingPolicy` syntax, CEL expressions, and kyverno-cli testin
 3. **SBOM** — generate and attest
 4. **Enforce** — Kyverno `ImageValidatingPolicy` in Audit mode
 5. **SLSA** — add Level 2 provenance attestation
-6. **Enforce → Deny** — harden admission after all images are signing
+6. **Enforce → Deny** — harden admission after all images are signed
