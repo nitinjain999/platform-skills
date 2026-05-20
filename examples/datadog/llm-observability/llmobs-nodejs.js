@@ -4,6 +4,15 @@
  * Requires: dd-trace >= 5.20.0, openai >= 4.0.0
  * Install:  npm install dd-trace openai
  *
+ * ESM note: this file uses static imports and top-level await, which requires
+ * ESM module mode. Add `"type": "module"` to package.json (or rename to .mjs).
+ *
+ * ESM import ordering: ESM hoists all static imports before module body runs,
+ * so `dd-trace` cannot patch OpenAI via a static import. For auto-instrumentation
+ * (where dd-trace patches the openai module), use a CJS require() or a separate
+ * bootstrap entrypoint. The LLMObs manual span API (llmobs.trace) used here does
+ * NOT rely on auto-instrumentation — it works correctly with static ESM imports.
+ *
  * Environment variables (set before running):
  *   DD_LLMOBS_ML_APP=orders-assistant
  *   DD_LLMOBS_AGENTLESS_ENABLED=true
@@ -14,7 +23,6 @@
  *   DD_VERSION=1.0.0
  */
 
-// dd-trace init must be the very first import
 import tracer from "dd-trace";
 tracer.init({
   service: process.env.DD_SERVICE ?? "orders-assistant",
@@ -77,5 +85,6 @@ async function orderSummaryWorkflow(orderId) {
   });
 }
 
+// Top-level await requires ESM ("type": "module" in package.json or .mjs extension)
 const result = await orderSummaryWorkflow("ORD-12345");
 console.log(result.summary);
