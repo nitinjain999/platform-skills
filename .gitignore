@@ -159,3 +159,8 @@ _site/
 *.backup
 
 .claude/
+
+# ===== Agent self-improvement (local session state) =====
+.learnings/
+memory/working-buffer.md
+.learnings/.pending-errors.log
