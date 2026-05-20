@@ -7,7 +7,7 @@
   "plugins": [
     {
       "name": "platform-skills",
-      "version": "1.16.0",
+      "version": "1.17.0",
       "description": "Practical guidance for platform engineers: Kubernetes, Helm, Terraform, GitOps, GitHub Actions, AWS, Azure, Linkerd, Linux, networking, MCP server development, observability (Prometheus/OpenTelemetry/Grafana), code documentation (OpenAPI/docstrings), SOC 2 compliance for Terraform, Datadog, Dynatrace, conventional commit message generation, OPA/Conftest Rego policies, Kyverno admission policies (ValidatingPolicy/MutatingPolicy/GeneratingPolicy/ImageValidatingPolicy, CEL expressions, Audit→Deny promotion), comprehensive PR review (cost impact, environment drift, ownership governance, compliance, deprecated API upgrade, rollback feasibility), PR comment triage, KEDA event-driven autoscaling (ScaledObject, ScaledJob, TriggerAuthentication, Prometheus/SQS/Kafka/Redis/Cron/HTTP/Azure scalers, scale-to-zero, IRSA), supply chain security (Cosign keyless signing, Syft SBOM, Trivy/Grype CVE gates, SLSA Level 2, Kyverno ImageValidatingPolicy enforcement), and Kubernetes runtime security (Falco eBPF, custom rules, Falcosidekick alert routing, Kyverno bridge). Covers troubleshooting, security-first patterns, DevEx, RFC/ADR, compliance controls, and working examples — at any scale.",
       "author": {
         "name": "Nitin Jain"
@@ -121,7 +121,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/nitinjain999/platform-skills.git",
-        "sha": "da491846b0be793a7fc7b6716608ca6d693cb412"
+        "sha": "daba1ef692c7f4f1b5296f389bae2981721ed5ff"
       },
       "homepage": "https://github.com/nitinjain999/platform-skills"
     }
