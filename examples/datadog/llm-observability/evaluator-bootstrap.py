@@ -5,7 +5,7 @@ This script demonstrates the pattern that the dd-llmo-eval-bootstrap skill
 automates. Run it manually to understand what the skill produces, or as a
 starting point when building custom evaluators.
 
-Requires: ddtrace >= 2.10.0, openai >= 4.0.0
+Requires: ddtrace >= 2.10.0, openai (Python SDK) >= 1.0.0
 Install:  pip install ddtrace openai
 
 Environment variables:
