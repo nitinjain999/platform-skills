@@ -12,6 +12,8 @@ This directory contains ready-to-copy templates for bootstrapping the self-impro
 | `.learnings/ERRORS.md` | Error and mistake log template |
 | `.learnings/FEATURE_REQUESTS.md` | Recurring unmet needs log template |
 | `memory/working-buffer.md` | WAL scratchpad and task state template |
+| `memory/SESSION-STATE.md` | Always-on capture of corrections, preferences, decisions, proper nouns |
+| `memory/YYYY-MM-DD.md` | Daily notes template — rename to actual date on first use |
 
 ## Usage
 
@@ -24,13 +26,13 @@ cp -r examples/agent-self-improve/memory .
 # /platform-skills:self-improve init
 ```
 
-Add to `.gitignore` for personal-only notes:
+Add to `.gitignore` for personal-only notes (recommended — daily notes grow fast):
 ```
 .learnings/
-memory/working-buffer.md
+memory/
 ```
 
-Commit the directory if you want the team to share and build on these learnings.
+Commit `.learnings/` only if you want the team to share and build on these learnings; keep `memory/` local.
 
 ## Reference
 
