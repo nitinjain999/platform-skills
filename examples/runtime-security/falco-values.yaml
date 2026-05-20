@@ -1,0 +1,34 @@
+# Falco Helm values for EKS/GKE with modern eBPF driver.
+# modern_ebpf requires Linux 5.8+ kernel (AL2023, COS, Ubuntu 22.04+).
+# Never use kmod (kernel module) on managed Kubernetes.
+driver:
+  kind: modern_ebpf
+
+falco:
+  # Deprecated: grpc/grpc_output are deprecated in Falco chart; Falcosidekick uses http output instead.
+  # Keep enabled only if you have direct gRPC consumers. For Falcosidekick, these are not needed.
+  grpc:
+    enabled: true
+  grpc_output:
+    enabled: true
+  json_output: true        # structured output; required for Falcosidekick parsing
+  log_stderr: true
+  log_syslog: false
+  priority: warning        # suppress DEBUG and INFO from default ruleset
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 512Mi          # cpu limit intentionally omitted — kernel event processing is bursty
+
+tolerations:
+  - effect: NoSchedule
+    operator: Exists       # Falco must run on ALL nodes, including tainted system nodes
+  - effect: NoExecute
+    operator: Exists
+
+# Load custom rules from the falco-custom-rules.yaml file in this directory
+customRules:
+  {}   # replace with: custom-rules.yaml: |- <content> when adding custom rules

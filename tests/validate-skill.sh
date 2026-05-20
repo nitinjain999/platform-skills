@@ -64,6 +64,8 @@ REQUIRED_REFERENCES=(
   references/pr-review.md
   references/keda.md
   references/agent-self-improve.md
+  references/supply-chain.md
+  references/runtime-security.md
 )
 
 for ref in "${REQUIRED_REFERENCES[@]}"; do
@@ -100,6 +102,8 @@ EXAMPLE_DOMAINS=(
   examples/triage
   examples/keda
   examples/agent-self-improve
+  examples/supply-chain
+  examples/runtime-security
 )
 
 for domain in "${EXAMPLE_DOMAINS[@]}"; do
@@ -235,6 +239,8 @@ VALIDATE_SCRIPTS=(
   "examples/terraform/terraform-validate.sh"
   "examples/github-actions/gha-validate.sh"
   "examples/compliance/compliance-validate.sh"
+  "examples/supply-chain/supply-chain-validate.sh"
+  "examples/runtime-security/runtime-security-validate.sh"
 )
 
 for script in "${VALIDATE_SCRIPTS[@]}"; do

@@ -1,0 +1,33 @@
+# Kyverno ValidatingPolicy: block re-admission of Deployments flagged by a Falco critical alert.
+# Workflow:
+#   1. Falco fires a critical rule in a container
+#   2. Alert handler labels the Deployment: security.platform/falco-alert=critical
+#   3. This policy blocks CREATE/UPDATE on that Deployment until the label is removed
+#   4. Ops team remediates, removes the label, then redeploys
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: block-falco-flagged-workloads
+  annotations:
+    policies.kyverno.io/title: Block Falco-Flagged Workloads
+    policies.kyverno.io/severity: critical
+    policies.kyverno.io/description: >
+      Prevents re-admission of Deployments that have been flagged by a Falco critical alert.
+      Remove the security.platform/falco-alert label after remediation to re-enable deployment.
+spec:
+  validationActions: [Deny]
+  matchConstraints:
+    resourceRules:
+    - apiGroups: ["apps"]
+      apiVersions: ["v1"]
+      operations: ["CREATE", "UPDATE"]
+      resources: ["deployments"]
+  validations:
+  - expression: >
+      !has(object.metadata.labels) ||
+      !('security.platform/falco-alert' in object.metadata.labels) ||
+      object.metadata.labels['security.platform/falco-alert'] != 'critical'
+    message: >
+      This Deployment has been flagged by a Falco critical security alert
+      (security.platform/falco-alert=critical). Remediate the security issue and
+      remove the label before redeploying.

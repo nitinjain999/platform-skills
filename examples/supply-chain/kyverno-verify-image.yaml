@@ -1,0 +1,41 @@
+# Kyverno ImageValidatingPolicy: block images not signed via Sigstore keyless from GitHub Actions.
+# This is a cluster-scoped resource — it applies across all namespaces.
+# Start with validationActions: [Audit], move to [Deny] after all images in scope are signing.
+#
+# To restrict to specific namespaces, use matchConditions:
+#   - expression: "request.namespace in ['production', 'staging']"
+apiVersion: policies.kyverno.io/v1
+kind: ImageValidatingPolicy
+metadata:
+  name: require-signed-images
+  annotations:
+    policies.kyverno.io/title: Require Signed Images
+    policies.kyverno.io/severity: critical
+    policies.kyverno.io/description: >
+      All container images must be signed via Sigstore keyless signing from GitHub Actions.
+      Unsigned images are reported as violations (Audit mode) or blocked (Deny mode).
+spec:
+  validationActions: [Audit]   # change to [Deny] after validating all images are signed
+  matchConstraints:
+    resourceRules:
+    - apiGroups: [""]
+      apiVersions: ["v1"]
+      operations: ["CREATE", "UPDATE"]
+      resources: ["pods"]
+  matchImageReferences:
+  - glob: "ghcr.io/<org>/*"
+  attestors:
+  - name: cosign
+    cosign:
+      keyless:
+        identities:
+        - issuer: "https://token.actions.githubusercontent.com"
+          subjectRegExp: "https://github.com/<org>/.*/.github/workflows/.*@refs/heads/main"
+        ctlog:
+          url: https://rekor.sigstore.dev
+  validations:
+  - expression: >-
+      images.containers.map(image,
+        verifyImageSignatures(image, [attestors.cosign])
+      ).all(e, e > 0)
+    message: "Image must be signed via Sigstore keyless signing from GitHub Actions (main branch)."

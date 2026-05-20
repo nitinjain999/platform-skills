@@ -1,0 +1,64 @@
+# Custom Falco rules for common threat patterns.
+# Load these via the Helm chart customRules value or by mounting as a ConfigMap.
+
+# Macro: identify shell binaries
+- macro: shell_procs
+  condition: proc.name in (bash, sh, zsh, dash, fish, ksh)
+
+# Rule 1: Interactive shell in any container
+- rule: Shell spawned in container
+  desc: An interactive shell was spawned inside a running container — potential intrusion
+  condition: >
+    spawned_process
+    and container
+    and shell_procs
+    and not container.image.repository in (allowed_shell_images)
+  output: >
+    Shell spawned in container
+    (user=%user.name uid=%user.uid
+     container=%container.name image=%container.image.repository
+     shell=%proc.name parent=%proc.pname cmdline=%proc.cmdline
+     pod=%k8s.pod.name ns=%k8s.ns.name)
+  priority: WARNING
+  tags: [container, shell, mitre_execution]
+
+# Rule 2: Privilege escalation attempt
+- rule: Privilege escalation via setuid binary
+  desc: A container process called a setuid binary — potential privilege escalation
+  condition: >
+    spawned_process
+    and container
+    and proc.is_suid_exe = true
+    and not proc.name in (ping)
+  output: >
+    Privilege escalation via setuid binary
+    (user=%user.name container=%container.name
+     binary=%proc.name parent=%proc.pname
+     pod=%k8s.pod.name ns=%k8s.ns.name)
+  priority: ERROR
+  tags: [container, privilege_escalation, mitre_privilege_escalation]
+
+# Rule 3: Unexpected outbound connection on non-standard port
+- rule: Unexpected outbound connection
+  desc: Container made an outbound TCP connection on a port not in the known-good list
+  condition: >
+    outbound
+    and container
+    and not fd.rport in (80, 443, 8080, 8443, 5432, 6379, 9200)
+    and not container.image.repository in (allowed_network_images)
+  output: >
+    Unexpected outbound connection from container
+    (user=%user.name container=%container.name
+     image=%container.image.repository
+     connection=%fd.name
+     pod=%k8s.pod.name ns=%k8s.ns.name)
+  priority: NOTICE
+  tags: [container, network, mitre_exfiltration]
+
+# Allow-list for shells (containers that legitimately run shells)
+- list: allowed_shell_images
+  items: []   # add image repos here: ["ghcr.io/org/debug-tools"]
+
+# Allow-list for containers with non-standard network access
+- list: allowed_network_images
+  items: []   # add image repos here: ["ghcr.io/org/egress-proxy"]
