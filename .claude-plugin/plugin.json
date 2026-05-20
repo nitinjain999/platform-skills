@@ -1,6 +1,6 @@
 {
   "name": "platform-skills",
-  "version": "1.15.0",
+  "version": "1.16.0",
   "description": "Practical guidance for platform engineers: Kubernetes, Kyverno admission policies, Helm, Terraform, GitOps, GitHub Actions, AWS, Azure, Linkerd, Linux, networking, MCP development, observability, code documentation, SOC 2 compliance, comprehensive PR review, PR comment triage, and KEDA event-driven autoscaling.",
   "author": {
     "name": "Nitin Jain",
@@ -50,7 +50,22 @@
     "scaledobject",
     "scaledjob",
     "autoscaling",
-    "scale-to-zero"
+    "scale-to-zero",
+    "supply-chain-security",
+    "image-signing",
+    "cosign",
+    "sigstore",
+    "sbom",
+    "syft",
+    "trivy",
+    "grype",
+    "slsa",
+    "runtime-security",
+    "falco",
+    "falcosidekick",
+    "ebpf",
+    "syscall-monitoring",
+    "threat-detection"
   ],
   "skills": [
     "./skills/platform-skills"
@@ -76,6 +91,8 @@
     "./commands/pr-review.md",
     "./commands/triage.md",
     "./commands/keda.md",
-    "./commands/self-improve.md"
+    "./commands/self-improve.md",
+    "./commands/supply-chain.md",
+    "./commands/runtime-security.md"
   ]
 }
