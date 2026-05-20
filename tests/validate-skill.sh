@@ -63,6 +63,7 @@ REQUIRED_REFERENCES=(
   references/kyverno.md
   references/pr-review.md
   references/keda.md
+  references/agent-self-improve.md
 )
 
 for ref in "${REQUIRED_REFERENCES[@]}"; do
@@ -98,6 +99,7 @@ EXAMPLE_DOMAINS=(
   examples/pr-review
   examples/triage
   examples/keda
+  examples/agent-self-improve
 )
 
 for domain in "${EXAMPLE_DOMAINS[@]}"; do

@@ -37,6 +37,7 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:pr-review](#platform-skillspr-review) | Comprehensive PR risk review |
 | [/platform-skills:triage](#platform-skillstriage) | Triage and resolve PR comments |
 | [/platform-skills:keda](#platform-skillskeda) | KEDA ScaledObject/ScaledJob — generate, debug, review, scale |
+| [/platform-skills:self-improve](#platform-skillsself-improve) | Bootstrap, log, review, or promote agent self-improvement entries |
 
 ---
 
@@ -1734,6 +1735,57 @@ The debug mode works through this checklist in order:
 - Set `restoreToOriginalReplicaCount: true`
 
 Reference: `commands/keda.md`, `references/keda.md`, and `examples/keda/`
+
+---
+
+## `/platform-skills:self-improve`
+
+**What it does:** Bootstrap and operate a self-improving agent workspace. Creates and maintains `.learnings/` directories, logs LRN/ERR/FEAT entries, reviews accumulated patterns, and promotes recurring learnings to project memory.
+
+**Works on:** Any project workspace. Most useful when working with an AI assistant over multiple sessions to accumulate reusable patterns, catch recurring errors, and evolve agent behavior.
+
+```
+/platform-skills:self-improve [init|log|review|promote] [description or file path]
+```
+
+| Mode | What it does |
+|------|--------------|
+| `init` | Scaffold `.learnings/` directory with `LEARNINGS.md`, `ERRORS.md`, `FEATURE_REQUESTS.md`, and `memory/working-buffer.md` |
+| `log` | Append a new LRN, ERR, or FEAT entry to the appropriate file based on the description |
+| `review` | Scan `.learnings/` for recurring patterns (threshold: 3+ occurrences) and surface candidates for promotion |
+| `promote` | Promote a recurring pattern from `.learnings/` into `CLAUDE.md` or project memory |
+
+**Example usage:**
+
+```
+/platform-skills:self-improve init
+```
+*Creates the full `.learnings/` scaffold in the current workspace.*
+
+```
+/platform-skills:self-improve log ERR helm upgrade failed due to immutable selectorLabels
+```
+*Appends an ERR entry with timestamp, context, and resolution to `.learnings/ERRORS.md`.*
+
+```
+/platform-skills:self-improve review
+```
+*Scans all `.learnings/` files, identifies patterns appearing 3+ times, and returns promotion candidates ranked by VFM score.*
+
+```
+/platform-skills:self-improve promote "never include app.kubernetes.io/version in selectorLabels"
+```
+*Appends the pattern to `CLAUDE.md` memory and marks the source entry as promoted.*
+
+**Key rules enforced**
+
+- Entry format: `[YYYY-MM-DD] [ID] [TAG] description` with `Context:`, `Resolution:`, `Frequency:` fields
+- Promotion threshold: 3+ occurrences or single high-severity ERR
+- WAL protocol: append-only `.learnings/` files; never edit existing entries
+- VFM scoring: Velocity × Frequency × Magnitude determines promotion priority
+- ADL protocol: decide Adopt / Defer / Reject for each promotion candidate
+
+Reference: `commands/self-improve.md`, `references/agent-self-improve.md`, and `examples/agent-self-improve/`
 
 ---
 

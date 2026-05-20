@@ -3,8 +3,8 @@
 > A practical handbook for developers and DevOps engineers working with Kubernetes, GitOps, Terraform, GitHub Actions, cloud infrastructure, and secrets management — with an optional Claude plugin layer for interactive guidance.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Domains](https://img.shields.io/badge/Domains-25-4c8eda)](references/)
-[![Commands](https://img.shields.io/badge/Commands-20-e87c2b)](commands/)
+[![Domains](https://img.shields.io/badge/Domains-26-4c8eda)](references/)
+[![Commands](https://img.shields.io/badge/Commands-21-e87c2b)](commands/)
 [![Examples](https://img.shields.io/badge/Examples-21-6f42c1)](examples/)
 [![Editors](https://img.shields.io/badge/Editors-VSCode%20%7C%20Cursor%20%7C%20Copilot-2ea44f)](EDITOR_INTEGRATIONS.md)
 [![GitHub Stars](https://img.shields.io/github/stars/nitinjain999/platform-skills?style=flat&label=Stars&color=0e1117)](https://github.com/nitinjain999/platform-skills/stargazers)
@@ -70,6 +70,7 @@ Both layers work independently. The plugin is optional.
 | 🔍 PR Review | [references/pr-review.md](references/pr-review.md) | Cost impact, environment drift, ownership gaps, SOC 2 compliance, deprecated API / version hygiene, rollback feasibility |
 | 🧵 PR Comment Triage | [commands/triage.md](commands/triage.md) | `/platform-skills:triage` classifies PR comments, applies valid fixes, replies, and resolves review threads |
 | ⚡ KEDA | [references/keda.md](references/keda.md) | ScaledObject, ScaledJob, TriggerAuthentication, Prometheus/SQS/Kafka/Redis/Cron/HTTP/Azure scalers, scale-to-zero, IRSA, GitOps integration, troubleshooting — `/platform-skills:keda` |
+| 🤖 Agent Self-Improvement | [references/agent-self-improve.md](references/agent-self-improve.md) | `.learnings/` directory setup, LRN/ERR/FEAT entry lifecycle, WAL protocol, working buffer, VFM scoring, ADL decision logic, Six Operating Pillars, heartbeat, reverse prompting, proactive agent behavior — `/platform-skills:self-improve` |
 
 ## Core principles
 
