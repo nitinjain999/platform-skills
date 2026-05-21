@@ -160,10 +160,16 @@ Open the doc locally in a browser before committing.
 
 Steps:
 1. Ask: path to the doc
-2. Check if the superpowers visual companion server is running (`$STATE_DIR/server-info` exists — `$STATE_DIR` is set by the superpowers brainstorming skill when active):
-   - If running: copy the doc and `assets/` to `screen_dir` and navigate to the URL
-   - If not running: start a minimal local HTTP server with `python3 -m http.server 8080 --directory .` and open the doc with `open http://localhost:8080/<doc-path>`
-3. Tell the user: "Preview running at <URL>. Ctrl+C to stop."
+2. Start a minimal local HTTP server:
+   ```bash
+   python3 -m http.server 8080 --directory .
+   ```
+3. Tell the user the preview URL and how to open it:
+   - macOS: `open http://localhost:8080/<doc-path>`
+   - Linux: `xdg-open http://localhost:8080/<doc-path>`
+   - Windows: `start http://localhost:8080/<doc-path>`
+   - Or paste `http://localhost:8080/<doc-path>` directly into your browser
+4. Tell the user: "Preview running at http://localhost:8080/<doc-path>. Press Ctrl+C to stop the server."
 
 Reference: `references/awesome-docs.md`
 

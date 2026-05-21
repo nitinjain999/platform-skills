@@ -28,6 +28,7 @@ Copy and adapt these files — substitute box labels, path coordinates, and fiel
 # Check SVG file sizes (must be under 50KB for GitHub inline rendering)
 ls -lh examples/awesome-docs/*.svg
 
-# Check SVGs have no external hrefs
-grep -l "http" examples/awesome-docs/*.svg && echo "WARNING: external refs found" || echo "OK"
+# Check SVGs have no external hrefs or blocked imports
+grep -lE 'href="https?://|xlink:href="https?://|@import' examples/awesome-docs/*.svg \
+  && echo "WARNING: external refs found" || echo "OK"
 ```

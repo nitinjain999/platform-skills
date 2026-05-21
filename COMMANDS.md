@@ -1969,8 +1969,6 @@ Reference: `references/dora.md` and `examples/dora/`
 
 ---
 
----
-
 ## `/platform-skills:awesome-docs`
 
 Generate, convert, and maintain animated GitHub-safe Markdown documents with animated SVG diagrams.
