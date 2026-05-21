@@ -226,7 +226,7 @@ gh copilot suggest "$(cat your-deployment.yaml) — review this for production r
 
 ## Skill commands in Copilot Chat
 
-Platform skills ships 19 command workflows. In Claude Code they are slash commands (`/platform-skills:review`). In Copilot Chat you phrase them as natural language — the instructions file makes Copilot apply the same structured output.
+Platform skills ships 26 command workflows. In Claude Code they are slash commands (`/platform-skills:review`). In Copilot Chat you phrase them as natural language — the instructions file makes Copilot apply the same structured output.
 
 ### review — production-readiness check on any file
 
@@ -539,6 +539,26 @@ APM traces are missing for the payments-service. The agent shows healthy. What a
 **Dynatrace:**
 ```
 OneAgent is not injecting into pods in the checkout namespace. How do I diagnose the injection failure?
+```
+
+---
+
+### awesome-docs — animated SVG documentation
+
+```
+Generate an animated demo doc for KEDA autoscaling. Components: ScaledObject, KEDA Operator, HPA, Deployment. Flow: metric source → KEDA → HPA → pods.
+```
+
+```
+Convert docs/keda-guide.md to animated — inject SVG diagrams at the major sections.
+```
+
+```
+Audit KEDA-DEMO.md for quality issues — missing captions, broken SVG refs, env-specific IDs.
+```
+
+```
+Export KEDA-DEMO.md as an animated HTML file for embedding in Confluence.
 ```
 
 ---

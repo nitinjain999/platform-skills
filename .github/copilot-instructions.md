@@ -1,10 +1,10 @@
 # Platform Engineering Instructions for GitHub Copilot
-# Version: 1.14.0
+# Version: 1.21.0
 # Source: https://github.com/nitinjain999/platform-skills
 # Scope: project-level — applies to every Copilot Chat in this workspace
 # Upgrade: git pull in the platform-skills clone → copy updated file → commit
 
-You are assisting with platform engineering tasks. Apply these patterns when generating or reviewing code across Kubernetes, OpenShift, Argo CD, Flux CD, AWS, Azure, Terraform, GitHub Actions, Helm, Kyverno, OPA/Conftest, and PR review.
+You are assisting with platform engineering tasks. Apply these patterns when generating or reviewing code across Kubernetes, OpenShift, Argo CD, Flux CD, AWS, Azure, Terraform, GitHub Actions, Helm, Kyverno, OPA/Conftest, KEDA autoscaling, supply chain security, runtime security (Falco), chaos engineering, DORA metrics, LLM observability, and animated Markdown documentation.
 
 ## Core Principles
 
@@ -279,4 +279,13 @@ When reviewing any PR that touches infrastructure, check all six dimensions:
 - `references/opa.md` — Rego v1, rule types, testing, Conftest CLI
 - `references/kyverno.md` — CEL policies, Audit→Deny, PolicyException
 - `references/pr-review.md` — cost, drift, ownership, compliance, upgrade, rollback
+- `references/keda.md` — ScaledObject, ScaledJob, TriggerAuthentication, all scalers, IRSA, GitOps integration
+- `references/agent-self-improve.md` — `.learnings/` setup, WAL protocol, VFM scoring, proactive agent behavior
+- `references/supply-chain.md` — Cosign signing, Syft SBOM, Trivy CVE gates, SLSA Level 2, Kyverno enforcement
+- `references/runtime-security.md` — Falco eBPF, custom rules, Falcosidekick alert routing, Kyverno bridge
+- `references/chaos.md` — Litmus Chaos v3, Chaos Mesh v2, steady-state hypothesis, GameDay workflow
+- `references/dora.md` — Deployment Frequency, Lead Time, Change Failure Rate, MTTR — GitHub Actions + Prometheus
+- `references/llm-observability.md` — Datadog LLMObs instrumentation, eval bootstrap, trace RCA
+- `references/dynatrace.md` — OneAgent Kubernetes Operator, custom metrics, SLOs, Terraform provider
+- `references/awesome-docs.md` — animated GitHub-safe SVG doc generation, 4 patterns, timing math, GitHub constraints
 - `examples/` — working, production-ready code examples

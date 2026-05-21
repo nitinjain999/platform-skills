@@ -3,7 +3,7 @@
 > A practical handbook for developers and DevOps engineers working with Kubernetes, GitOps, Terraform, GitHub Actions, cloud infrastructure, and secrets management — with an optional Claude plugin layer for interactive guidance.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Domains](https://img.shields.io/badge/Domains-30-4c8eda)](references/)
+[![Domains](https://img.shields.io/badge/Domains-31-4c8eda)](references/)
 [![Commands](https://img.shields.io/badge/Commands-25-e87c2b)](commands/)
 [![Examples](https://img.shields.io/badge/Examples-26-6f42c1)](examples/)
 [![Editors](https://img.shields.io/badge/Editors-VSCode%20%7C%20Cursor%20%7C%20Copilot-2ea44f)](EDITOR_INTEGRATIONS.md)
@@ -76,6 +76,7 @@ Both layers work independently. The plugin is optional.
 | 🦅 Runtime Security | [references/runtime-security.md](references/runtime-security.md) | Falco eBPF deployment on EKS/GKE, custom rule authoring, Falcosidekick alert routing, rule debugging, bridging Falco signals to Kyverno admission enforcement — `/platform-skills:runtime-security` |
 | 💥 Chaos Engineering | [references/chaos.md](references/chaos.md) | Litmus Chaos v3 and Chaos Mesh v2 fault injection, steady-state hypothesis (httpProbe/promProbe), blast radius scoping, GameDay workflow, recurring schedules, DORA feedback loop — `/platform-skills:chaos` |
 | 📊 DORA Metrics | [references/dora.md](references/dora.md) | Deployment Frequency, Lead Time, Change Failure Rate, MTTR — GitHub Actions + Prometheus Pushgateway instrumentation, recording rules, Grafana dashboards, SaaS decision matrix, anti-pattern detection — `/platform-skills:dora` |
+| ✨ Awesome Docs | [references/awesome-docs.md](references/awesome-docs.md) | Animated GitHub-safe Markdown document generation — 4 SVG patterns (architecture flow, lifecycle loop, field carousel, timeline phases), guided interview, convert existing docs, diff for staleness, audit quality, local preview, multi-platform export (Confluence/Notion HTML, PNG) — `/platform-skills:awesome-docs` |
 
 ## Core principles
 
@@ -166,7 +167,8 @@ platform-skills/
 │   ├── helm.md                         # Helm chart patterns, lint pipeline, values design
 │   ├── pr-review.md                    # PR review: cost, drift, ownership, compliance, upgrade, rollback (v1.12.0)
 │   ├── keda.md                         # KEDA event-driven autoscaling (v1.14.0)
-│   └── llm-observability.md                # Datadog LLMObs: instrumentation, evals, trace RCA (v1.20.0)
+│   ├── llm-observability.md                # Datadog LLMObs: instrumentation, evals, trace RCA (v1.20.0)
+│   └── awesome-docs.md                     # Animated SVG doc generation — 4 patterns, GitHub-safe CSS (v1.21.0)
 │
 ├── examples/                           # Working examples and handbook snippets
 │   ├── flux/basic-monorepo/            # Complete Flux CD monorepo structure
@@ -181,6 +183,7 @@ platform-skills/
 │   ├── helm/web-service/               # Production Helm chart: Deployment, HPA, PDB, NetworkPolicy, schema
 │   ├── triage/                         # PR comment triage scenarios and fixtures (v1.13.0)
 │   ├── keda/                           # ScaledObject, ScaledJob, TriggerAuthentication examples (v1.14.0)
+│   ├── awesome-docs/                       # Animated SVG templates: arch-flow, lifecycle-loop, field-carousel, timeline-phases (v1.21.0)
 │   └── compliance/                     # SOC 2 Terraform examples (v1.6.0)
 │       ├── checkov-config.yaml         # Checkov config grouped by SOC 2 criterion
 │       ├── iam/                        # CC6.1/CC6.2: IAM, IRSA, OIDC, SCPs
@@ -201,7 +204,7 @@ platform-skills/
 
 ## Roadmap
 
-**Current release: v1.20.0** — 25 commands, 31 domain reference guides, 50+ wiki pages.
+**Current release: v1.21.0** — 26 commands, 31 domain reference guides, 50+ wiki pages.
 
 Full version history is in [CHANGELOG.md](CHANGELOG.md).
 
