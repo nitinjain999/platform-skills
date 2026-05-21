@@ -107,10 +107,10 @@ Replace the `path("M ... L ...")` with the actual waypoints between boxes.
 Single row at `y = canvas_height - 45`, items evenly spaced, never overlapping component boxes:
 
 ```xml
-<circle cx="50"  cy="HEIGHT-45" r="5" fill="#4a9eff"/>
-<text   x="60"  y="HEIGHT-41" fill="#8b949e" font-size="11">Primary flow</text>
-<circle cx="180" cy="HEIGHT-45" r="5" fill="#ff9900"/>
-<text   x="190" y="HEIGHT-41" fill="#8b949e" font-size="11">Config/auth</text>
+<circle cx="50"  cy="475" r="5" fill="#4a9eff"/>
+<text   x="60"  y="479" fill="#8b949e" font-size="11">Primary flow</text>
+<circle cx="180" cy="475" r="5" fill="#ff9900"/>
+<text   x="190" y="479" fill="#8b949e" font-size="11">Config/auth</text>
 ```
 
 ---
@@ -150,7 +150,7 @@ Purpose: animate the repeating control loop (poll → evaluate → gate → act 
 
   @keyframes show-idle { 0%,22%{opacity:1} 27%,100%{opacity:0} }
   @keyframes show-act  { 0%,27%{opacity:0} 32%,68%{opacity:1} 73%,100%{opacity:0} }
-  @keyframes show-cool { 0%,72%{opacity:0} 77%,100%{opacity:1} }
+  @keyframes show-cool { 0%,72%{opacity:0} 77%,95%{opacity:1} 100%{opacity:0} }
 </style>
 
 <!-- Show different label/color for each state on the relevant box -->
@@ -161,15 +161,15 @@ Purpose: animate the repeating control loop (poll → evaluate → gate → act 
 
 ### Status Bar
 
-Full-width rect at `y = height - 42`:
+Full-width rect at `y = height - 52` (rect), text at `y = height - 32`:
 
 ```xml
-<rect x="0" y="HEIGHT-52" width="900" height="30" fill="#161b22"/>
-<g class="s-idle"><text x="450" y="HEIGHT-32" text-anchor="middle"
+<rect x="0" y="258" width="900" height="30" fill="#161b22"/>
+<g class="s-idle"><text x="450" y="278" text-anchor="middle"
    fill="#8b949e" font-size="12">Metric below threshold — no scaling action</text></g>
-<g class="s-act" ><text x="450" y="HEIGHT-32" text-anchor="middle"
+<g class="s-act" ><text x="450" y="278" text-anchor="middle"
    fill="#3fb950" font-size="12">Metric above threshold — scaling up</text></g>
-<g class="s-cool"><text x="450" y="HEIGHT-32" text-anchor="middle"
+<g class="s-cool"><text x="450" y="278" text-anchor="middle"
    fill="#ff9900" font-size="12">Cooldown period — holding replica count</text></g>
 ```
 
@@ -206,7 +206,7 @@ slot  = T / N          (seconds per field)
 delay[i] = i * slot    (start delay for field i, 0-indexed)
 ```
 
-Each field visible for first 12% of its slot, fade 12–15%, hidden 15–100%:
+Each field visible for the first 12% of T (= 0.12 × T seconds), fade 12–15% of T, hidden for the remainder. With N=6, T=9s this means each field shows for 1.08s (72% of its 1.5s slot):
 
 ```xml
 <style>
@@ -283,7 +283,7 @@ bar_height = 220 - bar_y
 <!-- Animated bar (fades in at phase start using CSS animation) -->
 <rect x="PHASE_X" y="BAR_Y" width="PHASE_WIDTH" height="BAR_HEIGHT"
       rx="2" fill="#4a9eff" opacity="0.7"
-      style="animation: bar-PHASE DURs ease-in DURs both"/>
+      style="animation: bar-PHASE DURs ease-in 0s both"/>
 ```
 
 ---
