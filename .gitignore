@@ -161,8 +161,9 @@ _site/
 .claude/
 
 # ===== Agent self-improvement (local session state) =====
-.learnings/
-memory/working-buffer.md
+.learnings/*
+memory/*
 .learnings/.pending-errors.log
 docs/superpowers/*
 .superpowers/*
+awesome-agent-skills/*
