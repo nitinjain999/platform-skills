@@ -191,7 +191,7 @@ Steps:
    - Do not run the export — document the manual step instead:
      ```bash
      # Requires svgexport (npm install -g svgexport)
-     for f in assets/*.svg; do svgexport "$f" "${f%.svg}.png" "svg" "2x"; done
+     for f in assets/*.svg; do svgexport "$f" "${f%.svg}.png" 2x; done
      ```
    - Explain: "PNG export requires `svgexport` or Puppeteer. Install with `npm install -g svgexport` then run the command above."
 
