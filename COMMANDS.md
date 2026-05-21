@@ -40,6 +40,7 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:self-improve](#platform-skillsself-improve) | Bootstrap, log, review, or promote agent self-improvement entries |
 | [/platform-skills:chaos](#platform-skillschaos) | Install Litmus Chaos or Chaos Mesh, generate fault experiments, schedule chaos, run GameDay, debug, report |
 | [/platform-skills:dora](#platform-skillsdora) | Instrument DORA metrics, generate Grafana dashboards, benchmark against performance bands, debug metric gaps |
+| [/platform-skills:awesome-docs](#platform-skillsawesome-docs) | Generate animated demo docs, convert existing Markdown, update diagrams, diff for staleness, audit quality, preview, export |
 
 ---
 
@@ -1965,6 +1966,79 @@ GitHub Actions + Prometheus instrumentation for all four DORA metrics — Deploy
 ```
 
 Reference: `references/dora.md` and `examples/dora/`
+
+---
+
+---
+
+## `/platform-skills:awesome-docs`
+
+Generate, convert, and maintain animated GitHub-safe Markdown documents with animated SVG diagrams.
+
+**Usage:** `/platform-skills:awesome-docs <mode> [topic or file path]`
+
+### Mode: `generate`
+
+Create a full animated doc from scratch. The skill runs a guided interview — topic, components, flow direction — then generates SVGs one at a time with visual confirmation before the next.
+
+```
+/platform-skills:awesome-docs generate KEDA autoscaling
+/platform-skills:awesome-docs generate Falco runtime security
+/platform-skills:awesome-docs generate --theme docs-light Linkerd service mesh
+```
+
+### Mode: `convert`
+
+Inject animated SVGs into an existing plain Markdown doc.
+
+```
+/platform-skills:awesome-docs convert docs/keda-guide.md
+/platform-skills:awesome-docs convert README.md
+```
+
+### Mode: `update`
+
+Revise a single diagram in an existing doc.
+
+```
+/platform-skills:awesome-docs update assets/keda-arch-flow.svg
+/platform-skills:awesome-docs update "Architecture section"
+```
+
+### Mode: `diff`
+
+Detect stale diagrams vs `git HEAD`.
+
+```
+/platform-skills:awesome-docs diff KEDA-DEMO.md
+```
+
+### Mode: `audit`
+
+Quality check — missing captions, broken refs, env-specific IDs, missing diagrams.
+
+```
+/platform-skills:awesome-docs audit KEDA-DEMO.md
+```
+
+### Mode: `preview`
+
+Open the doc locally in a browser before committing.
+
+```
+/platform-skills:awesome-docs preview KEDA-DEMO.md
+```
+
+### Mode: `export`
+
+Generate animated HTML for Confluence/Notion, or get PNG export instructions.
+
+```
+/platform-skills:awesome-docs export KEDA-DEMO.md html
+/platform-skills:awesome-docs export KEDA-DEMO.md png
+```
+
+Reference: `references/awesome-docs.md` and `examples/awesome-docs/`
 
 ---
 
