@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 310" width="900" height="310">
+<title>Platform Service Lifecycle Loop</title>
+<desc>Animated lifecycle loop diagram showing 3-state cycling: idle, active scaling, and cooldown</desc>
+<style>
+  @keyframes glow-blue  { 0%,100%{filter:drop-shadow(0 0 3px #4a9eff)} 50%{filter:drop-shadow(0 0 12px #4a9eff)} }
+  @keyframes glow-green { 0%,100%{filter:drop-shadow(0 0 3px #3fb950)} 50%{filter:drop-shadow(0 0 12px #3fb950)} }
+  .gb { animation: glow-blue  3s ease-in-out infinite; }
+  .gg { animation: glow-green 3s ease-in-out infinite; }
+  .s-idle { animation: show-idle 12s ease-in-out infinite both; }
+  .s-act  { animation: show-act  12s ease-in-out infinite both; }
+  .s-cool { animation: show-cool 12s ease-in-out infinite both; }
+  @keyframes show-idle { 0%,22%{opacity:1} 27%,100%{opacity:0} }
+  @keyframes show-act  { 0%,27%{opacity:0} 32%,68%{opacity:1} 73%,100%{opacity:0} }
+  @keyframes show-cool { 0%,72%{opacity:0} 77%,95%{opacity:1} 100%{opacity:0} }
+  .dot-poll  { fill:#4a9eff; offset-path:path("M 130 110 L 240 110"); offset-rotate:0deg; animation:fp 2s linear infinite 0s; }
+  .dot-poll2 { fill:#4a9eff; offset-path:path("M 130 110 L 240 110"); offset-rotate:0deg; animation:fp 2s linear infinite 1s; }
+  @keyframes fp { 0%{opacity:0;offset-distance:0%} 5%{opacity:1} 95%{opacity:1} 100%{opacity:0;offset-distance:100%} }
+</style>
+<defs>
+  <marker id="arr"   markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#4a9eff"/></marker>
+  <marker id="arr-r" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#ff7b72"/></marker>
+</defs>
+<rect width="900" height="310" fill="#0d1117"/>
+<rect x="20"  y="75" width="110" height="70" rx="8" fill="#161b22" stroke="#4a9eff" stroke-width="1.5" class="gb"/>
+<text x="75"  y="115" text-anchor="middle" dominant-baseline="central" fill="#e6edf3" font-size="12" font-family="monospace">Source</text>
+<rect x="240" y="75" width="110" height="70" rx="8" fill="#161b22" stroke="#4a9eff" stroke-width="1.5" class="gb"/>
+<text x="295" y="115" text-anchor="middle" dominant-baseline="central" fill="#e6edf3" font-size="12" font-family="monospace">Operator</text>
+<polygon points="450,85 480,110 450,135 420,110" fill="#161b22" stroke="#ff9900" stroke-width="1.5"/>
+<text x="450" y="114" text-anchor="middle" dominant-baseline="central" fill="#ff9900" font-size="10">threshold?</text>
+<text x="530" y="105" fill="#3fb950" font-size="11" font-family="sans-serif">YES</text>
+<text x="455" y="165" fill="#ff7b72" font-size="11" font-family="sans-serif">NO</text>
+<rect x="570" y="75" width="110" height="70" rx="8" fill="#161b22" stroke="#3fb950" stroke-width="1.5" class="gg"/>
+<text x="625" y="110" text-anchor="middle" dominant-baseline="central" fill="#e6edf3" font-size="12" font-family="monospace">Scale</text>
+<rect x="760" y="75" width="110" height="70" rx="8" fill="#161b22" stroke="#3fb950" stroke-width="1.5" class="gg"/>
+<g class="s-idle"><text x="815" y="115" text-anchor="middle" dominant-baseline="central" fill="#8b949e" font-size="12" font-family="monospace">1 pod</text></g>
+<g class="s-act" ><text x="815" y="115" text-anchor="middle" dominant-baseline="central" fill="#3fb950" font-size="12" font-family="monospace">5 pods</text></g>
+<g class="s-cool"><text x="815" y="115" text-anchor="middle" dominant-baseline="central" fill="#ff9900" font-size="12" font-family="monospace">3 pods</text></g>
+<rect x="380" y="170" width="140" height="50" rx="8" fill="#161b22" stroke="#ff7b72" stroke-width="1" stroke-dasharray="4,3"/>
+<text x="450" y="199" text-anchor="middle" dominant-baseline="central" fill="#ff7b72" font-size="11" font-family="monospace">no action</text>
+<line x1="130" y1="110" x2="235" y2="110" stroke="#4a9eff" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="350" y1="110" x2="417" y2="110" stroke="#4a9eff" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="483" y1="110" x2="565" y2="110" stroke="#3fb950" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="680" y1="110" x2="755" y2="110" stroke="#3fb950" stroke-width="1.5" marker-end="url(#arr)"/>
+<line x1="450" y1="135" x2="450" y2="165" stroke="#ff7b72" stroke-width="1.5" marker-end="url(#arr-r)"/>
+<circle class="dot-poll" r="4"/><circle class="dot-poll2" r="4"/>
+<rect x="0" y="258" width="900" height="30" fill="#161b22"/>
+<g class="s-idle"><text x="450" y="278" text-anchor="middle" fill="#8b949e" font-size="12" font-family="sans-serif">Metric below threshold — no scaling action</text></g>
+<g class="s-act" ><text x="450" y="278" text-anchor="middle" fill="#3fb950" font-size="12" font-family="sans-serif">Metric above threshold — scaling up to target</text></g>
+<g class="s-cool"><text x="450" y="278" text-anchor="middle" fill="#ff9900" font-size="12" font-family="sans-serif">Cooldown period — holding current replica count</text></g>
+</svg>

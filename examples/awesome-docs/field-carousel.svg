@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" width="900" height="400">
+<title>Platform Resource Field Explainer</title>
+<desc>Animated field explainer carousel cycling through 4 config fields with YAML highlighting and tooltips</desc>
+<style>
+  /* N=4 fields, T=8s, slot=2s — N×slot=T: 4×2=8 ✓ */
+  @keyframes hl  { 0%,12%{opacity:1} 15%,100%{opacity:0} }
+  @keyframes tip { 0%,12%{opacity:1} 15%,100%{opacity:0} }
+  .hl0  { animation: hl  8s ease-in-out infinite 0s;   fill:#ffffff10; }
+  .hl1  { animation: hl  8s ease-in-out infinite 2s;   fill:#ffffff10; }
+  .hl2  { animation: hl  8s ease-in-out infinite 4s;   fill:#ffffff10; }
+  .hl3  { animation: hl  8s ease-in-out infinite 6s;   fill:#ffffff10; }
+  .tip0 { animation: tip 8s ease-in-out infinite 0s;   }
+  .tip1 { animation: tip 8s ease-in-out infinite 2s;   }
+  .tip2 { animation: tip 8s ease-in-out infinite 4s;   }
+  .tip3 { animation: tip 8s ease-in-out infinite 6s;   }
+  .tipbox { animation: tipglow 3s ease-in-out infinite; }
+  @keyframes tipglow { 0%,100%{filter:drop-shadow(0 0 2px #4a9eff)} 50%{filter:drop-shadow(0 0 8px #4a9eff)} }
+</style>
+<rect width="900" height="400" fill="#0d1117"/>
+<rect x="20" y="20" width="400" height="360" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1"/>
+<text x="40" y="50" fill="#8b949e" font-size="11" font-family="monospace"># Platform resource config</text>
+<text x="40" y="75"  fill="#ff9900" font-size="13" font-family="monospace">apiVersion: platform/v1</text>
+<text x="40" y="100" fill="#ff9900" font-size="13" font-family="monospace">kind: Service</text>
+<text x="40" y="125" fill="#4a9eff" font-size="13" font-family="monospace">name<tspan fill="#e6edf3">: </tspan><tspan fill="#79c0ff">my-service</tspan></text>
+<text x="40" y="150" fill="#4a9eff" font-size="13" font-family="monospace">replicas<tspan fill="#e6edf3">: </tspan><tspan fill="#ff9900">3</tspan></text>
+<text x="40" y="175" fill="#4a9eff" font-size="13" font-family="monospace">image<tspan fill="#e6edf3">: </tspan><tspan fill="#79c0ff">my-app:1.0.0</tspan></text>
+<text x="40" y="200" fill="#4a9eff" font-size="13" font-family="monospace">port<tspan fill="#e6edf3">: </tspan><tspan fill="#ff9900">8080</tspan></text>
+<rect class="hl0" x="25" y="115" width="390" height="22" rx="3"/>
+<rect class="hl1" x="25" y="140" width="390" height="22" rx="3"/>
+<rect class="hl2" x="25" y="165" width="390" height="22" rx="3"/>
+<rect class="hl3" x="25" y="190" width="390" height="22" rx="3"/>
+<g class="tip0 tipbox">
+  <rect x="440" y="120" width="440" height="110" rx="6" fill="#161b22" stroke="#4a9eff" stroke-width="1.5"/>
+  <text x="460" y="147" fill="#4a9eff" font-size="14" font-family="monospace" font-weight="bold">name</text>
+  <text x="460" y="168" fill="#8b949e" font-size="12" font-family="sans-serif">Unique identifier for this service.</text>
+  <text x="460" y="185" fill="#8b949e" font-size="12" font-family="sans-serif">Must be unique within the namespace.</text>
+  <rect x="440" y="200" width="440" height="24" rx="3" fill="#0d2233"/>
+  <text x="460" y="217" fill="#79c0ff" font-size="11" font-family="monospace">Example: name: orders-service</text>
+</g>
+<g class="tip1 tipbox">
+  <rect x="440" y="120" width="440" height="110" rx="6" fill="#161b22" stroke="#ff9900" stroke-width="1.5"/>
+  <text x="460" y="147" fill="#ff9900" font-size="14" font-family="monospace" font-weight="bold">replicas</text>
+  <text x="460" y="168" fill="#8b949e" font-size="12" font-family="sans-serif">Desired number of pod replicas.</text>
+  <text x="460" y="185" fill="#8b949e" font-size="12" font-family="sans-serif">Set to 0 for scale-to-zero workloads.</text>
+  <rect x="440" y="200" width="440" height="24" rx="3" fill="#0d2233"/>
+  <text x="460" y="217" fill="#ff9900" font-size="11" font-family="monospace">Example: replicas: 3</text>
+</g>
+<g class="tip2 tipbox">
+  <rect x="440" y="120" width="440" height="110" rx="6" fill="#161b22" stroke="#79c0ff" stroke-width="1.5"/>
+  <text x="460" y="147" fill="#79c0ff" font-size="14" font-family="monospace" font-weight="bold">image</text>
+  <text x="460" y="168" fill="#8b949e" font-size="12" font-family="sans-serif">Container image reference.</text>
+  <text x="460" y="185" fill="#8b949e" font-size="12" font-family="sans-serif">Pin to an immutable digest in production.</text>
+  <rect x="440" y="200" width="440" height="24" rx="3" fill="#0d2233"/>
+  <text x="460" y="217" fill="#79c0ff" font-size="11" font-family="monospace">Example: image: my-app@sha256:abc123</text>
+</g>
+<g class="tip3 tipbox">
+  <rect x="440" y="120" width="440" height="110" rx="6" fill="#161b22" stroke="#4a9eff" stroke-width="1.5"/>
+  <text x="460" y="147" fill="#4a9eff" font-size="14" font-family="monospace" font-weight="bold">port</text>
+  <text x="460" y="168" fill="#8b949e" font-size="12" font-family="sans-serif">Container port to expose.</text>
+  <text x="460" y="185" fill="#8b949e" font-size="12" font-family="sans-serif">Must match the application listen port.</text>
+  <rect x="440" y="200" width="440" height="24" rx="3" fill="#0d2233"/>
+  <text x="460" y="217" fill="#ff9900" font-size="11" font-family="monospace">Example: port: 8080</text>
+</g>
+</svg>

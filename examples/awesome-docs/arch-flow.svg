@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" width="900" height="520">
+<title>Platform Service Architecture Flow</title>
+<desc>Animated architecture flow diagram showing Source, Processor, and Output components with flowing data dots</desc>
+<style>
+  @keyframes glow-blue { 0%,100%{filter:drop-shadow(0 0 3px #4a9eff)} 50%{filter:drop-shadow(0 0 14px #4a9eff)} }
+  @keyframes glow-orange { 0%,100%{filter:drop-shadow(0 0 3px #ff9900)} 50%{filter:drop-shadow(0 0 14px #ff9900)} }
+  .glow-blue   { animation: glow-blue   3s ease-in-out infinite; }
+  .glow-orange { animation: glow-orange 3s ease-in-out infinite 1s; }
+  .dot-a  { fill:#4a9eff; offset-path:path("M 200 180 L 450 180"); offset-rotate:0deg; animation:flow-a 2.5s linear infinite 0s; }
+  .dot-a2 { fill:#4a9eff; offset-path:path("M 200 180 L 450 180"); offset-rotate:0deg; animation:flow-a 2.5s linear infinite 1.25s; }
+  .dot-b  { fill:#ff9900; offset-path:path("M 630 180 L 770 180"); offset-rotate:0deg; animation:flow-b 2.5s linear infinite 0.3s; }
+  .dot-b2 { fill:#ff9900; offset-path:path("M 630 180 L 770 180"); offset-rotate:0deg; animation:flow-b 2.5s linear infinite 1.55s; }
+  @keyframes flow-a { 0%{opacity:0;offset-distance:0%} 5%{opacity:1} 95%{opacity:1} 100%{opacity:0;offset-distance:100%} }
+  @keyframes flow-b { 0%{opacity:0;offset-distance:0%} 5%{opacity:1} 95%{opacity:1} 100%{opacity:0;offset-distance:100%} }
+</style>
+<defs>
+  <marker id="arrow-blue"   markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#4a9eff"/></marker>
+  <marker id="arrow-orange" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#ff9900"/></marker>
+</defs>
+<rect width="900" height="520" fill="#0d1117"/>
+<text x="450" y="40" text-anchor="middle" fill="#e6edf3" font-size="16" font-family="sans-serif" font-weight="bold">Platform Service — Architecture Flow</text>
+<rect x="50"  y="140" width="150" height="80" rx="8" fill="#161b22" stroke="#4a9eff" stroke-width="1.5" class="glow-blue"/>
+<text x="125" y="185" text-anchor="middle" dominant-baseline="central" fill="#e6edf3" font-size="13" font-family="monospace">Source</text>
+<rect x="325" y="140" width="150" height="80" rx="8" fill="#161b22" stroke="#4a9eff" stroke-width="1.5" class="glow-blue"/>
+<text x="400" y="185" text-anchor="middle" dominant-baseline="central" fill="#e6edf3" font-size="13" font-family="monospace">Processor</text>
+<rect x="700" y="140" width="150" height="80" rx="8" fill="#161b22" stroke="#ff9900" stroke-width="1.5" class="glow-orange"/>
+<text x="775" y="185" text-anchor="middle" dominant-baseline="central" fill="#e6edf3" font-size="13" font-family="monospace">Output</text>
+<line x1="200" y1="180" x2="320" y2="180" stroke="#4a9eff" stroke-width="1.5" marker-end="url(#arrow-blue)"/>
+<line x1="475" y1="180" x2="695" y2="180" stroke="#ff9900" stroke-width="1.5" marker-end="url(#arrow-orange)"/>
+<circle class="dot-a"  r="5"/><circle class="dot-a2" r="5"/>
+<circle class="dot-b"  r="5"/><circle class="dot-b2" r="5"/>
+<circle cx="280" cy="475" r="5" fill="#4a9eff"/>
+<text x="292" y="479" fill="#8b949e" font-size="11" font-family="sans-serif">Primary flow</text>
+<circle cx="420" cy="475" r="5" fill="#ff9900"/>
+<text x="432" y="479" fill="#8b949e" font-size="11" font-family="sans-serif">Output path</text>
+</svg>
