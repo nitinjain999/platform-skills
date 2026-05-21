@@ -6,10 +6,10 @@
   @keyframes glow-orange { 0%,100%{filter:drop-shadow(0 0 3px #ff9900)} 50%{filter:drop-shadow(0 0 14px #ff9900)} }
   .glow-blue   { animation: glow-blue   3s ease-in-out infinite; }
   .glow-orange { animation: glow-orange 3s ease-in-out infinite 1s; }
-  .dot-a  { fill:#4a9eff; offset-path:path("M 200 180 L 450 180"); offset-rotate:0deg; animation:flow-a 2.5s linear infinite 0s; }
-  .dot-a2 { fill:#4a9eff; offset-path:path("M 200 180 L 450 180"); offset-rotate:0deg; animation:flow-a 2.5s linear infinite 1.25s; }
-  .dot-b  { fill:#ff9900; offset-path:path("M 630 180 L 770 180"); offset-rotate:0deg; animation:flow-b 2.5s linear infinite 0.3s; }
-  .dot-b2 { fill:#ff9900; offset-path:path("M 630 180 L 770 180"); offset-rotate:0deg; animation:flow-b 2.5s linear infinite 1.55s; }
+  .dot-a  { fill:#4a9eff; offset-path:path("M 200 180 L 325 180"); offset-rotate:0deg; animation:flow-a 2.5s linear infinite 0s; }
+  .dot-a2 { fill:#4a9eff; offset-path:path("M 200 180 L 325 180"); offset-rotate:0deg; animation:flow-a 2.5s linear infinite 1.25s; }
+  .dot-b  { fill:#ff9900; offset-path:path("M 630 180 L 700 180"); offset-rotate:0deg; animation:flow-b 2.5s linear infinite 0.3s; }
+  .dot-b2 { fill:#ff9900; offset-path:path("M 630 180 L 700 180"); offset-rotate:0deg; animation:flow-b 2.5s linear infinite 1.55s; }
   @keyframes flow-a { 0%{opacity:0;offset-distance:0%} 5%{opacity:1} 95%{opacity:1} 100%{opacity:0;offset-distance:100%} }
   @keyframes flow-b { 0%{opacity:0;offset-distance:0%} 5%{opacity:1} 95%{opacity:1} 100%{opacity:0;offset-distance:100%} }
 </style>
