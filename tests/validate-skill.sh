@@ -69,6 +69,7 @@ REQUIRED_REFERENCES=(
   references/chaos.md
   references/dora.md
   references/llm-observability.md
+  references/awesome-docs.md
 )
 
 for ref in "${REQUIRED_REFERENCES[@]}"; do
@@ -110,6 +111,7 @@ EXAMPLE_DOMAINS=(
   examples/chaos
   examples/dora
   examples/datadog/llm-observability
+  examples/awesome-docs
 )
 
 for domain in "${EXAMPLE_DOMAINS[@]}"; do
