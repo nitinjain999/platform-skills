@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 360" width="900" height="360" role="img">
+  <title>Deployment State Machine</title>
+  <desc>Animated state machine: Pending → Deploying → Healthy, with error paths to Failed and a self-loop Retry from Failed back to Deploying. Current state cycles with a glowing ring highlight.</desc>
+
+  <style>
+    @keyframes cur-ring {
+      0%,20%  { opacity: 1; stroke-width: 4; }
+      26%,100%{ opacity: 0; stroke-width: 1.5; }
+    }
+    /* N=4 active states in the happy path, T=12s, slot=3s */
+    .cur0 { animation: cur-ring 12s ease-in-out infinite 0s;  opacity:0 }
+    .cur1 { animation: cur-ring 12s ease-in-out infinite 3s;  opacity:0 }
+    .cur2 { animation: cur-ring 12s ease-in-out infinite 6s;  opacity:0 }
+    .cur3 { animation: cur-ring 12s ease-in-out infinite 9s;  opacity:0 }
+  </style>
+
+  <!-- Background -->
+  <rect width="900" height="360" fill="#0d1117"/>
+
+  <!-- Title -->
+  <text x="450" y="18" text-anchor="middle" fill="#8b949e" font-size="12" font-family="monospace">Deployment State Machine</text>
+
+  <!-- ── Arrowhead markers ── -->
+  <defs>
+    <marker id="arr-sm"  markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#8b949e"/>
+    </marker>
+    <marker id="arr-err" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#ff7b72"/>
+    </marker>
+    <marker id="arr-ret" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#ff9900"/>
+    </marker>
+  </defs>
+
+  <!-- ─────────────────────────────────────── -->
+  <!-- States: Pending(130,190)  Deploying(330,190)  Healthy(570,190)  Failed(450,310) -->
+  <!-- ─────────────────────────────────────── -->
+
+  <!-- Pending — initial state (double border) -->
+  <circle cx="130" cy="190" r="44" fill="#161b22" stroke="#8b949e" stroke-width="1.5"/>
+  <circle cx="130" cy="190" r="37" fill="none"    stroke="#8b949e" stroke-width="1" opacity="0.35"/>
+  <text x="130" y="190" text-anchor="middle" dominant-baseline="central" fill="#e6edf3" font-size="12" font-family="monospace">Pending</text>
+  <!-- Current-state ring -->
+  <circle cx="130" cy="190" r="50" fill="none" stroke="#4a9eff" class="cur0"/>
+
+  <!-- Deploying -->
+  <circle cx="350" cy="190" r="44" fill="#161b22" stroke="#ff9900" stroke-width="1.5"/>
+  <text x="350" y="190" text-anchor="middle" dominant-baseline="central" fill="#ff9900" font-size="12" font-family="monospace">Deploying</text>
+  <circle cx="350" cy="190" r="50" fill="none" stroke="#4a9eff" class="cur1"/>
+
+  <!-- Healthy — terminal state -->
+  <circle cx="600" cy="190" r="44" fill="#161b22" stroke="#3fb950" stroke-width="1.5"/>
+  <circle cx="600" cy="190" r="30" fill="#3fb950" opacity="0.15"/>
+  <text x="600" y="190" text-anchor="middle" dominant-baseline="central" fill="#3fb950" font-size="12" font-family="monospace">Healthy</text>
+  <circle cx="600" cy="190" r="50" fill="none" stroke="#4a9eff" class="cur2"/>
+
+  <!-- Failed -->
+  <circle cx="490" cy="310" r="44" fill="#161b22" stroke="#ff7b72" stroke-width="1.5"/>
+  <text x="490" y="310" text-anchor="middle" dominant-baseline="central" fill="#ff7b72" font-size="12" font-family="monospace">Failed</text>
+  <circle cx="490" cy="310" r="50" fill="none" stroke="#4a9eff" class="cur3"/>
+
+  <!-- ── Transitions ── -->
+  <!-- Pending → Deploying -->
+  <line x1="174" y1="190" x2="300" y2="190" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arr-sm)"/>
+  <text x="237" y="182" text-anchor="middle" fill="#8b949e" font-size="10" font-family="monospace">deploy</text>
+
+  <!-- Deploying → Healthy -->
+  <line x1="394" y1="190" x2="550" y2="190" stroke="#3fb950" stroke-width="1.5" marker-end="url(#arr-sm)"/>
+  <text x="472" y="182" text-anchor="middle" fill="#3fb950" font-size="10" font-family="monospace">rollout complete</text>
+
+  <!-- Deploying → Failed -->
+  <line x1="375" y1="226" x2="462" y2="280" stroke="#ff7b72" stroke-width="1.5" marker-end="url(#arr-err)"/>
+  <text x="398" y="262" text-anchor="middle" fill="#ff7b72" font-size="10" font-family="monospace">probe fail</text>
+
+  <!-- Healthy → Failed (regression) -->
+  <line x1="575" y1="226" x2="530" y2="278" stroke="#ff7b72" stroke-width="1.5" marker-end="url(#arr-err)"/>
+  <text x="577" y="264" text-anchor="middle" fill="#ff7b72" font-size="10" font-family="monospace">health fail</text>
+
+  <!-- Failed → Deploying (retry arc) -->
+  <path d="M 450,278 A 100 100 0 0 1 340,234" fill="none" stroke="#ff9900" stroke-width="1.5" marker-end="url(#arr-ret)"/>
+  <text x="368" y="298" text-anchor="middle" fill="#ff9900" font-size="10" font-family="monospace">retry</text>
+
+  <!-- ── Legend ── -->
+  <rect x="20" y="330" width="860" height="22" rx="4" fill="#161b22" opacity="0.6"/>
+  <circle cx="40"  cy="341" r="5" fill="none" stroke="#8b949e" stroke-width="1.5"/>
+  <text x="50"  y="345" fill="#8b949e" font-size="10" font-family="monospace">transition</text>
+  <circle cx="155" cy="341" r="5" fill="#3fb950" opacity="0.7"/>
+  <text x="165" y="345" fill="#3fb950" font-size="10" font-family="monospace">terminal</text>
+  <circle cx="250" cy="341" r="5" fill="none" stroke="#ff7b72" stroke-width="1.5"/>
+  <text x="260" y="345" fill="#ff7b72" font-size="10" font-family="monospace">error path</text>
+  <circle cx="360" cy="341" r="5" fill="none" stroke="#ff9900" stroke-width="1.5"/>
+  <text x="370" y="345" fill="#ff9900" font-size="10" font-family="monospace">retry path</text>
+  <circle cx="455" cy="341" r="5" fill="none" stroke="#4a9eff" stroke-width="2"/>
+  <text x="465" y="345" fill="#4a9eff" font-size="10" font-family="monospace">current state</text>
+</svg>

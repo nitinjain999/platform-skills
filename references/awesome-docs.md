@@ -177,7 +177,7 @@ Full-width rect at `y = height - 52` (rect), text at `y = height - 32`:
 
 ## SVG Pattern C — Field Explainer Carousel (`field-carousel`)
 
-Purpose: highlight each config field one-by-one with a tooltip explanation.
+Purpose: highlight each config field one-by-one with a tooltip explanation. Supports YAML, HCL, JSON, and TOML.
 
 ### Canvas
 
@@ -185,10 +185,14 @@ Purpose: highlight each config field one-by-one with a tooltip explanation.
 
 ### Layout
 
-- Left panel `x=20..440`: YAML block with syntax coloring
+- Left panel `x=20..440`: config block with syntax coloring (YAML, HCL, JSON, or TOML — see Config Format Syntax Colors)
 - Right panel `x=455..880`: single tooltip box visible at a time
 
-### YAML Syntax Colors
+### Config Format Syntax Colors
+
+Choose the color scheme matching the config format in the left panel.
+
+**YAML** (Kubernetes manifests, Helm values, CI configs):
 
 | Element | Color |
 |---------|-------|
@@ -196,7 +200,36 @@ Purpose: highlight each config field one-by-one with a tooltip explanation.
 | String values | `#79c0ff` |
 | Numeric values | `#ff9900` |
 | Special keys (`apiVersion`, `kind`) | `#ff9900` |
-| Comments | `#8b949e` |
+| Comments (`# ...`) | `#8b949e` |
+
+**HCL / Terraform** (`.tf`, `.tfvars`):
+
+| Element | Color |
+|---------|-------|
+| Block type / resource label | `#ff9900` |
+| Attribute names | `#4a9eff` |
+| String values | `#79c0ff` |
+| Numeric / bool values | `#ff9900` |
+| Comments (`# ...` or `//`) | `#8b949e` |
+
+**JSON** (API bodies, config files):
+
+| Element | Color |
+|---------|-------|
+| Keys (quoted strings on left of `:`) | `#4a9eff` |
+| String values | `#79c0ff` |
+| Numeric / bool / null values | `#ff9900` |
+| Structural punctuation (`{`, `}`, `[`, `]`, `,`) | `#e6edf3` |
+
+**TOML** (application configs, Cargo.toml, pyproject.toml):
+
+| Element | Color |
+|---------|-------|
+| Section headers (`[table]`) | `#ff9900` |
+| Keys | `#4a9eff` |
+| String values | `#79c0ff` |
+| Numeric / bool values | `#ff9900` |
+| Comments (`# ...`) | `#8b949e` |
 
 ### Timing Formula
 
@@ -284,6 +317,175 @@ bar_height = 220 - bar_y
 <rect x="PHASE_X" y="BAR_Y" width="PHASE_WIDTH" height="BAR_HEIGHT"
       rx="2" fill="#4a9eff" opacity="0.7"
       style="animation: bar-PHASE DURs ease-in 0s both"/>
+```
+
+---
+
+## SVG Pattern E — Sequence Diagram (`sequence-diagram`)
+
+Purpose: show request/response chains, API call sequences, and auth flows between actors.
+
+### Canvas
+
+- Width: 900px, Height: 400px
+- Actors spaced evenly across x-axis; lifelines run vertically from actor box to bottom of canvas
+
+### Actor and Lifeline Template
+
+```xml
+<!-- Actor box -->
+<rect x="X" y="20" width="100" height="36" rx="6"
+      fill="#161b22" stroke="#4a9eff" stroke-width="1.5"/>
+<text x="X+50" y="38" text-anchor="middle" dominant-baseline="central"
+      fill="#e6edf3" font-size="12" font-family="monospace">Actor</text>
+
+<!-- Lifeline (dashed vertical line) -->
+<line x1="X+50" y1="56" x2="X+50" y2="380"
+      stroke="#4a9eff" stroke-width="1" stroke-dasharray="4 4" opacity="0.4"/>
+```
+
+### Message Arrow Template
+
+Synchronous call (solid line, filled arrowhead) — animate with CSS `opacity` cycling:
+
+```xml
+<defs>
+  <marker id="arrow-seq" markerWidth="8" markerHeight="8"
+          refX="6" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L8,3 z" fill="#4a9eff"/>
+  </marker>
+  <marker id="arrow-ret" markerWidth="8" markerHeight="8"
+          refX="6" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L8,3 z" fill="#8b949e"/>
+  </marker>
+</defs>
+
+<!-- Request arrow (left to right) -->
+<line x1="SRC_X" y1="MSG_Y" x2="DST_X" y2="MSG_Y"
+      stroke="#4a9eff" stroke-width="1.5" marker-end="url(#arrow-seq)"
+      class="msg0"/>
+<text x="MID_X" y="MSG_Y-6" text-anchor="middle"
+      fill="#8b949e" font-size="11">message label</text>
+
+<!-- Return arrow (right to left, dashed) -->
+<line x1="DST_X" y1="RET_Y" x2="SRC_X" y2="RET_Y"
+      stroke="#8b949e" stroke-width="1.5" stroke-dasharray="4 3"
+      marker-end="url(#arrow-ret)" class="msg0-ret"/>
+```
+
+### Message Sequencing (CSS step animation)
+
+Reveal each message in turn — N messages cycling over T seconds:
+
+```xml
+<style>
+  /* N=4 messages, T=8s → slot=2s */
+  @keyframes seq-show { 0%,90%{opacity:1} 95%,100%{opacity:0} }
+
+  .msg0     { animation: seq-show 8s linear infinite 0s;   }
+  .msg0-ret { animation: seq-show 8s linear infinite 0.4s; }
+  .msg1     { animation: seq-show 8s linear infinite 2s;   }
+  .msg1-ret { animation: seq-show 8s linear infinite 2.4s; }
+  .msg2     { animation: seq-show 8s linear infinite 4s;   }
+  .msg2-ret { animation: seq-show 8s linear infinite 4.4s; }
+  .msg3     { animation: seq-show 8s linear infinite 6s;   }
+  .msg3-ret { animation: seq-show 8s linear infinite 6.4s; }
+</style>
+```
+
+**Invariant:** Each message's return arrow delay = message delay + 0.4s. Last message ends at T.
+
+### Activation Box (optional)
+
+Show that an actor is processing with a narrow rect on its lifeline:
+
+```xml
+<rect x="X+44" y="MSG_Y" width="12" height="RET_Y-MSG_Y"
+      fill="#4a9eff" opacity="0.25" class="msg0"/>
+```
+
+---
+
+## SVG Pattern F — State Machine (`state-machine`)
+
+Purpose: show states, transitions between them, and animate the "current state" highlight cycling through a typical path.
+
+### Canvas
+
+- Width: 900px, Height: 360px
+
+### State Node Template
+
+```xml
+<!-- Idle state (initial — double border) -->
+<circle cx="X" cy="Y" r="34" fill="#161b22" stroke="#4a9eff" stroke-width="3"/>
+<circle cx="X" cy="Y" r="28" fill="none"    stroke="#4a9eff" stroke-width="1" opacity="0.4"/>
+<text x="X" y="Y" text-anchor="middle" dominant-baseline="central"
+      fill="#e6edf3" font-size="12" font-family="monospace">Idle</text>
+
+<!-- Regular state -->
+<circle cx="X" cy="Y" r="34" fill="#161b22" stroke="#8b949e" stroke-width="1.5"/>
+<text x="X" y="Y" text-anchor="middle" dominant-baseline="central"
+      fill="#e6edf3" font-size="12" font-family="monospace">Active</text>
+
+<!-- Terminal state (filled inner circle) -->
+<circle cx="X" cy="Y" r="34" fill="#161b22" stroke="#8b949e" stroke-width="1.5"/>
+<circle cx="X" cy="Y" r="20" fill="#3fb950" opacity="0.7"/>
+<text x="X" y="Y" text-anchor="middle" dominant-baseline="central"
+      fill="#0d1117" font-size="11" font-family="monospace">Done</text>
+```
+
+### Transition Arrow
+
+```xml
+<defs>
+  <marker id="arrow-sm" markerWidth="8" markerHeight="8"
+          refX="6" refY="3" orient="auto">
+    <path d="M0,0 L0,6 L8,3 z" fill="#8b949e"/>
+  </marker>
+</defs>
+<!-- Straight transition -->
+<line x1="SRC_X+34" y1="SRC_Y" x2="DST_X-34" y2="DST_Y"
+      stroke="#8b949e" stroke-width="1.5" marker-end="url(#arrow-sm)"/>
+<text x="MID_X" y="MID_Y-8" text-anchor="middle"
+      fill="#8b949e" font-size="10">trigger</text>
+
+<!-- Self-loop transition (arc above node) -->
+<path d="M X-10,Y-34 A 30 30 0 1 1 X+10,Y-34"
+      fill="none" stroke="#8b949e" stroke-width="1.5" marker-end="url(#arrow-sm)"/>
+```
+
+### Current-State Highlight (CSS cycling)
+
+Animate a glowing ring on each state in sequence. N states, T seconds:
+
+```xml
+<style>
+  /* N=4 states, T=12s → slot=3s */
+  @keyframes cur-state {
+    0%,20%  { opacity: 1; r: 38; }
+    25%,100%{ opacity: 0; r: 34; }
+  }
+
+  .cur0 { animation: cur-state 12s ease-in-out infinite 0s;   }
+  .cur1 { animation: cur-state 12s ease-in-out infinite 3s;   }
+  .cur2 { animation: cur-state 12s ease-in-out infinite 6s;   }
+  .cur3 { animation: cur-state 12s ease-in-out infinite 9s;   }
+</style>
+
+<!-- Overlay pulsing ring on each state (same cx/cy as state node) -->
+<circle cx="X" cy="Y" r="34" fill="none" stroke="#4a9eff" stroke-width="2"
+        class="cur0" opacity="0"/>
+```
+
+**Note:** CSS `r` attribute animation requires SVG 2 support. For broad compatibility, use `transform: scale()` on a `<g>` wrapper or animate `stroke-width` instead:
+
+```xml
+<style>
+  @keyframes cur-ring { 0%,20%{opacity:1;stroke-width:4} 25%,100%{opacity:0;stroke-width:1.5} }
+  .cur0 { animation: cur-ring 12s ease-in-out infinite 0s; }
+</style>
+<circle cx="X" cy="Y" r="38" fill="none" stroke="#4a9eff" class="cur0" opacity="0"/>
 ```
 
 ---

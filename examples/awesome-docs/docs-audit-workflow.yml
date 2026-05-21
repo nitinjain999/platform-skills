@@ -1,0 +1,129 @@
+# .github/workflows/docs-audit.yml
+#
+# Runs the awesome-docs audit on every PR that touches Markdown or SVG files.
+# Reports broken img references, missing captions, and oversized SVGs as
+# PR annotations and a job summary.
+#
+# Prerequisites:
+#   - Claude Code CLI installed on the runner (uses the platform-skills plugin)
+#   - Or: use the lightweight bash checks below as a standalone alternative
+
+name: docs-audit
+
+on:
+  pull_request:
+    paths:
+      - "**/*.md"
+      - "assets/**/*.svg"
+
+permissions:
+  contents: read
+  pull-requests: write   # needed for PR comment / annotation
+
+jobs:
+  audit:
+    name: Audit animated docs
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history needed for git diff in diff mode
+
+      # ── 1. Lightweight built-in checks (no Claude Code required) ───────────
+      - name: Check SVG file sizes
+        id: svg-size
+        run: |
+          OVER_LIMIT=""
+          while IFS= read -r -d '' f; do
+            size=$(stat -c%s "$f")
+            if [ "$size" -gt 51200 ]; then
+              OVER_LIMIT="$OVER_LIMIT\n  FAIL: $f is $(( size / 1024 ))KB — exceeds 50KB GitHub limit"
+            fi
+          done < <(find . -name "*.svg" -not -path "./.git/*" -print0)
+          if [ -n "$OVER_LIMIT" ]; then
+            echo -e "SVG size violations:$OVER_LIMIT" | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "failed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "All SVGs within 50KB limit" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Check img captions in Markdown
+        id: captions
+        run: |
+          MISSING=""
+          while IFS= read -r -d '' f; do
+            # Find <img ...> lines not immediately followed by a > blockquote
+            python3 - "$f" <<'PY'
+          import sys, re
+          path = sys.argv[1]
+          lines = open(path).readlines()
+          for i, line in enumerate(lines):
+              if re.search(r'<img\b', line):
+                  next_line = lines[i+1].strip() if i+1 < len(lines) else ""
+                  if not next_line.startswith(">"):
+                      print(f"FAIL: {path}:{i+1} — <img> missing blockquote caption on next line")
+          PY
+          done < <(find . -name "*.md" -not -path "./.git/*" -print0)
+
+      - name: Check for broken SVG img references
+        id: broken-refs
+        run: |
+          while IFS= read -r -d '' f; do
+            dir=$(dirname "$f")
+            grep -oP '(?<=src=")[^"]+\.svg' "$f" | while read -r ref; do
+              # Resolve relative to doc directory
+              target="$dir/$ref"
+              if [ ! -f "$target" ]; then
+                echo "FAIL: $f references missing SVG: $ref" | tee -a "$GITHUB_STEP_SUMMARY"
+              fi
+            done
+          done < <(find . -name "*.md" -not -path "./.git/*" -print0)
+
+      - name: Check for external hrefs in SVGs
+        id: external-hrefs
+        run: |
+          if grep -rl 'href="http' assets/ 2>/dev/null | grep '\.svg$'; then
+            echo "FAIL: SVG files contain external href — GitHub will block rendering" \
+              | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          if grep -rl 'xlink:href="http' assets/ 2>/dev/null | grep '\.svg$'; then
+            echo "FAIL: SVG files contain xlink:href — blocked by GitHub sanitizer" \
+              | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "No external hrefs found in SVGs" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      # ── 2. Diff check — flag docs changed in this PR ─────────────────────
+      - name: Detect stale diagrams (changed docs)
+        id: stale-check
+        run: |
+          BASE="${{ github.event.pull_request.base.sha }}"
+          CHANGED_DOCS=$(git diff --name-only "$BASE" HEAD -- '*.md')
+          if [ -z "$CHANGED_DOCS" ]; then
+            echo "No Markdown files changed — skipping stale diagram check"
+            exit 0
+          fi
+          echo "Changed docs in this PR:" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "$CHANGED_DOCS" | tee -a "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Run \`/platform-skills:awesome-docs diff --base $BASE <doc>\` locally to check for stale diagrams." \
+            >> "$GITHUB_STEP_SUMMARY"
+
+      # ── 3. Post summary as PR comment ────────────────────────────────────
+      - name: Comment on PR
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const summary = process.env.GITHUB_STEP_SUMMARY
+              ? fs.readFileSync(process.env.GITHUB_STEP_SUMMARY, 'utf8')
+              : 'No summary generated.';
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## Docs Audit Results\n\n\`\`\`\n${summary}\n\`\`\``
+            });
