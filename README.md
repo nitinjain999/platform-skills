@@ -227,6 +227,16 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for how to propose new patterns, the deve
 - [Flux CD documentation](https://github.com/fluxcd/flux2)
 - [GitHub Actions security hardening](https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions)
 
+## Sponsor
+
+If Platform Skills saves you time, consider sponsoring to help keep it maintained and growing.
+
+[![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-pink?logo=github)](https://github.com/sponsors/nitinjain999)
+
+Every sponsor directly supports new domains, pattern updates, and the time spent validating every example in real environments.
+
+---
+
 ## License
 
 Apache-2.0. See [LICENSE](LICENSE) for the full text and [NOTICE](NOTICE) for attribution.
