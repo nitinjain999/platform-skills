@@ -37,6 +37,7 @@ Match the task to the right layer:
 24. `Agent Self-Improvement`: Bootstrap and operate self-improving, proactive agent workspaces. Covers `.learnings/` directory setup, LRN/ERR/FEAT entry lifecycle, recurring pattern detection, promotion to project memory, WAL protocol, working buffer, VFM scoring, ADL decision logic, Six Operating Pillars, heartbeat, and reverse prompting.
 25. `Supply Chain Security`: Secure the build pipeline and image lifecycle with Cosign keyless signing (Sigstore/Rekor), Syft SBOM generation and attestation, Trivy/Grype CVE scanning with severity gates, SLSA Level 2 provenance, and Kyverno ImageValidatingPolicy admission enforcement. All open-source, no license cost.
 26. `Runtime Security`: Detect in-container threats at the syscall level with Falco (eBPF driver, CNCF, no license cost). Covers eBPF driver deployment on EKS/GKE, custom rule authoring, Falcosidekick alert routing to Slack/PagerDuty/webhook, rule debugging, and bridging runtime signals to Kyverno admission enforcement.
+27. `Awesome Docs`: Generate, convert, and maintain animated GitHub-safe Markdown documents — any doc type (README, architecture guide, runbook, tutorial, API reference, how-it-works, RFC, post-mortem, or custom). Four SVG patterns: architecture flow, lifecycle loop, field explainer carousel, and timeline phases. Covers guided interview for new docs, converting existing plain Markdown, updating individual diagrams, diffing for stale diagrams, quality auditing, local preview, and multi-platform export (GitHub SVG, Confluence/Notion HTML, PNG guidance). Supports `github-dark`, `docs-light`, and custom color themes.
 
 If a task spans multiple areas, decide which layer owns the source of truth and keep the other layers consumers of that state.
 
@@ -100,6 +101,7 @@ When asked to generate code, start from the thinnest useful slice that proves th
 - For Kubernetes runtime security — Falco eBPF deployment on EKS/GKE, custom rule authoring, Falcosidekick alert routing, and bridging Falco signals to Kyverno admission enforcement — read [references/runtime-security.md](references/runtime-security.md).
 - For Chaos Engineering — Litmus Chaos v3 and Chaos Mesh v2 fault injection, steady-state hypothesis, blast radius scoping, GameDay workflow, and DORA feedback loop — read [references/chaos.md](references/chaos.md).
 - For DORA metrics — Deployment Frequency, Lead Time for Changes, Change Failure Rate, and MTTR instrumentation via GitHub Actions and Prometheus, SaaS tool selection, and anti-pattern detection — read [references/dora.md](references/dora.md).
+- For animated Markdown document generation — SVG blueprints (architecture flow, lifecycle loop, field carousel, timeline phases), GitHub animation constraints, timing math, theme system, and multi-platform export — read [references/awesome-docs.md](references/awesome-docs.md).
 
 Load only the files needed for the current request.
 
@@ -132,3 +134,4 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:runtime-security` — deploy Falco with eBPF, write custom rules, route alerts, debug why a rule is not firing, and bridge Falco signals to Kyverno admission enforcement
 - `/platform-skills:chaos` — install Litmus Chaos or Chaos Mesh, generate fault experiments, schedule recurring chaos, run structured GameDay, debug stuck experiments, report results
 - `/platform-skills:dora` — instrument DORA metrics in GitHub Actions, generate Grafana dashboards, benchmark against performance bands, debug missing metric data
+- `/platform-skills:awesome-docs` — generate any animated Markdown document (README, architecture guide, runbook, tutorial, RFC, post-mortem, or custom), convert existing Markdown to animated, update diagrams, diff for staleness, audit quality, preview locally, or export to Confluence/Notion HTML

@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 400" width="900" height="400" role="img">
+  <title>API Auth Sequence — Token Request Flow</title>
+  <desc>Animated sequence diagram: Client calls Auth service for a token, Auth calls IAM to validate credentials, then returns JWT to Client, which calls the API with the bearer token.</desc>
+
+  <style>
+    @keyframes seq-show { 0%,88%{opacity:1} 94%,100%{opacity:0} }
+
+    /* 4 request/return pairs, T=12s, slot=3s, return offset=0.5s */
+    .msg0     { animation: seq-show 12s linear infinite 0s;   opacity:0 }
+    .msg0-ret { animation: seq-show 12s linear infinite 0.5s; opacity:0 }
+    .msg1     { animation: seq-show 12s linear infinite 3s;   opacity:0 }
+    .msg1-ret { animation: seq-show 12s linear infinite 3.5s; opacity:0 }
+    .msg2     { animation: seq-show 12s linear infinite 6s;   opacity:0 }
+    .msg2-ret { animation: seq-show 12s linear infinite 6.5s; opacity:0 }
+    .msg3     { animation: seq-show 12s linear infinite 9s;   opacity:0 }
+    .msg3-ret { animation: seq-show 12s linear infinite 9.5s; opacity:0 }
+  </style>
+
+  <!-- Background -->
+  <rect width="900" height="400" fill="#0d1117"/>
+
+  <!-- Title -->
+  <text x="450" y="18" text-anchor="middle" fill="#8b949e" font-size="12" font-family="monospace">Auth Token Request Flow</text>
+
+  <!-- ── Actors ── -->
+  <!-- Client x=100 -->
+  <rect x="50" y="28" width="100" height="34" rx="6" fill="#161b22" stroke="#4a9eff" stroke-width="1.5"/>
+  <text x="100" y="45" text-anchor="middle" dominant-baseline="central" fill="#e6edf3" font-size="12" font-family="monospace">Client</text>
+
+  <!-- Auth Service x=350 -->
+  <rect x="300" y="28" width="100" height="34" rx="6" fill="#161b22" stroke="#4a9eff" stroke-width="1.5"/>
+  <text x="350" y="45" text-anchor="middle" dominant-baseline="central" fill="#e6edf3" font-size="12" font-family="monospace">Auth</text>
+
+  <!-- IAM x=600 -->
+  <rect x="550" y="28" width="100" height="34" rx="6" fill="#161b22" stroke="#79c0ff" stroke-width="1.5"/>
+  <text x="600" y="45" text-anchor="middle" dominant-baseline="central" fill="#e6edf3" font-size="12" font-family="monospace">IAM</text>
+
+  <!-- API x=850 -->
+  <rect x="800" y="28" width="100" height="34" rx="6" fill="#161b22" stroke="#3fb950" stroke-width="1.5"/>
+  <text x="850" y="45" text-anchor="middle" dominant-baseline="central" fill="#e6edf3" font-size="12" font-family="monospace">API</text>
+
+  <!-- ── Lifelines ── -->
+  <line x1="100" y1="62" x2="100" y2="380" stroke="#4a9eff" stroke-width="1" stroke-dasharray="4 4" opacity="0.3"/>
+  <line x1="350" y1="62" x2="350" y2="380" stroke="#4a9eff" stroke-width="1" stroke-dasharray="4 4" opacity="0.3"/>
+  <line x1="600" y1="62" x2="600" y2="380" stroke="#79c0ff" stroke-width="1" stroke-dasharray="4 4" opacity="0.3"/>
+  <line x1="850" y1="62" x2="850" y2="380" stroke="#3fb950" stroke-width="1" stroke-dasharray="4 4" opacity="0.3"/>
+
+  <!-- ── Arrowhead markers ── -->
+  <defs>
+    <marker id="arr-req" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#4a9eff"/>
+    </marker>
+    <marker id="arr-ret" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#8b949e"/>
+    </marker>
+    <marker id="arr-grn" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#3fb950"/>
+    </marker>
+  </defs>
+
+  <!-- ── Message 0: Client → Auth POST /token ── -->
+  <g class="msg0">
+    <line x1="104" y1="110" x2="340" y2="110" stroke="#4a9eff" stroke-width="1.5" marker-end="url(#arr-req)"/>
+    <text x="222" y="104" text-anchor="middle" fill="#4a9eff" font-size="11" font-family="monospace">POST /token {credentials}</text>
+    <!-- Activation box on Auth -->
+    <rect x="344" y="110" width="12" height="50" fill="#4a9eff" opacity="0.2"/>
+  </g>
+
+  <!-- ── Message 0-ret: Auth → Client 401 ── (only shown briefly before msg1 picks up) -->
+  <!-- skipped — return is message 2-ret after IAM validates -->
+
+  <!-- ── Message 1: Auth → IAM ValidateCredentials ── -->
+  <g class="msg1">
+    <line x1="354" y1="130" x2="590" y2="130" stroke="#4a9eff" stroke-width="1.5" marker-end="url(#arr-req)"/>
+    <text x="472" y="124" text-anchor="middle" fill="#4a9eff" font-size="11" font-family="monospace">ValidateCredentials(sub)</text>
+    <!-- Activation box on IAM -->
+    <rect x="594" y="130" width="12" height="46" fill="#79c0ff" opacity="0.2"/>
+  </g>
+
+  <!-- ── Message 1-ret: IAM → Auth OK + claims ── -->
+  <g class="msg1-ret">
+    <line x1="590" y1="176" x2="360" y2="176" stroke="#8b949e" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arr-ret)"/>
+    <text x="472" y="170" text-anchor="middle" fill="#8b949e" font-size="11" font-family="monospace">200 {claims, scopes}</text>
+  </g>
+
+  <!-- ── Message 2: Auth → Client JWT ── -->
+  <g class="msg2">
+    <line x1="340" y1="220" x2="110" y2="220" stroke="#8b949e" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arr-ret)"/>
+    <text x="222" y="214" text-anchor="middle" fill="#8b949e" font-size="11" font-family="monospace">200 {access_token: JWT}</text>
+    <!-- Activation box on Client -->
+    <rect x="94" y="220" width="12" height="46" fill="#4a9eff" opacity="0.2"/>
+  </g>
+
+  <!-- ── Message 3: Client → API GET /resource ── -->
+  <g class="msg3">
+    <line x1="104" y1="280" x2="840" y2="280" stroke="#3fb950" stroke-width="1.5" marker-end="url(#arr-grn)"/>
+    <text x="472" y="274" text-anchor="middle" fill="#3fb950" font-size="11" font-family="monospace">GET /resource  Authorization: Bearer &lt;JWT&gt;</text>
+    <!-- Activation box on API -->
+    <rect x="844" y="280" width="12" height="46" fill="#3fb950" opacity="0.2"/>
+  </g>
+
+  <!-- ── Message 3-ret: API → Client 200 data ── -->
+  <g class="msg3-ret">
+    <line x1="840" y1="326" x2="110" y2="326" stroke="#8b949e" stroke-width="1.5" stroke-dasharray="4 3" marker-end="url(#arr-ret)"/>
+    <text x="472" y="320" text-anchor="middle" fill="#8b949e" font-size="11" font-family="monospace">200 {data}</text>
+  </g>
+
+  <!-- Step counter labels -->
+  <text x="16" y="114" fill="#8b949e" font-size="10" font-family="monospace">1</text>
+  <text x="16" y="134" fill="#8b949e" font-size="10" font-family="monospace">2</text>
+  <text x="16" y="180" fill="#8b949e" font-size="10" font-family="monospace">3</text>
+  <text x="16" y="224" fill="#8b949e" font-size="10" font-family="monospace">4</text>
+  <text x="16" y="284" fill="#8b949e" font-size="10" font-family="monospace">5</text>
+  <text x="16" y="330" fill="#8b949e" font-size="10" font-family="monospace">6</text>
+</svg>

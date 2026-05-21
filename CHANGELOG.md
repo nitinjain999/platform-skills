@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.21.0] - 2026-05-21
+
+### Added
+
+#### Awesome Docs (Domain 27)
+
+- `references/awesome-docs.md` — comprehensive reference covering: SVG Pattern A (architecture flow — `offset-path` animated dots, glow animations, arrowhead markers, legend), SVG Pattern B (decision/lifecycle loop — 3-state CSS cycling, status bar), SVG Pattern C (field explainer carousel — timing formula `slot = T/N`, `N × slot = T` invariant, tooltip structure), SVG Pattern D (timeline phases — bar math `y = bottom - (N/max)*height`), GitHub SVG animation constraints table (allowed vs blocked), theme system (`github-dark`, `docs-light`, `custom`), multi-platform export rules (GitHub SVG, Confluence/Notion HTML, PNG manual steps), quality checklist, and curated external references (MDN, GitHub Docs, Shields.io, SVGO, Primer CSS)
+- `commands/awesome-docs.md` — slash command `/platform-skills:awesome-docs` with seven modes: `generate` (guided interview → full animated doc with incremental SVG confirmation), `convert` (inject SVGs into existing Markdown with conflict detection), `update` (revise a single diagram), `diff` (detect stale diagrams vs git HEAD), `audit` (quality punch list), `preview` (local browser preview), `export` (GitHub SVG default; Confluence/Notion animated HTML; PNG manual step)
+- `examples/awesome-docs/arch-flow.svg` — reusable architecture flow SVG template (github-dark, 3 boxes, 2 animated dot paths)
+- `examples/awesome-docs/lifecycle-loop.svg` — reusable lifecycle loop SVG template (3-state CSS, diamond gate, status bar)
+- `examples/awesome-docs/field-carousel.svg` — reusable field carousel SVG template (4 fields, 8s cycle, `N × slot = T` timing)
+- `examples/awesome-docs/timeline-phases.svg` — reusable timeline phases SVG template (3 phases, replica chart with correct bar math)
+
 ## [1.20.0] - 2026-05-20
 
 ### Added

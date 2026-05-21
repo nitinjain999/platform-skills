@@ -113,6 +113,7 @@ Slash commands are predefined workflows. Use them instead of writing a long prom
 | `/platform-skills:runtime-security` | Deploy Falco with eBPF, write custom rules, route alerts, debug rule firing, bridge to Kyverno |
 | `/platform-skills:chaos` | Install Litmus Chaos or Chaos Mesh, generate fault experiments, schedule chaos, run GameDay, debug, report |
 | `/platform-skills:dora` | Instrument DORA metrics, generate Grafana dashboards, benchmark against performance bands, debug metric gaps |
+| `/platform-skills:awesome-docs` | Generate any animated Markdown doc (README, architecture guide, runbook, tutorial, RFC, post-mortem, or custom), convert existing Markdown, update/diff/audit, preview, export to Confluence/Notion |
 
 Invoke a command by typing it at the start of your message:
 

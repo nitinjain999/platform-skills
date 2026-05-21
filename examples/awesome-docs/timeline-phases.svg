@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 280" width="900" height="280">
+<title>Load Phases Timeline</title>
+<desc>Timeline showing load phases with replica count chart: Idle (1 replica), Ramp (5 replicas), Peak (10 replicas)</desc>
+<style>
+  @keyframes bar-idle { 0%,5%{opacity:0.7} 30%,100%{opacity:0} }
+  @keyframes bar-ramp { 0%,29%{opacity:0} 35%,65%{opacity:0.7} 70%,100%{opacity:0} }
+  @keyframes bar-peak { 0%,64%{opacity:0} 70%,100%{opacity:0.7} }
+</style>
+<rect width="900" height="280" fill="#0d1117"/>
+<text x="450" y="28" text-anchor="middle" fill="#e6edf3" font-size="14" font-family="sans-serif" font-weight="bold">Load Phases Timeline</text>
+<rect x="50" y="50" width="800" height="6" rx="3" fill="#21262d"/>
+<circle cx="50"  cy="53" r="5" fill="#8b949e"/>
+<circle cx="333" cy="53" r="5" fill="#4a9eff"/>
+<circle cx="617" cy="53" r="5" fill="#ff9900"/>
+<circle cx="850" cy="53" r="5" fill="#8b949e"/>
+<text x="50"  y="40" text-anchor="middle" fill="#8b949e" font-size="11" font-family="sans-serif">Start</text>
+<text x="333" y="40" text-anchor="middle" fill="#4a9eff" font-size="11" font-family="sans-serif">Ramp</text>
+<text x="617" y="40" text-anchor="middle" fill="#ff9900" font-size="11" font-family="sans-serif">Peak</text>
+<text x="850" y="40" text-anchor="middle" fill="#8b949e" font-size="11" font-family="sans-serif">End</text>
+<!-- Chart: chart_top=90, chart_bottom=230, chart_height=140, maxReplicas=10 -->
+<!-- bar_y = 230 - (N/10)*140 -->
+<line x1="50" y1="230" x2="850" y2="230" stroke="#21262d" stroke-width="1"/>
+<line x1="50" y1="202" x2="850" y2="202" stroke="#21262d" stroke-width="1"/>
+<line x1="50" y1="160" x2="850" y2="160" stroke="#21262d" stroke-width="1"/>
+<line x1="50" y1="118" x2="850" y2="118" stroke="#21262d" stroke-width="1"/>
+<line x1="50" y1="90"  x2="850" y2="90"  stroke="#21262d" stroke-width="1"/>
+<text x="42" y="234" text-anchor="end" fill="#8b949e" font-size="10" font-family="monospace">0</text>
+<text x="42" y="206" text-anchor="end" fill="#8b949e" font-size="10" font-family="monospace">2</text>
+<text x="42" y="164" text-anchor="end" fill="#8b949e" font-size="10" font-family="monospace">5</text>
+<text x="42" y="122" text-anchor="end" fill="#8b949e" font-size="10" font-family="monospace">8</text>
+<text x="42" y="94"  text-anchor="end" fill="#8b949e" font-size="10" font-family="monospace">10</text>
+<!-- Idle: N=1, y=230-(1/10)*140=216, h=230-216=14 -->
+<rect x="50"  y="216" width="283" height="14"  rx="2" fill="#4a9eff" style="animation:bar-idle 6s ease-in 0s both"/>
+<!-- Ramp: N=5, y=230-(5/10)*140=160, h=230-160=70 -->
+<rect x="333" y="160" width="284" height="70"  rx="2" fill="#ff9900" style="animation:bar-ramp 6s ease-in 0s both"/>
+<!-- Peak: N=10, y=230-(10/10)*140=90, h=230-90=140 -->
+<rect x="617" y="90"  width="233" height="140" rx="2" fill="#ff7b72" style="animation:bar-peak 6s ease-in 0s both"/>
+<text x="20" y="165" text-anchor="middle" fill="#8b949e" font-size="11" font-family="sans-serif" transform="rotate(-90,20,165)">Replicas</text>
+</svg>
