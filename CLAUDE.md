@@ -341,3 +341,4 @@ Rules promoted from `.learnings/` — apply to every session in this project.
 - Dispatch all independent tool calls in a single message block — sequential calls only when output feeds the next.
 - Run `bash tests/handbook-consistency.sh` locally before every push to catch version/status/path check failures.
 - Use `repos/{owner}/{repo}/pulls/{pr}/comments/{id}/replies` for PR thread replies — omitting the PR number returns 404.
+- At the end of every session, append notable exchanges, decisions, and outcomes to `memory/YYYY-MM-DD.md` (today's date, created if missing). One file per day, append-only.
