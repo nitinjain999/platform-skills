@@ -163,7 +163,7 @@ See [COMMANDS.md](COMMANDS.md) for every command with modes and example prompts:
 | `runtime-security` | Deploy Falco with eBPF, write custom rules, route alerts, debug rule firing, bridge to Kyverno |
 | `chaos` | Install Litmus Chaos or Chaos Mesh, generate fault experiments, schedule chaos, run GameDay, debug, report |
 | `dora` | Instrument DORA metrics, generate Grafana dashboards, benchmark against performance bands, debug metric gaps |
-| `awesome-docs` | Generate animated demo docs, convert existing Markdown, update/diff/audit diagrams, export to Confluence/Notion |
+| `awesome-docs` | Generate any animated Markdown doc (README, architecture guide, runbook, tutorial, RFC, post-mortem, or custom), convert existing Markdown, update/diff/audit diagrams, export |
 
 ### How the agent and skill system work
 

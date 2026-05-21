@@ -1,7 +1,7 @@
 ---
 name: awesome-docs
-description: Generate, convert, and maintain animated GitHub-safe Markdown documents with animated SVG diagrams. Covers four SVG patterns (architecture flow, lifecycle loop, field carousel, timeline phases), guided interview for new docs, converting existing plain Markdown, diffing for stale diagrams, quality auditing, local preview, and multi-platform export. Use when asked to "create a demo doc for X", "animate this README", "convert my doc to animated", "check if my diagrams are stale", or "export my doc for Confluence".
-argument-hint: "[generate|convert|update|diff|audit|preview|export] [topic or file path]"
+description: Generate, convert, and maintain animated GitHub-safe Markdown documents with animated SVG diagrams. Covers four SVG patterns (architecture flow, lifecycle loop, field carousel, timeline phases), guided interview for any doc type (README, architecture guide, runbook, API reference, tutorial, RFC, post-mortem, how-it-works, or custom), converting existing plain Markdown, diffing for stale diagrams, quality auditing, local preview, and multi-platform export. Use when asked to "create a README for X", "write an architecture doc", "animate this guide", "convert my doc to animated", "check if my diagrams are stale", or "export my doc for Confluence".
+argument-hint: "[generate|convert|update|diff|audit|preview|export] [doc type or file path]"
 ---
 
 Generate, convert, and maintain animated Markdown documents with GitHub-safe SVG animations.
@@ -10,43 +10,46 @@ Generate, convert, and maintain animated Markdown documents with GitHub-safe SVG
 
 ## Mode: generate
 
-Create a full animated demo document from scratch via guided interview.
+Create a new animated Markdown document from scratch. Adapts structure and SVGs to the document type — not limited to demo docs.
 
 Steps:
 1. Ask one at a time:
-   - Technology topic (e.g. "KEDA autoscaling", "Falco runtime security")
-   - Target: local repo path (preferred) or remote GitHub URL to clone if no local path given
-   - Key components — the 3–6 main moving parts (e.g. "ScaledObject, KEDA Operator, HPA, Deployment")
-   - End-to-end flow direction (e.g. "metric source → KEDA → HPA → pods")
-2. Classify which SVG patterns apply based on the topic:
-   - `arch-flow` — always included
-   - `lifecycle-loop` — if the topic has a repeating control loop (e.g. KEDA poll cycle, Flux reconcile loop)
-   - `field-carousel` — only if the topic has a configurable resource (YAML/CRD); ask the user to paste their YAML/config at this point; validate syntax before generating
-   - `timeline-phases` — if the topic has distinct load or lifecycle phases (e.g. idle → ramp → peak → cooldown)
-3. For each applicable SVG pattern (incremental generation):
+   - **Document type** — what kind of document? Choose from: `readme`, `architecture-guide`, `runbook`, `tutorial`, `api-reference`, `how-it-works`, `rfc`, `post-mortem`, or `custom` (user defines sections)
+   - **Topic / subject** — what is the document about? (e.g. "KEDA autoscaling", "orders-service API", "Kubernetes upgrade runbook")
+   - **Output path** — where should the file be written? (e.g. `README.md`, `docs/architecture.md`, `runbooks/keda.md`)
+   - **Key components** — the main moving parts, concepts, or resources covered (3–6 items)
+2. Classify which SVG patterns are relevant to this doc type and topic:
+   - `arch-flow` — any doc that describes a system with multiple components or a data flow
+   - `lifecycle-loop` — docs covering a repeating control loop, approval cycle, or state machine
+   - `field-carousel` — docs covering a configurable resource (YAML, CRD, API body); ask the user to paste their YAML/config at this point and validate syntax before generating
+   - `timeline-phases` — docs covering distinct phases, stages, or a lifecycle with durations
+   - For `rfc`, `post-mortem`, `runbook`: SVGs are optional — ask "Would diagrams help here?" before generating
+3. For each applicable SVG pattern (incremental):
    - Generate the SVG using the blueprint in `references/awesome-docs.md`
-   - Write to `assets/<topic-slug>-<pattern>.svg` (e.g. `assets/keda-arch-flow.svg`)
+   - Write to `assets/<topic-slug>-<pattern>.svg`
    - Show to the user and ask: "Does this look right? Confirm to continue or describe what to adjust."
    - Only proceed to the next SVG after explicit confirmation
-4. Write `<TOPIC>-DEMO.md` at the repo root with all confirmed SVGs embedded using `<img>` tags, each followed by a `>` blockquote caption explaining what to watch in the animation
-5. Include all standard doc sections (see Standard Sections below)
-6. Prompt: "What real bugs or gotchas did you hit with this technology?" → auto-populate the Lessons Learned table from the answers
-7. Commit and push: `git add <TOPIC>-DEMO.md assets/ && git commit -m "feat(<topic>-demo): animated demo doc with architecture, lifecycle, and field explainer SVGs" && git push`
+4. Build the document structure from the **doc type section map** below
+5. Write the file to the output path with all confirmed SVGs embedded using `<img>` tags, each followed by a `>` blockquote caption
+6. Commit: `git add <output-path> assets/ && git commit -m "docs(<scope>): add <doc-type> for <topic>"`
 
-**Standard doc sections (in order):**
-1. `<div align="center">` header — title + shields.io static badges
-2. Live Architecture — arch-flow SVG
-3. Scaling/Flow Phases — lifecycle-loop or timeline-phases SVG (if generated)
-4. What Problem Does X Solve? — ❌ without / ✅ with contrast block
-5. How It Works (The Basics) — core formula or concept with concrete numbers
-6. Core Resource — Every Field Explained — field-carousel SVG + full annotated YAML (if generated)
-7. The Decision Formula — Step by Step — idle / active / cooldown states with real numbers (if applicable)
-8. Demo Flow — ASCII phase walkthrough with exact timing
-9. Lessons Learned — table: Bug | Why | Fix
+**Doc type section map** — use these as the default structure, adapt to user needs:
+
+| Doc type | Default sections |
+|----------|-----------------|
+| `readme` | Header (title + badges), Overview, Architecture diagram, How it works, Getting started, Configuration (field-carousel if applicable), Examples, Troubleshooting |
+| `architecture-guide` | Overview, System diagram (arch-flow), Component responsibilities, Data flow, Scaling/state behavior (lifecycle-loop), Configuration reference (field-carousel), Deployment phases (timeline-phases), Decisions & trade-offs |
+| `runbook` | Prerequisites, Health check commands, Architecture diagram, Step-by-step procedure, Validation, Rollback |
+| `tutorial` | Introduction, Prerequisites, Architecture overview (arch-flow), Step-by-step walkthrough, What you built, Next steps |
+| `api-reference` | Overview, Authentication, Endpoints, Request/response fields (field-carousel), Error codes, Examples |
+| `how-it-works` | Overview, Architecture diagram (arch-flow), Lifecycle/control loop (lifecycle-loop), Configuration fields (field-carousel), Load phases (timeline-phases if applicable) |
+| `rfc` | Context and problem, Proposal, Architecture diagram, Alternatives considered, Decision criteria, Open questions |
+| `post-mortem` | Incident summary, Timeline, Root cause analysis, Impact, Action items, Lessons learned |
+| `custom` | Ask the user to list the sections they want, then generate them in order |
 
 **Theme parameter:** append `--theme github-dark` (default), `--theme docs-light`, or `--theme custom:#bg,#primary,#accent` to override colors. See `references/awesome-docs.md` → Theme System.
 
-Reference: `references/awesome-docs.md` → SVG Patterns, Standard Doc Sections, Theme System
+Reference: `references/awesome-docs.md` → SVG Patterns, Theme System
 
 ---
 
@@ -95,7 +98,7 @@ Reference: `references/awesome-docs.md` → SVG Patterns
 Detect stale diagrams by comparing the current doc against `git HEAD`.
 
 Steps:
-1. Ask: path to the doc (e.g. `KEDA-DEMO.md`)
+1. Ask: path to the doc (e.g. `docs/architecture.md`, `README.md`)
 2. Run: `git diff HEAD -- <doc-path>` to see what changed since the last commit
 3. Scan for staleness signals:
    - Field count in YAML/config changed → field-carousel may be out of date
@@ -115,13 +118,11 @@ Quality-check an existing animated doc without making changes.
 
 Steps:
 1. Ask: path to the doc
-2. Check each item in the Quality Checklist from `references/awesome-docs.md`:
+2. Check each applicable item in the Quality Checklist from `references/awesome-docs.md`:
    - Every SVG `<img>` tag has a `>` blockquote caption immediately after it
    - No environment-specific IDs, account numbers, or hostnames in the doc or SVG files
    - No SVG references a file outside `assets/` (no external `href`, no `xlink:href`)
-   - At least 3 SVG diagrams present
    - All SVG files under 50KB (larger files may not render inline on GitHub)
-   - Lessons Learned table present and has at least one row
 3. Report findings as a numbered list: `[PASS]` or `[FAIL] — <what to fix>`
 4. Print total: `X passed, Y failed`
 

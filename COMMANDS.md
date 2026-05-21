@@ -40,7 +40,7 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:self-improve](#platform-skillsself-improve) | Bootstrap, log, review, or promote agent self-improvement entries |
 | [/platform-skills:chaos](#platform-skillschaos) | Install Litmus Chaos or Chaos Mesh, generate fault experiments, schedule chaos, run GameDay, debug, report |
 | [/platform-skills:dora](#platform-skillsdora) | Instrument DORA metrics, generate Grafana dashboards, benchmark against performance bands, debug metric gaps |
-| [/platform-skills:awesome-docs](#platform-skillsawesome-docs) | Generate animated demo docs, convert existing Markdown, update diagrams, diff for staleness, audit quality, preview, export |
+| [/platform-skills:awesome-docs](#platform-skillsawesome-docs) | Generate any animated Markdown doc (README, architecture guide, runbook, tutorial, RFC, post-mortem, or custom), convert existing Markdown, update/diff/audit, preview, export |
 
 ---
 
@@ -1979,12 +1979,14 @@ Generate, convert, and maintain animated GitHub-safe Markdown documents with ani
 
 ### Mode: `generate`
 
-Create a full animated doc from scratch. The skill runs a guided interview — topic, components, flow direction — then generates SVGs one at a time with visual confirmation before the next.
+Create any animated Markdown document from scratch. The skill asks for doc type (readme, architecture-guide, runbook, tutorial, api-reference, how-it-works, rfc, post-mortem, or custom), topic, output path, and key components — then generates relevant SVGs one at a time with confirmation before the next.
 
 ```
-/platform-skills:awesome-docs generate KEDA autoscaling
-/platform-skills:awesome-docs generate Falco runtime security
-/platform-skills:awesome-docs generate --theme docs-light Linkerd service mesh
+/platform-skills:awesome-docs generate readme for orders-service
+/platform-skills:awesome-docs generate architecture-guide for the KEDA autoscaling system
+/platform-skills:awesome-docs generate runbook for Kubernetes cluster upgrade
+/platform-skills:awesome-docs generate post-mortem for the 2026-05-21 checkout outage
+/platform-skills:awesome-docs generate --theme docs-light tutorial for setting up Falco
 ```
 
 ### Mode: `convert`
@@ -2010,7 +2012,7 @@ Revise a single diagram in an existing doc.
 Detect stale diagrams vs `git HEAD`.
 
 ```
-/platform-skills:awesome-docs diff KEDA-DEMO.md
+/platform-skills:awesome-docs diff docs/architecture.md
 ```
 
 ### Mode: `audit`
@@ -2018,7 +2020,7 @@ Detect stale diagrams vs `git HEAD`.
 Quality check — missing captions, broken refs, env-specific IDs, missing diagrams.
 
 ```
-/platform-skills:awesome-docs audit KEDA-DEMO.md
+/platform-skills:awesome-docs audit docs/architecture.md
 ```
 
 ### Mode: `preview`
@@ -2026,7 +2028,7 @@ Quality check — missing captions, broken refs, env-specific IDs, missing diagr
 Open the doc locally in a browser before committing.
 
 ```
-/platform-skills:awesome-docs preview KEDA-DEMO.md
+/platform-skills:awesome-docs preview docs/architecture.md
 ```
 
 ### Mode: `export`
@@ -2034,8 +2036,8 @@ Open the doc locally in a browser before committing.
 Generate animated HTML for Confluence/Notion, or get PNG export instructions.
 
 ```
-/platform-skills:awesome-docs export KEDA-DEMO.md html
-/platform-skills:awesome-docs export KEDA-DEMO.md png
+/platform-skills:awesome-docs export docs/architecture.md html
+/platform-skills:awesome-docs export docs/architecture.md png
 ```
 
 Reference: `references/awesome-docs.md` and `examples/awesome-docs/`

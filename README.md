@@ -76,7 +76,7 @@ Both layers work independently. The plugin is optional.
 | 🦅 Runtime Security | [references/runtime-security.md](references/runtime-security.md) | Falco eBPF deployment on EKS/GKE, custom rule authoring, Falcosidekick alert routing, rule debugging, bridging Falco signals to Kyverno admission enforcement — `/platform-skills:runtime-security` |
 | 💥 Chaos Engineering | [references/chaos.md](references/chaos.md) | Litmus Chaos v3 and Chaos Mesh v2 fault injection, steady-state hypothesis (httpProbe/promProbe), blast radius scoping, GameDay workflow, recurring schedules, DORA feedback loop — `/platform-skills:chaos` |
 | 📊 DORA Metrics | [references/dora.md](references/dora.md) | Deployment Frequency, Lead Time, Change Failure Rate, MTTR — GitHub Actions + Prometheus Pushgateway instrumentation, recording rules, Grafana dashboards, SaaS decision matrix, anti-pattern detection — `/platform-skills:dora` |
-| ✨ Awesome Docs | [references/awesome-docs.md](references/awesome-docs.md) | Animated GitHub-safe Markdown document generation — 4 SVG patterns (architecture flow, lifecycle loop, field carousel, timeline phases), guided interview, convert existing docs, diff for staleness, audit quality, local preview, multi-platform export (Confluence/Notion HTML, PNG) — `/platform-skills:awesome-docs` |
+| ✨ Awesome Docs | [references/awesome-docs.md](references/awesome-docs.md) | Animated GitHub-safe Markdown document generation — any doc type (README, architecture guide, runbook, tutorial, API reference, RFC, post-mortem, or custom), 4 SVG patterns, convert existing docs, diff for staleness, audit quality, local preview, multi-platform export — `/platform-skills:awesome-docs` |
 
 ## Core principles
 
