@@ -6,8 +6,6 @@ argument-hint: "[generate|convert|update|diff|audit|preview|export] [topic or fi
 
 Generate, convert, and maintain animated Markdown documents with GitHub-safe SVG animations.
 
-Reference: `references/awesome-docs.md` → SVG blueprints, GitHub constraints, theme system, export rules, external references
-
 ---
 
 ## Mode: generate
@@ -33,7 +31,7 @@ Steps:
 4. Write `<TOPIC>-DEMO.md` at the repo root with all confirmed SVGs embedded using `<img>` tags, each followed by a `>` blockquote caption explaining what to watch in the animation
 5. Include all standard doc sections (see Standard Sections below)
 6. Prompt: "What real bugs or gotchas did you hit with this technology?" → auto-populate the Lessons Learned table from the answers
-7. Commit and push: `git add . && git commit -m "feat(<topic>-demo): animated demo doc with architecture, lifecycle, and field explainer SVGs" && git push`
+7. Commit and push: `git add <TOPIC>-DEMO.md assets/ && git commit -m "feat(<topic>-demo): animated demo doc with architecture, lifecycle, and field explainer SVGs" && git push`
 
 **Standard doc sections (in order):**
 1. `<div align="center">` header — title + shields.io static badges
@@ -137,7 +135,7 @@ Open the doc locally in a browser before committing.
 
 Steps:
 1. Ask: path to the doc
-2. Check if the superpowers visual companion server is running (`$STATE_DIR/server-info` exists):
+2. Check if the superpowers visual companion server is running (`$STATE_DIR/server-info` exists — `$STATE_DIR` is set by the superpowers brainstorming skill when active):
    - If running: copy the doc and `assets/` to `screen_dir` and navigate to the URL
    - If not running: start a minimal local HTTP server with `python3 -m http.server 8080 --directory .` and open the doc with `open http://localhost:8080/<doc-path>`
 3. Tell the user: "Preview running at <URL>. Ctrl+C to stop."
