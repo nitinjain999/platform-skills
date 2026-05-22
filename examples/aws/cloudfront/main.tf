@@ -148,10 +148,10 @@ resource "aws_cloudfront_distribution" "this" {
 
       # Secret header prevents direct ALB access — WAF on ALB blocks requests missing this
       dynamic "custom_header" {
-        for_each = var.cloudfront_origin_secret != null ? { secret = var.cloudfront_origin_secret } : {}
+        for_each = var.cloudfront_origin_secret != null ? { enabled = true } : {}
         content {
           name  = "X-CloudFront-Secret"
-          value = custom_header.value
+          value = var.cloudfront_origin_secret
         }
       }
     }
