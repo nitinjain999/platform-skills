@@ -41,6 +41,7 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:chaos](#platform-skillschaos) | Install Litmus Chaos or Chaos Mesh, generate fault experiments, schedule chaos, run GameDay, debug, report |
 | [/platform-skills:dora](#platform-skillsdora) | Instrument DORA metrics, generate Grafana dashboards, benchmark against performance bands, debug metric gaps |
 | [/platform-skills:awesome-docs](#platform-skillsawesome-docs) | Generate any animated Markdown doc (README, architecture guide, runbook, tutorial, RFC, post-mortem, or custom), convert existing Markdown, update/diff/audit, preview, export |
+| [/platform-skills:aws](#platform-skillsaws) | CloudFront, WAF, Lambda@Edge, Firewall Manager multi-account enforcement, and Terraform module generation |
 
 ---
 
@@ -2058,3 +2059,33 @@ Reference: `references/awesome-docs.md` and `examples/awesome-docs/`
 - Compliance: `gap` → `remediate` → `evidence` → `checklist`
 
 **Deep-dive references** — each command points to a `references/<domain>.md` file. Read those for full spec coverage, edge cases, and worked examples.
+
+---
+
+## `/platform-skills:aws`
+
+**What it does:** Structured guidance for AWS CloudFront, WAF, Lambda@Edge, and multi-account security patterns. Routes to the correct reference section, calls out common footguns (WAF scope, us-east-1 constraint, Lambda@Edge numbered ARN), and generates production-ready Terraform modules with best practices.
+
+**Usage:** `/platform-skills:aws <mode>`
+
+```
+/platform-skills:aws cloudfront        # distribution setup, OAC, cache policies, security headers
+/platform-skills:aws waf               # web ACL, managed rules, rate limiting, logging
+/platform-skills:aws lambda-edge       # Lambda@Edge vs CloudFront Functions decision + implementation
+/platform-skills:aws multi-account     # Firewall Manager, FMS policy, Organizations enforcement
+/platform-skills:aws review            # production-readiness checklist for CloudFront + WAF config
+/platform-skills:aws terraform         # generate complete Terraform module scaffold
+```
+
+**Examples:**
+
+```
+/platform-skills:aws cloudfront — how do I restrict my S3 origin to only CloudFront?
+/platform-skills:aws waf — add rate limiting on /api/ to 500 req/5min
+/platform-skills:aws lambda-edge — should I use Lambda@Edge or CloudFront Functions for URL rewrites?
+/platform-skills:aws multi-account — enforce WAF on all CloudFront distributions in our production OU
+/platform-skills:aws review — here is my distribution Terraform, is it production ready?
+/platform-skills:aws terraform — generate a CloudFront + S3 + WAF module for a static site
+```
+
+Reference: `commands/aws.md`, `references/aws-cloudfront.md`, `references/aws-waf.md`, and `examples/aws/`

@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.22.0] - 2026-05-22
+
+### Added
+
+#### AWS CloudFront + WAF + Lambda@Edge (Domains 33–34)
+
+- `references/aws-cloudfront.md` — comprehensive reference covering: distribution anatomy, OAC (Origin Access Control replaces legacy OAI), cache policies, origin request policies, security headers (`aws_cloudfront_response_headers_policy` with HSTS preload + CSP + X-Frame + XSS), WAF integration (CLOUDFRONT scope requires us-east-1 — documented as the most common footgun), Lambda@Edge (all 4 event types with memory/timeout/body-access table), CloudFront Functions vs Lambda@Edge decision matrix (~6× cost difference), standard logging v2 + real-time logging + Athena partitioning, multi-account patterns (shared CDN account with cross-account OAC, per-account distributions + FMS enforcement), Organizations SCP, and production readiness checklist
+- `references/aws-waf.md` — comprehensive reference covering: scope section (CLOUDFRONT vs REGIONAL, prominent footgun callout), web ACL anatomy, full managed rule groups table (11 groups, free vs paid), rate-based rules with aggregation keys (IP, HTTP method, URI path, query string, header), custom rules (IP sets, geo match, regex, label matching), CAPTCHA/Challenge actions, WAF logging (CW log group must start with `aws-waf-logs-`), testing workflow (Count → Block), multi-account FMS (prerequisites, policy anatomy, FIRST/MIDDLE/LAST rule group ownership model, auto-remediation, compliance dashboard, cross-account central logging), and Shield Advanced integration
+- `commands/aws.md` — slash command `/platform-skills:aws` with six modes: `cloudfront` (distribution design, OAC, caching, security headers), `waf` (scope, managed rules, rate limiting, logging), `lambda-edge` (event type selection, constraints, deployment), `multi-account` (FMS policy design, OU targeting, audit mode), `review` (production-readiness checklist for CloudFront + WAF Terraform), `terraform` (module structure, provider aliases, validation blocks, best practices)
+- `examples/aws/cloudfront/` — production-ready Terraform module:
+  - `versions.tf` — provider constraints (`aws ~> 5.0`, `archive ~> 2.4`), `us_east_1` alias, `required_version = ">= 1.5.0"`
+  - `variables.tf` — 15 variables with `validation{}` blocks for `price_class`, `geo_restriction_type`, and `name` (regex + length)
+  - `locals.tf` — origin IDs, `use_custom_domain`, `viewer_certificate`, `default_origin_id`, `use_alb` derived values
+  - `main.tf` — S3 bucket (versioning + SSE-KMS + public access block), OAC with `cloudfront.amazonaws.com` service principal + `AWS:SourceArn` condition, response headers policy, CloudFront Function, distribution with dynamic blocks for ALB origin + custom header enforcement, Lambda@Edge association via `qualified_arn`, geo restriction, standard logging v2
+  - `outputs.tf` — `distribution_id/arn/domain_name/hosted_zone_id`, `origin_bucket_name/arn`, `oac_id`
+  - `lambda-edge/main.tf` — Lambda@Edge: `publish = true`, `provider = aws.us_east_1`, dual trust policy (`lambda.amazonaws.com` + `edgelambda.amazonaws.com`), pre-created CloudWatch log group, `qualified_arn` output (with explicit note: do not use `.arn` which resolves to `$LATEST`)
+  - `lambda-edge/functions/viewer-request.js` — auth check (missing Bearer → 401), method restriction on `/api/`, A/B routing by cookie (20% to `/v2/`)
+  - `functions/url-rewrite.js` — CloudFront Functions JS 2.0: trailing slash → index.html, SPA deep-link rewrite, clean URL rewrite, path traversal blocking
+- `examples/aws/waf/` — production-ready Terraform module:
+  - `versions.tf` — `us_east_1` alias with comment explaining CLOUDFRONT scope requirement
+  - `variables.tf` — 9 variables with validation: `default_action` (allow/block), `rate_limit` (0 or 100–2B), `cloudwatch_log_retention_days` (validates against CloudWatch valid values list)
+  - `main.tf` — WebACL with: IP allowlist (priority 0, dynamic), IP reputation (5), AnonymousIpList (6), CRS with `SizeRestrictions_BODY` override to Count (10), KnownBadInputs (11), geo block (20, dynamic), rate limit with custom 429 + `Retry-After` header (30, dynamic), Bot Control with inspection level (40, dynamic), ATP with login path config (50, dynamic); logging config with field redaction (authorization, cookie headers) + filter to keep only BLOCK/COUNT actions
+  - `outputs.tf` — `web_acl_arn/id`, `web_acl_capacity` (WCU consumption), `log_group_name/arn`
+- `examples/aws/firewall-manager/main.tf` — self-contained FMS module: `aws_fms_admin_account`, `aws_fms_policy` for `AWS::CloudFront::Distribution` with OU include + excluded accounts, `preProcessRuleGroups` (IP reputation + CRS + KnownBadInputs at priorities 5/10/11), `overrideCustomerWebACLAssociation = false` to allow app-team local rules, `remediation_enabled` defaulting to `false` (audit mode) with explanation
+- `examples/aws/README.md` — updated index with cloudfront, waf, firewall-manager examples; quick-start snippets for single-account (WAF → CloudFront) and multi-account (FMS) patterns; key patterns summary and checklist
+
 ## [1.21.0] - 2026-05-21
 
 ### Added

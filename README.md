@@ -3,9 +3,9 @@
 > A practical handbook for developers and DevOps engineers working with Kubernetes, GitOps, Terraform, GitHub Actions, cloud infrastructure, and secrets management — with an optional Claude plugin layer for interactive guidance.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Domains](https://img.shields.io/badge/Domains-32-4c8eda)](references/)
-[![Commands](https://img.shields.io/badge/Commands-26-e87c2b)](commands/)
-[![Examples](https://img.shields.io/badge/Examples-27-6f42c1)](examples/)
+[![Domains](https://img.shields.io/badge/Domains-34-4c8eda)](references/)
+[![Commands](https://img.shields.io/badge/Commands-27-e87c2b)](commands/)
+[![Examples](https://img.shields.io/badge/Examples-30-6f42c1)](examples/)
 [![Editors](https://img.shields.io/badge/Editors-VSCode%20%7C%20Cursor%20%7C%20Copilot-2ea44f)](EDITOR_INTEGRATIONS.md)
 [![GitHub Stars](https://img.shields.io/github/stars/nitinjain999/platform-skills?style=flat&label=Stars&color=0e1117)](https://github.com/nitinjain999/platform-skills/stargazers)
 [![Skill Check](https://img.shields.io/badge/SkillCheck-Validated-brightgreen)](tests/validate-skill.sh)
@@ -50,6 +50,8 @@ Both layers work independently. The plugin is optional.
 | <img src="https://cdn.simpleicons.org/argo/EF7B4D" width="16" height="16" alt="Argo CD"> Argo CD | [references/argocd.md](references/argocd.md) | App-of-apps design, ApplicationSet, sync control, promotion flows |
 | <img src="https://cdn.simpleicons.org/flux/5468FF" width="16" height="16" alt="Flux CD"> Flux CD | [references/flux.md](references/flux.md) | Monorepo structure, reconciliation, multi-tenancy, image automation |
 | <img src="https://cdn.simpleicons.org/amazonaws/FF9900" width="16" height="16" alt="AWS"> AWS | [references/aws.md](references/aws.md) | IAM least-privilege, IRSA, EKS, resource tagging, cost allocation |
+| <img src="https://cdn.simpleicons.org/amazonaws/FF9900" width="16" height="16" alt="AWS"> AWS CloudFront | [references/aws-cloudfront.md](references/aws-cloudfront.md) | Distributions, OAC, cache policies, security headers, Lambda@Edge, CloudFront Functions, multi-account |
+| <img src="https://cdn.simpleicons.org/amazonaws/FF9900" width="16" height="16" alt="AWS"> AWS WAF | [references/aws-waf.md](references/aws-waf.md) | Web ACLs, managed rule groups, rate limiting, Bot Control, Firewall Manager, Shield Advanced |
 | <img src="https://cdn.simpleicons.org/microsoftazure/0078D4" width="16" height="16" alt="Azure"> Azure | [references/azure.md](references/azure.md) | Workload identity, AKS, RBAC, resource tagging, Azure Policy |
 | <img src="https://cdn.simpleicons.org/terraform/844FBA" width="16" height="16" alt="Terraform"> Terraform | [references/terraform.md](references/terraform.md) | Module design, state management, testing, CI/CD integration |
 | <img src="https://cdn.simpleicons.org/githubactions/2088FF" width="16" height="16" alt="GitHub Actions"> GitHub Actions | [references/github-actions.md](references/github-actions.md) | Security hardening, OIDC, SHA pinning, reusable workflows |
