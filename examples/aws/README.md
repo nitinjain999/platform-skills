@@ -2,27 +2,59 @@ Status: Stable
 
 # AWS Examples
 
-Production-ready IAM patterns for EKS workloads and GitHub Actions OIDC authentication — no static credentials.
+Production-ready AWS platform patterns — CloudFront, WAF, Lambda@Edge, Firewall Manager, and IAM.
 
 ## Examples
 
-| Example | Type | Description |
-|---------|------|-------------|
-| [iam/irsa-dynamodb.json](iam/irsa-dynamodb.json) | IAM JSON | IRSA trust policy + DynamoDB scoped permissions |
-| [iam/s3-least-privilege.json](iam/s3-least-privilege.json) | IAM JSON | Least-privilege S3 read policy |
+| Directory | Description |
+|---|---|
+| [cloudfront/](cloudfront/) | CloudFront distribution with S3 + ALB origins, OAC, security headers, CloudFront Functions, Lambda@Edge |
+| [waf/](waf/) | WAF WebACL (CLOUDFRONT scope, us-east-1) with managed rules, rate limiting, geo blocking, logging |
+| [firewall-manager/](firewall-manager/) | Firewall Manager WAF policy for multi-account enforcement via AWS Organizations |
+| [iam/](iam/) | IAM least-privilege patterns: IRSA, OIDC federation, no static credentials |
 
 ## Quick Start
 
+### Single-account: CloudFront + WAF
+
+```hcl
+# Deploy WAF first (CLOUDFRONT scope requires us-east-1)
+module "waf" {
+  source = "./waf"
+  name   = "my-app"
+  providers = { aws.us_east_1 = aws.us_east_1 }
+}
+
+# Deploy CloudFront, pass WAF ARN in
+module "cloudfront" {
+  source          = "./cloudfront"
+  name            = "my-app"
+  waf_web_acl_arn = module.waf.web_acl_arn
+  providers = {
+    aws           = aws
+    aws.us_east_1 = aws.us_east_1
+  }
+}
+```
+
+### Multi-account: Firewall Manager
+
+```hcl
+# Run from the FMS administrator (security) account
+module "fms" {
+  source              = "./firewall-manager"
+  security_account_id = "123456789012"
+  production_ou_id    = "ou-xxxx-yyyyyyyy"
+  remediation_enabled = false  # audit mode first
+}
+```
+
+### IAM (existing patterns)
+
 ```bash
-# Create the IAM policy from the JSON document
 aws iam create-policy \
   --policy-name my-app-s3-read \
   --policy-document file://iam/s3-least-privilege.json
-
-# Attach to an IRSA role
-aws iam attach-role-policy \
-  --role-name my-app-irsa-role \
-  --policy-arn arn:aws:iam::$(aws sts get-caller-identity --query Account --output text):policy/my-app-s3-read
 ```
 
 ## Key Patterns
@@ -94,8 +126,17 @@ steps:
 - [ ] GitHub Actions OIDC trust pins to specific repo and ref
 - [ ] All resources tagged via provider `default_tags`
 
+## Key patterns
+
+- **WAF before CloudFront** — deploy WAF module first, pass `web_acl_arn` output to CloudFront `waf_web_acl_arn`
+- **Provider aliases** — both CloudFront and WAF modules require `aws.us_east_1` alias
+- **Lambda@Edge** — set `enable_lambda_edge = true`; deployed to us-east-1 automatically, uses numbered version ARN
+- **CloudFront Functions** — set `enable_cloudfront_function = true`; ~6× cheaper than Lambda@Edge for URL rewrites
+- **FMS audit mode** — set `remediation_enabled = false` to review compliance dashboard before enforcing
+
 ## See Also
 
-- [references/aws.md](../../references/aws.md) — account model, EKS, IAM, tagging, cost management
-- [references/compliance.md](../../references/compliance.md) — SOC 2 CC6.1/CC6.2 IAM controls
-- `/platform-skills:review` — production-readiness review of Terraform IAM resources
+- [references/aws-cloudfront.md](../../references/aws-cloudfront.md) — CloudFront deep-dive: OAC, cache policies, Lambda@Edge, multi-account
+- [references/aws-waf.md](../../references/aws-waf.md) — WAF deep-dive: managed rules, rate limiting, FMS, Shield Advanced
+- [references/aws.md](../../references/aws.md) — account model, EKS, IAM, tagging
+- `/platform-skills:aws` — structured guidance for CloudFront, WAF, Lambda@Edge, and multi-account patterns
