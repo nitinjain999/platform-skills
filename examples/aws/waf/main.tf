@@ -19,18 +19,18 @@ resource "aws_wafv2_web_acl" "cloudfront" {
 
   default_action {
     dynamic "allow" {
-      for_each = var.default_action == "allow" ? [1] : []
+      for_each = var.default_action == "allow" ? { v = true } : {}
       content {}
     }
     dynamic "block" {
-      for_each = var.default_action == "block" ? [1] : []
+      for_each = var.default_action == "block" ? { v = true } : {}
       content {}
     }
   }
 
   # ── Priority 0: Allowlist trusted CIDRs (terminates evaluation immediately)
   dynamic "rule" {
-    for_each = length(var.trusted_cidrs) > 0 ? [1] : []
+    for_each = length(var.trusted_cidrs) > 0 ? { v = true } : {}
     content {
       name     = "AllowTrustedIPs"
       priority = 0
@@ -140,7 +140,7 @@ resource "aws_wafv2_web_acl" "cloudfront" {
 
   # ── Priority 20: Geo block (optional)
   dynamic "rule" {
-    for_each = length(var.blocked_country_codes) > 0 ? [1] : []
+    for_each = length(var.blocked_country_codes) > 0 ? { v = true } : {}
     content {
       name     = "BlockHighRiskGeos"
       priority = 20
@@ -162,7 +162,7 @@ resource "aws_wafv2_web_acl" "cloudfront" {
 
   # ── Priority 30: Rate limit per IP (optional)
   dynamic "rule" {
-    for_each = var.rate_limit > 0 ? [1] : []
+    for_each = var.rate_limit > 0 ? { v = true } : {}
     content {
       name     = "RateLimitPerIP"
       priority = 30
@@ -183,7 +183,7 @@ resource "aws_wafv2_web_acl" "cloudfront" {
           aggregate_key_type = "IP"
 
           dynamic "scope_down_statement" {
-            for_each = var.rate_limit_scope_path != "" ? [1] : []
+            for_each = var.rate_limit_scope_path != "" ? { v = true } : {}
             content {
               byte_match_statement {
                 search_string         = var.rate_limit_scope_path
@@ -210,7 +210,7 @@ resource "aws_wafv2_web_acl" "cloudfront" {
 
   # ── Priority 40: Bot Control (paid — opt-in)
   dynamic "rule" {
-    for_each = var.enable_bot_control ? [1] : []
+    for_each = var.enable_bot_control ? { v = true } : {}
     content {
       name     = "AWSManagedRulesBotControlRuleSet"
       priority = 40
@@ -238,7 +238,7 @@ resource "aws_wafv2_web_acl" "cloudfront" {
 
   # ── Priority 50: Account Takeover Prevention (paid — opt-in)
   dynamic "rule" {
-    for_each = var.enable_atp && var.login_path != null ? [1] : []
+    for_each = var.enable_atp && var.login_path != null ? { v = true } : {}
     content {
       name     = "AWSManagedRulesATPRuleSet"
       priority = 50

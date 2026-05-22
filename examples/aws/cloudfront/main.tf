@@ -134,7 +134,7 @@ resource "aws_cloudfront_distribution" "this" {
 
   # ── ALB origin (optional)
   dynamic "origin" {
-    for_each = local.use_alb ? [1] : []
+    for_each = local.use_alb ? { alb = true } : {}
     content {
       domain_name = var.custom_origin_domain
       origin_id   = local.alb_origin_id
@@ -148,10 +148,10 @@ resource "aws_cloudfront_distribution" "this" {
 
       # Secret header prevents direct ALB access — WAF on ALB blocks requests missing this
       dynamic "custom_header" {
-        for_each = compact([var.cloudfront_origin_secret])
+        for_each = var.cloudfront_origin_secret != null ? { secret = var.cloudfront_origin_secret } : {}
         content {
           name  = "X-CloudFront-Secret"
-          value = var.cloudfront_origin_secret
+          value = custom_header.value
         }
       }
     }
@@ -171,7 +171,7 @@ resource "aws_cloudfront_distribution" "this" {
 
     # CloudFront Function association (optional)
     dynamic "function_association" {
-      for_each = var.enable_cloudfront_function ? [1] : []
+      for_each = var.enable_cloudfront_function ? { cf_fn = true } : {}
       content {
         event_type   = "viewer-request"
         function_arn = aws_cloudfront_function.url_rewrite[0].arn
@@ -181,7 +181,7 @@ resource "aws_cloudfront_distribution" "this" {
     # Lambda@Edge association (optional) — must use qualified_arn (numbered version, not $LATEST)
     # Deploy lambda-edge/ first, then pass its qualified_arn output to this variable.
     dynamic "lambda_function_association" {
-      for_each = compact([var.lambda_edge_function_arn])
+      for_each = var.lambda_edge_function_arn != null ? { fn = var.lambda_edge_function_arn } : {}
       content {
         event_type   = "viewer-request"
         lambda_arn   = lambda_function_association.value
@@ -192,7 +192,7 @@ resource "aws_cloudfront_distribution" "this" {
 
   # ── API path behavior (when ALB origin is configured)
   dynamic "ordered_cache_behavior" {
-    for_each = local.use_alb ? [1] : []
+    for_each = local.use_alb ? { api = true } : {}
     content {
       path_pattern               = "/api/*"
       allowed_methods            = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
@@ -223,7 +223,7 @@ resource "aws_cloudfront_distribution" "this" {
 
   # ── Access logging
   dynamic "logging_config" {
-    for_each = var.log_bucket_domain_name != null ? [1] : []
+    for_each = var.log_bucket_domain_name != null ? { log = true } : {}
     content {
       bucket          = var.log_bucket_domain_name
       prefix          = var.log_prefix

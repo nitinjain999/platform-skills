@@ -99,7 +99,7 @@ resource "aws_fms_policy" "cloudfront_waf" {
 
   # Exclude specific accounts (sandbox, dev tooling)
   dynamic "exclude_map" {
-    for_each = length(var.excluded_account_ids) > 0 ? [1] : []
+    for_each = length(var.excluded_account_ids) > 0 ? { v = true } : {}
     content {
       account = var.excluded_account_ids
     }
