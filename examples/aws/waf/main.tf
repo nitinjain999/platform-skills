@@ -34,7 +34,9 @@ resource "aws_wafv2_web_acl" "cloudfront" {
     content {
       name     = "AllowTrustedIPs"
       priority = 0
-      action { allow {} }
+      action {
+        allow {}
+      }
       statement {
         ip_set_reference_statement {
           arn = aws_wafv2_ip_set.allowlist[0].arn
@@ -52,7 +54,9 @@ resource "aws_wafv2_web_acl" "cloudfront" {
   rule {
     name     = "AWSManagedRulesAmazonIpReputationList"
     priority = 5
-    override_action { none {} }
+    override_action {
+      none {}
+    }
     statement {
       managed_rule_group_statement {
         name        = "AWSManagedRulesAmazonIpReputationList"
@@ -70,7 +74,9 @@ resource "aws_wafv2_web_acl" "cloudfront" {
   rule {
     name     = "AWSManagedRulesAnonymousIpList"
     priority = 6
-    override_action { none {} }
+    override_action {
+      none {}
+    }
     statement {
       managed_rule_group_statement {
         name        = "AWSManagedRulesAnonymousIpList"
@@ -88,7 +94,9 @@ resource "aws_wafv2_web_acl" "cloudfront" {
   rule {
     name     = "AWSManagedRulesCommonRuleSet"
     priority = 10
-    override_action { none {} }
+    override_action {
+      none {}
+    }
     statement {
       managed_rule_group_statement {
         name        = "AWSManagedRulesCommonRuleSet"
@@ -96,8 +104,10 @@ resource "aws_wafv2_web_acl" "cloudfront" {
 
         # SizeRestrictions_BODY fires on large uploads — Count initially, promote to Block after testing
         rule_action_override {
-          name          = "SizeRestrictions_BODY"
-          action_to_use { count {} }
+          name = "SizeRestrictions_BODY"
+          action_to_use {
+            count {}
+          }
         }
       }
     }
@@ -112,7 +122,9 @@ resource "aws_wafv2_web_acl" "cloudfront" {
   rule {
     name     = "AWSManagedRulesKnownBadInputsRuleGroup"
     priority = 11
-    override_action { none {} }
+    override_action {
+      none {}
+    }
     statement {
       managed_rule_group_statement {
         name        = "AWSManagedRulesKnownBadInputsRuleGroup"
@@ -132,7 +144,9 @@ resource "aws_wafv2_web_acl" "cloudfront" {
     content {
       name     = "BlockHighRiskGeos"
       priority = 20
-      action { block {} }
+      action {
+        block {}
+      }
       statement {
         geo_match_statement {
           country_codes = var.blocked_country_codes
@@ -174,8 +188,13 @@ resource "aws_wafv2_web_acl" "cloudfront" {
               byte_match_statement {
                 search_string         = var.rate_limit_scope_path
                 positional_constraint = "STARTS_WITH"
-                field_to_match { uri_path {} }
-                text_transformation { priority = 0; type = "NONE" }
+                field_to_match {
+                  uri_path {}
+                }
+                text_transformation {
+                  priority = 0
+                  type     = "NONE"
+                }
               }
             }
           }
@@ -195,7 +214,9 @@ resource "aws_wafv2_web_acl" "cloudfront" {
     content {
       name     = "AWSManagedRulesBotControlRuleSet"
       priority = 40
-      override_action { none {} }
+      override_action {
+        none {}
+      }
       statement {
         managed_rule_group_statement {
           name        = "AWSManagedRulesBotControlRuleSet"
@@ -221,7 +242,9 @@ resource "aws_wafv2_web_acl" "cloudfront" {
     content {
       name     = "AWSManagedRulesATPRuleSet"
       priority = 50
-      override_action { none {} }
+      override_action {
+        none {}
+      }
       statement {
         managed_rule_group_statement {
           name        = "AWSManagedRulesATPRuleSet"
@@ -231,8 +254,12 @@ resource "aws_wafv2_web_acl" "cloudfront" {
               login_path = var.login_path
               request_inspection {
                 # Adjust to match your login form field names
-                username_field { identifier = "/username" }
-                password_field { identifier = "/password" }
+                username_field {
+                  identifier = "/username"
+                }
+                password_field {
+                  identifier = "/password"
+                }
                 payload_type = "JSON"
               }
               response_inspection {
@@ -276,10 +303,14 @@ resource "aws_wafv2_web_acl_logging_configuration" "this" {
 
   # Redact sensitive headers from logs
   redacted_fields {
-    single_header { name = "authorization" }
+    single_header {
+      name = "authorization"
+    }
   }
   redacted_fields {
-    single_header { name = "cookie" }
+    single_header {
+      name = "cookie"
+    }
   }
 
   # Log only blocked and counted requests — reduces log volume and cost
@@ -289,13 +320,21 @@ resource "aws_wafv2_web_acl_logging_configuration" "this" {
     filter {
       behavior    = "KEEP"
       requirement = "MEETS_ANY"
-      condition { action_condition { action = "BLOCK" } }
+      condition {
+        action_condition {
+          action = "BLOCK"
+        }
+      }
     }
 
     filter {
       behavior    = "KEEP"
       requirement = "MEETS_ANY"
-      condition { action_condition { action = "COUNT" } }
+      condition {
+        action_condition {
+          action = "COUNT"
+        }
+      }
     }
   }
 }
