@@ -102,6 +102,8 @@ When asked to generate code, start from the thinnest useful slice that proves th
 - For Chaos Engineering — Litmus Chaos v3 and Chaos Mesh v2 fault injection, steady-state hypothesis, blast radius scoping, GameDay workflow, and DORA feedback loop — read [references/chaos.md](references/chaos.md).
 - For DORA metrics — Deployment Frequency, Lead Time for Changes, Change Failure Rate, and MTTR instrumentation via GitHub Actions and Prometheus, SaaS tool selection, and anti-pattern detection — read [references/dora.md](references/dora.md).
 - For animated Markdown document generation — SVG blueprints (architecture flow, lifecycle loop, field carousel, timeline phases), GitHub animation constraints, timing math, theme system, and multi-platform export — read [references/awesome-docs.md](references/awesome-docs.md).
+- For AWS CloudFront CDN — distributions, Origin Access Control (OAC), cache policies, security headers, Lambda@Edge, CloudFront Functions, geo restriction, logging, and multi-account patterns — read [references/aws-cloudfront.md](references/aws-cloudfront.md).
+- For AWS WAF — web ACLs, managed rule groups, rate limiting, Bot Control, CAPTCHA, Firewall Manager multi-account enforcement, and Shield Advanced integration — read [references/aws-waf.md](references/aws-waf.md).
 
 Load only the files needed for the current request.
 
@@ -135,3 +137,4 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:chaos` — install Litmus Chaos or Chaos Mesh, generate fault experiments, schedule recurring chaos, run structured GameDay, debug stuck experiments, report results
 - `/platform-skills:dora` — instrument DORA metrics in GitHub Actions, generate Grafana dashboards, benchmark against performance bands, debug missing metric data
 - `/platform-skills:awesome-docs` — generate any animated Markdown document (README, architecture guide, runbook, tutorial, RFC, post-mortem, or custom), convert existing Markdown to animated, update diagrams, diff for staleness, audit quality, preview locally, or export to Confluence/Notion HTML
+- `/platform-skills:aws` — CloudFront distributions, WAF web ACLs, Lambda@Edge, CloudFront Functions, Firewall Manager multi-account enforcement, and Terraform module generation with best practices
