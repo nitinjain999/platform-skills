@@ -250,3 +250,19 @@ data "aws_cloudfront_cache_policy" "optimized" {
 data "aws_cloudfront_cache_policy" "disabled" {
   name = "CachingDisabled"
 }
+
+# ─── Cross-variable validations ───────────────────────────────────────────────
+
+check "acm_certificate_required" {
+  assert {
+    condition     = length(var.domain_names) == 0 || var.acm_certificate_arn != null
+    error_message = "acm_certificate_arn must be set when domain_names is non-empty."
+  }
+}
+
+check "geo_restriction_locations_required" {
+  assert {
+    condition     = var.geo_restriction_type == "none" || length(var.geo_restriction_locations) > 0
+    error_message = "geo_restriction_locations must be non-empty when geo_restriction_type is 'allowlist' or 'blacklist'."
+  }
+}

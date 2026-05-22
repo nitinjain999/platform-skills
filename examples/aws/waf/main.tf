@@ -1,5 +1,14 @@
 # ─── IP Allowlist ─────────────────────────────────────────────────────────────
 
+# ─── Cross-variable validations ───────────────────────────────────────────────
+
+check "atp_requires_login_path" {
+  assert {
+    condition     = !var.enable_atp || var.login_path != null
+    error_message = "login_path must be set when enable_atp = true."
+  }
+}
+
 resource "aws_wafv2_ip_set" "allowlist" {
   provider           = aws.us_east_1
   count              = length(var.trusted_cidrs) > 0 ? 1 : 0

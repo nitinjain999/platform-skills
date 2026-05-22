@@ -628,7 +628,7 @@ Shield Advanced extends WAF with DDoS-specific capabilities.
 
 ```hcl
 resource "aws_iam_role" "shield_srt" {
-  name = "AWSShieldDRTAccessRoleForRRT"
+  name = "AWSShieldDRTAccessRole"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"

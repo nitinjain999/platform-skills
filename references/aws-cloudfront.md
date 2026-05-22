@@ -369,7 +369,7 @@ resource "aws_cloudwatch_log_group" "edge" {
 | Runtime | JavaScript 2.0 (ES5.1 + partial ES6–12) | Node.js 22.x, Python 3.x |
 | Max execution time | **1ms** | 5s (viewer) / 30s (origin) |
 | Max memory | **2 MB** | 128–512 MB |
-| Network calls | ❌ | ❌ |
+| Network calls | ❌ | ✅ (allowed but discouraged — adds latency and reliability risk at edge) |
 | Body access | ❌ | Origin events only |
 | Environment variables | ❌ (use KeyValueStore) | ❌ |
 | KV configuration store | ✅ CloudFront KeyValueStore | ❌ |

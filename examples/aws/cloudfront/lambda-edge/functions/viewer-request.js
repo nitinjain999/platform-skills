@@ -7,7 +7,7 @@
  * Use cases: lightweight auth, geo-based redirect, A/B routing by cookie.
  *
  * Constraints:
- * - No network calls (no SDK, no fetch, no require('https'))
+ * - Network calls are possible but strongly discouraged — they add latency at every edge location
  * - No environment variables — embed config as constants or use CloudFront KeyValueStore
  * - Max 128 MB memory, 5s timeout
  * - No body access at viewer-request (use origin-request for body)
@@ -63,10 +63,10 @@ exports.handler = async (event) => {
 
   if (!abCookie) {
     const bucket = Math.random() < 0.2 ? 'b' : 'a';
-    // Set cookie so the same user gets the same bucket on subsequent requests
-    request.headers['set-cookie'] = [
-      { key: 'Set-Cookie', value: `ab=${bucket}; Path=/; Max-Age=86400; SameSite=Lax` },
-    ];
+    // Attach a request header so the origin or a viewer-response function can set Set-Cookie.
+    // Do NOT set Set-Cookie on the *request* — it is sent to the origin, not the viewer,
+    // so the browser never receives it and the user gets re-bucketed on every uncached request.
+    request.headers['x-ab-bucket'] = [{ key: 'X-Ab-Bucket', value: bucket }];
     if (bucket === 'b') {
       request.uri = '/v2' + uri;
     }

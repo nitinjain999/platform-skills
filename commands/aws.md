@@ -114,7 +114,7 @@ rate_based_statement { limit = 2000; aggregate_key_type = "IP" }
 Decision — CloudFront Functions vs Lambda@Edge:
 
 ```
-Need network calls?                → Neither (both have no network access)
+Need network calls?                → Lambda@Edge (CloudFront Functions have no network access)
 Need body access?                  → Lambda@Edge (origin events only)
 Need execution > 1ms?              → Lambda@Edge
 Need viewer-request/response only? → CloudFront Functions (6× cheaper)
@@ -237,9 +237,9 @@ Then generate complete module files:
 ```hcl
 # versions.tf — always pin providers
 terraform {
-  required_version = ">= 1.5.0"
+  required_version = ">= 1.7.0"
   required_providers {
-    aws = { source = "hashicorp/aws"; version = "~> 5.0" }
+    aws = { source = "hashicorp/aws"; version = ">= 5.0.0" }
   }
 }
 
