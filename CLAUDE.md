@@ -342,3 +342,5 @@ Rules promoted from `.learnings/` — apply to every session in this project.
 - Run `bash tests/handbook-consistency.sh` locally before every push to catch version/status/path check failures.
 - Use `repos/{owner}/{repo}/pulls/{pr}/comments/{id}/replies` for PR thread replies — omitting the PR number returns 404.
 - At the end of every session, append notable exchanges, decisions, and outcomes to `memory/YYYY-MM-DD.md` (today's date, created if missing). One file per day, append-only.
+- Before every release commit, verify: (1) `SKILL.md` matches `skills/platform-skills/SKILL.md`, (2) `INSTALLATION.md` version matches plugin version, (3) all example READMEs have `Status:` label, (4) `marketplace.json` `source.sha` is the current main HEAD SHA.
+- Never write SDK method names, parameter names, or env vars for external tools (Datadog, LLMObs, etc.) without fetching actual SDK source or docs first.
