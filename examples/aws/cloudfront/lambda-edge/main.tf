@@ -1,10 +1,10 @@
 terraform {
-  required_version = ">= 1.5.0"
+  required_version = ">= 1.15.0"
 
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0"
+      version = "~> 6.0"
     }
     archive = {
       source  = "hashicorp/archive"
@@ -40,13 +40,13 @@ data "aws_iam_policy_document" "edge_trust" {
 }
 
 resource "aws_iam_role" "edge" {
-  provider           = aws.us_east_1
+  provider           = aws
   name               = "${var.name}-edge-role"
   assume_role_policy = data.aws_iam_policy_document.edge_trust.json
 }
 
 resource "aws_iam_role_policy_attachment" "edge_basic" {
-  provider   = aws.us_east_1
+  provider   = aws
   role       = aws_iam_role.edge.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
@@ -57,7 +57,7 @@ resource "aws_iam_role_policy_attachment" "edge_basic" {
 # The log group name pattern is: /aws/lambda/us-east-1.<function-name>
 # Pre-create in us-east-1 so Terraform manages retention.
 resource "aws_cloudwatch_log_group" "edge" {
-  provider          = aws.us_east_1
+  provider          = aws
   name              = "/aws/lambda/us-east-1.${var.name}-edge"
   retention_in_days = 30
 }

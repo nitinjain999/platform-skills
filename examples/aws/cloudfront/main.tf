@@ -148,7 +148,7 @@ resource "aws_cloudfront_distribution" "this" {
 
       # Secret header prevents direct ALB access — WAF on ALB blocks requests missing this
       dynamic "custom_header" {
-        for_each = var.cloudfront_origin_secret != null ? toset(["secret"]) : toset([])
+        for_each = compact([var.cloudfront_origin_secret])
         content {
           name  = "X-CloudFront-Secret"
           value = var.cloudfront_origin_secret
@@ -181,10 +181,10 @@ resource "aws_cloudfront_distribution" "this" {
     # Lambda@Edge association (optional) — must use qualified_arn (numbered version, not $LATEST)
     # Deploy lambda-edge/ first, then pass its qualified_arn output to this variable.
     dynamic "lambda_function_association" {
-      for_each = var.lambda_edge_function_arn != null ? toset(["viewer-request"]) : toset([])
+      for_each = compact([var.lambda_edge_function_arn])
       content {
-        event_type   = lambda_function_association.key
-        lambda_arn   = var.lambda_edge_function_arn
+        event_type   = "viewer-request"
+        lambda_arn   = lambda_function_association.value
         include_body = false
       }
     }
