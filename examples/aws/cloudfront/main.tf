@@ -148,7 +148,7 @@ resource "aws_cloudfront_distribution" "this" {
 
       # Secret header prevents direct ALB access — WAF on ALB blocks requests missing this
       dynamic "custom_header" {
-        for_each = var.cloudfront_origin_secret != null ? [1] : []
+        for_each = var.cloudfront_origin_secret != null ? toset(["secret"]) : toset([])
         content {
           name  = "X-CloudFront-Secret"
           value = var.cloudfront_origin_secret
@@ -178,12 +178,13 @@ resource "aws_cloudfront_distribution" "this" {
       }
     }
 
-    # Lambda@Edge association (optional) — must use qualified_arn (numbered version)
+    # Lambda@Edge association (optional) — must use qualified_arn (numbered version, not $LATEST)
+    # Deploy lambda-edge/ first, then pass its qualified_arn output to this variable.
     dynamic "lambda_function_association" {
-      for_each = var.enable_lambda_edge ? [1] : []
+      for_each = var.lambda_edge_function_arn != null ? toset(["viewer-request"]) : toset([])
       content {
-        event_type   = "viewer-request"
-        lambda_arn   = module.lambda_edge[0].qualified_arn
+        event_type   = lambda_function_association.key
+        lambda_arn   = var.lambda_edge_function_arn
         include_body = false
       }
     }
@@ -229,15 +230,6 @@ resource "aws_cloudfront_distribution" "this" {
       include_cookies = false
     }
   }
-}
-
-# ── Lambda@Edge module (us-east-1 provider passed in)
-module "lambda_edge" {
-  count  = var.enable_lambda_edge ? 1 : 0
-  source = "./lambda-edge"
-
-  name      = var.name
-  providers = { aws.us_east_1 = aws.us_east_1 }
 }
 
 # ─── Data sources ─────────────────────────────────────────────────────────────

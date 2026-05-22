@@ -72,10 +72,10 @@ variable "enable_cloudfront_function" {
   default     = false
 }
 
-variable "enable_lambda_edge" {
-  type        = bool
-  description = "Deploy the viewer-request Lambda@Edge function on the default cache behavior."
-  default     = false
+variable "lambda_edge_function_arn" {
+  type        = string
+  description = "Qualified ARN (numbered version) of a Lambda@Edge function to associate on viewer-request. Deploy using examples/aws/cloudfront/lambda-edge/ and pass its qualified_arn output here. Leave null to skip."
+  default     = null
 }
 
 variable "log_bucket_domain_name" {
