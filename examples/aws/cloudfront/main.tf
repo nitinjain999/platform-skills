@@ -132,27 +132,36 @@ resource "aws_cloudfront_distribution" "this" {
     origin_access_control_id = aws_cloudfront_origin_access_control.this.id
   }
 
-  # ── ALB origin (optional)
+  # ── ALB origin without secret header
   dynamic "origin" {
-    for_each = local.use_alb ? { alb = true } : {}
+    for_each = local.use_alb && var.cloudfront_origin_secret == null ? { alb = true } : {}
     content {
       domain_name = var.custom_origin_domain
       origin_id   = local.alb_origin_id
-
       custom_origin_config {
         http_port              = 80
         https_port             = 443
         origin_protocol_policy = "https-only"
         origin_ssl_protocols   = ["TLSv1.2"]
       }
+    }
+  }
 
-      # Secret header prevents direct ALB access — WAF on ALB blocks requests missing this
-      dynamic "custom_header" {
-        for_each = var.cloudfront_origin_secret != null ? { enabled = true } : {}
-        content {
-          name  = "X-CloudFront-Secret"
-          value = var.cloudfront_origin_secret
-        }
+  # ── ALB origin with secret header (prevents direct ALB access — WAF on ALB blocks missing header)
+  dynamic "origin" {
+    for_each = local.use_alb && var.cloudfront_origin_secret != null ? { alb = true } : {}
+    content {
+      domain_name = var.custom_origin_domain
+      origin_id   = local.alb_origin_id
+      custom_origin_config {
+        http_port              = 80
+        https_port             = 443
+        origin_protocol_policy = "https-only"
+        origin_ssl_protocols   = ["TLSv1.2"]
+      }
+      custom_header {
+        name  = "X-CloudFront-Secret"
+        value = var.cloudfront_origin_secret
       }
     }
   }
