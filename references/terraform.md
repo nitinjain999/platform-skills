@@ -171,3 +171,48 @@ Minimum CI for Terraform changes:
 5. Controlled `apply` through protected environments
 
 If the task involves module quality, add tests or example validation. If the task involves platform rollout, focus on safe composition, state isolation, and promotion gates before writing module internals.
+
+## Sensitive-conditional dynamic blocks
+
+When a `dynamic` block's `for_each` condition depends on a sensitive nullable variable, none of the common single-block patterns work in Terraform 1.7:
+
+| Pattern | Failure |
+|---|---|
+| `for_each = condition ? [1] : []` | list literal rejected in some nested contexts |
+| `for_each = toset([var.secret])` | sensitive value cannot be a set element (used as key) |
+| `for_each = { k = var.secret }` | sensitive map value rejected |
+| `for_each = { k = true } if condition` | bool map rejected inside nested `dynamic` |
+
+**Reliable pattern: two sibling `dynamic` blocks**
+
+Use one block for each branch of the condition, with a literal non-sensitive map key:
+
+```hcl
+# Branch A — secret not set
+dynamic "origin" {
+  for_each = local.use_alb && var.cloudfront_origin_secret == null ? { alb = true } : {}
+  content {
+    domain_name = var.custom_origin_domain
+    origin_id   = local.alb_origin_id
+    custom_origin_config { http_port = 80; https_port = 443; origin_protocol_policy = "https-only"; origin_ssl_protocols = ["TLSv1.2"] }
+  }
+}
+
+# Branch B — secret present
+dynamic "origin" {
+  for_each = local.use_alb && var.cloudfront_origin_secret != null ? { alb = true } : {}
+  content {
+    domain_name = var.custom_origin_domain
+    origin_id   = local.alb_origin_id
+    custom_origin_config { http_port = 80; https_port = 443; origin_protocol_policy = "https-only"; origin_ssl_protocols = ["TLSv1.2"] }
+    custom_header {
+      name  = "X-CloudFront-Secret"
+      value = var.cloudfront_origin_secret
+    }
+  }
+}
+```
+
+The null-check (`== null` / `!= null`) moves the sensitive comparison out of the `for_each` value entirely, leaving only a plain bool map key `{ alb = true }`. Terraform accepts this in all nesting contexts.
+
+Apply this pattern any time a block is conditionally rendered based on whether a sensitive nullable variable is set.
