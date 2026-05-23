@@ -6,33 +6,65 @@ argument-hint: "[init|log|review|promote|resume|state] [description or file path
 
 Bootstrap and operate a self-improving, proactive agent workspace.
 
+## Path Resolution (applies to all modes)
+
+Before executing any mode, resolve `LEARNINGS_BASE`:
+
+1. If `~/.claude/.learnings/` exists → use `~/.claude/` as base (global setup)
+2. Else if `.learnings/` exists in the current working directory → use `.` as base (project setup)
+3. Else if mode is `init` → ask the user to choose scope (see init mode step 1)
+4. Else → default to `~/.claude/`, create the directories, and inform the user that global setup was auto-created
+
+All path references in every mode below use `LEARNINGS_BASE` as the root:
+
+| Logical path | Resolved path (global) | Resolved path (project) |
+|---|---|---|
+| `.learnings/LEARNINGS.md` | `~/.claude/.learnings/LEARNINGS.md` | `.learnings/LEARNINGS.md` |
+| `.learnings/ERRORS.md` | `~/.claude/.learnings/ERRORS.md` | `.learnings/ERRORS.md` |
+| `.learnings/FEATURE_REQUESTS.md` | `~/.claude/.learnings/FEATURE_REQUESTS.md` | `.learnings/FEATURE_REQUESTS.md` |
+| `memory/working-buffer.md` | `~/.claude/memory/working-buffer.md` | `memory/working-buffer.md` |
+| `memory/SESSION-STATE.md` | `~/.claude/memory/SESSION-STATE.md` | `memory/SESSION-STATE.md` |
+| `memory/YYYY-MM-DD.md` | `~/.claude/memory/YYYY-MM-DD.md` | `memory/YYYY-MM-DD.md` |
+| `.learnings/.pending-errors.log` | `~/.claude/.learnings/.pending-errors.log` | `.learnings/.pending-errors.log` |
+
+Promotion targets (`CLAUDE.md`, `AGENTS.md`, `.github/copilot-instructions.md`) always remain project-local regardless of scope — only the capture files follow `LEARNINGS_BASE`.
+
+Reference: `references/agent-self-improve.md` → Global vs project scope
+
 ## Mode: init
 
-Scaffold the `.learnings/` and `memory/` directories in the current project.
+Scaffold the `.learnings/` and `memory/` directories.
 
 Steps:
-1. Check whether `.learnings/` already exists — if so, skip creation and report the existing state
-2. Create the directory structure:
+1. Ask the user: **global** (`~/.claude/`) or **project-local** (`.`)?
+   - Recommend global if no existing `.learnings/` is found in either location
+   - If `~/.claude/.learnings/` already exists, report current state and skip creation
+   - If `.learnings/` already exists in the current directory, report current state and skip creation
+   - Set `LEARNINGS_BASE` from the answer before proceeding
+2. Create the directory structure under `LEARNINGS_BASE`:
    ```
-   .learnings/
+   $LEARNINGS_BASE/.learnings/
      LEARNINGS.md
      ERRORS.md
      FEATURE_REQUESTS.md
-   memory/
+   $LEARNINGS_BASE/memory/
      working-buffer.md
      SESSION-STATE.md
    ```
 3. Seed each file with the correct header and an example entry marked `Status: example`
-4. Check `.gitignore` — ask the user whether these files should be committed or gitignored; recommend gitignoring `memory/` entirely (daily notes grow fast)
-5. If a `.claude/settings.json` exists, offer to add the PostToolUse hook for automatic error capture
-6. Print the bootstrap summary:
+4. For project-local setup: check `.gitignore` — ask the user whether these files should be committed or gitignored; recommend gitignoring `memory/` entirely (daily notes grow fast). Skip for global setup (`~/.claude/` is not a git repo).
+5. Offer to add the PostToolUse hook for automatic error capture:
+   - Global setup → add to `~/.claude/settings.json` (applies to all projects)
+   - Project setup → add to `.claude/settings.json` (this project only)
+   - The hook command must write to `$LEARNINGS_BASE/.learnings/.pending-errors.log` using the **absolute path**
+6. Print the bootstrap summary with resolved paths:
    ```
-   ✓ .learnings/LEARNINGS.md        — positive learnings
-   ✓ .learnings/ERRORS.md           — mistakes and root causes
-   ✓ .learnings/FEATURE_REQUESTS.md — recurring unmet needs
-   ✓ memory/working-buffer.md       — WAL scratchpad and task state
-   ✓ memory/SESSION-STATE.md        — always-on session capture
-   ✓ memory/YYYY-MM-DD.md           — daily notes (created on first use)
+   ✓ $LEARNINGS_BASE/.learnings/LEARNINGS.md        — positive learnings
+   ✓ $LEARNINGS_BASE/.learnings/ERRORS.md           — mistakes and root causes
+   ✓ $LEARNINGS_BASE/.learnings/FEATURE_REQUESTS.md — recurring unmet needs
+   ✓ $LEARNINGS_BASE/memory/working-buffer.md       — WAL scratchpad and task state
+   ✓ $LEARNINGS_BASE/memory/SESSION-STATE.md        — always-on session capture
+   ✓ $LEARNINGS_BASE/memory/YYYY-MM-DD.md           — daily notes (created on first use)
    ```
 7. Remind the user to run `/platform-skills:self-improve review` after a few sessions to promote recurring patterns
 
@@ -48,7 +80,7 @@ Steps:
    - **Error** (`ERR`) — a mistake, misunderstanding, or failed assumption
    - **Feature request** (`FEAT`) — a need that was unmet by the current skill or tool set
 2. Generate the ID: `<TYPE>-YYYYMMDD-NNN` where `NNN` is the next sequential number in that file today
-3. Before logging, scan `.learnings/` for an existing entry with the same context keywords. If one exists, update its **Action** field and keep the existing ID — do not create a duplicate.
+3. Before logging, scan `$LEARNINGS_BASE/.learnings/` for an existing entry with the same context keywords. If one exists, update its **Action** field and keep the existing ID — do not create a duplicate.
 4. Write the entry using the four-field format:
    ```markdown
    ### LRN-20260520-001
@@ -59,7 +91,7 @@ Steps:
    ```
 5. If the fix was applied in this same session, immediately set `Status: resolved` and record what was done in **Action**.
 6. Append to the correct file without modifying any existing entries
-7. Confirm: "Logged as `<ID>` in `.learnings/<FILE>.md`"
+7. Confirm: "Logged as `<ID>` in `$LEARNINGS_BASE/.learnings/<FILE>.md`"
 
 Reference: `references/agent-self-improve.md` → Entry format, Recurring Pattern Detection
 
@@ -68,9 +100,9 @@ Reference: `references/agent-self-improve.md` → Entry format, Recurring Patter
 Resume an incomplete task after context compaction or session interruption.
 
 Steps:
-1. Read `memory/working-buffer.md` — identify current task and last `[x]` step
-2. Read `memory/SESSION-STATE.md` — reload corrections, preferences, and decisions
-3. Read today's `memory/YYYY-MM-DD.md` — reload recent session exchanges
+1. Read `$LEARNINGS_BASE/memory/working-buffer.md` — identify current task and last `[x]` step
+2. Read `$LEARNINGS_BASE/memory/SESSION-STATE.md` — reload corrections, preferences, and decisions
+3. Read today's `$LEARNINGS_BASE/memory/YYYY-MM-DD.md` — reload recent session exchanges
 4. Verify the actual state of affected resources before continuing:
    - Files: check they exist and have expected content
    - Kubernetes: `kubectl get <resource> -n <namespace>`
@@ -88,7 +120,7 @@ Reference: `references/agent-self-improve.md` → Compaction Recovery, SESSION-S
 Scan `.learnings/` for recurring patterns and surface promotion candidates.
 
 Steps:
-1. Read all three `.learnings/` files
+1. Read all three `$LEARNINGS_BASE/.learnings/` files
 2. Group entries by context keyword similarity
 3. Report any context that appears three or more times as a **promotion candidate**:
    ```
@@ -125,7 +157,7 @@ Steps:
    - LRN → positive rule: "Prefer `helm diff upgrade` before `helm upgrade` to preview changes"
 4. Ask the user to confirm the target file and the promoted line before writing
 5. Append to the confirmed target file under a `## Agent Rules` or `## Platform Rules` heading
-6. Update the entry `Status` in `.learnings/` from `resolved` to `promoted`
+6. Update the entry `Status` in `$LEARNINGS_BASE/.learnings/` from `resolved` to `promoted`
 7. Commit the change with a conventional commit message:
    `docs(memory): promote <ID> — <imperative summary>`
 
@@ -141,12 +173,12 @@ Steps:
    - **Preference** — stated preference for this project or session
    - **Decision** — a choice was made between options
    - **Proper noun** — cluster name, team name, account ID, service name
-2. Append to the correct section in `memory/SESSION-STATE.md`:
+2. Append to the correct section in `$LEARNINGS_BASE/memory/SESSION-STATE.md`:
    ```markdown
    - YYYY-MM-DD — <one sentence capturing what was said or decided>
    ```
 3. Update the `Last updated:` timestamp at the top of the file
-4. Confirm: "Captured to `memory/SESSION-STATE.md`"
+4. Confirm: "Captured to `$LEARNINGS_BASE/memory/SESSION-STATE.md`"
 
 **When to invoke proactively (without being asked):**
 - User corrects an assumption mid-session
@@ -163,7 +195,7 @@ These protocols run automatically when the proactive agent pattern is active. No
 ### WAL Protocol
 
 Before any destructive or hard-to-reverse operation:
-1. Write a WAL entry to `memory/working-buffer.md` before acting
+1. Write a WAL entry to `$LEARNINGS_BASE/memory/working-buffer.md` before acting
 2. Format:
    ```markdown
    ## WAL Entry — YYYY-MM-DD HH:MM
@@ -181,7 +213,7 @@ Destructive operations requiring a WAL entry: deleting files, `git reset --hard`
 
 ### Working Buffer
 
-Maintain `memory/working-buffer.md` as a live task scratchpad:
+Maintain `$LEARNINGS_BASE/memory/working-buffer.md` as a live task scratchpad:
 - Write at task start with the plan and steps
 - Update after each significant step with `[x]` progress markers
 - At ~60% context: write a compaction-ready summary proactively — do not wait for a compaction event
@@ -190,7 +222,7 @@ Maintain `memory/working-buffer.md` as a live task scratchpad:
 
 ### SESSION-STATE
 
-Maintain `memory/SESSION-STATE.md` as always-on session capture. Write to it **before responding** whenever:
+Maintain `$LEARNINGS_BASE/memory/SESSION-STATE.md` as always-on session capture. Write to it **before responding** whenever:
 - The user corrects an assumption or rules out an approach
 - A preference is stated
 - A decision is made between options
@@ -200,7 +232,7 @@ This file is the second read in compaction recovery (after working-buffer, befor
 
 ### Daily Notes
 
-Write notable exchanges, discoveries, and outcomes to `memory/YYYY-MM-DD.md` (today's date). One file per day, append-only. Read today's file at session start alongside the working buffer.
+Write notable exchanges, discoveries, and outcomes to `$LEARNINGS_BASE/memory/YYYY-MM-DD.md` (today's date). One file per day, append-only. Read today's file at session start alongside the working buffer.
 
 ### Verify Before Reporting (VBR)
 

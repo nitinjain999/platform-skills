@@ -44,6 +44,45 @@ memory/
 
 Or commit them if they are team-shared project memory.
 
+### Global vs project scope
+
+The `init` mode asks which scope to use before creating anything:
+
+| Scope | Base path (`LEARNINGS_BASE`) | When to use |
+|---|---|---|
+| **Global** | `~/.claude/` | Learnings apply across all projects — recommended default for individuals |
+| **Project** | `.` (current working directory) | Team-shared memory committed to the repo |
+
+**Auto-detection order** (used by all modes except `init`):
+
+1. `~/.claude/.learnings/` exists → global setup detected, use `~/.claude/`
+2. `.learnings/` exists in `$PWD` → project setup detected, use `.`
+3. Neither exists → default to `~/.claude/` and auto-create
+
+**Promotion targets are always project-local** regardless of scope. `CLAUDE.md`, `AGENTS.md`, and `.github/copilot-instructions.md` live in the project repo — only the capture files (`.learnings/`, `memory/`) follow `LEARNINGS_BASE`.
+
+**Hook paths must be absolute** when using global setup. The PostToolUse hook in `~/.claude/settings.json` must reference the full path:
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ \"$CLAUDE_TOOL_EXIT_CODE\" -ne 0 ]; then echo \"$(date -u +%Y-%m-%dT%H:%M:%SZ) TOOL_FAILURE: $CLAUDE_TOOL_NAME\" >> ~/.claude/.learnings/.pending-errors.log; fi"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+For project-scoped setup, replace `~/.claude/.learnings/` with `.learnings/` (relative path works because the hook runs from the project root).
+
 ### Entry format
 
 Every entry uses the same four-field structure regardless of log type:
