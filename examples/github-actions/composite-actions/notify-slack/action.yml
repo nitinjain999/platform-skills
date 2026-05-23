@@ -1,0 +1,189 @@
+name: 'Notify Slack'
+description: 'Send a build status notification to Slack via an incoming webhook. Webhook URL is never logged.'
+author: 'Platform Team'
+
+inputs:
+  webhook_url:
+    description: |
+      Slack incoming webhook URL.
+      SECRET — pass as: webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+    required: true
+  status:
+    description: 'Build status to report.'
+    required: false
+    default: ${{ job.status }}
+    type: choice
+    options: [success, failure, cancelled]
+  message:
+    description: 'Optional custom message appended to the notification.'
+    required: false
+    default: ''
+  channel:
+    description: 'Override the default channel configured on the webhook (e.g. #deployments).'
+    required: false
+    default: ''
+  actor:
+    description: 'GitHub actor to include in the message.'
+    required: false
+    default: ${{ github.actor }}
+  run_url:
+    description: 'Link to the GitHub Actions run.'
+    required: false
+    default: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+  mention_on_failure:
+    description: 'Slack user ID or group handle to @mention when status is failure (e.g. U01234567 or !here).'
+    required: false
+    default: ''
+
+outputs:
+  status_emoji:
+    description: 'Emoji representing the build status (✅ / ❌ / ⚠️).'
+    value: ${{ steps.build_payload.outputs.emoji }}
+  http_status:
+    description: 'HTTP status code returned by the Slack API.'
+    value: ${{ steps.send.outputs.http_status }}
+
+runs:
+  using: 'composite'
+  steps:
+    # ── 1. Validate inputs ────────────────────────────────────────────────────
+    - name: Validate inputs
+      shell: bash
+      env:
+        WEBHOOK_URL: ${{ inputs.webhook_url }}
+        STATUS: ${{ inputs.status }}
+      run: |
+        echo "::group::Input validation"
+        ERRORS=()
+
+        [[ -z "$WEBHOOK_URL" ]] && ERRORS+=("webhook_url is required — pass \${{ secrets.SLACK_WEBHOOK_URL }}")
+        [[ "$WEBHOOK_URL" != https://hooks.slack.com/* ]] && \
+          [[ "$WEBHOOK_URL" != https://*.slack.com/* ]] && \
+          ERRORS+=("webhook_url does not look like a Slack webhook URL")
+
+        case "$STATUS" in
+          success|failure|cancelled) ;;
+          *) ERRORS+=("status must be one of: success, failure, cancelled (got: $STATUS)") ;;
+        esac
+
+        if [[ ${#ERRORS[@]} -gt 0 ]]; then
+          for err in "${ERRORS[@]}"; do echo "::error::$err"; done
+          exit 1
+        fi
+        echo "::endgroup::"
+
+    # ── 2. Mask webhook URL immediately ──────────────────────────────────────
+    - name: Mask webhook URL
+      shell: bash
+      env:
+        WEBHOOK_URL: ${{ inputs.webhook_url }}
+      run: |
+        # Mask before it can appear in any subsequent log line
+        echo "::add-mask::$WEBHOOK_URL"
+
+    # ── 3. Build Slack payload ────────────────────────────────────────────────
+    - name: Build Slack payload
+      id: build_payload
+      shell: bash
+      env:
+        STATUS: ${{ inputs.status }}
+        CUSTOM_MESSAGE: ${{ inputs.message }}
+        CHANNEL: ${{ inputs.channel }}
+        ACTOR: ${{ inputs.actor }}
+        RUN_URL: ${{ inputs.run_url }}
+        MENTION: ${{ inputs.mention_on_failure }}
+        REPO: ${{ github.repository }}
+        REF: ${{ github.ref_name }}
+      run: |
+        echo "::group::Build Slack payload"
+
+        case "$STATUS" in
+          success)   EMOJI="✅"; COLOR="good"  ;;
+          failure)   EMOJI="❌"; COLOR="danger" ;;
+          cancelled) EMOJI="⚠️"; COLOR="warning" ;;
+        esac
+
+        # Mention on failure
+        MENTION_TEXT=""
+        if [[ "$STATUS" == "failure" && -n "$MENTION" ]]; then
+          MENTION_TEXT=" <!${MENTION}>"
+        fi
+
+        TEXT="${EMOJI} *${REPO}* (${REF}) — ${STATUS}${MENTION_TEXT}"
+        [[ -n "$CUSTOM_MESSAGE" ]] && TEXT="${TEXT}\n${CUSTOM_MESSAGE}"
+
+        # Build JSON payload using printf to avoid heredoc quoting issues
+        PAYLOAD=$(printf '{
+          "text": "%s",
+          "attachments": [{
+            "color": "%s",
+            "fields": [
+              {"title": "Repository", "value": "%s", "short": true},
+              {"title": "Branch/Tag", "value": "%s", "short": true},
+              {"title": "Actor",      "value": "%s", "short": true},
+              {"title": "Run",        "value": "<%s|View run>", "short": true}
+            ]
+          }]
+        }' "$TEXT" "$COLOR" "$REPO" "$REF" "$ACTOR" "$RUN_URL")
+
+        # Add channel override if provided
+        if [[ -n "$CHANNEL" ]]; then
+          PAYLOAD=$(echo "$PAYLOAD" | jq --arg ch "$CHANNEL" '. + {channel: $ch}')
+        fi
+
+        # Write payload to a temp file — avoids quoting issues when passing to curl
+        echo "$PAYLOAD" > /tmp/slack_payload.json
+        echo "emoji=$EMOJI" >> "$GITHUB_OUTPUT"
+
+        echo "::endgroup::"
+
+    # ── 4. Send notification ──────────────────────────────────────────────────
+    - name: Send Slack notification
+      id: send
+      shell: bash
+      timeout-minutes: 1
+      env:
+        WEBHOOK_URL: ${{ inputs.webhook_url }}
+      run: |
+        echo "::group::Send Slack notification"
+
+        HTTP_STATUS=$(curl -s -o /tmp/slack_response.txt -w "%{http_code}" \
+          -X POST "$WEBHOOK_URL" \
+          -H 'Content-Type: application/json' \
+          -d @/tmp/slack_payload.json)
+
+        echo "http_status=$HTTP_STATUS" >> "$GITHUB_OUTPUT"
+        RESPONSE=$(cat /tmp/slack_response.txt)
+
+        if [[ "$HTTP_STATUS" != "200" ]]; then
+          echo "::error::Slack API returned HTTP $HTTP_STATUS: $RESPONSE"
+          exit 1
+        fi
+
+        echo "::notice::Slack notification sent (HTTP $HTTP_STATUS)"
+        echo "::endgroup::"
+
+    # ── 5. Job summary ────────────────────────────────────────────────────────
+    - name: Write job summary
+      if: always()
+      shell: bash
+      env:
+        STATUS: ${{ inputs.status }}
+        EMOJI: ${{ steps.build_payload.outputs.emoji }}
+        HTTP: ${{ steps.send.outputs.http_status }}
+      run: |
+        {
+          echo "## Slack Notification"
+          echo ""
+          echo "| Field | Value |"
+          echo "|---|---|"
+          echo "| Status | ${EMOJI} ${STATUS} |"
+          echo "| HTTP response | \`${HTTP:-n/a}\` |"
+          echo "| Channel override | \`${CHANNEL:-webhook default}\` |"
+        } >> "$GITHUB_STEP_SUMMARY"
+      env:
+        CHANNEL: ${{ inputs.channel }}
+
+branding:
+  icon: 'send'
+  color: 'purple'

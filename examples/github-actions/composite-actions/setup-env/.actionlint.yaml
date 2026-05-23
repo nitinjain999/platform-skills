@@ -1,0 +1,6 @@
+rules:
+  runner-label:
+    runs-on:
+      - ubuntu-latest
+      - ubuntu-22.04
+      - self-hosted

@@ -1,0 +1,200 @@
+name: 'Setup Environment'
+description: 'Install a language runtime (Node.js, Python, or Go) and restore the dependency cache. The official GitHub Docs tutorial action — extended with input validation, job summary, and multi-runtime support.'
+author: 'Platform Team'
+
+inputs:
+  runtime:
+    description: 'Language runtime to install.'
+    required: true
+    type: choice
+    options: [node, python, go]
+  version:
+    description: 'Runtime version (e.g. 20.x for Node, 3.12 for Python, 1.22.x for Go).'
+    required: false
+    default: ''
+  enable_cache:
+    description: 'Restore the dependency cache (npm/pip/go module cache).'
+    required: false
+    default: 'true'
+    type: boolean
+  working_directory:
+    description: 'Directory containing the lock file used for cache key generation.'
+    required: false
+    default: '.'
+  install_dependencies:
+    description: 'Run the install command after setup (npm ci / pip install -r requirements.txt / go mod download).'
+    required: false
+    default: 'true'
+    type: boolean
+
+outputs:
+  runtime_version:
+    description: 'The exact runtime version that was installed.'
+    value: ${{ steps.installed_version.outputs.version }}
+  cache_hit:
+    description: 'true if the dependency cache was restored.'
+    value: ${{ steps.cache.outputs.cache-hit }}
+
+runs:
+  using: 'composite'
+  steps:
+    # ── 1. Validate inputs ────────────────────────────────────────────────────
+    - name: Validate inputs
+      shell: bash
+      env:
+        RUNTIME: ${{ inputs.runtime }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        echo "::group::Input validation"
+        case "$RUNTIME" in
+          node|python|go) ;;
+          *) echo "::error::runtime must be one of: node, python, go (got: $RUNTIME)"; exit 1 ;;
+        esac
+        echo "runtime=$RUNTIME version=${VERSION:-default}"
+        echo "::endgroup::"
+
+    # ── 2. Set version defaults by runtime ────────────────────────────────────
+    - name: Resolve runtime version
+      id: version
+      shell: bash
+      env:
+        RUNTIME: ${{ inputs.runtime }}
+        VERSION: ${{ inputs.version }}
+      run: |
+        if [[ -n "$VERSION" ]]; then
+          echo "resolved=$VERSION" >> "$GITHUB_OUTPUT"
+        else
+          case "$RUNTIME" in
+            node)   echo "resolved=20.x"  >> "$GITHUB_OUTPUT" ;;
+            python) echo "resolved=3.12"  >> "$GITHUB_OUTPUT" ;;
+            go)     echo "resolved=1.22.x" >> "$GITHUB_OUTPUT" ;;
+          esac
+        fi
+
+    # ── 3a. Node.js setup ─────────────────────────────────────────────────────
+    - name: Set up Node.js
+      if: inputs.runtime == 'node'
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
+      with:
+        node-version: ${{ steps.version.outputs.resolved }}
+
+    - name: Restore npm cache
+      if: inputs.runtime == 'node' && inputs.enable_cache == 'true'
+      id: cache
+      uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684  # v4.2.3
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-node-${{ steps.version.outputs.resolved }}-${{ hashFiles(format('{0}/**/package-lock.json', inputs.working_directory)) }}
+        restore-keys: |
+          ${{ runner.os }}-node-${{ steps.version.outputs.resolved }}-
+          ${{ runner.os }}-node-
+
+    - name: Install npm dependencies
+      if: inputs.runtime == 'node' && inputs.install_dependencies == 'true'
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      run: |
+        echo "::group::npm ci"
+        npm ci --prefer-offline
+        echo "::endgroup::"
+
+    # ── 3b. Python setup ──────────────────────────────────────────────────────
+    - name: Set up Python
+      if: inputs.runtime == 'python'
+      uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+      with:
+        python-version: ${{ steps.version.outputs.resolved }}
+
+    - name: Restore pip cache
+      if: inputs.runtime == 'python' && inputs.enable_cache == 'true'
+      id: cache
+      uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684  # v4.2.3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ steps.version.outputs.resolved }}-${{ hashFiles(format('{0}/**/requirements*.txt', inputs.working_directory)) }}
+        restore-keys: |
+          ${{ runner.os }}-pip-${{ steps.version.outputs.resolved }}-
+          ${{ runner.os }}-pip-
+
+    - name: Install pip dependencies
+      if: inputs.runtime == 'python' && inputs.install_dependencies == 'true'
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      run: |
+        echo "::group::pip install"
+        REQ=$(find . -maxdepth 2 -name "requirements*.txt" | head -1)
+        if [[ -n "$REQ" ]]; then
+          pip install -r "$REQ"
+        else
+          echo "::notice::No requirements.txt found — skipping pip install"
+        fi
+        echo "::endgroup::"
+
+    # ── 3c. Go setup ──────────────────────────────────────────────────────────
+    - name: Set up Go
+      if: inputs.runtime == 'go'
+      uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5  # v5.5.0
+      with:
+        go-version: ${{ steps.version.outputs.resolved }}
+
+    - name: Restore Go module cache
+      if: inputs.runtime == 'go' && inputs.enable_cache == 'true'
+      id: cache
+      uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684  # v4.2.3
+      with:
+        path: |
+          ~/go/pkg/mod
+          ~/.cache/go-build
+        key: ${{ runner.os }}-go-${{ steps.version.outputs.resolved }}-${{ hashFiles(format('{0}/**/go.sum', inputs.working_directory)) }}
+        restore-keys: |
+          ${{ runner.os }}-go-${{ steps.version.outputs.resolved }}-
+          ${{ runner.os }}-go-
+
+    - name: Download Go modules
+      if: inputs.runtime == 'go' && inputs.install_dependencies == 'true'
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      run: |
+        echo "::group::go mod download"
+        [[ -f go.mod ]] && go mod download || echo "::notice::No go.mod found — skipping"
+        echo "::endgroup::"
+
+    # ── 4. Capture installed version ──────────────────────────────────────────
+    - name: Get installed runtime version
+      id: installed_version
+      shell: bash
+      env:
+        RUNTIME: ${{ inputs.runtime }}
+      run: |
+        case "$RUNTIME" in
+          node)   VER=$(node --version | sed 's/^v//') ;;
+          python) VER=$(python --version 2>&1 | awk '{print $2}') ;;
+          go)     VER=$(go version | awk '{print $3}' | sed 's/^go//') ;;
+        esac
+        echo "version=$VER" >> "$GITHUB_OUTPUT"
+        echo "::notice::Installed $RUNTIME $VER"
+
+    # ── 5. Job summary ────────────────────────────────────────────────────────
+    - name: Write job summary
+      if: always()
+      shell: bash
+      env:
+        RUNTIME: ${{ inputs.runtime }}
+        VERSION: ${{ steps.installed_version.outputs.version }}
+        CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
+        ENABLE_CACHE: ${{ inputs.enable_cache }}
+      run: |
+        {
+          echo "## Environment Setup"
+          echo ""
+          echo "| Field | Value |"
+          echo "|---|---|"
+          echo "| Runtime | \`$RUNTIME\` |"
+          echo "| Version | \`${VERSION:-unknown}\` |"
+          echo "| Cache enabled | $ENABLE_CACHE |"
+          echo "| Cache hit | ${CACHE_HIT:-n/a} |"
+        } >> "$GITHUB_STEP_SUMMARY"
+
+branding:
+  icon: 'download-cloud'
+  color: 'green'

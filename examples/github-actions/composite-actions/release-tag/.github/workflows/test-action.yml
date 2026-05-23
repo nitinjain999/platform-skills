@@ -1,0 +1,84 @@
+name: Test release-tag action
+
+on:
+  push:
+    paths:
+      - 'action.yml'
+      - '.github/workflows/test-action.yml'
+  pull_request:
+    paths:
+      - 'action.yml'
+
+# act usage:
+#   act -W .github/workflows/test-action.yml \
+#       -P ubuntu-latest=catthehacker/ubuntu:act-22.04 \
+#       --secret GITHUB_TOKEN=$GITHUB_TOKEN
+
+jobs:
+  # Test 1 — wrong branch → skips gracefully (is_new_release=false)
+  test-wrong-branch-skip:
+    runs-on: ubuntu-latest
+    if: github.ref_name != 'main'    # only runs on non-main branches
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Run on non-release branch — expect skip
+        id: release
+        uses: ./
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          release_branch: main    # current branch is not main
+      - name: Verify skipped
+        shell: bash
+        run: |
+          echo "is_new_release=${{ steps.release.outputs.is_new_release }}"
+          [[ "${{ steps.release.outputs.is_new_release }}" == "false" ]] || \
+            { echo "::error::Expected is_new_release=false on non-release branch"; exit 1; }
+          echo "::notice::Correctly skipped release on non-main branch"
+
+  # Test 2 — missing github_token fails validation
+  test-missing-token:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Run with empty token — expect failure
+        id: release
+        uses: ./
+        with:
+          github_token: ''
+        continue-on-error: true
+      - name: Assert failure
+        shell: bash
+        run: |
+          [[ "${{ steps.release.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure for empty github_token"; exit 1; }
+
+  # Test 3 — auto-detect conventional commits (dry-run friendly)
+  test-auto-detect-outputs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          fetch-depth: 0
+      - name: Run auto-detect (may skip if no releasable commits)
+        id: release
+        uses: ./
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          release_branch: ${{ github.ref_name }}   # allow current branch
+        continue-on-error: true
+
+      - name: Verify outputs are always set
+        shell: bash
+        run: |
+          echo "is_new_release=${{ steps.release.outputs.is_new_release }}"
+          echo "version=${{ steps.release.outputs.version }}"
+          echo "tag=${{ steps.release.outputs.tag }}"
+          # Outputs should be set regardless of whether a release was created
+          [[ -n "${{ steps.release.outputs.is_new_release }}" ]] || \
+            { echo "::error::is_new_release output not set"; exit 1; }

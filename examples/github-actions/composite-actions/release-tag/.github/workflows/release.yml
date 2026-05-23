@@ -1,0 +1,49 @@
+name: Release release-tag action
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Install actionlint
+        shell: bash
+        run: |
+          curl -sL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash \
+            | bash -s -- latest /usr/local/bin
+
+      - name: Validate action.yml
+        shell: bash
+        run: actionlint action.yml
+
+      - name: Verify SHA pinning
+        shell: bash
+        run: |
+          UNPINNED=$(grep -n 'uses:' action.yml \
+            | grep -vE '@[0-9a-f]{40}' | grep -v '\./' || true)
+          [[ -z "$UNPINNED" ]] || { echo "::error::$UNPINNED"; exit 1; }
+
+      - name: Update floating major version tag
+        shell: bash
+        run: |
+          MAJOR=$(echo "${{ github.ref_name }}" | cut -d. -f1)
+          git tag -f "$MAJOR" && git push origin "$MAJOR" --force
+
+      - name: Create GitHub release
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          script: |
+            const tag = context.ref.replace('refs/tags/', '');
+            await github.rest.repos.createRelease({
+              owner: context.repo.owner, repo: context.repo.repo,
+              tag_name: tag, name: `Release ${tag}`,
+              generate_release_notes: true,
+            });

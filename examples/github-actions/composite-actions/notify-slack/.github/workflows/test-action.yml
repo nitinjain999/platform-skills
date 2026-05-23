@@ -1,0 +1,97 @@
+name: Test notify-slack action
+
+on:
+  push:
+    paths:
+      - 'action.yml'
+      - '.github/workflows/test-action.yml'
+  pull_request:
+    paths:
+      - 'action.yml'
+
+# act usage:
+#   act -W .github/workflows/test-action.yml \
+#       -P ubuntu-latest=catthehacker/ubuntu:act-22.04 \
+#       --secret SLACK_WEBHOOK_URL=https://hooks.slack.com/services/TEST
+
+jobs:
+  # Test 1 — invalid webhook URL should fail
+  test-invalid-webhook:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Run with invalid webhook URL — expect failure
+        id: notify
+        uses: ./
+        with:
+          webhook_url: 'https://not-slack.example.com/webhook'
+          status: 'success'
+        continue-on-error: true
+
+      - name: Assert validation failure
+        shell: bash
+        run: |
+          if [[ "${{ steps.notify.outcome }}" != "failure" ]]; then
+            echo "::error::Expected action to fail with invalid webhook URL"
+            exit 1
+          fi
+          echo "::notice::Validation correctly rejected non-Slack webhook URL"
+
+  # Test 2 — invalid status value should fail
+  test-invalid-status:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Run with invalid status — expect failure
+        id: notify
+        uses: ./
+        with:
+          webhook_url: 'https://hooks.slack.com/services/fake/url'
+          status: 'unknown-status'
+        continue-on-error: true
+
+      - name: Assert validation failure
+        shell: bash
+        run: |
+          if [[ "${{ steps.notify.outcome }}" != "failure" ]]; then
+            echo "::error::Expected action to fail with invalid status"
+            exit 1
+          fi
+          echo "::notice::Validation correctly rejected invalid status value"
+
+  # Test 3 — verify output emoji is correct for each status
+  test-status-matrix:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        status: [success, failure, cancelled]
+        include:
+          - status: success
+            expected_emoji: '✅'
+          - status: failure
+            expected_emoji: '❌'
+          - status: cancelled
+            expected_emoji: '⚠️'
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Build payload (no actual send — uses dummy webhook)
+        id: notify
+        uses: ./
+        with:
+          # Real send will fail — test only validates payload construction and output
+          webhook_url: 'https://hooks.slack.com/services/T00000000/B00000000/test_token_placeholder'
+          status: ${{ matrix.status }}
+        continue-on-error: true   # webhook call will fail with dummy URL
+
+      - name: Verify emoji output
+        shell: bash
+        run: |
+          EMOJI="${{ steps.notify.outputs.status_emoji }}"
+          EXPECTED="${{ matrix.expected_emoji }}"
+          echo "status=${{ matrix.status }} emoji=$EMOJI expected=$EXPECTED"
+          [[ "$EMOJI" == "$EXPECTED" ]] || { echo "::error::Wrong emoji for ${{ matrix.status }}: got $EMOJI, expected $EXPECTED"; exit 1; }

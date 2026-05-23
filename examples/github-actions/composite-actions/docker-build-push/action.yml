@@ -1,0 +1,173 @@
+name: 'Docker Build and Push'
+description: 'Build a multi-platform Docker image and push to GHCR using OIDC. No long-lived credentials required.'
+author: 'Platform Team'
+
+inputs:
+  image_name:
+    description: 'Image name (e.g. my-service). Published as ghcr.io/OWNER/IMAGE_NAME.'
+    required: true
+  image_tag:
+    description: 'Image tag. Defaults to the full commit SHA.'
+    required: false
+    default: ${{ github.sha }}
+  platforms:
+    description: 'Comma-separated target platforms (e.g. linux/amd64,linux/arm64).'
+    required: false
+    default: 'linux/amd64'
+  context:
+    description: 'Docker build context path.'
+    required: false
+    default: '.'
+  dockerfile:
+    description: 'Path to the Dockerfile relative to the build context.'
+    required: false
+    default: 'Dockerfile'
+  build_args:
+    description: 'Newline-separated build arguments (KEY=VALUE). Do not pass secrets here — use --secret instead.'
+    required: false
+    default: ''
+  push:
+    description: 'Push the image to the registry after a successful build.'
+    required: false
+    default: 'true'
+    type: boolean
+  registry:
+    description: 'Container registry host.'
+    required: false
+    default: 'ghcr.io'
+
+outputs:
+  image_uri:
+    description: 'Full image URI including tag (e.g. ghcr.io/org/my-service:abc1234).'
+    value: ${{ steps.compute_uri.outputs.uri }}
+  image_digest:
+    description: 'SHA256 digest of the published image.'
+    value: ${{ steps.push.outputs.digest }}
+  image_tag:
+    description: 'Short 7-character SHA tag applied to the image.'
+    value: ${{ steps.compute_tag.outputs.tag }}
+
+runs:
+  using: 'composite'
+  steps:
+    # ── 1. Validate inputs ────────────────────────────────────────────────────
+    - name: Validate inputs
+      shell: bash
+      env:
+        IMAGE_NAME: ${{ inputs.image_name }}
+        PLATFORMS: ${{ inputs.platforms }}
+      run: |
+        echo "::group::Input validation"
+        ERRORS=()
+
+        [[ -z "$IMAGE_NAME" ]] && ERRORS+=("image_name is required")
+
+        # image_name must be lowercase, alphanumeric, hyphens and slashes only
+        if [[ -n "$IMAGE_NAME" ]] && ! echo "$IMAGE_NAME" | grep -qE '^[a-z0-9][a-z0-9/_-]*$'; then
+          ERRORS+=("image_name must be lowercase alphanumeric with hyphens/slashes (got: $IMAGE_NAME)")
+        fi
+
+        if [[ ${#ERRORS[@]} -gt 0 ]]; then
+          for err in "${ERRORS[@]}"; do
+            echo "::error::$err"
+          done
+          exit 1
+        fi
+
+        echo "::notice::image_name=$IMAGE_NAME platforms=$PLATFORMS"
+        echo "::endgroup::"
+
+    # ── 2. Compute short tag ──────────────────────────────────────────────────
+    - name: Compute short tag
+      id: compute_tag
+      shell: bash
+      env:
+        FULL_TAG: ${{ inputs.image_tag }}
+      run: |
+        SHORT="${FULL_TAG:0:7}"
+        echo "tag=$SHORT" >> "$GITHUB_OUTPUT"
+
+    # ── 3. Compute full image URI ─────────────────────────────────────────────
+    - name: Compute image URI
+      id: compute_uri
+      shell: bash
+      env:
+        REGISTRY: ${{ inputs.registry }}
+        IMAGE_NAME: ${{ inputs.image_name }}
+      run: |
+        # github.repository_owner is lowercased automatically by GitHub
+        OWNER="${{ github.repository_owner }}"
+        URI="${REGISTRY}/${OWNER}/${IMAGE_NAME}:${{ steps.compute_tag.outputs.tag }}"
+        echo "uri=$URI" >> "$GITHUB_OUTPUT"
+        echo "IMAGE_URI=$URI" >> "$GITHUB_ENV"
+
+    # ── 4. Set up buildx ─────────────────────────────────────────────────────
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@29109295f81e9208d7d86ff9e93491b13649e775  # v3.6.0
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@b5730b3fe9e39543dc05c9a9e4e8aa50f0f07ae0  # v3.11.1
+
+    # ── 5. Authenticate to registry (OIDC — no static credentials) ───────────
+    - name: Log in to registry
+      uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772  # v3.4.0
+      with:
+        registry: ${{ inputs.registry }}
+        username: ${{ github.actor }}
+        password: ${{ github.token }}    # GITHUB_TOKEN — ephemeral, no secrets required
+
+    # ── 6. Extract metadata ───────────────────────────────────────────────────
+    - name: Extract image metadata
+      id: meta
+      uses: docker/metadata-action@902fa8ec7d6ecbea8a986d36e8b1d9b60e5c8e58  # v5.7.0
+      with:
+        images: ${{ inputs.registry }}/${{ github.repository_owner }}/${{ inputs.image_name }}
+        tags: |
+          type=sha,prefix=,suffix=,format=short
+          type=raw,value=latest,enable={{is_default_branch}}
+          type=ref,event=tag
+
+    # ── 7. Build and push ─────────────────────────────────────────────────────
+    - name: Build and push image
+      id: push
+      uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c53  # v6.18.0
+      with:
+        context: ${{ inputs.context }}
+        file: ${{ inputs.dockerfile }}
+        platforms: ${{ inputs.platforms }}
+        push: ${{ inputs.push }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        build-args: ${{ inputs.build_args }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        provenance: true      # SLSA provenance attestation
+        sbom: true            # SBOM attestation
+
+    # ── 8. Job summary ────────────────────────────────────────────────────────
+    - name: Write job summary
+      if: always()
+      shell: bash
+      env:
+        PUSH_ENABLED: ${{ inputs.push }}
+        DIGEST: ${{ steps.push.outputs.digest }}
+      run: |
+        echo "::group::Job summary"
+        {
+          echo "## Docker Build and Push"
+          echo ""
+          echo "| Field | Value |"
+          echo "|---|---|"
+          echo "| Image URI | \`$IMAGE_URI\` |"
+          echo "| Tag | \`${{ steps.compute_tag.outputs.tag }}\` |"
+          echo "| Platforms | \`${{ inputs.platforms }}\` |"
+          echo "| Digest | \`${DIGEST:-n/a}\` |"
+          echo "| Pushed | ${PUSH_ENABLED} |"
+          echo "| Actor | ${{ github.actor }} |"
+          echo "| Workflow | ${{ github.workflow }} |"
+        } >> "$GITHUB_STEP_SUMMARY"
+        echo "::endgroup::"
+
+branding:
+  icon: 'box'
+  color: 'blue'

@@ -1,0 +1,289 @@
+name: 'Terraform Plan'
+description: 'Run terraform fmt, validate, and plan. Post the plan output as a PR comment. Supports AWS and Azure OIDC — no static credentials.'
+author: 'Platform Team'
+
+inputs:
+  working_directory:
+    description: 'Directory containing the Terraform root module.'
+    required: true
+  terraform_version:
+    description: 'Terraform version to install.'
+    required: false
+    default: '1.9.0'
+  github_token:
+    description: |
+      GitHub token for posting the plan comment.
+      Pass as: github_token: ${{ secrets.GITHUB_TOKEN }}
+    required: true
+  aws_role_arn:
+    description: |
+      AWS IAM role ARN to assume via OIDC (e.g. arn:aws:iam::123456789012:role/terraform-plan).
+      Requires caller permission: id-token: write
+      Leave empty for non-AWS workspaces.
+    required: false
+    default: ''
+  aws_region:
+    description: 'AWS region. Required when aws_role_arn is set.'
+    required: false
+    default: 'us-east-1'
+  azure_client_id:
+    description: |
+      Azure app client ID for OIDC federation.
+      Leave empty for non-Azure workspaces.
+    required: false
+    default: ''
+  azure_tenant_id:
+    description: 'Azure tenant ID. Required when azure_client_id is set.'
+    required: false
+    default: ''
+  azure_subscription_id:
+    description: 'Azure subscription ID. Required when azure_client_id is set.'
+    required: false
+    default: ''
+  var_file:
+    description: 'Path to a .tfvars file relative to working_directory.'
+    required: false
+    default: ''
+  comment_on_pr:
+    description: 'Post the plan output as a PR comment.'
+    required: false
+    default: 'true'
+    type: boolean
+
+outputs:
+  plan_exitcode:
+    description: '0 = no changes, 2 = changes present, non-zero = error.'
+    value: ${{ steps.plan.outputs.exitcode }}
+  has_changes:
+    description: 'true if the plan contains infrastructure changes.'
+    value: ${{ steps.plan.outputs.has_changes }}
+
+runs:
+  using: 'composite'
+  steps:
+    # ── 1. Validate inputs ────────────────────────────────────────────────────
+    - name: Validate inputs
+      shell: bash
+      env:
+        WORKING_DIR: ${{ inputs.working_directory }}
+        AWS_ROLE: ${{ inputs.aws_role_arn }}
+        AWS_REGION: ${{ inputs.aws_region }}
+        AZ_CLIENT: ${{ inputs.azure_client_id }}
+        AZ_TENANT: ${{ inputs.azure_tenant_id }}
+        AZ_SUB: ${{ inputs.azure_subscription_id }}
+      run: |
+        echo "::group::Input validation"
+        ERRORS=()
+
+        [[ -z "$WORKING_DIR" ]] && ERRORS+=("working_directory is required")
+
+        if [[ -n "$AWS_ROLE" ]] && [[ -z "$AWS_REGION" ]]; then
+          ERRORS+=("aws_region is required when aws_role_arn is set")
+        fi
+
+        if [[ -n "$AZ_CLIENT" ]]; then
+          [[ -z "$AZ_TENANT" ]] && ERRORS+=("azure_tenant_id is required when azure_client_id is set")
+          [[ -z "$AZ_SUB" ]] && ERRORS+=("azure_subscription_id is required when azure_client_id is set")
+        fi
+
+        if [[ ${#ERRORS[@]} -gt 0 ]]; then
+          for err in "${ERRORS[@]}"; do echo "::error::$err"; done
+          exit 1
+        fi
+        echo "::endgroup::"
+
+    # ── 2. Authenticate — AWS OIDC ────────────────────────────────────────────
+    - name: Configure AWS credentials (OIDC)
+      if: inputs.aws_role_arn != ''
+      uses: aws-actions/configure-aws-credentials@b47578312673ae6fa5b5096b330d9fbac3bfa571  # v4.2.1
+      with:
+        role-to-assume: ${{ inputs.aws_role_arn }}
+        aws-region: ${{ inputs.aws_region }}
+        role-session-name: terraform-plan-${{ github.run_id }}
+
+    # ── 3. Authenticate — Azure OIDC ──────────────────────────────────────────
+    - name: Configure Azure credentials (OIDC)
+      if: inputs.azure_client_id != ''
+      uses: azure/login@a65d910e8af852a8061c627c456678983e180302  # v2.2.0
+      with:
+        client-id: ${{ inputs.azure_client_id }}
+        tenant-id: ${{ inputs.azure_tenant_id }}
+        subscription-id: ${{ inputs.azure_subscription_id }}
+
+    # ── 4. Install Terraform with provider cache ───────────────────────────────
+    - name: Set up Terraform provider cache
+      shell: bash
+      run: |
+        mkdir -p ~/.terraform.d/plugin-cache
+        echo 'plugin_cache_dir = "$HOME/.terraform.d/plugin-cache"' > ~/.terraformrc
+
+    - name: Cache Terraform providers
+      uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684  # v4.2.3
+      with:
+        path: |
+          ~/.terraform.d/plugin-cache
+        key: ${{ runner.os }}-terraform-${{ inputs.terraform_version }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', inputs.working_directory)) }}
+        restore-keys: |
+          ${{ runner.os }}-terraform-${{ inputs.terraform_version }}-
+
+    - name: Install Terraform
+      uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269ef065  # v3.2.0
+      with:
+        terraform_version: ${{ inputs.terraform_version }}
+        terraform_wrapper: true
+
+    # ── 5. fmt → validate → plan ──────────────────────────────────────────────
+    - name: Terraform fmt
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      run: |
+        echo "::group::terraform fmt"
+        terraform fmt -check -recursive || {
+          echo "::error::Terraform formatting check failed. Run 'terraform fmt -recursive' locally."
+          exit 1
+        }
+        echo "::endgroup::"
+
+    - name: Terraform init
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      run: |
+        echo "::group::terraform init"
+        terraform init -input=false
+        echo "::endgroup::"
+
+    - name: Terraform validate
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      run: |
+        echo "::group::terraform validate"
+        terraform validate
+        echo "::endgroup::"
+
+    - name: Terraform plan
+      id: plan
+      shell: bash
+      working-directory: ${{ inputs.working_directory }}
+      env:
+        VAR_FILE: ${{ inputs.var_file }}
+      run: |
+        echo "::group::terraform plan"
+
+        VAR_FILE_FLAG=""
+        [[ -n "$VAR_FILE" ]] && VAR_FILE_FLAG="-var-file=$VAR_FILE"
+
+        set +e
+        terraform plan \
+          -input=false \
+          -no-color \
+          -detailed-exitcode \
+          $VAR_FILE_FLAG \
+          -out=tfplan.binary 2>&1 | tee /tmp/tfplan.txt
+        EXIT_CODE=${PIPESTATUS[0]}
+        set -e
+
+        terraform show -no-color tfplan.binary > /tmp/tfplan-readable.txt 2>&1 || true
+
+        echo "exitcode=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+
+        case "$EXIT_CODE" in
+          0) echo "has_changes=false" >> "$GITHUB_OUTPUT"
+             echo "::notice::No infrastructure changes" ;;
+          2) echo "has_changes=true" >> "$GITHUB_OUTPUT"
+             echo "::notice::Plan contains infrastructure changes" ;;
+          *) echo "has_changes=false" >> "$GITHUB_OUTPUT"
+             echo "::error::terraform plan failed (exit $EXIT_CODE)"
+             exit "$EXIT_CODE" ;;
+        esac
+        echo "::endgroup::"
+
+    # ── 6. Post plan as PR comment ────────────────────────────────────────────
+    - name: Post plan comment
+      if: inputs.comment_on_pr == 'true' && github.event_name == 'pull_request'
+      uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        WORKING_DIR: ${{ inputs.working_directory }}
+        HAS_CHANGES: ${{ steps.plan.outputs.has_changes }}
+      with:
+        github-token: ${{ inputs.github_token }}
+        script: |
+          const fs = require('fs');
+          const plan = fs.readFileSync('/tmp/tfplan-readable.txt', 'utf8').slice(0, 65000);
+          const hasChanges = process.env.HAS_CHANGES === 'true';
+          const workingDir = process.env.WORKING_DIR;
+          const icon = hasChanges ? '⚠️' : '✅';
+
+          const body = [
+            `## ${icon} Terraform Plan — \`${workingDir}\``,
+            '',
+            hasChanges
+              ? '> **Changes detected** — review the plan before merging.'
+              : '> **No changes** — infrastructure is up to date.',
+            '',
+            '<details><summary>Show plan</summary>',
+            '',
+            '```hcl',
+            plan,
+            '```',
+            '</details>',
+            '',
+            `_Workflow: \`${context.workflow}\` · Run: [#${context.runNumber}](${process.env.GITHUB_SERVER_URL}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})_`,
+          ].join('\n');
+
+          // Find existing plan comment and update, or create new one
+          const marker = `<!-- terraform-plan:${workingDir} -->`;
+          const comments = await github.rest.issues.listComments({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+          });
+
+          const existing = comments.data.find(c => c.body.includes(marker));
+          if (existing) {
+            await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existing.id,
+              body: `${marker}\n${body}`,
+            });
+          } else {
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `${marker}\n${body}`,
+            });
+          }
+
+    # ── 7. Job summary ────────────────────────────────────────────────────────
+    - name: Write job summary
+      if: always()
+      shell: bash
+      env:
+        EXIT_CODE: ${{ steps.plan.outputs.exitcode }}
+        HAS_CHANGES: ${{ steps.plan.outputs.has_changes }}
+        WORKING_DIR: ${{ inputs.working_directory }}
+      run: |
+        {
+          echo "## Terraform Plan"
+          echo ""
+          echo "| Field | Value |"
+          echo "|---|---|"
+          echo "| Directory | \`$WORKING_DIR\` |"
+          echo "| Exit code | \`${EXIT_CODE:-n/a}\` |"
+          echo "| Changes | ${HAS_CHANGES:-n/a} |"
+          echo ""
+          if [[ -f /tmp/tfplan-readable.txt ]]; then
+            echo "<details><summary>Plan output</summary>"
+            echo ""
+            echo '```hcl'
+            head -200 /tmp/tfplan-readable.txt
+            echo '```'
+            echo "</details>"
+          fi
+        } >> "$GITHUB_STEP_SUMMARY"
+
+branding:
+  icon: 'layers'
+  color: 'purple'

@@ -1,0 +1,239 @@
+name: 'Security Scan'
+description: 'Scan a container image or filesystem with Trivy. Fails the workflow when findings meet or exceed the severity threshold. Posts annotated findings and a job summary.'
+author: 'Platform Team'
+
+inputs:
+  scan_target:
+    description: 'Image URI or filesystem path to scan (e.g. ghcr.io/org/app:sha, .).'
+    required: true
+  scan_type:
+    description: 'Target type to scan.'
+    required: false
+    default: 'image'
+    type: choice
+    options: [image, fs, repo]
+  severity:
+    description: 'Comma-separated severity levels to report (e.g. HIGH,CRITICAL).'
+    required: false
+    default: 'HIGH,CRITICAL'
+  fail_on_findings:
+    description: 'Exit non-zero when vulnerabilities are found at or above the severity threshold.'
+    required: false
+    default: 'true'
+    type: boolean
+  ignore_unfixed:
+    description: 'Ignore vulnerabilities with no available fix.'
+    required: false
+    default: 'false'
+    type: boolean
+  trivy_version:
+    description: 'Trivy version to install (e.g. 0.58.0).'
+    required: false
+    default: '0.58.0'
+  output_format:
+    description: 'Trivy output format for the job summary.'
+    required: false
+    default: 'table'
+    type: choice
+    options: [table, json, sarif]
+  registry_username:
+    description: |
+      Registry username for pulling private images.
+      Leave empty for public images or OIDC-authenticated registries.
+    required: false
+    default: ''
+  registry_password:
+    description: |
+      Registry password or token for pulling private images.
+      SECRET — pass as: registry_password: ${{ secrets.REGISTRY_PASSWORD }}
+    required: false
+    default: ''
+
+outputs:
+  vulnerability_count:
+    description: 'Total count of vulnerabilities found at or above the severity threshold.'
+    value: ${{ steps.scan.outputs.vuln_count }}
+  scan_result:
+    description: 'pass or fail based on findings and fail_on_findings setting.'
+    value: ${{ steps.evaluate.outputs.result }}
+  sarif_path:
+    description: 'Path to the generated SARIF file (only when output_format: sarif).'
+    value: ${{ steps.scan.outputs.sarif_path }}
+
+runs:
+  using: 'composite'
+  steps:
+    # ── 1. Validate inputs ────────────────────────────────────────────────────
+    - name: Validate inputs
+      shell: bash
+      env:
+        SCAN_TARGET: ${{ inputs.scan_target }}
+        SEVERITY: ${{ inputs.severity }}
+        SCAN_TYPE: ${{ inputs.scan_type }}
+      run: |
+        echo "::group::Input validation"
+        ERRORS=()
+
+        [[ -z "$SCAN_TARGET" ]] && ERRORS+=("scan_target is required")
+
+        # Validate severity is a valid combination
+        IFS=',' read -ra LEVELS <<< "$SEVERITY"
+        VALID_LEVELS=(UNKNOWN LOW MEDIUM HIGH CRITICAL)
+        for level in "${LEVELS[@]}"; do
+          valid=false
+          for valid_level in "${VALID_LEVELS[@]}"; do
+            [[ "$level" == "$valid_level" ]] && valid=true && break
+          done
+          [[ "$valid" == "false" ]] && ERRORS+=("Invalid severity level: $level. Valid: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL")
+        done
+
+        if [[ ${#ERRORS[@]} -gt 0 ]]; then
+          for err in "${ERRORS[@]}"; do echo "::error::$err"; done
+          exit 1
+        fi
+        echo "::endgroup::"
+
+    # ── 2. Mask registry password if provided ────────────────────────────────
+    - name: Mask registry credentials
+      if: inputs.registry_password != ''
+      shell: bash
+      env:
+        REGISTRY_PASS: ${{ inputs.registry_password }}
+      run: |
+        echo "::add-mask::$REGISTRY_PASS"
+
+    # ── 3. Install Trivy ──────────────────────────────────────────────────────
+    - name: Install Trivy
+      shell: bash
+      timeout-minutes: 3
+      env:
+        TRIVY_VERSION: ${{ inputs.trivy_version }}
+      run: |
+        echo "::group::Install Trivy $TRIVY_VERSION"
+        if command -v trivy > /dev/null 2>&1 && trivy --version | grep -q "$TRIVY_VERSION"; then
+          echo "Trivy $TRIVY_VERSION already installed"
+        else
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sh -s -- -b /usr/local/bin "v${TRIVY_VERSION}"
+          echo "Installed Trivy $(trivy --version | head -1)"
+        fi
+        echo "::endgroup::"
+
+    # ── 4. Run scan ───────────────────────────────────────────────────────────
+    - name: Run Trivy scan
+      id: scan
+      shell: bash
+      timeout-minutes: 15
+      env:
+        SCAN_TARGET: ${{ inputs.scan_target }}
+        SCAN_TYPE: ${{ inputs.scan_type }}
+        SEVERITY: ${{ inputs.severity }}
+        IGNORE_UNFIXED: ${{ inputs.ignore_unfixed }}
+        OUTPUT_FORMAT: ${{ inputs.output_format }}
+        REGISTRY_USER: ${{ inputs.registry_username }}
+        REGISTRY_PASS: ${{ inputs.registry_password }}
+      run: |
+        echo "::group::Trivy scan"
+
+        IGNORE_FLAG=""
+        [[ "$IGNORE_UNFIXED" == "true" ]] && IGNORE_FLAG="--ignore-unfixed"
+
+        AUTH_FLAGS=""
+        if [[ -n "$REGISTRY_USER" ]]; then
+          AUTH_FLAGS="--username $REGISTRY_USER --password $REGISTRY_PASS"
+        fi
+
+        SARIF_PATH=""
+        FORMAT_FLAGS="--format table"
+        if [[ "$OUTPUT_FORMAT" == "sarif" ]]; then
+          SARIF_PATH="/tmp/trivy-results.sarif"
+          FORMAT_FLAGS="--format sarif --output $SARIF_PATH"
+        fi
+
+        # Run scan — capture output and exit code separately
+        set +e
+        trivy "$SCAN_TYPE" \
+          --severity "$SEVERITY" \
+          --exit-code 1 \
+          $IGNORE_FLAG \
+          $FORMAT_FLAGS \
+          $AUTH_FLAGS \
+          --no-progress \
+          "$SCAN_TARGET" 2>&1 | tee /tmp/trivy-output.txt
+        TRIVY_EXIT=$?
+        set -e
+
+        # Count vulnerabilities from output
+        VULN_COUNT=$(grep -cE '^\s*(CRITICAL|HIGH|MEDIUM|LOW|UNKNOWN)\s' /tmp/trivy-output.txt 2>/dev/null || echo 0)
+        echo "vuln_count=$VULN_COUNT" >> "$GITHUB_OUTPUT"
+        [[ -n "$SARIF_PATH" ]] && echo "sarif_path=$SARIF_PATH" >> "$GITHUB_OUTPUT"
+
+        # Emit annotations for each critical finding
+        grep -E '^\s*CRITICAL' /tmp/trivy-output.txt | while read -r line; do
+          echo "::error::CRITICAL vulnerability: $line"
+        done
+        grep -E '^\s*HIGH' /tmp/trivy-output.txt | while read -r line; do
+          echo "::warning::HIGH vulnerability: $line"
+        done
+
+        # Store exit code for evaluation step
+        echo "TRIVY_EXIT_CODE=$TRIVY_EXIT" >> "$GITHUB_ENV"
+        echo "::endgroup::"
+
+    # ── 5. Evaluate and decide pass/fail ─────────────────────────────────────
+    - name: Evaluate results
+      id: evaluate
+      shell: bash
+      env:
+        FAIL_ON_FINDINGS: ${{ inputs.fail_on_findings }}
+        VULN_COUNT: ${{ steps.scan.outputs.vuln_count }}
+      run: |
+        if [[ "$FAIL_ON_FINDINGS" == "true" && "$TRIVY_EXIT_CODE" != "0" ]]; then
+          echo "result=fail" >> "$GITHUB_OUTPUT"
+          echo "::error::Security scan found $VULN_COUNT vulnerability/ies — failing build"
+          exit 1
+        else
+          echo "result=pass" >> "$GITHUB_OUTPUT"
+          if [[ "$VULN_COUNT" -gt 0 ]]; then
+            echo "::warning::Security scan found $VULN_COUNT vulnerability/ies (fail_on_findings=false)"
+          else
+            echo "::notice::Security scan passed — no findings"
+          fi
+        fi
+
+    # ── 6. Job summary ────────────────────────────────────────────────────────
+    - name: Write job summary
+      if: always()
+      shell: bash
+      env:
+        SCAN_TARGET: ${{ inputs.scan_target }}
+        SEVERITY: ${{ inputs.severity }}
+        VULN_COUNT: ${{ steps.scan.outputs.vuln_count }}
+        RESULT: ${{ steps.evaluate.outputs.result }}
+        FAIL_ON: ${{ inputs.fail_on_findings }}
+      run: |
+        ICON=$([[ "$RESULT" == "pass" ]] && echo "✅" || echo "❌")
+        {
+          echo "## ${ICON} Security Scan"
+          echo ""
+          echo "| Field | Value |"
+          echo "|---|---|"
+          echo "| Target | \`$SCAN_TARGET\` |"
+          echo "| Severity filter | \`$SEVERITY\` |"
+          echo "| Findings | **${VULN_COUNT:-0}** |"
+          echo "| Fail on findings | $FAIL_ON |"
+          echo "| Result | ${ICON} ${RESULT:-n/a} |"
+          echo ""
+          if [[ -f /tmp/trivy-output.txt ]]; then
+            echo "<details><summary>Full scan output</summary>"
+            echo ""
+            echo '```'
+            cat /tmp/trivy-output.txt
+            echo '```'
+            echo "</details>"
+          fi
+        } >> "$GITHUB_STEP_SUMMARY"
+
+branding:
+  icon: 'shield'
+  color: 'red'

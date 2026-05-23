@@ -1,0 +1,291 @@
+name: 'Release Tag'
+description: 'Compute the next semantic version, create a git tag, and open a GitHub release. Demonstrates $GITHUB_OUTPUT chaining across steps.'
+author: 'Platform Team'
+
+inputs:
+  github_token:
+    description: |
+      GitHub token with contents:write and pull-requests:read.
+      Pass as: github_token: ${{ secrets.GITHUB_TOKEN }}
+    required: true
+  version_type:
+    description: 'Semver bump type, or auto to derive from conventional commit messages.'
+    required: false
+    default: 'auto'
+    type: choice
+    options: [major, minor, patch, auto]
+  release_branch:
+    description: 'Branch that is allowed to create releases.'
+    required: false
+    default: 'main'
+  draft:
+    description: 'Create the release as a draft (not publicly visible until published).'
+    required: false
+    default: 'false'
+    type: boolean
+  prerelease:
+    description: 'Mark the release as a pre-release.'
+    required: false
+    default: 'false'
+    type: boolean
+  tag_prefix:
+    description: 'Prefix added to the version number when creating the tag (e.g. v).'
+    required: false
+    default: 'v'
+  changelog_sections:
+    description: 'Comma-separated commit types to include in the changelog (conventional commits).'
+    required: false
+    default: 'feat,fix,perf,refactor,docs'
+
+outputs:
+  version:
+    description: 'The computed next version (e.g. 1.4.0).'
+    value: ${{ steps.bump.outputs.version }}
+  tag:
+    description: 'The full tag string (e.g. v1.4.0).'
+    value: ${{ steps.bump.outputs.tag }}
+  release_url:
+    description: 'URL of the created GitHub release.'
+    value: ${{ steps.create_release.outputs.release_url }}
+  is_new_release:
+    description: 'true if a new release was created, false if skipped (no releasable commits).'
+    value: ${{ steps.bump.outputs.is_new_release }}
+
+runs:
+  using: 'composite'
+  steps:
+    # ── 1. Validate inputs ────────────────────────────────────────────────────
+    - name: Validate inputs
+      shell: bash
+      env:
+        GITHUB_TOKEN_INPUT: ${{ inputs.github_token }}
+        RELEASE_BRANCH: ${{ inputs.release_branch }}
+        CURRENT_BRANCH: ${{ github.ref_name }}
+      run: |
+        echo "::group::Input validation"
+        ERRORS=()
+
+        [[ -z "$GITHUB_TOKEN_INPUT" ]] && \
+          ERRORS+=("github_token is required — pass \${{ secrets.GITHUB_TOKEN }}")
+
+        if [[ "$CURRENT_BRANCH" != "$RELEASE_BRANCH" ]]; then
+          echo "::warning::Current branch ($CURRENT_BRANCH) is not the release branch ($RELEASE_BRANCH) — skipping release"
+          echo "SKIP_RELEASE=true" >> "$GITHUB_ENV"
+        fi
+
+        if [[ ${#ERRORS[@]} -gt 0 ]]; then
+          for err in "${ERRORS[@]}"; do echo "::error::$err"; done
+          exit 1
+        fi
+        echo "::endgroup::"
+
+    # ── 2. Mask token ─────────────────────────────────────────────────────────
+    - name: Mask github_token
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.github_token }}
+      run: echo "::add-mask::$TOKEN"
+
+    # ── 3. Fetch full git history ─────────────────────────────────────────────
+    - name: Fetch all tags
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+      run: |
+        echo "::group::Fetch tags"
+        git fetch --tags --unshallow 2>/dev/null || git fetch --tags
+        echo "::endgroup::"
+
+    # ── 4. Compute next version ($GITHUB_OUTPUT chaining) ────────────────────
+    - name: Compute next version
+      id: bump
+      shell: bash
+      env:
+        VERSION_TYPE: ${{ inputs.version_type }}
+        TAG_PREFIX: ${{ inputs.tag_prefix }}
+        CHANGELOG_SECTIONS: ${{ inputs.changelog_sections }}
+      run: |
+        echo "::group::Compute next version"
+
+        if [[ "${SKIP_RELEASE:-false}" == "true" ]]; then
+          echo "version=" >> "$GITHUB_OUTPUT"
+          echo "tag=" >> "$GITHUB_OUTPUT"
+          echo "is_new_release=false" >> "$GITHUB_OUTPUT"
+          echo "::endgroup::"
+          exit 0
+        fi
+
+        # Get the latest semver tag
+        LATEST=$(git tag -l "${TAG_PREFIX}[0-9]*.[0-9]*.[0-9]*" \
+          | sort -V | tail -1)
+        LATEST="${LATEST:-${TAG_PREFIX}0.0.0}"
+        CURRENT="${LATEST#"$TAG_PREFIX"}"   # strip prefix
+        echo "Latest tag: $LATEST (version: $CURRENT)"
+
+        IFS='.' read -ra PARTS <<< "$CURRENT"
+        MAJOR="${PARTS[0]:-0}"
+        MINOR="${PARTS[1]:-0}"
+        PATCH="${PARTS[2]:-0}"
+
+        # Auto-detect bump type from conventional commits since last tag
+        BUMP="$VERSION_TYPE"
+        if [[ "$VERSION_TYPE" == "auto" ]]; then
+          COMMITS=$(git log "${LATEST}..HEAD" --pretty=format:"%s" 2>/dev/null || \
+                    git log --pretty=format:"%s")
+
+          if echo "$COMMITS" | grep -qiE '^(feat|fix|perf|refactor)!:|BREAKING CHANGE'; then
+            BUMP="major"
+          elif echo "$COMMITS" | grep -qiE '^feat(\(.+\))?:'; then
+            BUMP="minor"
+          elif echo "$COMMITS" | grep -qiE "^($(echo $CHANGELOG_SECTIONS | tr ',' '|'))(\(.+\))?:"; then
+            BUMP="patch"
+          else
+            echo "::notice::No releasable commits since $LATEST — skipping"
+            echo "is_new_release=false" >> "$GITHUB_OUTPUT"
+            echo "version=$CURRENT" >> "$GITHUB_OUTPUT"
+            echo "tag=$LATEST" >> "$GITHUB_OUTPUT"
+            echo "::endgroup::"
+            exit 0
+          fi
+        fi
+
+        # Apply bump
+        case "$BUMP" in
+          major) MAJOR=$((MAJOR+1)); MINOR=0; PATCH=0 ;;
+          minor) MINOR=$((MINOR+1)); PATCH=0 ;;
+          patch) PATCH=$((PATCH+1)) ;;
+        esac
+
+        NEXT_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+        NEXT_TAG="${TAG_PREFIX}${NEXT_VERSION}"
+
+        echo "version=$NEXT_VERSION" >> "$GITHUB_OUTPUT"
+        echo "tag=$NEXT_TAG" >> "$GITHUB_OUTPUT"
+        echo "is_new_release=true" >> "$GITHUB_OUTPUT"
+        echo "bump_type=$BUMP" >> "$GITHUB_OUTPUT"
+
+        echo "::notice::$LATEST → $NEXT_TAG (bump: $BUMP)"
+        echo "::endgroup::"
+
+    # ── 5. Create git tag — uses output from step 4 ───────────────────────────
+    - name: Create git tag
+      id: git_tag
+      if: steps.bump.outputs.is_new_release == 'true'
+      shell: bash
+      env:
+        NEXT_TAG: ${{ steps.bump.outputs.tag }}
+        GH_TOKEN: ${{ inputs.github_token }}
+      run: |
+        echo "::group::Create tag $NEXT_TAG"
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git tag -a "$NEXT_TAG" -m "Release $NEXT_TAG"
+        git push origin "$NEXT_TAG"
+        echo "::notice::Tag $NEXT_TAG pushed"
+        echo "::endgroup::"
+
+    # ── 6. Build changelog — uses output from step 4 ──────────────────────────
+    - name: Build changelog
+      id: changelog
+      if: steps.bump.outputs.is_new_release == 'true'
+      shell: bash
+      env:
+        PREVIOUS_TAG: ${{ steps.bump.outputs.tag }}
+        SECTIONS: ${{ inputs.changelog_sections }}
+      run: |
+        echo "::group::Build changelog"
+
+        LATEST_PREV=$(git tag -l "v[0-9]*.[0-9]*.[0-9]*" \
+          | sort -V | tail -2 | head -1 || echo "")
+
+        NOTES=""
+        IFS=',' read -ra TYPES <<< "$SECTIONS"
+        for TYPE in "${TYPES[@]}"; do
+          COMMITS=$(git log "${LATEST_PREV}..HEAD" \
+            --pretty=format:"- %s" \
+            --grep="^${TYPE}[:(]" 2>/dev/null || true)
+          if [[ -n "$COMMITS" ]]; then
+            SECTION_TITLE=$(case "$TYPE" in
+              feat) echo "Features" ;;
+              fix) echo "Bug fixes" ;;
+              perf) echo "Performance" ;;
+              docs) echo "Documentation" ;;
+              *) echo "$TYPE" ;;
+            esac)
+            NOTES="${NOTES}### ${SECTION_TITLE}\n${COMMITS}\n\n"
+          fi
+        done
+
+        {
+          echo 'notes<<NOTES_EOF'
+          printf '%b' "${NOTES:-No notable changes.}"
+          echo 'NOTES_EOF'
+        } >> "$GITHUB_OUTPUT"
+
+        echo "::endgroup::"
+
+    # ── 7. Create GitHub release — uses outputs from steps 4, 5, 6 ───────────
+    - name: Create GitHub release
+      id: create_release
+      if: steps.bump.outputs.is_new_release == 'true'
+      uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        IS_DRAFT: ${{ inputs.draft }}
+        IS_PRERELEASE: ${{ inputs.prerelease }}
+      with:
+        github-token: ${{ inputs.github_token }}
+        result-encoding: string
+        script: |
+          const tag = '${{ steps.bump.outputs.tag }}';
+          const version = '${{ steps.bump.outputs.version }}';
+          const notes = `${{ steps.changelog.outputs.notes }}`;
+          const isDraft = process.env.IS_DRAFT === 'true';
+          const isPrerelease = process.env.IS_PRERELEASE === 'true';
+
+          const release = await github.rest.repos.createRelease({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            tag_name: tag,
+            name: `Release ${tag}`,
+            body: notes,
+            draft: isDraft,
+            prerelease: isPrerelease,
+          });
+
+          core.setOutput('release_url', release.data.html_url);
+          return release.data.html_url;
+
+    # ── 8. Job summary ────────────────────────────────────────────────────────
+    - name: Write job summary
+      if: always()
+      shell: bash
+      env:
+        VERSION: ${{ steps.bump.outputs.version }}
+        TAG: ${{ steps.bump.outputs.tag }}
+        IS_NEW: ${{ steps.bump.outputs.is_new_release }}
+        RELEASE_URL: ${{ steps.create_release.outputs.release_url }}
+        DRAFT: ${{ inputs.draft }}
+        PRERELEASE: ${{ inputs.prerelease }}
+      run: |
+        {
+          if [[ "$IS_NEW" == "true" ]]; then
+            echo "## ✅ Release $TAG"
+            echo ""
+            echo "| Field | Value |"
+            echo "|---|---|"
+            echo "| Version | \`$VERSION\` |"
+            echo "| Tag | \`$TAG\` |"
+            echo "| Draft | $DRAFT |"
+            echo "| Pre-release | $PRERELEASE |"
+            [[ -n "$RELEASE_URL" ]] && echo "| Release | [$RELEASE_URL]($RELEASE_URL) |"
+          else
+            echo "## ⏭️ Release skipped"
+            echo ""
+            echo "No releasable commits found since the last tag."
+          fi
+        } >> "$GITHUB_STEP_SUMMARY"
+
+branding:
+  icon: 'tag'
+  color: 'green'

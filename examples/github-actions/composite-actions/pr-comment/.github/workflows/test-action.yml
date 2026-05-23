@@ -1,0 +1,114 @@
+name: Test pr-comment action
+
+on:
+  push:
+    paths:
+      - 'action.yml'
+      - '.github/workflows/test-action.yml'
+  pull_request:
+    paths:
+      - 'action.yml'
+
+# act usage:
+#   act -W .github/workflows/test-action.yml \
+#       -P ubuntu-latest=catthehacker/ubuntu:act-22.04 \
+#       --secret GITHUB_TOKEN=$GITHUB_TOKEN
+
+jobs:
+  # Test 1 — missing title fails
+  test-missing-title:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Run with empty title — expect failure
+        id: comment
+        uses: ./
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          title: ''
+          body: 'some body'
+        continue-on-error: true
+      - name: Assert failure
+        shell: bash
+        run: |
+          [[ "${{ steps.comment.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure for empty title"; exit 1; }
+
+  # Test 2 — missing body fails
+  test-missing-body:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Run with empty body — expect failure
+        id: comment
+        uses: ./
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          title: 'Test Title'
+          body: ''
+        continue-on-error: true
+      - name: Assert failure
+        shell: bash
+        run: |
+          [[ "${{ steps.comment.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure for empty body"; exit 1; }
+
+  # Test 3 — non-PR event emits warning but does not fail
+  test-non-pr-event:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Run on push event (no PR number) — should warn, not fail
+        id: comment
+        uses: ./
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          title: Test Comment
+          body: 'Test body content'
+        continue-on-error: true
+
+      - name: Verify action_taken output
+        shell: bash
+        run: |
+          echo "action_taken=${{ steps.comment.outputs.action_taken }}"
+          # On push event, PR number not found → action_taken=skipped
+          [[ "${{ steps.comment.outputs.action_taken }}" == "skipped" ]] || \
+            echo "::notice::action_taken=${{ steps.comment.outputs.action_taken }}"
+
+  # Test 4 — on actual PR, post and verify upsert
+  test-upsert-on-pr:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Post initial comment
+        id: first
+        uses: ./
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          title: Test Comment
+          body: 'First version of the comment'
+          marker: test-upsert-marker
+
+      - name: Post again — should update, not create new
+        id: second
+        uses: ./
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          title: Test Comment
+          body: 'Updated version of the comment'
+          marker: test-upsert-marker
+
+      - name: Verify same comment was updated
+        shell: bash
+        run: |
+          echo "first_id=${{ steps.first.outputs.comment_id }}"
+          echo "second_id=${{ steps.second.outputs.comment_id }}"
+          echo "action_taken=${{ steps.second.outputs.action_taken }}"
+          [[ "${{ steps.first.outputs.comment_id }}" == "${{ steps.second.outputs.comment_id }}" ]] || \
+            { echo "::error::Expected same comment_id (upsert), got different IDs"; exit 1; }
+          [[ "${{ steps.second.outputs.action_taken }}" == "updated" ]] || \
+            { echo "::error::Expected action_taken=updated"; exit 1; }

@@ -1,0 +1,215 @@
+name: 'PR Comment'
+description: 'Post or update a structured comment on a pull request using github-script. Supports idempotent upsert via a marker string — running twice updates the same comment rather than creating a duplicate.'
+author: 'Platform Team'
+
+inputs:
+  github_token:
+    description: |
+      GitHub token with pull-requests:write permission.
+      Pass as: github_token: ${{ secrets.GITHUB_TOKEN }}
+    required: true
+  title:
+    description: 'Comment heading (Markdown supported, e.g. ## Terraform Plan).'
+    required: true
+  body:
+    description: 'Comment body (Markdown supported). Multi-line values supported via YAML block scalars.'
+    required: true
+  marker:
+    description: 'Unique HTML comment used to find and update an existing comment. Defaults to the action name slug. Must be unique per workflow if multiple instances run on the same PR.'
+    required: false
+    default: 'pr-comment-action'
+  update_existing:
+    description: 'Update an existing comment with the same marker instead of creating a new one.'
+    required: false
+    default: 'true'
+    type: boolean
+  delete_on_close:
+    description: 'Remove the comment when the PR is closed or merged. Requires the workflow to trigger on pull_request closed event.'
+    required: false
+    default: 'false'
+    type: boolean
+  icon:
+    description: 'Emoji or icon prepended to the title (e.g. ✅ ❌ ⚠️ 📋).'
+    required: false
+    default: ''
+  collapsible:
+    description: 'Wrap the body in a <details> block so it is collapsed by default.'
+    required: false
+    default: 'false'
+    type: boolean
+  collapsible_summary:
+    description: 'Summary text shown for the collapsed details block.'
+    required: false
+    default: 'Show details'
+
+outputs:
+  comment_id:
+    description: 'ID of the created or updated comment.'
+    value: ${{ steps.post.outputs.comment_id }}
+  comment_url:
+    description: 'URL of the created or updated comment.'
+    value: ${{ steps.post.outputs.comment_url }}
+  action_taken:
+    description: 'created or updated — indicates what happened to the comment.'
+    value: ${{ steps.post.outputs.action_taken }}
+
+runs:
+  using: 'composite'
+  steps:
+    # ── 1. Validate inputs ────────────────────────────────────────────────────
+    - name: Validate inputs
+      shell: bash
+      env:
+        GITHUB_TOKEN_INPUT: ${{ inputs.github_token }}
+        TITLE: ${{ inputs.title }}
+        BODY: ${{ inputs.body }}
+        EVENT: ${{ github.event_name }}
+      run: |
+        echo "::group::Input validation"
+        ERRORS=()
+
+        [[ -z "$GITHUB_TOKEN_INPUT" ]] && \
+          ERRORS+=("github_token is required — pass \${{ secrets.GITHUB_TOKEN }}")
+        [[ -z "$TITLE" ]] && ERRORS+=("title is required")
+        [[ -z "$BODY" ]] && ERRORS+=("body is required")
+
+        if [[ "$EVENT" != "pull_request" && "$EVENT" != "pull_request_target" ]]; then
+          echo "::warning::This action is designed for pull_request events (current: $EVENT). It may not find a PR to comment on."
+        fi
+
+        if [[ ${#ERRORS[@]} -gt 0 ]]; then
+          for err in "${ERRORS[@]}"; do echo "::error::$err"; done
+          exit 1
+        fi
+        echo "::endgroup::"
+
+    # ── 2. Mask token ─────────────────────────────────────────────────────────
+    - name: Mask github_token
+      shell: bash
+      env:
+        TOKEN: ${{ inputs.github_token }}
+      run: echo "::add-mask::$TOKEN"
+
+    # ── 3. Post or update comment ─────────────────────────────────────────────
+    - name: Post or update PR comment
+      id: post
+      uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+      env:
+        GITHUB_TOKEN: ${{ inputs.github_token }}
+        INPUT_TITLE: ${{ inputs.title }}
+        INPUT_BODY: ${{ inputs.body }}
+        INPUT_MARKER: ${{ inputs.marker }}
+        INPUT_UPDATE: ${{ inputs.update_existing }}
+        INPUT_DELETE: ${{ inputs.delete_on_close }}
+        INPUT_ICON: ${{ inputs.icon }}
+        INPUT_COLLAPSIBLE: ${{ inputs.collapsible }}
+        INPUT_SUMMARY: ${{ inputs.collapsible_summary }}
+      with:
+        github-token: ${{ inputs.github_token }}
+        script: |
+          const marker = `<!-- ${process.env.INPUT_MARKER} -->`;
+          const icon = process.env.INPUT_ICON ? `${process.env.INPUT_ICON} ` : '';
+          const title = `${icon}${process.env.INPUT_TITLE}`;
+          const rawBody = process.env.INPUT_BODY;
+          const isCollapsible = process.env.INPUT_COLLAPSIBLE === 'true';
+          const summary = process.env.INPUT_SUMMARY;
+          const shouldUpdate = process.env.INPUT_UPDATE === 'true';
+          const shouldDelete = process.env.INPUT_DELETE === 'true';
+
+          // Build body — optional collapsible wrapping
+          const formattedBody = isCollapsible
+            ? `<details><summary>${summary}</summary>\n\n${rawBody}\n\n</details>`
+            : rawBody;
+
+          const fullBody = [
+            marker,   // hidden marker for idempotent upsert
+            `## ${title}`,
+            '',
+            formattedBody,
+            '',
+            `_Posted by \`${{ github.workflow }}\` · [View run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})_`,
+          ].join('\n');
+
+          const prNumber = context.issue?.number ?? context.payload?.pull_request?.number;
+          if (!prNumber) {
+            core.warning('Could not determine PR number — skipping comment');
+            core.setOutput('comment_id', '');
+            core.setOutput('comment_url', '');
+            core.setOutput('action_taken', 'skipped');
+            return;
+          }
+
+          // Handle delete-on-close
+          if (shouldDelete && context.payload?.action === 'closed') {
+            const existing = await findComment(prNumber, marker);
+            if (existing) {
+              await github.rest.issues.deleteComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+              });
+              core.notice(`Deleted comment ${existing.id} (PR closed)`);
+            }
+            core.setOutput('action_taken', 'deleted');
+            return;
+          }
+
+          // Find existing comment with the marker
+          async function findComment(prNum, marker) {
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNum,
+              per_page: 100,
+            });
+            return comments.data.find(c => c.body.startsWith(marker));
+          }
+
+          const existing = shouldUpdate ? await findComment(prNumber, marker) : null;
+
+          let result;
+          if (existing) {
+            result = await github.rest.issues.updateComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: existing.id,
+              body: fullBody,
+            });
+            core.setOutput('action_taken', 'updated');
+            core.notice(`Updated comment ${existing.id}`);
+          } else {
+            result = await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: fullBody,
+            });
+            core.setOutput('action_taken', 'created');
+            core.notice(`Created comment ${result.data.id}`);
+          }
+
+          core.setOutput('comment_id', String(result.data.id));
+          core.setOutput('comment_url', result.data.html_url);
+
+    # ── 4. Job summary ────────────────────────────────────────────────────────
+    - name: Write job summary
+      if: always()
+      shell: bash
+      env:
+        ACTION_TAKEN: ${{ steps.post.outputs.action_taken }}
+        COMMENT_URL: ${{ steps.post.outputs.comment_url }}
+        MARKER: ${{ inputs.marker }}
+      run: |
+        {
+          echo "## PR Comment"
+          echo ""
+          echo "| Field | Value |"
+          echo "|---|---|"
+          echo "| Action | \`${ACTION_TAKEN:-n/a}\` |"
+          echo "| Marker | \`${MARKER}\` |"
+          [[ -n "$COMMENT_URL" ]] && echo "| Comment | [$COMMENT_URL]($COMMENT_URL) |"
+        } >> "$GITHUB_STEP_SUMMARY"
+
+branding:
+  icon: 'message-square'
+  color: 'gray-dark'

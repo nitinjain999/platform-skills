@@ -1,0 +1,237 @@
+name: 'Kubernetes Deploy'
+description: 'Apply a Kubernetes manifest and wait for rollout to complete. Kubeconfig is written to a temp file and cleaned up after the job.'
+author: 'Platform Team'
+
+inputs:
+  kubeconfig:
+    description: |
+      Base64-encoded kubeconfig content.
+      SECRET — pass as: kubeconfig: ${{ secrets.KUBECONFIG }}
+    required: true
+  namespace:
+    description: 'Kubernetes namespace to deploy into.'
+    required: true
+  manifest_path:
+    description: 'Path to the Kubernetes manifest file or directory.'
+    required: true
+  deployment_name:
+    description: 'Deployment name to watch with kubectl rollout status. Leave empty to skip rollout wait.'
+    required: false
+    default: ''
+  timeout:
+    description: 'Rollout wait timeout (e.g. 5m, 300s).'
+    required: false
+    default: '5m'
+  kubectl_version:
+    description: 'kubectl version to install (e.g. v1.30.0).'
+    required: false
+    default: 'v1.30.0'
+  dry_run:
+    description: 'Run kubectl apply with --dry-run=server to validate without applying.'
+    required: false
+    default: 'false'
+    type: boolean
+
+outputs:
+  rollout_status:
+    description: 'Rollout outcome: success, skipped, or failed.'
+    value: ${{ steps.rollout.outputs.status }}
+  applied_resources:
+    description: 'Newline-separated list of resources created or updated by kubectl apply.'
+    value: ${{ steps.apply.outputs.resources }}
+
+runs:
+  using: 'composite'
+  steps:
+    # ── 1. Validate inputs ────────────────────────────────────────────────────
+    - name: Validate inputs
+      shell: bash
+      env:
+        KUBECONFIG_B64: ${{ inputs.kubeconfig }}
+        NAMESPACE: ${{ inputs.namespace }}
+        MANIFEST_PATH: ${{ inputs.manifest_path }}
+        TIMEOUT: ${{ inputs.timeout }}
+      run: |
+        echo "::group::Input validation"
+        ERRORS=()
+
+        [[ -z "$KUBECONFIG_B64" ]] && ERRORS+=("kubeconfig is required — pass \${{ secrets.KUBECONFIG }}")
+        [[ -z "$NAMESPACE" ]] && ERRORS+=("namespace is required")
+        [[ -z "$MANIFEST_PATH" ]] && ERRORS+=("manifest_path is required")
+
+        if [[ -n "$KUBECONFIG_B64" ]]; then
+          echo "$KUBECONFIG_B64" | base64 -d > /dev/null 2>&1 || \
+            ERRORS+=("kubeconfig is not valid base64")
+        fi
+
+        if ! echo "$TIMEOUT" | grep -qE '^[0-9]+(s|m|h)$'; then
+          ERRORS+=("timeout must be a duration like 5m, 300s, or 1h (got: $TIMEOUT)")
+        fi
+
+        if [[ ${#ERRORS[@]} -gt 0 ]]; then
+          for err in "${ERRORS[@]}"; do echo "::error::$err"; done
+          exit 1
+        fi
+        echo "::endgroup::"
+
+    # ── 2. Install kubectl ────────────────────────────────────────────────────
+    - name: Install kubectl
+      shell: bash
+      timeout-minutes: 3
+      env:
+        KUBECTL_VERSION: ${{ inputs.kubectl_version }}
+      run: |
+        echo "::group::Install kubectl $KUBECTL_VERSION"
+        if command -v kubectl > /dev/null 2>&1; then
+          echo "kubectl already installed: $(kubectl version --client --short 2>/dev/null || kubectl version --client)"
+        else
+          curl -sLO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/kubectl
+          echo "Installed kubectl $KUBECTL_VERSION"
+        fi
+        echo "::endgroup::"
+
+    # ── 3. Write kubeconfig to temp file — masked immediately ─────────────────
+    - name: Configure kubeconfig
+      id: kubeconfig
+      shell: bash
+      env:
+        KUBECONFIG_B64: ${{ inputs.kubeconfig }}
+      run: |
+        echo "::group::Configure kubeconfig"
+
+        # Mask raw kubeconfig content — it contains credentials
+        KUBECONFIG_CONTENT=$(echo "$KUBECONFIG_B64" | base64 -d)
+        echo "::add-mask::$KUBECONFIG_CONTENT"
+
+        # Write to a temp file with restricted permissions
+        KUBECONFIG_PATH=$(mktemp /tmp/kubeconfig-XXXXXX)
+        chmod 600 "$KUBECONFIG_PATH"
+        echo "$KUBECONFIG_CONTENT" > "$KUBECONFIG_PATH"
+
+        # Export path for subsequent steps
+        echo "KUBECONFIG=$KUBECONFIG_PATH" >> "$GITHUB_ENV"
+        echo "path=$KUBECONFIG_PATH" >> "$GITHUB_OUTPUT"
+
+        # Verify cluster connectivity (masked output)
+        kubectl cluster-info 2>&1 | grep -v "token\|password\|certificate" || true
+        echo "::endgroup::"
+
+    # ── 4. Apply manifest ─────────────────────────────────────────────────────
+    - name: Apply manifest
+      id: apply
+      shell: bash
+      timeout-minutes: 10
+      env:
+        NAMESPACE: ${{ inputs.namespace }}
+        MANIFEST_PATH: ${{ inputs.manifest_path }}
+        DRY_RUN: ${{ inputs.dry_run }}
+      run: |
+        echo "::group::kubectl apply"
+
+        DRY_RUN_FLAG=""
+        [[ "$DRY_RUN" == "true" ]] && DRY_RUN_FLAG="--dry-run=server"
+
+        APPLY_OUTPUT=$(kubectl apply \
+          -f "$MANIFEST_PATH" \
+          -n "$NAMESPACE" \
+          $DRY_RUN_FLAG \
+          --output=json 2>&1)
+
+        # Extract resource list
+        RESOURCES=$(echo "$APPLY_OUTPUT" | \
+          jq -r '.items[]? | "\(.kind)/\(.metadata.name)"' 2>/dev/null || \
+          echo "$APPLY_OUTPUT" | grep -oE '[a-z]+/[a-z0-9-]+' | head -20)
+
+        echo "resources<<EOF" >> "$GITHUB_OUTPUT"
+        echo "$RESOURCES" >> "$GITHUB_OUTPUT"
+        echo "EOF" >> "$GITHUB_OUTPUT"
+
+        if [[ "$DRY_RUN" == "true" ]]; then
+          echo "::notice::Dry run complete — no changes applied"
+        else
+          echo "$RESOURCES" | while read -r resource; do
+            echo "::notice::Applied $resource"
+          done
+        fi
+        echo "::endgroup::"
+
+    # ── 5. Wait for rollout ───────────────────────────────────────────────────
+    - name: Wait for rollout
+      id: rollout
+      shell: bash
+      timeout-minutes: 15
+      env:
+        DEPLOYMENT: ${{ inputs.deployment_name }}
+        NAMESPACE: ${{ inputs.namespace }}
+        TIMEOUT: ${{ inputs.timeout }}
+        DRY_RUN: ${{ inputs.dry_run }}
+      run: |
+        echo "::group::Rollout status"
+
+        if [[ -z "$DEPLOYMENT" || "$DRY_RUN" == "true" ]]; then
+          echo "::notice::Rollout wait skipped"
+          echo "status=skipped" >> "$GITHUB_OUTPUT"
+        else
+          if kubectl rollout status deployment/"$DEPLOYMENT" \
+              -n "$NAMESPACE" \
+              --timeout="$TIMEOUT"; then
+            echo "status=success" >> "$GITHUB_OUTPUT"
+            echo "::notice::Deployment $DEPLOYMENT rolled out successfully"
+          else
+            echo "status=failed" >> "$GITHUB_OUTPUT"
+            echo "::error::Deployment $DEPLOYMENT rollout failed — check pod events below"
+            kubectl describe pods -n "$NAMESPACE" -l app="$DEPLOYMENT" 2>/dev/null || true
+            kubectl events -n "$NAMESPACE" --for=deployment/"$DEPLOYMENT" 2>/dev/null || true
+            exit 1
+          fi
+        fi
+        echo "::endgroup::"
+
+    # ── 6. Job summary ────────────────────────────────────────────────────────
+    - name: Write job summary
+      if: always()
+      shell: bash
+      env:
+        NAMESPACE: ${{ inputs.namespace }}
+        MANIFEST: ${{ inputs.manifest_path }}
+        DEPLOYMENT: ${{ inputs.deployment_name }}
+        ROLLOUT: ${{ steps.rollout.outputs.status }}
+        DRY_RUN: ${{ inputs.dry_run }}
+        RESOURCES: ${{ steps.apply.outputs.resources }}
+      run: |
+        {
+          echo "## Kubernetes Deploy"
+          echo ""
+          echo "| Field | Value |"
+          echo "|---|---|"
+          echo "| Namespace | \`$NAMESPACE\` |"
+          echo "| Manifest | \`$MANIFEST\` |"
+          echo "| Dry run | ${DRY_RUN} |"
+          echo "| Deployment | \`${DEPLOYMENT:-n/a}\` |"
+          echo "| Rollout | ${ROLLOUT:-n/a} |"
+          echo ""
+          if [[ -n "$RESOURCES" ]]; then
+            echo "### Resources applied"
+            echo '```'
+            echo "$RESOURCES"
+            echo '```'
+          fi
+        } >> "$GITHUB_STEP_SUMMARY"
+
+    # ── 7. Cleanup kubeconfig — always runs ───────────────────────────────────
+    - name: Cleanup kubeconfig
+      if: always()
+      shell: bash
+      env:
+        KUBECONFIG_PATH: ${{ steps.kubeconfig.outputs.path }}
+      run: |
+        if [[ -f "$KUBECONFIG_PATH" ]]; then
+          rm -f "$KUBECONFIG_PATH"
+          echo "::notice::Kubeconfig temp file removed"
+        fi
+
+branding:
+  icon: 'layers'
+  color: 'blue'
