@@ -82,15 +82,29 @@ pending → resolved → promoted
 
 ## The Five Modes
 
-### `init` — Bootstrap the workspace
+### `init global` / `init local` — Bootstrap the workspace
+
+Two explicit subcommands — no interactive prompt:
+
+```text
+/platform-skills:self-improve init global
+```
+
+Creates `~/.claude/.learnings/` and `~/.claude/memory/`. Learnings persist across **all projects** on your machine. Recommended for individuals. Offers to wire all three hooks in `~/.claude/settings.json` and create `~/.claude/CLAUDE.md` from the template.
+
+```text
+/platform-skills:self-improve init local
+```
+
+Creates `.learnings/` and `memory/` in the **current project directory**. Learnings live in the repo and can be committed and shared with the team. Asks whether to gitignore or commit. Offers to add the PostToolUse hook to `.claude/settings.json`.
 
 ```text
 /platform-skills:self-improve init
 ```
 
-Creates the `.learnings/` and `memory/` directories with seed templates. Asks whether to gitignore them and whether to add the PostToolUse hook to `.claude/settings.json`.
+No argument — asks you to choose global or local, then proceeds as above.
 
-Run once per project.
+Both subcommands are idempotent: if the target directory already exists, they report the current state and stop without overwriting.
 
 ---
 
@@ -282,7 +296,29 @@ Next session start
 
 ## Automatic Error Capture via Hook
 
-With the PostToolUse hook configured in `.claude/settings.json`, tool failures are automatically appended to `.learnings/.pending-errors.log`:
+With the PostToolUse hook configured, tool failures are automatically appended to `$LEARNINGS_BASE/.learnings/.pending-errors.log`.
+
+**Global setup** (`~/.claude/settings.json` — applies to all projects):
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ \"$CLAUDE_TOOL_EXIT_CODE\" -ne 0 ]; then echo \"$(date -u +%Y-%m-%dT%H:%M:%SZ) TOOL_FAILURE: $CLAUDE_TOOL_NAME\" >> ~/.claude/.learnings/.pending-errors.log; fi"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Project-local setup** (`.claude/settings.json` in the project root):
 
 ```json
 {
@@ -302,9 +338,11 @@ With the PostToolUse hook configured in `.claude/settings.json`, tool failures a
 }
 ```
 
+Global setup must use the absolute `~/.claude/` path. Relative paths resolve from the project root and will write to the wrong place when global setup is active.
+
 On `/platform-skills:self-improve review`, the agent reads `.pending-errors.log`, converts each line into a proper `ERR` entry in `ERRORS.md`, and clears the log.
 
-Add to `.gitignore`:
+For project-local setup, add to `.gitignore`:
 ```
 .learnings/.pending-errors.log
 ```
@@ -313,10 +351,10 @@ Add to `.gitignore`:
 
 ## What This Skill Cannot Do
 
-- **It cannot learn across projects automatically.** `.learnings/` is per-project. To share lessons across projects, promote them to a shared `references/` file or a global `CLAUDE.md`.
 - **It does not replace human post-mortems.** It captures agent-level errors. System-level incidents and team retrospectives still belong in your incident management process.
 - **It cannot verify that promoted rules are being followed.** Once a rule is in `CLAUDE.md`, it is up to you to review it periodically and retire it if it becomes stale.
 - **The working buffer is not a database.** Keep it lean — summarise completed WAL entries into a single `## Completed` block and delete individual entries once the task is done.
+- **Global learnings are not shared automatically.** The global workspace (`~/.claude/`) is local to your machine. To share lessons with the team, use project-local setup and commit `.learnings/`, or promote entries to a shared `references/` file.
 
 ---
 

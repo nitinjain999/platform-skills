@@ -5,7 +5,79 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.23.0] - 2026-05-23
+
+### Changed
+
+#### Self-Improve: explicit `init global` / `init local` subcommands
+
+- `commands/self-improve.md` — `init` mode split into three explicit forms:
+  - `init global` — scaffolds `~/.claude/` directly, no prompt; offers to wire all three hooks and create `~/.claude/CLAUDE.md`; idempotent (reports existing state and stops if already set up)
+  - `init local` — scaffolds `.learnings/` and `memory/` in `$PWD`, no prompt; asks gitignore vs commit; idempotent
+  - `init` (no argument) — asks user to choose, then delegates to `init global` or `init local`
+- `commands/self-improve.md` — `argument-hint` updated to `[init [global|local]|log [LRN|ERR|FEAT]|promote <ID>|migrate [global|local]|status|resume|review|state]`
+- `commands/self-improve.md` — Path Resolution preamble updated to short-circuit on `init global` / `init local` before auto-detection
+- `references/agent-self-improve.md` — Bootstrap section updated with explicit subcommand examples; line 26 updated from bare `init` to `init global` / `init local` examples
+- `examples/agent-self-improve/HOW_IT_WORKS.md` — init section rewritten with both subcommands, idempotency note
+
+#### Self-Improve: new subcommands — `status` and `migrate`
+
+- `commands/self-improve.md` — new `## Mode: status` — read-only health summary: counts across all three log files, working-buffer age, sessions since last review, any WAL entries still PENDING, pending error count, and a prioritised action-item list
+- `commands/self-improve.md` — new `## Mode: migrate` — moves workspace between global and local scope; chooses merge or replace for conflicting entries; writes a WAL entry before moving any files; verifies write to new path and confirms deletion of old path; idempotent if already at target scope
+
+#### Self-Improve: `promote` supports global target
+
+- `commands/self-improve.md` — `promote` mode now includes `~/.claude/CLAUDE.md` as a valid target for rules that should apply across all projects (e.g. "never do X on any repo"); scope determination step added before drafting the promoted line
+- `references/agent-self-improve.md` — Promotion targets table updated with `~/.claude/CLAUDE.md` row
+
+#### Self-Improve: `review` flags stale resolved entries
+
+- `commands/self-improve.md` — `review` mode now reports entries with `Status: resolved` that are older than 30 days and have no `Action` containing "promoted", surfacing them as promotion candidates rather than silently aging out
+
+#### Self-Improve: `resume` warns on stale working buffer
+
+- `commands/self-improve.md` — `resume` mode now reads the `Last updated:` timestamp from `memory/working-buffer.md` before proceeding; warns if buffer is 3+ days old (task may be abandoned); blocks with an explicit confirmation prompt if 7+ days old
+
+#### Self-Improve: SKILL.md description updates
+
+- `SKILL.md` — self-improve reference line updated to mention global/project-local workspace, `init global`/`init local`, `status`/`migrate` subcommands
+- `SKILL.md` — `/platform-skills:self-improve` slash command description updated to reflect full capability set
+- `skills/platform-skills/SKILL.md` — same updates applied (kept in sync with root `SKILL.md`)
+
+#### Self-Improve: global path resolution for cross-project learnings
+
+- `commands/self-improve.md` — added `## Path Resolution` preamble that all modes evaluate before acting: detects global setup (`~/.claude/.learnings/` exists), project setup (`.learnings/` in `$PWD`), or auto-creates global on first use; all path references updated to use `LEARNINGS_BASE`
+- `commands/self-improve.md` — `init` mode now asks **global vs project-local** before creating any directories; step 4 skips `.gitignore` check for global setup; step 5 targets the correct `settings.json` (`~/.claude/` for global, `.claude/` for project) and enforces absolute paths in the PostToolUse hook command
+- `commands/self-improve.md` — `log` confirm message now shows resolved `$LEARNINGS_BASE` path instead of hardcoded `.learnings/`
+- `commands/self-improve.md` — `resume`, `review`, `promote`, `state`, WAL Protocol, Working Buffer, SESSION-STATE, and Daily Notes proactive protocols updated to use `$LEARNINGS_BASE`
+- `references/agent-self-improve.md` — new **Global vs project scope** section under Directory layout: scope comparison table, auto-detection order, promotion-targets-stay-local rule, working PostToolUse hook JSON example with absolute paths
+- `examples/agent-self-improve/HOW_IT_WORKS.md` — updated `init` description to mention global vs project choice; corrected "What This Skill Cannot Do" section which previously stated learnings cannot persist across projects
+- `examples/agent-self-improve/README.md` — updated setup instructions to reflect global scope option and hook wiring steps
+- `examples/agent-self-improve/scripts/session-end.sh` — Stop hook script: drains `.pending-errors.log` into ERR entries on every session close, saves daily notes, auto-logs PENDING WAL as ERR, clears session marker, increments session counter with review reminder every 5 sessions, nudges if no LRN logged today
+- `examples/agent-self-improve/scripts/session-start-reminder.sh` — PreToolUse hook script: marker-based session detection fires once per session; prints memory-load banner with active task and pending error count; silent on all subsequent tool calls
+- `examples/agent-self-improve/global-claude.md` — template for `~/.claude/CLAUDE.md`: temporary path override table, session-start instruction, in-session logging rules (`log LRN/ERR/FEAT at moment of discovery`), `VFM_THRESHOLD=60`, Agent Rules section
+- `examples/agent-self-improve/settings.json.example` — all 3 hooks wired: Stop (`session-end.sh`), PreToolUse (`session-start-reminder.sh`), PostToolUse (inline error capture to `.pending-errors.log`)
+
+#### Self-Improve: cross-platform support (Windows and Linux distributions)
+
+- `examples/agent-self-improve/scripts/session-end.ps1` — PowerShell 5.1+ equivalent of `session-end.sh` for Windows native; same logic (daily notes, error drain, WAL check, session counter, review reminder)
+- `examples/agent-self-improve/scripts/session-start-reminder.ps1` — PowerShell equivalent of `session-start-reminder.sh` for Windows native; marker-based once-per-session banner
+- `examples/agent-self-improve/settings-windows.json.example` — all 3 hooks wired with PowerShell commands for Windows native (`%USERPROFILE%` paths, `powershell -NonInteractive -File ...`)
+- `examples/agent-self-improve/scripts/session-end.sh` — shebang changed from `#!/bin/bash` to `#!/usr/bin/env bash` for portability on Linux distros where bash is not at `/bin/bash`
+- `examples/agent-self-improve/scripts/session-start-reminder.sh` — same shebang fix
+- `examples/agent-self-improve/README.md` — new Platform support table (macOS, Linux, Alpine, WSL, Git Bash, Windows native); Windows recommendation (WSL/Git Bash is simpler); PowerShell copy/setup instructions; execution policy note
+- `commands/self-improve.md` — Path Resolution preamble updated with cross-platform `~` resolution note; `init global` step 5 updated to detect platform and point to correct scripts (`session-end.sh` vs `.ps1`, `settings.json.example` vs `settings-windows.json.example`)
+- `references/agent-self-improve.md` — new **Platform Compatibility** section: global config path table per OS, hook script selection table, per-platform `settings.json` snippets (bash and PowerShell), Alpine install note, execution policy note; old inline hook JSON examples replaced with a pointer to the new section
+
+#### Self-Improve: path resolution and hook setup fixes
+
+- `commands/self-improve.md` — path resolution steps reordered: explicit `init global`/`init local` now short-circuit (steps 1–2) before auto-detection probes (steps 3–4), matching the changelog claim and preventing an existing `.learnings/` repo from hijacking an explicit `init global` call
+- `references/agent-self-improve.md` — copy command updated to copy both `session-end.sh` and `session-start-reminder.sh`; added `mkdir -p ~/.claude/scripts` to prevent hook wiring failure when the scripts directory doesn't exist yet
+- `examples/agent-self-improve/scripts/session-start-reminder.sh` — added `mkdir -p "$MEMORY_DIR"` before `touch "$SESSION_MARKER"` to prevent banner-on-every-tool-call when `~/.claude/memory` doesn't exist
+
+### Contributors
+
+Thanks to [@geetika-sv](https://github.com/geetika-sv) for contributing the self-improve global workspace, cross-platform support, and `init global`/`init local`/`status`/`migrate` subcommands in this release.
 
 ## [1.22.0] - 2026-05-22
 
@@ -260,7 +332,7 @@ Enhanced `/platform-skills:review` with structured output for automated PR comme
 #### Wiki
 
 - Full GitHub wiki published at https://github.com/nitinjain999/platform-skills/wiki
-- 50 pages covering all 21 commands and 25 domains
+- 50 pages covering all 27 commands and 25 domains
 - Navigation index, Quick Start, Installation, Editor Integrations, How It Works, Contributing
 - One page per command with Claude Code slash syntax, Copilot Chat prompts, and what gets checked
 - One page per domain with key patterns, code examples, and links to the full reference guide
