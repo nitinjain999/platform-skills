@@ -1,6 +1,6 @@
 {
   "name": "platform-skills",
-  "version": "1.22.0",
+  "version": "1.23.0",
   "description": "Practical guidance for platform engineers: Kubernetes, Kyverno admission policies, Helm, Terraform, GitOps, GitHub Actions, AWS (CloudFront, WAF, Lambda@Edge, Firewall Manager, IAM, IRSA), Azure, Linkerd, Linux, networking, MCP development, observability, code documentation, SOC 2 compliance, comprehensive PR review, PR comment triage, KEDA event-driven autoscaling, Chaos Engineering (Litmus Chaos, Chaos Mesh, GameDay), DORA Metrics (Deployment Frequency, Lead Time, Change Failure Rate, MTTR), and LLM Observability (Datadog LLMObs instrumentation, pup CLI, eval bootstrap, trace RCA, experiment analysis), animated Markdown document generation (architecture flow SVGs, field carousel, lifecycle loop, timeline phases — GitHub-safe CSS animations, convert/diff/audit/export).",
   "author": {
     "name": "Nitin Jain",

@@ -5,7 +5,7 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.23.0] - 2026-05-23
 
 ### Changed
 
@@ -68,6 +68,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `examples/agent-self-improve/README.md` — new Platform support table (macOS, Linux, Alpine, WSL, Git Bash, Windows native); Windows recommendation (WSL/Git Bash is simpler); PowerShell copy/setup instructions; execution policy note
 - `commands/self-improve.md` — Path Resolution preamble updated with cross-platform `~` resolution note; `init global` step 5 updated to detect platform and point to correct scripts (`session-end.sh` vs `.ps1`, `settings.json.example` vs `settings-windows.json.example`)
 - `references/agent-self-improve.md` — new **Platform Compatibility** section: global config path table per OS, hook script selection table, per-platform `settings.json` snippets (bash and PowerShell), Alpine install note, execution policy note; old inline hook JSON examples replaced with a pointer to the new section
+
+#### Self-Improve: path resolution and hook setup fixes
+
+- `commands/self-improve.md` — path resolution steps reordered: explicit `init global`/`init local` now short-circuit (steps 1–2) before auto-detection probes (steps 3–4), matching the changelog claim and preventing an existing `.learnings/` repo from hijacking an explicit `init global` call
+- `references/agent-self-improve.md` — copy command updated to copy both `session-end.sh` and `session-start-reminder.sh`; added `mkdir -p ~/.claude/scripts` to prevent hook wiring failure when the scripts directory doesn't exist yet
+- `examples/agent-self-improve/scripts/session-start-reminder.sh` — added `mkdir -p "$MEMORY_DIR"` before `touch "$SESSION_MARKER"` to prevent banner-on-every-tool-call when `~/.claude/memory` doesn't exist
+
+### Contributors
+
+Thanks to [@geetika-sv](https://github.com/geetika-sv) for contributing the self-improve global workspace, cross-platform support, and `init global`/`init local`/`status`/`migrate` subcommands in this release.
 
 ## [1.22.0] - 2026-05-22
 
@@ -322,7 +332,7 @@ Enhanced `/platform-skills:review` with structured output for automated PR comme
 #### Wiki
 
 - Full GitHub wiki published at https://github.com/nitinjain999/platform-skills/wiki
-- 50 pages covering all 21 commands and 25 domains
+- 50 pages covering all 27 commands and 25 domains
 - Navigation index, Quick Start, Installation, Editor Integrations, How It Works, Contributing
 - One page per command with Claude Code slash syntax, Copilot Chat prompts, and what gets checked
 - One page per domain with key patterns, code examples, and links to the full reference guide
