@@ -5,6 +5,19 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.24.2] - 2026-05-23
+
+### Added
+
+#### Composite GitHub Actions — context, OIDC setup, step semantics, db-migrate example
+
+- `examples/github-actions/composite-actions/db-migrate/` — new example: safely run database migrations with health check, dry-run, multi-tool support, and rollback guide: `action.yml` (Flyway / Liquibase / golang-migrate; `::add-mask::` on `database_url` as first operation; `nc` health check with 10 retries; `dry_run` mode; `verify_after` schema validation; `if: always()` summary; `timeout-minutes` on health-check and migration steps; `migrations_applied` + `current_version` + `dry_run_output` outputs), `README.md` (pipeline example chaining dry-run PR comment → migration → deploy; rollback commands per tool; concurrency anti-pattern callout), `CHANGELOG.md`, `.github/workflows/test-action.yml` (5 tests: empty URL failure, invalid tool failure, unreachable host failure, dry-run with live Postgres service container, tool install matrix), `.github/workflows/release.yml`, `.github/dependabot.yml`, `.actionlint.yaml`
+- `examples/github-actions/composite-actions/README.md` — updated index to include `db-migrate` (11 examples total)
+- `references/composite-actions.md` — three new sections:
+  - **Context availability in composite actions**: full table of which contexts are available (`github.*` ✓, `runner.*` ✓, `env.*` ✓, `inputs.*` ✓, `steps.*` partial, `job.*` partial, `secrets.*` ✗, `needs.*` ✗, `matrix.*` ✗, `strategy.*` ✗) with threading patterns for matrix values and caller step outputs
+  - **OIDC cloud trust configuration**: AWS IAM trust policy JSON with condition key options (branch / environment / PR / wildcard), OIDC provider creation command, Azure federated credential fields + `az ad app federated-credential create` command + role assignment, Terraform provider config for ambient OIDC credentials
+  - **`continue-on-error` vs `if: always()` semantics**: comparison table (outcome vs conclusion, job outcome effect), the cleanup-step footgun (cleanup skipped if prior step fails without `if: always()`), correct patterns for both use cases
+
 ## [1.24.1] - 2026-05-23
 
 ### Added

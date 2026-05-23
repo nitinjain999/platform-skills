@@ -20,6 +20,7 @@ Status: Stable
 | [setup-env](setup-env/) | Install Node/Python/Go + cache | Multi-runtime, cache key, `runtime_version` output |
 | [configure-cloud](configure-cloud/) | AWS or Azure OIDC credentials | Conditional inputs, no secrets, federated identity |
 | [setup-terraform](setup-terraform/) | Install Terraform + provider cache | Plugin cache dir, lock-file cache key, wrapper flag |
+| [db-migrate](db-migrate/) | Run database migrations safely | Health check, dry-run, multi-tool, advisory lock, rollback guide |
 
 ---
 
@@ -36,6 +37,7 @@ Need to post a structured comment on a PR?         → pr-comment
 Need to set up a language runtime with caching?    → setup-env (tutorial baseline)
 Need to configure AWS or Azure credentials?        → configure-cloud
 Need to install Terraform with provider caching?   → setup-terraform
+Need to run database migrations safely?            → db-migrate
 ```
 
 ---

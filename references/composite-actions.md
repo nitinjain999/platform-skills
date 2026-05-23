@@ -214,6 +214,8 @@ git push origin v1 --force
 - [Using composite actions from private repositories](#using-composite-actions-from-private-repositories)
 - [Organisation action repository strategy](#organisation-action-repository-strategy)
 - [When to use composite vs JavaScript vs Docker](#when-to-use-composite-vs-javascript-vs-docker)
+- [Context availability in composite actions](#context-availability-in-composite-actions)
+- [OIDC cloud trust configuration](#oidc-cloud-trust-configuration)
 - [action.yml anatomy](#actionyml-anatomy)
 - [Variables and secrets](#variables-and-secrets)
 - [Inputs and outputs](#inputs-and-outputs)
@@ -379,6 +381,176 @@ Clearly distinguish inputs by adding a comment in the action's README inputs tab
 | `aws_role_arn` | string | No | IAM role ARN to assume via OIDC |
 | `webhook_url` | string | **Yes** | Pass `${{ secrets.SLACK_WEBHOOK }}` |
 | `kubeconfig` | string | **Yes** | Pass `${{ secrets.KUBECONFIG }}` |
+
+---
+
+## Context availability in composite actions
+
+Not all GitHub Actions contexts are available inside composite action steps. Getting this wrong produces silent empty values — no error, just broken behaviour.
+
+| Context | Available in composite? | Notes |
+|---|---|---|
+| `github.*` | **Yes** — full | `github.sha`, `github.ref`, `github.actor`, `github.event`, etc. |
+| `runner.*` | **Yes** | `runner.os`, `runner.arch`, `runner.temp`, `runner.tool_cache` |
+| `env.*` | **Yes** | Env vars set by the caller job or earlier steps in the action |
+| `inputs.*` | **Yes** | The action's own declared inputs |
+| `steps.*` | **Partial** | Only steps defined *within this composite action* — not the caller's steps |
+| `job.*` | **Partial** | `job.status` works; `job.container` and `job.services` are empty |
+| `secrets.*` | **No** | Always empty — pass secrets as `required: true` inputs instead |
+| `needs.*` | **No** | Job dependency outputs are not visible inside a composite action |
+| `matrix.*` | **No** | Matrix values are not passed automatically — thread through inputs |
+| `strategy.*` | **No** | |
+
+### Threading matrix and needs values through inputs
+
+Because `matrix.*` and `needs.*` are invisible inside a composite action, the caller must forward them explicitly:
+
+```yaml
+# Caller job — matrix is defined here
+jobs:
+  build:
+    strategy:
+      matrix:
+        environment: [dev, staging, production]
+    steps:
+      - uses: org/actions/deploy@v1
+        with:
+          environment: ${{ matrix.environment }}   # thread matrix value as an input
+          previous_sha: ${{ needs.setup.outputs.sha }}  # thread needs output as an input
+
+# action.yml — receives the values as plain inputs
+inputs:
+  environment:
+    description: 'Target environment'
+    required: true
+  previous_sha:
+    description: 'SHA from the setup job'
+    required: false
+```
+
+### `steps.*` scope
+
+`steps.*` inside a composite action only sees steps defined **within that action**, not steps in the caller's job. To consume a caller step's output inside your action, the caller must pass it as an input:
+
+```yaml
+# Caller
+- name: Compute version
+  id: version
+  run: echo "value=1.2.3" >> "$GITHUB_OUTPUT"
+
+- uses: org/actions/release@v1
+  with:
+    version: ${{ steps.version.outputs.value }}   # thread caller step output as input
+
+# action.yml — steps.version is NOT visible here; use inputs.version instead
+```
+
+---
+
+## OIDC cloud trust configuration
+
+Composite actions like `configure-cloud` and `terraform-plan` use OIDC to exchange a GitHub Actions token for cloud credentials. The action side is straightforward — the common blocker is configuring the *trust relationship* on the cloud side.
+
+### AWS — IAM role trust policy
+
+Create an IAM role with a web identity trust policy that restricts which GitHub repos and branches can assume it:
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+        },
+        "StringLike": {
+          "token.actions.githubusercontent.com:sub": "repo:org/repo:*"
+        }
+      }
+    }
+  ]
+}
+```
+
+**Condition key options** (use the narrowest that fits):
+
+| Condition | Example value | Restricts to |
+|---|---|---|
+| `sub` contains `ref:refs/heads/main` | `repo:org/repo:ref:refs/heads/main` | Main branch only |
+| `sub` contains `environment:production` | `repo:org/repo:environment:production` | A specific GitHub Environment |
+| `sub` wildcard | `repo:org/repo:*` | Any ref in the repo (use with caution) |
+| `sub` exact `pull_request` | `repo:org/repo:pull_request` | PRs only (read-only roles) |
+
+**Create the OIDC provider** (one-time per AWS account):
+
+```bash
+aws iam create-open-id-connect-provider \
+  --url https://token.actions.githubusercontent.com \
+  --client-id-list sts.amazonaws.com \
+  --thumbprint-list 6938fd4d98bab03faadb97b34396831e3780aea1
+```
+
+> The thumbprint is for the GitHub OIDC endpoint certificate. GitHub rotates this — check the current value in [GitHub's docs](https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services).
+
+### Azure — federated credential on the app registration
+
+In Azure, add a federated credential to an existing app registration (Entra ID → App registrations → your app → Certificates & secrets → Federated credentials):
+
+| Field | Value |
+|---|---|
+| Federated credential scenario | GitHub Actions deploying Azure resources |
+| Organisation | `your-github-org` |
+| Repository | `your-repo` |
+| Entity type | Branch / Environment / Pull request / Tag |
+| Based on selection | `main` (for branch) or `production` (for environment) |
+| Name | `github-actions-prod` |
+
+**Via Azure CLI:**
+
+```bash
+az ad app federated-credential create \
+  --id <app-object-id> \
+  --parameters '{
+    "name": "github-actions-prod",
+    "issuer": "https://token.actions.githubusercontent.com",
+    "subject": "repo:org/repo:environment:production",
+    "audiences": ["api://AzureADTokenExchange"]
+  }'
+```
+
+**Then grant the service principal the required role:**
+
+```bash
+az role assignment create \
+  --assignee <service-principal-id> \
+  --role "Contributor" \
+  --scope "/subscriptions/<subscription-id>/resourceGroups/<rg>"
+```
+
+### Terraform — required provider config for OIDC
+
+When using OIDC in a Terraform workflow, configure the provider to use web identity:
+
+```hcl
+# AWS — reads OIDC token from ACTIONS_ID_TOKEN_REQUEST_URL automatically
+provider "aws" {
+  region = var.aws_region
+  # No access_key / secret_key — relies on ambient OIDC credentials set by the action
+}
+
+# Azure — uses env vars set by azure/login
+provider "azurerm" {
+  features {}
+  use_oidc = true
+  # ARM_CLIENT_ID, ARM_TENANT_ID, ARM_SUBSCRIPTION_ID set by the action
+}
+```
 
 ---
 
@@ -741,6 +913,59 @@ Add `id:` to every step whose result is referenced by a later step or exposed as
     path: '*.log'
 ```
 
+### `continue-on-error` vs `if: always()` — critical difference
+
+These look similar but have opposite semantics. Using the wrong one is a silent bug.
+
+| Behaviour | `continue-on-error: true` | `if: always()` |
+|---|---|---|
+| Step runs when previous step fails? | Only on that specific step | Yes — any subsequent step with `if: always()` |
+| `steps.<id>.outcome` | `failure` (correct) | `failure` (correct) |
+| `steps.<id>.conclusion` | **`success`** — always, even if it failed | `failure` if it failed |
+| Job outcome affected by step failure? | **No** — failure is swallowed | Yes — job still fails unless `if: always()` step masks it |
+| Use for | Optional steps whose failure should not block the job | Cleanup/summary steps that must always run |
+
+```yaml
+# ✅ continue-on-error: true — optional step, failure is ignored for job outcome
+- name: Optional security scan
+  id: scan
+  continue-on-error: true
+  uses: aquasecurity/trivy-action@...
+  with:
+    exit-code: '1'
+
+- name: Report scan result
+  shell: bash
+  run: |
+    # steps.scan.conclusion == 'success' even if scan found CVEs and exited 1
+    # Use steps.scan.outcome (not conclusion) to check the real result
+    echo "Scan outcome: ${{ steps.scan.outcome }}"
+
+# ✅ if: always() — cleanup must run regardless of what failed above
+- name: Delete temp kubeconfig
+  if: always()
+  shell: bash
+  run: rm -f "$KUBECONFIG_TMPFILE"
+```
+
+**The footgun:** using `continue-on-error: true` on a cleanup step when you meant `if: always()`. If the prior step succeeded, both work. But if the prior step *failed*, a cleanup step without `if: always()` is **skipped**, leaving credentials or temp files behind.
+
+```yaml
+# ❌ Wrong — cleanup is SKIPPED if the deploy step fails
+- name: Deploy
+  run: kubectl apply -f manifest.yml
+- name: Cleanup
+  continue-on-error: true   # this only affects THIS step's failure, not whether it runs
+  run: rm -f /tmp/kubeconfig
+
+# ✅ Correct — cleanup always runs
+- name: Deploy
+  run: kubectl apply -f manifest.yml
+- name: Cleanup
+  if: always()
+  run: rm -f /tmp/kubeconfig
+```
+
 ### Allow a step to fail without failing the action
 
 ```yaml
@@ -750,9 +975,10 @@ Add `id:` to every step whose result is referenced by a later step or exposed as
   continue-on-error: true
   run: npm run lint
 
-- name: Report lint
+- name: Report lint result
   shell: bash
   run: |
+    # Use .outcome (actual result), not .conclusion (always success with continue-on-error)
     if [[ "${{ steps.lint.outcome }}" == "failure" ]]; then
       echo "::warning::Lint failed — see output above"
     fi

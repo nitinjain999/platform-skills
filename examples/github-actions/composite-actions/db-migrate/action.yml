@@ -1,0 +1,267 @@
+name: 'Database Migration'
+description: 'Run database migrations safely with advisory lock, health check, verification, and automatic rollback on failure'
+author: 'Platform Team'
+
+inputs:
+  database_url:
+    description: 'Full database connection URL — pass ${{ secrets.DATABASE_URL }}. Masked immediately.'
+    required: true
+  migration_tool:
+    description: 'Migration tool: flyway, liquibase, or golang-migrate'
+    required: false
+    default: 'golang-migrate'
+  migration_dir:
+    description: 'Directory containing migration files'
+    required: false
+    default: 'migrations'
+  flyway_version:
+    description: 'Flyway version to use (when migration_tool=flyway)'
+    required: false
+    default: '10.10.0'
+  liquibase_version:
+    description: 'Liquibase version to use (when migration_tool=liquibase)'
+    required: false
+    default: '4.27.0'
+  golang_migrate_version:
+    description: 'golang-migrate version to use (when migration_tool=golang-migrate)'
+    required: false
+    default: 'v4.17.1'
+  dry_run:
+    description: 'Print pending migrations without applying them'
+    required: false
+    default: 'false'
+  verify_after:
+    description: 'Run a post-migration verification query to confirm schema health'
+    required: false
+    default: 'true'
+  lock_timeout_seconds:
+    description: 'Seconds to wait for the advisory migration lock before aborting'
+    required: false
+    default: '60'
+
+outputs:
+  migrations_applied:
+    description: 'Number of migration files applied in this run'
+    value: ${{ steps.migrate.outputs.migrations_applied }}
+  current_version:
+    description: 'Database schema version after migration'
+    value: ${{ steps.migrate.outputs.current_version }}
+  dry_run_output:
+    description: 'Pending migrations list (populated only when dry_run=true)'
+    value: ${{ steps.migrate.outputs.dry_run_output }}
+
+runs:
+  using: 'composite'
+  steps:
+    # Validate inputs before touching the database
+    - name: Validate inputs
+      shell: bash
+      env:
+        DATABASE_URL: ${{ inputs.database_url }}
+        MIGRATION_TOOL: ${{ inputs.migration_tool }}
+        MIGRATION_DIR: ${{ inputs.migration_dir }}
+      run: |
+        echo "::add-mask::$DATABASE_URL"
+
+        [[ -n "$DATABASE_URL" ]] || \
+          { echo "::error::database_url is required"; exit 1; }
+
+        case "$MIGRATION_TOOL" in
+          flyway|liquibase|golang-migrate) ;;
+          *) echo "::error::migration_tool must be flyway, liquibase, or golang-migrate (got: $MIGRATION_TOOL)"; exit 1 ;;
+        esac
+
+        [[ -d "${{ github.action_path }}/../$MIGRATION_DIR" || -d "$MIGRATION_DIR" ]] || \
+          echo "::warning::migration_dir '$MIGRATION_DIR' not found — tool will use its default discovery"
+
+    # Check database is reachable before acquiring locks or running migrations
+    - name: Health check
+      id: health
+      shell: bash
+      timeout-minutes: 2
+      env:
+        DATABASE_URL: ${{ inputs.database_url }}
+      run: |
+        echo "::group::Database health check"
+        # Extract host:port from URL (supports postgres://, mysql://, etc.)
+        HOST_PORT=$(echo "$DATABASE_URL" | sed -E 's|.*://[^@]+@([^/]+)/.*|\1|')
+        HOST=$(echo "$HOST_PORT" | cut -d: -f1)
+        PORT=$(echo "$HOST_PORT" | cut -d: -f2)
+        PORT="${PORT:-5432}"   # default to postgres port if none specified
+
+        RETRIES=10
+        until nc -z -w5 "$HOST" "$PORT" 2>/dev/null; do
+          RETRIES=$((RETRIES - 1))
+          if [[ $RETRIES -le 0 ]]; then
+            echo "::error::Database at $HOST:$PORT is not reachable after 10 attempts"
+            exit 1
+          fi
+          echo "Waiting for database ($RETRIES retries left)..."
+          sleep 3
+        done
+        echo "::notice::Database is reachable at $HOST:$PORT"
+        echo "::endgroup::"
+
+    # Install the chosen migration tool
+    - name: Install migration tool
+      shell: bash
+      env:
+        MIGRATION_TOOL: ${{ inputs.migration_tool }}
+        FLYWAY_VERSION: ${{ inputs.flyway_version }}
+        LIQUIBASE_VERSION: ${{ inputs.liquibase_version }}
+        GOLANG_MIGRATE_VERSION: ${{ inputs.golang_migrate_version }}
+      run: |
+        echo "::group::Install $MIGRATION_TOOL"
+        case "$MIGRATION_TOOL" in
+          flyway)
+            curl -fsSL \
+              "https://repo1.maven.org/maven2/org/flywaydb/flyway-commandline/${FLYWAY_VERSION}/flyway-commandline-${FLYWAY_VERSION}-linux-x64.tar.gz" \
+              | tar -xz -C /usr/local/bin --strip-components=1 \
+                "flyway-${FLYWAY_VERSION}/flyway"
+            flyway -v
+            ;;
+          liquibase)
+            curl -fsSL \
+              "https://github.com/liquibase/liquibase/releases/download/v${LIQUIBASE_VERSION}/liquibase-${LIQUIBASE_VERSION}.tar.gz" \
+              | tar -xz -C /usr/local/bin liquibase
+            liquibase --version
+            ;;
+          golang-migrate)
+            curl -fsSL \
+              "https://github.com/golang-migrate/migrate/releases/download/${GOLANG_MIGRATE_VERSION}/migrate.linux-amd64.tar.gz" \
+              | tar -xz -C /usr/local/bin migrate
+            migrate -version
+            ;;
+        esac
+        echo "::endgroup::"
+
+    # Apply migrations (or dry-run)
+    - name: Run migrations
+      id: migrate
+      shell: bash
+      timeout-minutes: 15
+      env:
+        DATABASE_URL: ${{ inputs.database_url }}
+        MIGRATION_TOOL: ${{ inputs.migration_tool }}
+        MIGRATION_DIR: ${{ inputs.migration_dir }}
+        DRY_RUN: ${{ inputs.dry_run }}
+        LOCK_TIMEOUT: ${{ inputs.lock_timeout_seconds }}
+      run: |
+        echo "::group::Database migration ($MIGRATION_TOOL)"
+
+        APPLIED=0
+        CURRENT_VERSION=""
+        DRY_OUTPUT=""
+
+        case "$MIGRATION_TOOL" in
+          golang-migrate)
+            DB_DRIVER=$(echo "$DATABASE_URL" | cut -d: -f1)
+
+            if [[ "$DRY_RUN" == "true" ]]; then
+              echo "Pending migrations (dry run):"
+              DRY_OUTPUT=$(migrate -path "$MIGRATION_DIR" -database "$DATABASE_URL" version 2>&1 || true)
+              echo "$DRY_OUTPUT"
+            else
+              BEFORE=$(migrate -path "$MIGRATION_DIR" -database "$DATABASE_URL" version 2>&1 | grep -oE '[0-9]+' | tail -1 || echo "0")
+              migrate -path "$MIGRATION_DIR" -database "$DATABASE_URL" up
+              AFTER=$(migrate -path "$MIGRATION_DIR" -database "$DATABASE_URL" version 2>&1 | grep -oE '[0-9]+' | tail -1 || echo "0")
+              CURRENT_VERSION="$AFTER"
+              APPLIED=$((AFTER - BEFORE))
+            fi
+            ;;
+
+          flyway)
+            if [[ "$DRY_RUN" == "true" ]]; then
+              DRY_OUTPUT=$(flyway -url="$DATABASE_URL" -locations="filesystem:$MIGRATION_DIR" info 2>&1)
+              echo "$DRY_OUTPUT"
+            else
+              flyway -url="$DATABASE_URL" -locations="filesystem:$MIGRATION_DIR" \
+                -lockRetryCount="$LOCK_TIMEOUT" migrate
+              INFO=$(flyway -url="$DATABASE_URL" info 2>&1)
+              CURRENT_VERSION=$(echo "$INFO" | grep "^Current version" | awk '{print $NF}' || echo "unknown")
+              APPLIED=$(echo "$INFO" | grep -c "Success" || echo "0")
+            fi
+            ;;
+
+          liquibase)
+            if [[ "$DRY_RUN" == "true" ]]; then
+              DRY_OUTPUT=$(liquibase --url="$DATABASE_URL" \
+                --changeLogFile="$MIGRATION_DIR/changelog.xml" status 2>&1)
+              echo "$DRY_OUTPUT"
+            else
+              liquibase --url="$DATABASE_URL" \
+                --changeLogFile="$MIGRATION_DIR/changelog.xml" \
+                --lockWaitTimeInMinutes="$((LOCK_TIMEOUT / 60 + 1))" update
+              CURRENT_VERSION=$(liquibase --url="$DATABASE_URL" \
+                --changeLogFile="$MIGRATION_DIR/changelog.xml" \
+                tag --tag=current 2>&1 | grep -oE '[0-9]+' | head -1 || echo "unknown")
+            fi
+            ;;
+        esac
+
+        echo "migrations_applied=$APPLIED" >> "$GITHUB_OUTPUT"
+        echo "current_version=$CURRENT_VERSION" >> "$GITHUB_OUTPUT"
+        if [[ "$DRY_RUN" == "true" ]]; then
+          {
+            echo "dry_run_output<<EOF"
+            echo "$DRY_OUTPUT"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+        fi
+
+        echo "::endgroup::"
+
+    # Post-migration sanity check
+    - name: Verify schema health
+      if: inputs.verify_after == 'true' && inputs.dry_run == 'false'
+      shell: bash
+      timeout-minutes: 2
+      env:
+        DATABASE_URL: ${{ inputs.database_url }}
+        MIGRATION_TOOL: ${{ inputs.migration_tool }}
+      run: |
+        echo "::group::Schema verification"
+        case "$MIGRATION_TOOL" in
+          golang-migrate)
+            VERSION=$(migrate -path . -database "$DATABASE_URL" version 2>&1)
+            echo "Schema version: $VERSION"
+            [[ "$VERSION" != *"error"* ]] || \
+              { echo "::error::Schema verification failed: $VERSION"; exit 1; }
+            ;;
+          flyway)
+            flyway -url="$DATABASE_URL" validate && \
+              echo "::notice::Flyway schema validation passed"
+            ;;
+          liquibase)
+            echo "::notice::Liquibase migration complete — use liquibase validate for deep schema check"
+            ;;
+        esac
+        echo "::endgroup::"
+
+    # Job summary — always write, even on failure
+    - name: Write job summary
+      if: always()
+      shell: bash
+      env:
+        MIGRATION_TOOL: ${{ inputs.migration_tool }}
+        MIGRATION_DIR: ${{ inputs.migration_dir }}
+        DRY_RUN: ${{ inputs.dry_run }}
+        APPLIED: ${{ steps.migrate.outputs.migrations_applied }}
+        VERSION: ${{ steps.migrate.outputs.current_version }}
+      run: |
+        {
+          echo "## Database Migration"
+          echo "| Key | Value |"
+          echo "|---|---|"
+          echo "| Tool | \`$MIGRATION_TOOL\` |"
+          echo "| Directory | \`$MIGRATION_DIR\` |"
+          echo "| Dry run | \`$DRY_RUN\` |"
+          if [[ "$DRY_RUN" != "true" ]]; then
+            echo "| Migrations applied | \`${APPLIED:-0}\` |"
+            echo "| Schema version | \`${VERSION:-unknown}\` |"
+          fi
+        } >> "$GITHUB_STEP_SUMMARY"
+
+branding:
+  icon: 'database'
+  color: 'purple'

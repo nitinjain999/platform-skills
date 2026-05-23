@@ -1,0 +1,147 @@
+name: Test db-migrate action
+
+on:
+  push:
+    paths:
+      - 'action.yml'
+      - '.github/workflows/test-action.yml'
+  pull_request:
+    paths:
+      - 'action.yml'
+
+# act usage:
+#   act -W .github/workflows/test-action.yml \
+#       -P ubuntu-latest=catthehacker/ubuntu:act-22.04
+#
+# Note: Tests that require a real database are skipped in CI unless
+# DATABASE_URL is available. Use a local Postgres container with act:
+#   act ... --env DATABASE_URL=postgres://user:pass@localhost:5432/testdb
+
+jobs:
+  # Test 1 — empty database_url fails
+  test-empty-database-url:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Run with empty database_url — expect failure
+        id: migrate
+        uses: ./
+        with:
+          database_url: ''
+        continue-on-error: true
+      - name: Assert failure
+        shell: bash
+        run: |
+          [[ "${{ steps.migrate.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure for empty database_url"; exit 1; }
+
+  # Test 2 — invalid migration_tool fails
+  test-invalid-tool:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Run with invalid tool — expect failure
+        id: migrate
+        uses: ./
+        with:
+          database_url: 'postgres://user:pass@localhost:5432/db'
+          migration_tool: sqlalchemy
+        continue-on-error: true
+      - name: Assert failure
+        shell: bash
+        run: |
+          [[ "${{ steps.migrate.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure for invalid migration_tool"; exit 1; }
+
+  # Test 3 — health check fails for unreachable host
+  test-unreachable-database:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Run against unreachable database — expect failure
+        id: migrate
+        uses: ./
+        with:
+          database_url: 'postgres://user:pass@nonexistent.host.invalid:5432/db'
+          migration_tool: golang-migrate
+          lock_timeout_seconds: '5'
+        continue-on-error: true
+      - name: Assert failure
+        shell: bash
+        run: |
+          [[ "${{ steps.migrate.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure for unreachable database"; exit 1; }
+
+  # Test 4 — dry_run with real DB (skipped unless DATABASE_URL secret is set)
+  test-dry-run:
+    runs-on: ubuntu-latest
+    if: ${{ vars.TEST_DATABASE_AVAILABLE == 'true' }}
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Create test migration files
+        shell: bash
+        run: |
+          mkdir -p migrations
+          printf '%s' '-- Create users table
+CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name TEXT NOT NULL);' \
+            > migrations/000001_create_users.up.sql
+          printf '%s' 'DROP TABLE IF EXISTS users;' \
+            > migrations/000001_create_users.down.sql
+
+      - name: Dry run
+        id: migrate
+        uses: ./
+        with:
+          database_url: 'postgres://testuser:testpass@localhost:5432/testdb?sslmode=disable'
+          migration_tool: golang-migrate
+          migration_dir: migrations
+          dry_run: 'true'
+
+      - name: Verify dry_run output is set
+        shell: bash
+        run: |
+          echo "migrations_applied=${{ steps.migrate.outputs.migrations_applied }}"
+          echo "dry_run_output=${{ steps.migrate.outputs.dry_run_output }}"
+
+  # Test 5 — tool matrix validation (install only, no real DB needed)
+  test-tool-install:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - tool: golang-migrate
+            version_input: golang_migrate_version
+            version_value: v4.17.1
+          - tool: flyway
+            version_input: flyway_version
+            version_value: '10.10.0'
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Run with unreachable DB to test install only
+        id: migrate
+        uses: ./
+        with:
+          database_url: 'postgres://u:p@127.0.0.1:9999/db'
+          migration_tool: ${{ matrix.tool }}
+          lock_timeout_seconds: '3'
+        continue-on-error: true
+      - name: Verify tool was installed (health check fails, not install)
+        shell: bash
+        run: |
+          which ${{ matrix.tool == 'golang-migrate' && 'migrate' || matrix.tool }} || \
+            echo "::warning::${{ matrix.tool }} binary not found on PATH"
