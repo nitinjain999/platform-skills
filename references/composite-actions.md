@@ -1,7 +1,218 @@
 # Composite GitHub Actions Reference
 
+## Composite actions vs reusable workflows
+
+This is the most common architectural question teams face. Both reduce duplication — but they operate at different levels.
+
+| Dimension | Composite action | Reusable workflow |
+|---|---|---|
+| **Unit of reuse** | Steps within a job | An entire job (or set of jobs) |
+| **Calling syntax** | `uses:` inside a job's `steps:` | `uses:` as a top-level `jobs.<id>.uses:` |
+| **Secrets** | Must be passed as inputs — `secrets.*` not accessible | Can receive `secrets: inherit` or explicit mapping |
+| **Outputs** | `outputs:` in `action.yml` → `steps.<id>.outputs.*` | `outputs:` in the called workflow → `jobs.<id>.outputs.*` |
+| **Concurrency** | Inherits the caller job's runner and concurrency | Gets its own runner per job; can declare its own concurrency |
+| **Matrix** | Cannot define a matrix — runs once per call | Can define its own `strategy.matrix` |
+| **Context visibility** | Sees `github.*`, `runner.*`, `env.*` from caller | Sees its own `github.*`; some caller context is absent |
+| **Permissions** | Inherits caller job's token permissions | Must re-declare `permissions:` — cannot inherit |
+| **Log grouping** | Steps appear inline in the caller job's log | Jobs appear as separate entries in the workflow run |
+| **`if:` conditions** | Applied at the step level | Applied at the job level |
+
+### When to use each
+
+```
+Reusing 3–10 steps that always run together → composite action
+Reusing an entire job that needs its own runner → reusable workflow
+Need secrets:inherit or secrets:inherit shortcut → reusable workflow
+Need a matrix strategy defined inside the reused unit → reusable workflow
+Caller needs the result as a step output → composite action
+Reused unit needs different permissions from caller → reusable workflow
+```
+
+### Reusable workflow calling syntax
+
+```yaml
+# Reusable workflow — top-level jobs key, not inside steps:
+jobs:
+  call-build:
+    uses: org/actions/.github/workflows/build.yml@v1
+    with:
+      image_name: my-service
+    secrets:
+      registry_token: ${{ secrets.REGISTRY_TOKEN }}
+```
+
+```yaml
+# Composite action — inside a job's steps:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: org/actions/docker-build-push@v1
+        with:
+          image_name: my-service
+```
+
+---
+
+## Using composite actions from private repositories
+
+When a composite action lives in a private repo (not the same repo as the caller), the runner needs permission to read it.
+
+### Pattern 1 — same-repo action (no token needed)
+
+```yaml
+# Caller workflow in the same repo as the action
+steps:
+  - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+  - uses: ./.github/actions/my-action    # relative path — resolves to the checked-out repo
+```
+
+No extra token needed. The default `GITHUB_TOKEN` has read access to its own repo.
+
+### Pattern 2 — private cross-repo action via GitHub App (recommended)
+
+Create a GitHub App with `Contents: Read` on the actions repo. Install it on the org or the target repo.
+
+```yaml
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Generate a short-lived installation token for the actions repo
+      - name: Get GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ vars.ACTIONS_APP_ID }}
+          private-key: ${{ secrets.ACTIONS_APP_PRIVATE_KEY }}
+          repositories: actions   # the repo containing the composite action
+
+      # 2. Check out the actions repo so the runner can find action.yml
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          repository: org/actions
+          ref: v1
+          token: ${{ steps.app-token.outputs.token }}
+          path: .actions   # check out into a subdirectory
+
+      # 3. Reference the local copy
+      - uses: ./.actions/docker-build-push
+        with:
+          image_name: my-service
+```
+
+**Why App token over PAT:**
+- Scoped to specific repos — principle of least privilege
+- Short-lived (1 hour max) — no long-term credential to rotate
+- Auditable — actions appear as App activity in the audit log
+- No personal account dependency — survives employee offboarding
+
+### Pattern 3 — personal access token (avoid in production)
+
+```yaml
+- uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+  with:
+    repository: org/actions
+    token: ${{ secrets.ORG_ACTIONS_PAT }}   # fine-grained PAT, Contents:Read
+    path: .actions
+- uses: ./.actions/my-action
+```
+
+**Risks:** tied to a personal account; requires manual rotation; wide scope if using classic PAT.
+
+### Diagnosing "can't find action.yml"
+
+```
+Error: Can't find 'action.yml', 'action.yaml', or 'Dockerfile' under '/home/runner/work/...'
+```
+
+Checklist:
+1. Is the actions repo private? → needs a token on the checkout step
+2. Is `actions/checkout` running before the `uses:` reference?
+3. Is the `path:` on the checkout step matching the prefix in the `uses:` path?
+4. Does the branch/tag/SHA in `ref:` actually have an `action.yml` at the specified subdirectory?
+
+---
+
+## Organisation action repository strategy
+
+### Mono-repo of actions (recommended for most orgs)
+
+```
+org/actions/
+├── docker-build-push/action.yml
+├── notify-slack/action.yml
+├── setup-env/action.yml
+└── .github/
+    ├── dependabot.yml          (one file — updates all action SHAs)
+    └── workflows/
+        ├── test-docker-build-push.yml
+        ├── test-notify-slack.yml
+        └── release.yml         (tags: v1.2.3 → updates org/actions@v1)
+```
+
+**Caller:**
+```yaml
+- uses: org/actions/docker-build-push@v1
+- uses: org/actions/notify-slack@v2
+```
+
+**Pros:**
+- Single dependabot config updates all pinned SHAs at once
+- One release workflow, one version tag, one floating major tag
+- Easy cross-action discoverability and standardisation
+- Atomic changes that span multiple actions ship together
+
+**Cons:**
+- A broken release blocks all actions from updating
+- Version is shared — can't release `docker-build-push@v2` independently of `notify-slack`
+
+### Per-action repos (use when actions diverge significantly)
+
+```
+org/action-docker-build-push/action.yml   → org/action-docker-build-push@v1
+org/action-notify-slack/action.yml        → org/action-notify-slack@v1
+```
+
+**Pros:**
+- Independent versioning and release cadence
+- Separate dependabot, separate test workflow
+- Can be individually Marketplace-published
+
+**Cons:**
+- Each repo needs its own release workflow, dependabot config, test workflow
+- Dependabot creates separate PRs in every caller repo for every action
+- Hard to enforce consistent standards across many repos
+
+### Decision guide
+
+```
+< 5 actions, same team owns all of them    → mono-repo
+> 10 actions or multiple owning teams      → per-action repos or domain-grouped repos
+Some actions go to Marketplace             → those actions get their own repos; internal ones in mono-repo
+Actions have vastly different release cadences → per-action repos
+```
+
+### Floating tag strategy (applies to both)
+
+```bash
+# On release of v1.2.3:
+git tag v1.2.3
+git tag -f v1             # update floating major tag
+git push origin v1.2.3
+git push origin v1 --force
+
+# Callers pinning to @v1 automatically get v1.2.3
+# Callers pinning to SHA are unaffected — intentional
+```
+
+---
+
 ## Contents
 
+- [Composite actions vs reusable workflows](#composite-actions-vs-reusable-workflows)
+- [Using composite actions from private repositories](#using-composite-actions-from-private-repositories)
+- [Organisation action repository strategy](#organisation-action-repository-strategy)
 - [When to use composite vs JavaScript vs Docker](#when-to-use-composite-vs-javascript-vs-docker)
 - [action.yml anatomy](#actionyml-anatomy)
 - [Variables and secrets](#variables-and-secrets)
@@ -406,7 +617,20 @@ echo "::warning file=terraform/main.tf,line=10::Deprecated resource type"
 echo "::notice::Image built successfully: $IMAGE_TAG"
 ```
 
-### Debug mode — respect `RUNNER_DEBUG`
+### Debug logging — `::debug::` and `RUNNER_DEBUG`
+
+`::debug::` writes a message that only appears when debug logging is enabled. Use it for verbose diagnostic output that would clutter normal runs:
+
+```yaml
+- name: Compute cache key
+  shell: bash
+  run: |
+    KEY="${{ runner.os }}-node-${{ inputs.version }}-${{ hashFiles('**/package-lock.json') }}"
+    echo "::debug::Cache key: $KEY"
+    echo "cache_key=$KEY" >> "$GITHUB_OUTPUT"
+```
+
+`RUNNER_DEBUG=1` is also set when debug logging is enabled — use it for conditional verbose blocks:
 
 ```yaml
 - name: Run deployment
@@ -421,7 +645,17 @@ echo "::notice::Image built successfully: $IMAGE_TAG"
     NAMESPACE: ${{ inputs.namespace }}
 ```
 
-Callers enable debug logging from the repo → Actions → "Re-run jobs" → "Enable debug logging".
+Enable from the repo → Actions → "Re-run jobs" → "Enable debug logging", or set `ACTIONS_STEP_DEBUG=true` as a repository secret for permanent debug output.
+
+**Logging command summary:**
+
+| Command | Visibility | Use for |
+|---|---|---|
+| `::debug::message` | Debug runs only | Verbose diagnostic info, cache keys, computed values |
+| `::notice::message` | Always — blue annotation | Informational milestones (release URL, tag created) |
+| `::warning::message` | Always — yellow annotation | Non-fatal issues (deprecated input, skipped step) |
+| `::error::message` | Always — red annotation | Fatal errors (pair with `exit 1`) |
+| `echo "plain text"` | Always — no annotation | Progress messages inside `::group::` blocks |
 
 ---
 

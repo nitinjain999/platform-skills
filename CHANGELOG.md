@@ -5,6 +5,29 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.24.1] - 2026-05-23
+
+### Added
+
+#### Composite GitHub Actions — improvements
+
+- `examples/github-actions/composite-actions/configure-cloud/` — completed from stub to full repo structure: updated `action.yml` (input validation with conditional required-field checks per provider, `::group::` log grouping, `if: always()` job summary), `README.md` (OIDC flow diagram, conditional inputs table, no-secrets explanation, multi-cloud deploy example), `CHANGELOG.md`, `.github/workflows/test-action.yml` (4 failure-assertion tests), `.github/workflows/release.yml`, `.github/dependabot.yml`, `.actionlint.yaml`
+- `examples/github-actions/composite-actions/setup-terraform/` — completed from stub to full repo structure: updated `action.yml` (input validation, `enable_cache` flag, `working_directory` input for multi-module repos, `::debug::` log when cache dir created, `if: always()` job summary), `README.md` (cache key flow diagram, plan pipeline example chaining with `configure-cloud` and `terraform-plan`), `CHANGELOG.md`, `.github/workflows/test-action.yml` (4 test jobs: empty version failure, version matrix `1.6/1.7/1.8`, cache disabled, wrapper disabled), `.github/workflows/release.yml`, `.github/dependabot.yml`, `.actionlint.yaml`
+- `examples/github-actions/composite-actions/README.md` — updated index to include `configure-cloud` and `setup-terraform` (10 examples total)
+- `references/composite-actions.md` — four new sections:
+  - **Composite actions vs reusable workflows**: decision table (unit of reuse, calling syntax, secret handling, outputs, concurrency, matrix, context visibility, permissions, log grouping), when-to-use guide, calling syntax side-by-side
+  - **Using composite actions from private repositories**: three patterns (same-repo relative path, private cross-repo via GitHub App token, PAT fallback), why App token beats PAT, "can't find action.yml" diagnostic checklist
+  - **Organisation action repository strategy**: mono-repo vs per-action-repo trade-offs, decision guide, floating tag strategy
+  - **Debug logging `::debug::` and `RUNNER_DEBUG`**: `::debug::` with cache key example, `RUNNER_DEBUG` conditional verbose block, `ACTIONS_STEP_DEBUG` secret tip, complete logging command summary table
+
+## [1.24.0] - 2026-05-23
+
+### Added
+
+#### Composite GitHub Actions (Domain 28)
+
+- `references/composite-actions.md`, `commands/composite-actions.md`, 8 production-ready examples (`docker-build-push`, `notify-slack`, `k8s-deploy`, `terraform-plan`, `security-scan`, `release-tag`, `pr-comment`, `setup-env`) — see v1.24.0 PR for full detail
+
 ## [1.23.0] - 2026-05-23
 
 ### Changed

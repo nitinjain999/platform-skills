@@ -1,0 +1,87 @@
+name: Test setup-terraform action
+
+on:
+  push:
+    paths:
+      - 'action.yml'
+      - '.github/workflows/test-action.yml'
+  pull_request:
+    paths:
+      - 'action.yml'
+
+# act usage:
+#   act -W .github/workflows/test-action.yml \
+#       -P ubuntu-latest=catthehacker/ubuntu:act-22.04
+
+jobs:
+  # Test 1 — empty version fails
+  test-empty-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Run with empty version — expect failure
+        id: setup
+        uses: ./
+        with:
+          terraform_version: ''
+        continue-on-error: true
+      - name: Assert failure
+        shell: bash
+        run: |
+          [[ "${{ steps.setup.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure for empty terraform_version"; exit 1; }
+
+  # Test 2 — version matrix
+  test-version-matrix:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        terraform_version: ['1.6.0', '1.7.0', '1.8.0']
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Setup Terraform ${{ matrix.terraform_version }}
+        id: setup
+        uses: ./
+        with:
+          terraform_version: ${{ matrix.terraform_version }}
+          enable_cache: 'false'
+      - name: Verify installation
+        shell: bash
+        run: |
+          terraform version
+          [[ -n "${{ steps.setup.outputs.terraform_version }}" ]] || \
+            { echo "::error::terraform_version output is empty"; exit 1; }
+          echo "terraform_version=${{ steps.setup.outputs.terraform_version }}"
+
+  # Test 3 — cache disabled
+  test-no-cache:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Setup Terraform with cache disabled
+        id: setup
+        uses: ./
+        with:
+          enable_cache: 'false'
+      - name: Verify cache_hit is not true
+        shell: bash
+        run: |
+          echo "cache_hit=${{ steps.setup.outputs.cache_hit }}"
+          [[ "${{ steps.setup.outputs.cache_hit }}" != "true" ]] || \
+            echo "::warning::cache_hit=true even though enable_cache=false"
+
+  # Test 4 — wrapper disabled
+  test-no-wrapper:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Setup Terraform without wrapper
+        id: setup
+        uses: ./
+        with:
+          terraform_wrapper: 'false'
+          enable_cache: 'false'
+      - name: Verify Terraform runs without wrapper
+        shell: bash
+        run: terraform version

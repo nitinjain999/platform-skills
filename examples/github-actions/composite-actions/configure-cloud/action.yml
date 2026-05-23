@@ -1,40 +1,70 @@
 name: 'Configure Cloud Credentials'
-description: 'Configure AWS or Azure credentials using OIDC'
+description: 'Configure AWS or Azure credentials using OIDC — no long-lived secrets'
 author: 'Platform Team'
 
 inputs:
   cloud_provider:
-    description: 'Cloud provider (aws or azure)'
+    description: 'Cloud provider: aws or azure'
     required: true
   aws_role_arn:
-    description: 'AWS IAM role ARN for OIDC'
+    description: 'AWS IAM role ARN to assume via OIDC (required when cloud_provider=aws)'
     required: false
   aws_region:
     description: 'AWS region'
     required: false
     default: 'us-east-1'
   azure_client_id:
-    description: 'Azure client ID for OIDC'
+    description: 'Azure app registration client ID for federated credentials (required when cloud_provider=azure)'
     required: false
   azure_tenant_id:
-    description: 'Azure tenant ID'
+    description: 'Azure AD tenant ID (required when cloud_provider=azure)'
     required: false
   azure_subscription_id:
-    description: 'Azure subscription ID'
+    description: 'Azure subscription ID (required when cloud_provider=azure)'
     required: false
 
 outputs:
   cloud_provider:
-    description: 'Configured cloud provider'
+    description: 'The configured cloud provider (aws or azure)'
     value: ${{ inputs.cloud_provider }}
   aws_account_id:
-    description: 'AWS account ID (if AWS)'
+    description: 'AWS account ID — empty string when cloud_provider=azure'
     value: ${{ steps.aws_config.outputs.aws-account-id }}
 
 runs:
   using: 'composite'
   steps:
-    - name: Configure AWS credentials
+    # Validate inputs before doing anything
+    - name: Validate inputs
+      shell: bash
+      env:
+        CLOUD_PROVIDER: ${{ inputs.cloud_provider }}
+        AWS_ROLE_ARN: ${{ inputs.aws_role_arn }}
+        AZURE_CLIENT_ID: ${{ inputs.azure_client_id }}
+        AZURE_TENANT_ID: ${{ inputs.azure_tenant_id }}
+        AZURE_SUBSCRIPTION_ID: ${{ inputs.azure_subscription_id }}
+      run: |
+        case "$CLOUD_PROVIDER" in
+          aws)
+            [[ -n "$AWS_ROLE_ARN" ]] || \
+              { echo "::error::aws_role_arn is required when cloud_provider=aws"; exit 1; }
+            ;;
+          azure)
+            [[ -n "$AZURE_CLIENT_ID" ]] || \
+              { echo "::error::azure_client_id is required when cloud_provider=azure"; exit 1; }
+            [[ -n "$AZURE_TENANT_ID" ]] || \
+              { echo "::error::azure_tenant_id is required when cloud_provider=azure"; exit 1; }
+            [[ -n "$AZURE_SUBSCRIPTION_ID" ]] || \
+              { echo "::error::azure_subscription_id is required when cloud_provider=azure"; exit 1; }
+            ;;
+          *)
+            echo "::error::cloud_provider must be 'aws' or 'azure', got: $CLOUD_PROVIDER"
+            exit 1
+            ;;
+        esac
+
+    # AWS path
+    - name: Configure AWS credentials via OIDC
       if: inputs.cloud_provider == 'aws'
       id: aws_config
       uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7  # v6.0.0
@@ -44,14 +74,19 @@ runs:
         role-session-name: github-actions-${{ github.run_id }}
         mask-aws-account-id: false
 
-    - name: Verify AWS configuration
+    - name: Verify AWS credentials
       if: inputs.cloud_provider == 'aws'
       shell: bash
+      env:
+        AWS_REGION: ${{ inputs.aws_region }}
       run: |
-        echo "AWS Account: $(aws sts get-caller-identity --query Account --output text)"
-        echo "AWS Region: ${{ inputs.aws_region }}"
+        echo "::group::AWS identity"
+        aws sts get-caller-identity
+        echo "Region: $AWS_REGION"
+        echo "::endgroup::"
 
-    - name: Azure CLI login
+    # Azure path
+    - name: Configure Azure credentials via OIDC
       if: inputs.cloud_provider == 'azure'
       uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43  # v3.0.0
       with:
@@ -59,11 +94,35 @@ runs:
         tenant-id: ${{ inputs.azure_tenant_id }}
         subscription-id: ${{ inputs.azure_subscription_id }}
 
-    - name: Verify Azure configuration
+    - name: Verify Azure credentials
       if: inputs.cloud_provider == 'azure'
       shell: bash
       run: |
+        echo "::group::Azure identity"
         az account show --output table
+        echo "::endgroup::"
+
+    # Job summary
+    - name: Write job summary
+      if: always()
+      shell: bash
+      env:
+        CLOUD_PROVIDER: ${{ inputs.cloud_provider }}
+        AWS_REGION: ${{ inputs.aws_region }}
+        AZURE_SUBSCRIPTION: ${{ inputs.azure_subscription_id }}
+      run: |
+        {
+          echo "## Cloud Credentials"
+          echo "| Key | Value |"
+          echo "|---|---|"
+          echo "| Provider | \`$CLOUD_PROVIDER\` |"
+          if [[ "$CLOUD_PROVIDER" == "aws" ]]; then
+            echo "| Region | \`$AWS_REGION\` |"
+          else
+            echo "| Subscription | \`$AZURE_SUBSCRIPTION\` |"
+          fi
+          echo "| Auth method | OIDC (no long-lived secrets) |"
+        } >> "$GITHUB_STEP_SUMMARY"
 
 branding:
   icon: 'cloud'

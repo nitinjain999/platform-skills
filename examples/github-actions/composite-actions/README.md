@@ -18,6 +18,8 @@ Status: Stable
 | [release-tag](release-tag/) | Semver bump + GitHub release | Conventional commits, `$GITHUB_OUTPUT` chaining |
 | [pr-comment](pr-comment/) | Post or update a PR comment | Hidden marker upsert, collapsible, delete-on-close |
 | [setup-env](setup-env/) | Install Node/Python/Go + cache | Multi-runtime, cache key, `runtime_version` output |
+| [configure-cloud](configure-cloud/) | AWS or Azure OIDC credentials | Conditional inputs, no secrets, federated identity |
+| [setup-terraform](setup-terraform/) | Install Terraform + provider cache | Plugin cache dir, lock-file cache key, wrapper flag |
 
 ---
 
@@ -32,6 +34,8 @@ Need to scan for CVEs before deploying?            → security-scan
 Need to version and release automatically?         → release-tag
 Need to post a structured comment on a PR?         → pr-comment
 Need to set up a language runtime with caching?    → setup-env (tutorial baseline)
+Need to configure AWS or Azure credentials?        → configure-cloud
+Need to install Terraform with provider caching?   → setup-terraform
 ```
 
 ---
