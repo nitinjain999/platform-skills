@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # session-end.sh — wired to the Stop hook in ~/.claude/settings.json
 # Auto-captures session state, drains pending errors, and manages session lifecycle.
 #

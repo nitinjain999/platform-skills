@@ -17,6 +17,8 @@ Before executing any mode, resolve `LEARNINGS_BASE`:
 5. Else if mode is `init` (no argument) → ask the user to choose (see init mode below)
 6. Else → default to `~/.claude/`, create the directories, and inform the user that global setup was auto-created
 
+`~/.claude/` resolves consistently across all platforms (macOS, Linux, Windows) because Claude Code uses `os.homedir()` for `~`. On Windows this maps to `C:\Users\<you>\.claude\` — no manual path adjustment needed.
+
 All path references in every mode below use `LEARNINGS_BASE` as the root:
 
 | Logical path | Resolved path (global) | Resolved path (project) |
@@ -55,11 +57,11 @@ Steps:
      SESSION-STATE.md
    ```
 4. Seed each file with the correct header and an example entry marked `Status: example`
-5. Offer to wire all three hooks in `~/.claude/settings.json`:
-   - **Stop** → `session-end.sh` (daily notes, error drain, WAL check, session counter)
-   - **PreToolUse** → `session-start-reminder.sh` (memory banner on first tool use per session)
-   - **PostToolUse** → inline command writing to `~/.claude/.learnings/.pending-errors.log` (absolute path — required for global setup)
-   - Point to `examples/agent-self-improve/scripts/` and `examples/agent-self-improve/settings.json.example` for ready-to-copy files
+5. Detect the user's platform and offer to wire all three hooks in `~/.claude/settings.json`:
+   - **macOS / Linux / WSL / Git Bash** → bash scripts (`session-end.sh`, `session-start-reminder.sh`) + inline bash PostToolUse; point to `settings.json.example`
+   - **Windows native (PowerShell)** → PS1 scripts (`session-end.ps1`, `session-start-reminder.ps1`) + inline PowerShell PostToolUse; point to `settings-windows.json.example`
+   - **Alpine or minimal Linux** → same as macOS/Linux but remind the user to install bash first: `apk add bash`
+   - All scripts are in `examples/agent-self-improve/scripts/`; PostToolUse hook must use absolute path to `.pending-errors.log` (global setup)
 6. Offer to create `~/.claude/CLAUDE.md` from the template at `examples/agent-self-improve/global-claude.md`
 7. Print bootstrap summary:
    ```

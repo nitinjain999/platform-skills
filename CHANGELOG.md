@@ -58,6 +58,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `examples/agent-self-improve/global-claude.md` — template for `~/.claude/CLAUDE.md`: temporary path override table, session-start instruction, in-session logging rules (`log LRN/ERR/FEAT at moment of discovery`), `VFM_THRESHOLD=60`, Agent Rules section
 - `examples/agent-self-improve/settings.json.example` — all 3 hooks wired: Stop (`session-end.sh`), PreToolUse (`session-start-reminder.sh`), PostToolUse (inline error capture to `.pending-errors.log`)
 
+#### Self-Improve: cross-platform support (Windows and Linux distributions)
+
+- `examples/agent-self-improve/scripts/session-end.ps1` — PowerShell 5.1+ equivalent of `session-end.sh` for Windows native; same logic (daily notes, error drain, WAL check, session counter, review reminder)
+- `examples/agent-self-improve/scripts/session-start-reminder.ps1` — PowerShell equivalent of `session-start-reminder.sh` for Windows native; marker-based once-per-session banner
+- `examples/agent-self-improve/settings-windows.json.example` — all 3 hooks wired with PowerShell commands for Windows native (`%USERPROFILE%` paths, `powershell -NonInteractive -File ...`)
+- `examples/agent-self-improve/scripts/session-end.sh` — shebang changed from `#!/bin/bash` to `#!/usr/bin/env bash` for portability on Linux distros where bash is not at `/bin/bash`
+- `examples/agent-self-improve/scripts/session-start-reminder.sh` — same shebang fix
+- `examples/agent-self-improve/README.md` — new Platform support table (macOS, Linux, Alpine, WSL, Git Bash, Windows native); Windows recommendation (WSL/Git Bash is simpler); PowerShell copy/setup instructions; execution policy note
+- `commands/self-improve.md` — Path Resolution preamble updated with cross-platform `~` resolution note; `init global` step 5 updated to detect platform and point to correct scripts (`session-end.sh` vs `.ps1`, `settings.json.example` vs `settings-windows.json.example`)
+- `references/agent-self-improve.md` — new **Platform Compatibility** section: global config path table per OS, hook script selection table, per-platform `settings.json` snippets (bash and PowerShell), Alpine install note, execution policy note; old inline hook JSON examples replaced with a pointer to the new section
+
 ## [1.22.0] - 2026-05-22
 
 ### Added

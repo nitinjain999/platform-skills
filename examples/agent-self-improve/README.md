@@ -14,27 +14,47 @@ This directory contains ready-to-copy templates for bootstrapping the self-impro
 | `memory/working-buffer.md` | WAL scratchpad and task state template |
 | `memory/SESSION-STATE.md` | Always-on capture of corrections, preferences, decisions, proper nouns |
 | `memory/YYYY-MM-DD.md` | Daily notes template — rename to actual date on first use |
-| `scripts/session-end.sh` | Stop hook: drains errors, saves daily notes, session counter, review reminder |
-| `scripts/session-start-reminder.sh` | PreToolUse hook: injects memory-load banner at first tool use each session |
+| `scripts/session-end.sh` | Stop hook (macOS/Linux/WSL): drains errors, saves daily notes, session counter, review reminder |
+| `scripts/session-start-reminder.sh` | PreToolUse hook (macOS/Linux/WSL): injects memory-load banner at first tool use each session |
+| `scripts/session-end.ps1` | Stop hook (Windows native PowerShell): same behaviour as `.sh` equivalent |
+| `scripts/session-start-reminder.ps1` | PreToolUse hook (Windows native PowerShell): same behaviour as `.sh` equivalent |
 | `global-claude.md` | Template for `~/.claude/CLAUDE.md` — path override, session-start, in-session logging rules |
-| `settings.json.example` | All 3 hooks wired: Stop, PreToolUse, PostToolUse |
+| `settings.json.example` | All 3 hooks wired for macOS / Linux / WSL / Git Bash |
+| `settings-windows.json.example` | All 3 hooks wired for Windows native (PowerShell) |
+
+## Platform support
+
+| Platform | Shell scripts | Settings file |
+|---|---|---|
+| macOS | `session-end.sh`, `session-start-reminder.sh` | `settings.json.example` |
+| Linux (Ubuntu, Debian, RHEL, Fedora, Arch) | `session-end.sh`, `session-start-reminder.sh` | `settings.json.example` |
+| Linux (Alpine, busybox-only) | Install bash first: `apk add bash` | `settings.json.example` |
+| Windows — WSL or Git Bash | `session-end.sh`, `session-start-reminder.sh` | `settings.json.example` |
+| Windows — native PowerShell | `session-end.ps1`, `session-start-reminder.ps1` | `settings-windows.json.example` |
+
+**Windows recommendation:** WSL (Windows Subsystem for Linux) or Git Bash is the simplest path — no PowerShell scripts needed, and the bash setup is identical to macOS/Linux. Use the native PowerShell scripts only if you cannot use WSL or Git Bash.
+
+The global config directory (`~/.claude/`) resolves to the same location on all platforms:
+- macOS / Linux: `~/.claude/` → `/Users/<you>/.claude/` or `/home/<you>/.claude/`
+- Windows: `~/.claude/` → `C:\Users\<you>\.claude\` (Node.js `os.homedir()` resolves `~`)
+- WSL / Git Bash on Windows: same as Linux above
 
 ## Usage
 
 The recommended approach is to run the init command — it asks whether you want global or project-local setup before creating anything:
 
-```bash
+```
 /platform-skills:self-improve init
 ```
 
 Or copy manually:
 
 ```bash
-# Global setup — learnings persist across all projects (recommended for individuals)
+# macOS / Linux / WSL / Git Bash — global setup (recommended for individuals)
 cp -r examples/agent-self-improve/.learnings ~/.claude/
 cp -r examples/agent-self-improve/memory ~/.claude/
 
-# Project-local setup — learnings live in the repo, shareable with the team
+# macOS / Linux / WSL / Git Bash — project-local setup (shareable with the team)
 cp -r examples/agent-self-improve/.learnings .
 cp -r examples/agent-self-improve/memory .
 ```
@@ -47,7 +67,7 @@ memory/
 
 Commit `.learnings/` only if you want the team to share and build on these learnings; keep `memory/` local.
 
-### Wire the hooks (global setup)
+### Wire the hooks — macOS / Linux / WSL / Git Bash
 
 ```bash
 # Copy scripts
@@ -63,12 +83,32 @@ cp examples/agent-self-improve/settings.json.example ~/.claude/settings.json
 cp examples/agent-self-improve/global-claude.md ~/.claude/CLAUDE.md
 ```
 
+### Wire the hooks — Windows native (PowerShell)
+
+```powershell
+# Copy scripts
+New-Item -ItemType Directory -Force "$env:USERPROFILE\.claude\scripts"
+Copy-Item examples\agent-self-improve\scripts\session-end.ps1 "$env:USERPROFILE\.claude\scripts\"
+Copy-Item examples\agent-self-improve\scripts\session-start-reminder.ps1 "$env:USERPROFILE\.claude\scripts\"
+
+# Copy settings (merge manually if settings.json already exists)
+Copy-Item examples\agent-self-improve\settings-windows.json.example "$env:USERPROFILE\.claude\settings.json"
+
+# Copy global CLAUDE.md
+Copy-Item examples\agent-self-improve\global-claude.md "$env:USERPROFILE\.claude\CLAUDE.md"
+```
+
+If you see an execution policy error when the hooks run, allow local scripts once:
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
 What the hooks do:
 
 | Hook | Trigger | What it does |
 |---|---|---|
-| `Stop` → `session-end.sh` | Session close | Saves daily notes, drains `.pending-errors.log` → ERR entries, clears session marker, increments counter, nudges if no LRN logged |
-| `PreToolUse` → `session-start-reminder.sh` | First tool use per session | Prints memory-load banner once, silent after that |
+| `Stop` → `session-end.sh` / `.ps1` | Session close | Saves daily notes, drains `.pending-errors.log` → ERR entries, clears session marker, increments counter, nudges if no LRN logged |
+| `PreToolUse` → `session-start-reminder.sh` / `.ps1` | First tool use per session | Prints memory-load banner once, silent after that |
 | `PostToolUse` | Every failed tool call | Appends to `.pending-errors.log` for batch processing at session end |
 
 ## Reference

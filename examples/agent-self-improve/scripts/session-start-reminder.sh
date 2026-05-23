@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # session-start-reminder.sh — wired to the PreToolUse hook in ~/.claude/settings.json
 # Injects a memory-load reminder before the first tool use of each new session.
 # Subsequent tool uses in the same session are silent (marker file controls this).
