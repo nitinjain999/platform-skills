@@ -1,7 +1,7 @@
 ---
 name: self-improve
 description: Bootstrap and operate a self-improving agent workspace. Scaffolds .learnings/ and memory/ directories, captures errors and learnings during a session, detects recurring patterns, and promotes stable entries to project memory (CLAUDE.md, AGENTS.md, or references/). Also implements the Proactive Agent pillars — WAL protocol, working buffer, SESSION-STATE, daily notes, VBR, VFM scoring, ADL decision logic, heartbeat, and reverse prompting. Use when asked to "remember this lesson", "set up agent memory", "log that error", "promote learnings", "capture session state", or "enable proactive mode".
-argument-hint: "[init|log|review|promote|resume|state] [description or file path]"
+argument-hint: "[init global|init local|log|review|promote|resume|state] [description or file path]"
 ---
 
 Bootstrap and operate a self-improving, proactive agent workspace.
@@ -12,8 +12,10 @@ Before executing any mode, resolve `LEARNINGS_BASE`:
 
 1. If `~/.claude/.learnings/` exists → use `~/.claude/` as base (global setup)
 2. Else if `.learnings/` exists in the current working directory → use `.` as base (project setup)
-3. Else if mode is `init` → ask the user to choose scope (see init mode step 1)
-4. Else → default to `~/.claude/`, create the directories, and inform the user that global setup was auto-created
+3. Else if mode is `init global` → use `~/.claude/`
+4. Else if mode is `init local` → use `.` (current working directory)
+5. Else if mode is `init` (no argument) → ask the user to choose (see init mode below)
+6. Else → default to `~/.claude/`, create the directories, and inform the user that global setup was auto-created
 
 All path references in every mode below use `LEARNINGS_BASE` as the root:
 
@@ -31,42 +33,101 @@ Promotion targets (`CLAUDE.md`, `AGENTS.md`, `.github/copilot-instructions.md`) 
 
 Reference: `references/agent-self-improve.md` → Global vs project scope
 
-## Mode: init
+## Mode: init global
 
-Scaffold the `.learnings/` and `memory/` directories.
+Scaffold the global workspace under `~/.claude/` — learnings persist across all projects.
+
+```
+/platform-skills:self-improve init global
+```
 
 Steps:
-1. Ask the user: **global** (`~/.claude/`) or **project-local** (`.`)?
-   - Recommend global if no existing `.learnings/` is found in either location
-   - If `~/.claude/.learnings/` already exists, report current state and skip creation
-   - If `.learnings/` already exists in the current directory, report current state and skip creation
-   - Set `LEARNINGS_BASE` from the answer before proceeding
-2. Create the directory structure under `LEARNINGS_BASE`:
+1. Set `LEARNINGS_BASE=~/.claude/`
+2. If `~/.claude/.learnings/` already exists: report current state, list existing files, and stop — do not overwrite
+3. Create the directory structure:
    ```
-   $LEARNINGS_BASE/.learnings/
+   ~/.claude/.learnings/
      LEARNINGS.md
      ERRORS.md
      FEATURE_REQUESTS.md
-   $LEARNINGS_BASE/memory/
+   ~/.claude/memory/
      working-buffer.md
      SESSION-STATE.md
    ```
-3. Seed each file with the correct header and an example entry marked `Status: example`
-4. For project-local setup: check `.gitignore` — ask the user whether these files should be committed or gitignored; recommend gitignoring `memory/` entirely (daily notes grow fast). Skip for global setup (`~/.claude/` is not a git repo).
-5. Offer to add the PostToolUse hook for automatic error capture:
-   - Global setup → add to `~/.claude/settings.json` (applies to all projects)
-   - Project setup → add to `.claude/settings.json` (this project only)
-   - The hook command must write to `$LEARNINGS_BASE/.learnings/.pending-errors.log` using the **absolute path**
-6. Print the bootstrap summary with resolved paths:
+4. Seed each file with the correct header and an example entry marked `Status: example`
+5. Offer to wire all three hooks in `~/.claude/settings.json`:
+   - **Stop** → `session-end.sh` (daily notes, error drain, WAL check, session counter)
+   - **PreToolUse** → `session-start-reminder.sh` (memory banner on first tool use per session)
+   - **PostToolUse** → inline command writing to `~/.claude/.learnings/.pending-errors.log` (absolute path — required for global setup)
+   - Point to `examples/agent-self-improve/scripts/` and `examples/agent-self-improve/settings.json.example` for ready-to-copy files
+6. Offer to create `~/.claude/CLAUDE.md` from the template at `examples/agent-self-improve/global-claude.md`
+7. Print bootstrap summary:
    ```
-   ✓ $LEARNINGS_BASE/.learnings/LEARNINGS.md        — positive learnings
-   ✓ $LEARNINGS_BASE/.learnings/ERRORS.md           — mistakes and root causes
-   ✓ $LEARNINGS_BASE/.learnings/FEATURE_REQUESTS.md — recurring unmet needs
-   ✓ $LEARNINGS_BASE/memory/working-buffer.md       — WAL scratchpad and task state
-   ✓ $LEARNINGS_BASE/memory/SESSION-STATE.md        — always-on session capture
-   ✓ $LEARNINGS_BASE/memory/YYYY-MM-DD.md           — daily notes (created on first use)
+   ✓ ~/.claude/.learnings/LEARNINGS.md        — positive learnings
+   ✓ ~/.claude/.learnings/ERRORS.md           — mistakes and root causes
+   ✓ ~/.claude/.learnings/FEATURE_REQUESTS.md — recurring unmet needs
+   ✓ ~/.claude/memory/working-buffer.md       — WAL scratchpad and task state
+   ✓ ~/.claude/memory/SESSION-STATE.md        — always-on session capture
+   ✓ ~/.claude/memory/YYYY-MM-DD.md           — daily notes (created on first use)
    ```
-7. Remind the user to run `/platform-skills:self-improve review` after a few sessions to promote recurring patterns
+8. Remind the user to run `/platform-skills:self-improve review` after a few sessions
+
+Reference: `references/agent-self-improve.md` → Global vs project scope
+
+---
+
+## Mode: init local
+
+Scaffold a project-local workspace in the current working directory — learnings live in the repo.
+
+```
+/platform-skills:self-improve init local
+```
+
+Steps:
+1. Set `LEARNINGS_BASE=.` (current working directory)
+2. If `.learnings/` already exists in `$PWD`: report current state, list existing files, and stop — do not overwrite
+3. Create the directory structure:
+   ```
+   .learnings/
+     LEARNINGS.md
+     ERRORS.md
+     FEATURE_REQUESTS.md
+   memory/
+     working-buffer.md
+     SESSION-STATE.md
+   ```
+4. Seed each file with the correct header and an example entry marked `Status: example`
+5. Check `.gitignore` — ask the user:
+   - **Gitignore** (recommended for personal notes): add `.learnings/` and `memory/` to `.gitignore`
+   - **Commit**: leave untracked so the team can share and build on them; note that `memory/` daily notes grow fast
+6. Offer to add hooks to `.claude/settings.json` (this project only):
+   - **PostToolUse** → inline command writing to `.learnings/.pending-errors.log` (relative path is safe here — hooks run from project root)
+   - Note: Stop and PreToolUse session scripts should be wired globally via `~/.claude/settings.json` even for project-local learnings
+7. Print bootstrap summary:
+   ```
+   ✓ .learnings/LEARNINGS.md        — positive learnings
+   ✓ .learnings/ERRORS.md           — mistakes and root causes
+   ✓ .learnings/FEATURE_REQUESTS.md — recurring unmet needs
+   ✓ memory/working-buffer.md       — WAL scratchpad and task state
+   ✓ memory/SESSION-STATE.md        — always-on session capture
+   ✓ memory/YYYY-MM-DD.md           — daily notes (created on first use)
+   ```
+8. Remind the user to run `/platform-skills:self-improve review` after a few sessions
+
+Reference: `references/agent-self-improve.md` → Global vs project scope
+
+---
+
+## Mode: init (no argument)
+
+When called without `global` or `local`, ask the user to choose:
+
+- Recommend `init global` if neither `~/.claude/.learnings/` nor `.learnings/` in `$PWD` exists
+- If `~/.claude/.learnings/` already exists, recommend `init local` (global already set up)
+- If `.learnings/` in `$PWD` already exists, report its state and suggest using `log`, `resume`, or `review` instead
+
+Then proceed as `init global` or `init local` based on the answer.
 
 Reference: `references/agent-self-improve.md` → Directory layout, Entry format
 

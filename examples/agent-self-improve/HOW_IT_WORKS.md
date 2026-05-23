@@ -82,20 +82,29 @@ pending → resolved → promoted
 
 ## The Five Modes
 
-### `init` — Bootstrap the workspace
+### `init global` / `init local` — Bootstrap the workspace
+
+Two explicit subcommands — no interactive prompt:
+
+```text
+/platform-skills:self-improve init global
+```
+
+Creates `~/.claude/.learnings/` and `~/.claude/memory/`. Learnings persist across **all projects** on your machine. Recommended for individuals. Offers to wire all three hooks in `~/.claude/settings.json` and create `~/.claude/CLAUDE.md` from the template.
+
+```text
+/platform-skills:self-improve init local
+```
+
+Creates `.learnings/` and `memory/` in the **current project directory**. Learnings live in the repo and can be committed and shared with the team. Asks whether to gitignore or commit. Offers to add the PostToolUse hook to `.claude/settings.json`.
 
 ```text
 /platform-skills:self-improve init
 ```
 
-First asks whether you want a **global** workspace (`~/.claude/`) or a **project-local** one (`.`):
+No argument — asks you to choose global or local, then proceeds as above.
 
-- **Global** — learnings persist across all projects on your machine. Recommended for individuals. Hook installs to `~/.claude/settings.json`.
-- **Project-local** — learnings live in the repo, can be committed and shared with the team. Hook installs to `.claude/settings.json`.
-
-Then creates the `.learnings/` and `memory/` directories with seed templates. For project-local setup, also asks whether to gitignore them.
-
-Run once (globally or per project).
+Both subcommands are idempotent: if the target directory already exists, they report the current state and stop without overwriting.
 
 ---
 

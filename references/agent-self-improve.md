@@ -390,12 +390,19 @@ Each session, the agent should:
 
 ## What users need to do
 
-### Bootstrap (once per project)
+### Bootstrap
+
+Two explicit subcommands — no interactive prompt needed:
 
 ```bash
-# Run the init command — agent scaffolds the directory structure
-/platform-skills:self-improve init
+# Global workspace — learnings persist across all projects (recommended for individuals)
+/platform-skills:self-improve init global
+
+# Project-local workspace — learnings live in the repo (recommended for teams)
+/platform-skills:self-improve init local
 ```
+
+`init` without an argument asks you to choose and then proceeds as one of the above.
 
 Or copy from `examples/agent-self-improve/`:
 

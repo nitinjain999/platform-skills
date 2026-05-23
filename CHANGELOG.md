@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+#### Self-Improve: explicit `init global` / `init local` subcommands
+
+- `commands/self-improve.md` — `init` mode split into three explicit forms:
+  - `init global` — scaffolds `~/.claude/` directly, no prompt; offers to wire all three hooks and create `~/.claude/CLAUDE.md`; idempotent (reports existing state and stops if already set up)
+  - `init local` — scaffolds `.learnings/` and `memory/` in `$PWD`, no prompt; asks gitignore vs commit; idempotent
+  - `init` (no argument) — asks user to choose, then delegates to `init global` or `init local`
+- `commands/self-improve.md` — `argument-hint` updated to `[init global|init local|log|review|promote|resume|state]`
+- `commands/self-improve.md` — Path Resolution preamble updated to short-circuit on `init global` / `init local` before auto-detection
+- `references/agent-self-improve.md` — Bootstrap section updated with explicit subcommand examples
+- `examples/agent-self-improve/HOW_IT_WORKS.md` — init section rewritten with both subcommands, idempotency note
+
 #### Self-Improve: global path resolution for cross-project learnings
 
 - `commands/self-improve.md` — added `## Path Resolution` preamble that all modes evaluate before acting: detects global setup (`~/.claude/.learnings/` exists), project setup (`.learnings/` in `$PWD`), or auto-creates global on first use; all path references updated to use `LEARNINGS_BASE`
