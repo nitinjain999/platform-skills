@@ -416,7 +416,13 @@ Add to `~/.claude/settings.json`:
 }
 ```
 
-Copy scripts: `cp examples/agent-self-improve/scripts/session-end.sh ~/.claude/scripts/ && chmod +x ~/.claude/scripts/*.sh`
+Copy scripts:
+```sh
+mkdir -p ~/.claude/scripts
+cp examples/agent-self-improve/scripts/session-end.sh ~/.claude/scripts/
+cp examples/agent-self-improve/scripts/session-start-reminder.sh ~/.claude/scripts/
+chmod +x ~/.claude/scripts/*.sh
+```
 
 ### Hook setup — Windows native (PowerShell)
 

@@ -10,10 +10,10 @@ Bootstrap and operate a self-improving, proactive agent workspace.
 
 Before executing any mode, resolve `LEARNINGS_BASE`:
 
-1. If `~/.claude/.learnings/` exists → use `~/.claude/` as base (global setup)
-2. Else if `.learnings/` exists in the current working directory → use `.` as base (project setup)
-3. Else if mode is `init global` → use `~/.claude/`
-4. Else if mode is `init local` → use `.` (current working directory)
+1. If mode is `init global` → use `~/.claude/`
+2. Else if mode is `init local` → use `.` (current working directory)
+3. Else if `~/.claude/.learnings/` exists → use `~/.claude/` as base (global setup)
+4. Else if `.learnings/` exists in the current working directory → use `.` as base (project setup)
 5. Else if mode is `init` (no argument) → ask the user to choose (see init mode below)
 6. Else → default to `~/.claude/`, create the directories, and inform the user that global setup was auto-created
 

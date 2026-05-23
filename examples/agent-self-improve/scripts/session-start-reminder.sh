@@ -14,6 +14,7 @@ DATE=$(date '+%Y-%m-%d')
 [ -f "$SESSION_MARKER" ] && exit 0
 
 # Mark session as active to prevent repeat output on subsequent tool calls
+mkdir -p "$MEMORY_DIR"
 touch "$SESSION_MARKER"
 
 echo "╔══════════════════════════════════════════════════════════╗"
