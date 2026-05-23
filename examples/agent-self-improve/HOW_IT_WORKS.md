@@ -88,9 +88,14 @@ pending → resolved → promoted
 /platform-skills:self-improve init
 ```
 
-Creates the `.learnings/` and `memory/` directories with seed templates. Asks whether to gitignore them and whether to add the PostToolUse hook to `.claude/settings.json`.
+First asks whether you want a **global** workspace (`~/.claude/`) or a **project-local** one (`.`):
 
-Run once per project.
+- **Global** — learnings persist across all projects on your machine. Recommended for individuals. Hook installs to `~/.claude/settings.json`.
+- **Project-local** — learnings live in the repo, can be committed and shared with the team. Hook installs to `.claude/settings.json`.
+
+Then creates the `.learnings/` and `memory/` directories with seed templates. For project-local setup, also asks whether to gitignore them.
+
+Run once (globally or per project).
 
 ---
 
@@ -293,7 +298,7 @@ With the PostToolUse hook configured in `.claude/settings.json`, tool failures a
         "hooks": [
           {
             "type": "command",
-            "command": "if [ \"$CLAUDE_TOOL_EXIT_CODE\" -ne 0 ]; then echo \"$(date -u +%Y-%m-%dT%H:%M:%SZ) TOOL_FAILURE: $CLAUDE_TOOL_NAME\" >> .learnings/.pending-errors.log; fi"
+            "command": "if [ \"$CLAUDE_TOOL_EXIT_CODE\" -ne 0 ]; then echo \"$(date -u +%Y-%m-%dT%H:%M:%SZ) TOOL_FAILURE: $CLAUDE_TOOL_NAME\" >> ~/.claude/.learnings/.pending-errors.log; fi"
           }
         ]
       }
@@ -313,10 +318,10 @@ Add to `.gitignore`:
 
 ## What This Skill Cannot Do
 
-- **It cannot learn across projects automatically.** `.learnings/` is per-project. To share lessons across projects, promote them to a shared `references/` file or a global `CLAUDE.md`.
 - **It does not replace human post-mortems.** It captures agent-level errors. System-level incidents and team retrospectives still belong in your incident management process.
 - **It cannot verify that promoted rules are being followed.** Once a rule is in `CLAUDE.md`, it is up to you to review it periodically and retire it if it becomes stale.
 - **The working buffer is not a database.** Keep it lean — summarise completed WAL entries into a single `## Completed` block and delete individual entries once the task is done.
+- **Global learnings are not shared automatically.** The global workspace (`~/.claude/`) is local to your machine. To share lessons with the team, use project-local setup and commit `.learnings/`, or promote entries to a shared `references/` file.
 
 ---
 

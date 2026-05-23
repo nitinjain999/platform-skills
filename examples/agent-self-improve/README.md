@@ -17,16 +17,25 @@ This directory contains ready-to-copy templates for bootstrapping the self-impro
 
 ## Usage
 
-```bash
-# Copy into your project root
-cp -r examples/agent-self-improve/.learnings .
-cp -r examples/agent-self-improve/memory .
+The recommended approach is to run the init command — it asks whether you want global or project-local setup before creating anything:
 
-# Or run the init command
-# /platform-skills:self-improve init
+```bash
+/platform-skills:self-improve init
 ```
 
-Add to `.gitignore` for personal-only notes (recommended — daily notes grow fast):
+Or copy manually:
+
+```bash
+# Global setup — learnings persist across all projects (recommended for individuals)
+cp -r examples/agent-self-improve/.learnings ~/.claude/
+cp -r examples/agent-self-improve/memory ~/.claude/
+
+# Project-local setup — learnings live in the repo, shareable with the team
+cp -r examples/agent-self-improve/.learnings .
+cp -r examples/agent-self-improve/memory .
+```
+
+For project-local setup, add to `.gitignore` for personal-only notes (recommended — daily notes grow fast):
 ```
 .learnings/
 memory/

@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+#### Self-Improve: global path resolution for cross-project learnings
+
+- `commands/self-improve.md` — added `## Path Resolution` preamble that all modes evaluate before acting: detects global setup (`~/.claude/.learnings/` exists), project setup (`.learnings/` in `$PWD`), or auto-creates global on first use; all path references updated to use `LEARNINGS_BASE`
+- `commands/self-improve.md` — `init` mode now asks **global vs project-local** before creating any directories; step 4 skips `.gitignore` check for global setup; step 5 targets the correct `settings.json` (`~/.claude/` for global, `.claude/` for project) and enforces absolute paths in the PostToolUse hook command
+- `commands/self-improve.md` — `log` confirm message now shows resolved `$LEARNINGS_BASE` path instead of hardcoded `.learnings/`
+- `commands/self-improve.md` — `resume`, `review`, `promote`, `state`, WAL Protocol, Working Buffer, SESSION-STATE, and Daily Notes proactive protocols updated to use `$LEARNINGS_BASE`
+- `references/agent-self-improve.md` — new **Global vs project scope** section under Directory layout: scope comparison table, auto-detection order, promotion-targets-stay-local rule, working PostToolUse hook JSON example with absolute paths
+- `examples/agent-self-improve/HOW_IT_WORKS.md` — updated `init` description to mention global vs project choice; corrected "What This Skill Cannot Do" section which previously stated learnings cannot persist across projects
+- `examples/agent-self-improve/README.md` — updated setup instructions to reflect global scope option
+
 ## [1.22.0] - 2026-05-22
 
 ### Added
