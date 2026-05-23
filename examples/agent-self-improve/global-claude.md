@@ -4,28 +4,6 @@ Copy this file to `~/.claude/CLAUDE.md` to apply these rules across every projec
 
 ---
 
-## Self-Improve Path Override
-
-> **TEMPORARY — remove this section after `nitinjain999/platform-skills` ships native
-> global path resolution and you have run `claude plugin update platform-skills`.**
-> The skill will then detect `~/.claude/.learnings/` automatically. Keep only the sections below.
-
-The `/platform-skills:self-improve` skill defaults to relative paths. Override globally:
-
-| Skill default | Global override |
-|---|---|
-| `.learnings/LEARNINGS.md` | `~/.claude/.learnings/LEARNINGS.md` |
-| `.learnings/ERRORS.md` | `~/.claude/.learnings/ERRORS.md` |
-| `.learnings/FEATURE_REQUESTS.md` | `~/.claude/.learnings/FEATURE_REQUESTS.md` |
-| `memory/working-buffer.md` | `~/.claude/memory/working-buffer.md` |
-| `memory/SESSION-STATE.md` | `~/.claude/memory/SESSION-STATE.md` |
-| `memory/YYYY-MM-DD.md` | `~/.claude/memory/YYYY-MM-DD.md` |
-| `.learnings/.pending-errors.log` | `~/.claude/.learnings/.pending-errors.log` |
-
-Promotion targets remain project-local (`CLAUDE.md`, `.github/copilot-instructions.md`).
-
----
-
 ## Session Start
 
 When the session-start banner fires (╔══╗ from the PreToolUse hook), immediately read:

@@ -1,6 +1,4 @@
 {
-  "_comment": "Windows settings — uses PowerShell scripts. Copy to %USERPROFILE%\\.claude\\settings.json",
-  "_note": "If you use WSL or Git Bash on Windows, use settings.json.example (bash) instead — it is simpler.",
   "hooks": {
     "Stop": [
       {
@@ -29,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NonInteractive -Command \"$code=$env:CLAUDE_TOOL_EXIT_CODE; if ($code -and $code -ne '0') { $ts=(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ'); $name=$env:CLAUDE_TOOL_NAME; \\\"$ts TOOL_FAILURE: $name\\\" | Add-Content -Encoding UTF8 \\\"$env:USERPROFILE\\.claude\\.learnings\\.pending-errors.log\\\" }\""
+            "command": "powershell -NonInteractive -Command \"$code=$env:CLAUDE_TOOL_EXIT_CODE; if ($code -and $code -ne '0') { $ts=[DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'); $name=$env:CLAUDE_TOOL_NAME; \\\"$ts TOOL_FAILURE: $name\\\" | Add-Content -Encoding UTF8 \\\"$env:USERPROFILE\\.claude\\.learnings\\.pending-errors.log\\\" }\""
           }
         ]
       }
