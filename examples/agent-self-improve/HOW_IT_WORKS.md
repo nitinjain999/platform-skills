@@ -287,7 +287,9 @@ Next session start
 
 ## Automatic Error Capture via Hook
 
-With the PostToolUse hook configured in `.claude/settings.json`, tool failures are automatically appended to `.learnings/.pending-errors.log`:
+With the PostToolUse hook configured, tool failures are automatically appended to `$LEARNINGS_BASE/.learnings/.pending-errors.log`.
+
+**Global setup** (`~/.claude/settings.json` — applies to all projects):
 
 ```json
 {
@@ -307,9 +309,31 @@ With the PostToolUse hook configured in `.claude/settings.json`, tool failures a
 }
 ```
 
+**Project-local setup** (`.claude/settings.json` in the project root):
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ \"$CLAUDE_TOOL_EXIT_CODE\" -ne 0 ]; then echo \"$(date -u +%Y-%m-%dT%H:%M:%SZ) TOOL_FAILURE: $CLAUDE_TOOL_NAME\" >> .learnings/.pending-errors.log; fi"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Global setup must use the absolute `~/.claude/` path. Relative paths resolve from the project root and will write to the wrong place when global setup is active.
+
 On `/platform-skills:self-improve review`, the agent reads `.pending-errors.log`, converts each line into a proper `ERR` entry in `ERRORS.md`, and clears the log.
 
-Add to `.gitignore`:
+For project-local setup, add to `.gitignore`:
 ```
 .learnings/.pending-errors.log
 ```

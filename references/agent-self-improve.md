@@ -131,7 +131,29 @@ Detection approach: read all **Context** fields across `.learnings/*.md` and gro
 
 ### Claude Code hook integration
 
-Auto-capture errors after failed tool calls using `.claude/settings.json`. The hook writes a timestamped reminder line to a scratch file; Claude reads it at the next opportunity and logs a proper entry to `.learnings/ERRORS.md`.
+Auto-capture errors after failed tool calls. The hook writes a timestamped line to a scratch file; Claude reads it at the next opportunity and logs a proper entry to `$LEARNINGS_BASE/.learnings/ERRORS.md`.
+
+**Global setup** — add to `~/.claude/settings.json` (applies to all projects):
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ \"$CLAUDE_TOOL_EXIT_CODE\" -ne 0 ]; then echo \"$(date -u +%Y-%m-%dT%H:%M:%SZ) TOOL_FAILURE: $CLAUDE_TOOL_NAME\" >> ~/.claude/.learnings/.pending-errors.log; fi"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+**Project-local setup** — add to `.claude/settings.json` in the project root:
 
 ```json
 {
@@ -151,7 +173,9 @@ Auto-capture errors after failed tool calls using `.claude/settings.json`. The h
 }
 ```
 
-At session end (or on `/platform-skills:self-improve review`), the agent reads `.pending-errors.log`, converts each line into a proper `ERR` entry in `ERRORS.md`, and clears the log. Add `.learnings/.pending-errors.log` to `.gitignore` alongside the other personal-note files.
+Global setup must use the absolute `~/.claude/` path — relative paths in hooks resolve from the project root and will create a local `.learnings/` even when global setup is active.
+
+At session end (or on `/platform-skills:self-improve review`), the agent reads `.pending-errors.log`, converts each line into a proper `ERR` entry in `ERRORS.md`, and clears the log. For project-local setup, add `.learnings/.pending-errors.log` to `.gitignore`.
 
 ---
 
