@@ -132,7 +132,7 @@ My Flux Kustomization `apps` is stuck in NotReady with: "context deadline exceed
 - It cannot see your cluster or cloud account — paste the relevant output
 - It works best on one concrete problem at a time, not "review everything"
 
-### All 21 command workflows
+### All 27 command workflows
 
 See [COMMANDS.md](COMMANDS.md) for every command with modes and example prompts:
 

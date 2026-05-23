@@ -23,7 +23,7 @@ These two patterns address those failure modes at the source.
 
 ### Directory layout
 
-Bootstrap with `/platform-skills:self-improve init` or copy from `examples/agent-self-improve/`:
+Bootstrap with `/platform-skills:self-improve init global` (cross-project) or `/platform-skills:self-improve init local` (project-scoped), or copy from `examples/agent-self-improve/`:
 
 ```
 .learnings/
@@ -43,6 +43,45 @@ memory/
 ```
 
 Or commit them if they are team-shared project memory.
+
+### Global vs project scope
+
+The `init` mode asks which scope to use before creating anything:
+
+| Scope | Base path (`LEARNINGS_BASE`) | When to use |
+|---|---|---|
+| **Global** | `~/.claude/` | Learnings apply across all projects — recommended default for individuals |
+| **Project** | `.` (current working directory) | Team-shared memory committed to the repo |
+
+**Auto-detection order** (used by all modes except `init`):
+
+1. `~/.claude/.learnings/` exists → global setup detected, use `~/.claude/`
+2. `.learnings/` exists in `$PWD` → project setup detected, use `.`
+3. Neither exists → default to `~/.claude/` and auto-create
+
+**Promotion targets are always project-local** regardless of scope. `CLAUDE.md`, `AGENTS.md`, and `.github/copilot-instructions.md` live in the project repo — only the capture files (`.learnings/`, `memory/`) follow `LEARNINGS_BASE`.
+
+**Hook paths must be absolute** when using global setup. The PostToolUse hook in `~/.claude/settings.json` must reference the full path:
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ \"$CLAUDE_TOOL_EXIT_CODE\" -ne 0 ]; then echo \"$(date -u +%Y-%m-%dT%H:%M:%SZ) TOOL_FAILURE: $CLAUDE_TOOL_NAME\" >> ~/.claude/.learnings/.pending-errors.log; fi"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+For project-scoped setup, replace `~/.claude/.learnings/` with `.learnings/` (relative path works because the hook runs from the project root).
 
 ### Entry format
 
@@ -80,7 +119,8 @@ pending → resolved → promoted
 
 | Target file | When to promote there |
 |---|---|
-| `CLAUDE.md` / `AGENTS.md` | Agent-level rules for this project |
+| `~/.claude/CLAUDE.md` | Global agent-level rules — apply to all projects on this machine |
+| `CLAUDE.md` / `AGENTS.md` | Agent-level rules for this project only |
 | `.github/copilot-instructions.md` | GitHub Copilot workspace rules |
 | `references/` guide | Reusable pattern for the whole team |
 
@@ -92,27 +132,13 @@ Detection approach: read all **Context** fields across `.learnings/*.md` and gro
 
 ### Claude Code hook integration
 
-Auto-capture errors after failed tool calls using `.claude/settings.json`. The hook writes a timestamped reminder line to a scratch file; Claude reads it at the next opportunity and logs a proper entry to `.learnings/ERRORS.md`.
+Auto-capture errors after failed tool calls. The hook appends a timestamped line to `.pending-errors.log`; the agent converts it to a proper `ERR` entry at session end or on `review`.
 
-```json
-{
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "if [ \"$CLAUDE_TOOL_EXIT_CODE\" -ne 0 ]; then echo \"$(date -u +%Y-%m-%dT%H:%M:%SZ) TOOL_FAILURE: $CLAUDE_TOOL_NAME\" >> .learnings/.pending-errors.log; fi"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
+Hook setup varies by platform — see the **Platform Compatibility** section (below Part 2) for per-platform `settings.json` snippets and script copy commands.
 
-At session end (or on `/platform-skills:self-improve review`), the agent reads `.pending-errors.log`, converts each line into a proper `ERR` entry in `ERRORS.md`, and clears the log. Add `.learnings/.pending-errors.log` to `.gitignore` alongside the other personal-note files.
+Key rules regardless of platform:
+- Global setup must use absolute paths in the PostToolUse hook — relative paths resolve from the project root and write to the wrong directory.
+- For project-local setup, add `.learnings/.pending-errors.log` to `.gitignore`.
 
 ---
 
@@ -325,20 +351,141 @@ Each session, the agent should:
 
 ---
 
-## What users need to do
+## Platform Compatibility
 
-### Bootstrap (once per project)
+The self-improve workspace runs on macOS, Linux, Windows (WSL / Git Bash), and Windows native (PowerShell). The core skill logic is identical on all platforms — only the hook scripts and their invocation differ.
 
-```bash
-# Run the init command — agent scaffolds the directory structure
-/platform-skills:self-improve init
+### Global config path
+
+Claude Code resolves `~` via Node.js `os.homedir()`, which maps consistently across platforms:
+
+| Platform | `~/.claude/` resolves to |
+|---|---|
+| macOS | `/Users/<you>/.claude/` |
+| Linux | `/home/<you>/.claude/` |
+| Windows (WSL / Git Bash) | `/home/<you>/.claude/` (WSL home) |
+| Windows native | `C:\Users\<you>\.claude\` |
+
+All skill modes use `~/.claude/` notation — no platform-specific path changes are needed in the skill itself.
+
+### Hook scripts by platform
+
+| Platform | Stop hook | PreToolUse hook | PostToolUse |
+|---|---|---|---|
+| macOS / Linux | `session-end.sh` | `session-start-reminder.sh` | inline bash (see below) |
+| Windows — WSL / Git Bash | `session-end.sh` | `session-start-reminder.sh` | inline bash (see below) |
+| Windows — native PowerShell | `session-end.ps1` | `session-start-reminder.ps1` | inline PowerShell (see below) |
+
+**Windows recommendation:** WSL or Git Bash is the simpler path — bash scripts work identically to macOS/Linux. Use the PowerShell (`.ps1`) scripts only when WSL or Git Bash is not available.
+
+**Alpine Linux / busybox-only containers:** The bash scripts require bash. Install it first:
+```sh
+apk add bash
 ```
 
-Or copy from `examples/agent-self-improve/`:
+### Hook setup — macOS / Linux / WSL / Git Bash
+
+Add to `~/.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [{"type": "command", "command": "bash ~/.claude/scripts/session-end.sh"}]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [{"type": "command", "command": "bash ~/.claude/scripts/session-start-reminder.sh"}]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ \"$CLAUDE_TOOL_EXIT_CODE\" -ne 0 ] 2>/dev/null; then echo \"$(date -u +%Y-%m-%dT%H:%M:%SZ) TOOL_FAILURE: $CLAUDE_TOOL_NAME\" >> ~/.claude/.learnings/.pending-errors.log; fi"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Copy scripts:
+```sh
+mkdir -p ~/.claude/scripts
+cp examples/agent-self-improve/scripts/session-end.sh ~/.claude/scripts/
+cp examples/agent-self-improve/scripts/session-start-reminder.sh ~/.claude/scripts/
+chmod +x ~/.claude/scripts/*.sh
+```
+
+### Hook setup — Windows native (PowerShell)
+
+Add to `%USERPROFILE%\.claude\settings.json` (see `examples/agent-self-improve/settings-windows.json.example`):
+
+```json
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [{"type": "command", "command": "powershell -NonInteractive -File %USERPROFILE%\\.claude\\scripts\\session-end.ps1"}]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [{"type": "command", "command": "powershell -NonInteractive -File %USERPROFILE%\\.claude\\scripts\\session-start-reminder.ps1"}]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NonInteractive -Command \"$code=$env:CLAUDE_TOOL_EXIT_CODE; if ($code -and $code -ne '0') { $ts=(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ'); $name=$env:CLAUDE_TOOL_NAME; \\\"$ts TOOL_FAILURE: $name\\\" | Add-Content -Encoding UTF8 \\\"$env:USERPROFILE\\.claude\\.learnings\\.pending-errors.log\\\" }\""
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+If PowerShell blocks script execution, allow local scripts: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
+
+---
+
+## What users need to do
+
+### Bootstrap
+
+Two explicit subcommands — no interactive prompt needed:
+
+```
+/platform-skills:self-improve init global
+/platform-skills:self-improve init local
+```
+
+`init` without an argument asks you to choose and then proceeds as one of the above.
+
+Or copy from `examples/agent-self-improve/` (macOS/Linux/WSL):
 
 ```bash
-cp -r examples/agent-self-improve/.learnings .
-cp -r examples/agent-self-improve/memory .
+cp -r examples/agent-self-improve/.learnings ~/.claude/
+cp -r examples/agent-self-improve/memory ~/.claude/
+```
+
+Windows native (PowerShell):
+
+```powershell
+Copy-Item -Recurse examples\agent-self-improve\.learnings "$env:USERPROFILE\.claude\"
+Copy-Item -Recurse examples\agent-self-improve\memory "$env:USERPROFILE\.claude\"
 ```
 
 ### Per-session workflow

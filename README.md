@@ -206,7 +206,7 @@ platform-skills/
 
 ## Roadmap
 
-**Current release: v1.21.0** — 26 commands, 32 domain reference guides, 50+ wiki pages.
+**Current release: v1.23.0** — 27 commands, 34 domain reference guides, 50+ wiki pages.
 
 Full version history is in [CHANGELOG.md](CHANGELOG.md).
 
@@ -236,6 +236,29 @@ If Platform Skills saves you time, consider sponsoring to help keep it maintaine
 [![Sponsor](https://img.shields.io/badge/Sponsor-%E2%9D%A4-pink?logo=github)](https://github.com/sponsors/nitinjain999)
 
 Every sponsor directly supports new domains, pattern updates, and the time spent validating every example in real environments.
+
+---
+
+## Contributors ✨
+
+Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/docs/en/emoji-key)):
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+<table>
+  <tbody>
+    <tr>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/nitinjain999"><img src="https://avatars.githubusercontent.com/u/5239798?v=4?s=100" width="100px;" alt="Nitin Jain"/><br /><sub><b>Nitin Jain</b></sub></a><br /><a href="https://github.com/nitinjain999/platform-skills/commits?author=nitinjain999" title="Code">💻</a> <a href="https://github.com/nitinjain999/platform-skills/commits?author=nitinjain999" title="Documentation">📖</a> <a href="#maintenance-nitinjain999" title="Maintenance">🚧</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/geetika-sv"><img src="https://avatars.githubusercontent.com/u/148191613?v=4?s=100" width="100px;" alt="geetika-sv"/><br /><sub><b>geetika-sv</b></sub></a><br /><a href="https://github.com/nitinjain999/platform-skills/commits?author=geetika-sv" title="Code">💻</a> <a href="https://github.com/nitinjain999/platform-skills/commits?author=geetika-sv" title="Documentation">📖</a></td>
+    </tr>
+  </tbody>
+</table>
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+<!-- ALL-CONTRIBUTORS-LIST:END -->
+
+This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind welcome!
 
 ---
 
