@@ -1,7 +1,7 @@
 ---
 name: self-improve
 description: Bootstrap and operate a self-improving agent workspace. Scaffolds .learnings/ and memory/ directories, captures errors and learnings during a session, detects recurring patterns, and promotes stable entries to project memory (CLAUDE.md, AGENTS.md, or references/). Also implements the Proactive Agent pillars — WAL protocol, working buffer, SESSION-STATE, daily notes, VBR, VFM scoring, ADL decision logic, heartbeat, and reverse prompting. Use when asked to "remember this lesson", "set up agent memory", "log that error", "promote learnings", "capture session state", or "enable proactive mode".
-argument-hint: "[init global|init local|log|review|promote|resume|state] [description or file path]"
+argument-hint: "[init [global|local]|log [LRN|ERR|FEAT]|promote <ID>|migrate [global|local]|status|resume|review|state]"
 ---
 
 Bootstrap and operate a self-improving, proactive agent workspace.
@@ -162,15 +162,18 @@ Resume an incomplete task after context compaction or session interruption.
 
 Steps:
 1. Read `$LEARNINGS_BASE/memory/working-buffer.md` — identify current task and last `[x]` step
-2. Read `$LEARNINGS_BASE/memory/SESSION-STATE.md` — reload corrections, preferences, and decisions
-3. Read today's `$LEARNINGS_BASE/memory/YYYY-MM-DD.md` — reload recent session exchanges
-4. Verify the actual state of affected resources before continuing:
+2. Check the buffer's last-modified date:
+   - If the buffer is **3 or more days old**, warn: "Working buffer is N days old — state may be stale. Verify resources before resuming."
+   - If the buffer is **7 or more days old**, surface as a blocker: "Buffer is N days old. Recommended to clear and start fresh unless you can verify all resource state."
+3. Read `$LEARNINGS_BASE/memory/SESSION-STATE.md` — reload corrections, preferences, and decisions
+4. Read today's `$LEARNINGS_BASE/memory/YYYY-MM-DD.md` — reload recent session exchanges
+5. Verify the actual state of affected resources before continuing:
    - Files: check they exist and have expected content
    - Kubernetes: `kubectl get <resource> -n <namespace>`
    - Terraform: `terraform state list`
    - Git: `git log --oneline -5`
-5. Resume from the first `[ ]` step — do not re-run already-committed steps
-6. If a WAL entry shows `Status: PENDING`, determine whether the operation completed (check the resource) and update to `COMMITTED` or `ROLLED_BACK` accordingly
+6. Resume from the first `[ ]` step — do not re-run already-committed steps
+7. If a WAL entry shows `Status: PENDING`, determine whether the operation completed (check the resource) and update to `COMMITTED` or `ROLLED_BACK` accordingly
 
 Never ask "where were we?" — the buffer and session state answer that.
 
@@ -178,7 +181,7 @@ Reference: `references/agent-self-improve.md` → Compaction Recovery, SESSION-S
 
 ## Mode: review
 
-Scan `.learnings/` for recurring patterns and surface promotion candidates.
+Scan `$LEARNINGS_BASE/.learnings/` for recurring patterns and surface actionable items.
 
 Steps:
 1. Read all three `$LEARNINGS_BASE/.learnings/` files
@@ -190,36 +193,48 @@ Steps:
    Suggested target: .github/copilot-instructions.md → "Always add resource limits"
    ```
 4. Report entries still in `pending` state older than 7 days
-5. Report unresolved `FEAT` entries that could be addressed by an existing platform-skills domain
-6. Print totals:
+5. Report entries in `resolved` state older than 30 days — these are stale and should be either promoted or discarded:
    ```
-   Learnings: 8 total, 3 pending, 5 resolved
+   STALE RESOLVED — LRN-20260410-001: "helm diff before upgrade" (45 days in resolved)
+   Action: run /platform-skills:self-improve promote LRN-20260410-001 or set Status: discarded
+   ```
+6. Report unresolved `FEAT` entries that could be addressed by an existing platform-skills domain
+7. Process `$LEARNINGS_BASE/.learnings/.pending-errors.log` if it exists and is non-empty — convert each line to a proper `ERR` entry and clear the log
+8. Print totals:
+   ```
+   Learnings: 8 total, 3 pending, 5 resolved (1 stale)
    Errors: 5 total, 1 pending, 4 resolved
    Feature requests: 2 total, 2 pending
-   Promotion candidates: 1
+   Promotion candidates: 1 | Stale resolved: 1
    ```
 
 Reference: `references/agent-self-improve.md` → Recurring Pattern Detection
 
 ## Mode: promote
 
-Promote a resolved entry to a project memory file.
+Promote a resolved entry to the correct memory file.
 
 Steps:
 1. Read the entry by ID (e.g. `ERR-20260520-001`)
-2. Identify the correct promotion target:
-   | Target | When to use |
-   |---|---|
-   | `CLAUDE.md` / `AGENTS.md` | Agent-level rules that apply to every session in this project |
-   | `.github/copilot-instructions.md` | Copilot workspace rules |
-   | A `references/` guide | Reusable pattern for the whole team |
-3. Draft the promoted line — use imperative voice, ≤ 80 characters:
+2. Determine if this rule applies globally (all projects) or locally (this project only):
+   - **Global** — applies regardless of which project is open → promote to `~/.claude/CLAUDE.md` under `## Agent Rules`
+   - **Project** — applies only in this repo → promote to `CLAUDE.md` / `AGENTS.md` or `.github/copilot-instructions.md`
+
+3. Identify the correct promotion target:
+   | Target | Scope | When to use |
+   |---|---|---|
+   | `~/.claude/CLAUDE.md` → `## Agent Rules` | Global | Rule applies across all projects (only available for global setup) |
+   | `CLAUDE.md` / `AGENTS.md` | Project | Agent-level rules for this project only |
+   | `.github/copilot-instructions.md` | Project | GitHub Copilot workspace rules |
+   | A `references/` guide | Shared | Reusable pattern for the whole team |
+
+4. Draft the promoted line — imperative voice, ≤ 80 characters:
    - ERR → negative rule: "Never use `kubectl delete` without first capturing the manifest"
    - LRN → positive rule: "Prefer `helm diff upgrade` before `helm upgrade` to preview changes"
-4. Ask the user to confirm the target file and the promoted line before writing
-5. Append to the confirmed target file under a `## Agent Rules` or `## Platform Rules` heading
-6. Update the entry `Status` in `$LEARNINGS_BASE/.learnings/` from `resolved` to `promoted`
-7. Commit the change with a conventional commit message:
+5. Ask the user to confirm the target file and wording before writing
+6. Append to the confirmed target file under `## Agent Rules` or `## Platform Rules`
+7. Update the entry `Status` in `$LEARNINGS_BASE/.learnings/` from `resolved` to `promoted`
+8. Commit with a conventional commit message:
    `docs(memory): promote <ID> — <imperative summary>`
 
 Reference: `references/agent-self-improve.md` → Entry lifecycle, Promotion targets
@@ -248,6 +263,84 @@ Steps:
 - A non-obvious proper noun appears that isn't in project docs
 
 Reference: `references/agent-self-improve.md` → SESSION-STATE, Compaction Recovery
+
+## Mode: status
+
+Print a one-screen health summary of the self-improve workspace — no changes made.
+
+```
+/platform-skills:self-improve status
+```
+
+Steps:
+1. Resolve `LEARNINGS_BASE` (same auto-detection as all other modes)
+2. Read all three `$LEARNINGS_BASE/.learnings/` files and `$LEARNINGS_BASE/memory/working-buffer.md`
+3. Print the summary:
+   ```
+   Self-Improve Status
+   ───────────────────────────────────────────────
+   Workspace:   ~/.claude/ (global)            [or: ./  (local)]
+   
+   Learnings    3 pending   8 resolved   2 promoted
+   Errors       1 pending   4 resolved   0 promoted
+   Feature reqs 2 pending   0 resolved   0 promoted
+   
+   Pending errors log:  2 unprocessed entries
+   Working buffer:      active task — "deploy payments service"
+   Buffer age:          2 days
+   Last session:        2026-05-23 (today)
+   Sessions since review: 3 of 5
+   
+   Action items:
+     • 1 pending ERR older than 7 days → run review
+     • 2 stale resolved LRN (30+ days) → promote or discard
+     • Run /platform-skills:self-improve review (due in 2 sessions)
+   ───────────────────────────────────────────────
+   ```
+4. If `.pending-errors.log` is non-empty, note count but do not drain it (status is read-only)
+5. If no action items exist, print: "✓ Workspace is healthy"
+
+Reference: `references/agent-self-improve.md` → Entry lifecycle
+
+---
+
+## Mode: migrate
+
+Move the workspace from one scope to the other without losing any entries.
+
+```
+/platform-skills:self-improve migrate global   # project-local → ~/.claude/
+/platform-skills:self-improve migrate local    # ~/.claude/ → current project
+```
+
+Steps:
+1. Detect the **source** location:
+   - `migrate global`: source is `.learnings/` and `memory/` in `$PWD`
+   - `migrate local`: source is `~/.claude/.learnings/` and `~/.claude/memory/`
+2. Detect the **target** location (opposite of source)
+3. If target already has entries, ask the user:
+   - **Merge** — append source entries to target files (default)
+   - **Replace** — overwrite target with source
+   - **Cancel** — abort with no changes
+4. Write a WAL entry to `$LEARNINGS_BASE/memory/working-buffer.md` before moving anything
+5. Copy all `.learnings/*.md` entries and `memory/` files to the target
+6. Verify the target has all entries (count matches source)
+7. Ask the user to confirm deletion of the source directory before removing it
+8. Print migration summary:
+   ```
+   Migrated to ~/.claude/ (global):
+   ✓ .learnings/LEARNINGS.md  — 8 entries
+   ✓ .learnings/ERRORS.md     — 5 entries
+   ✓ .learnings/FEATURE_REQUESTS.md — 2 entries
+   ✓ memory/working-buffer.md
+   ✓ memory/SESSION-STATE.md
+   Source removed: ./.learnings/, ./memory/
+   ```
+9. If the source had hooks in `.claude/settings.json`, offer to update them for the new scope
+
+Reference: `references/agent-self-improve.md` → Global vs project scope
+
+---
 
 ## Proactive Agent Protocols
 

@@ -15,10 +15,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `init global` — scaffolds `~/.claude/` directly, no prompt; offers to wire all three hooks and create `~/.claude/CLAUDE.md`; idempotent (reports existing state and stops if already set up)
   - `init local` — scaffolds `.learnings/` and `memory/` in `$PWD`, no prompt; asks gitignore vs commit; idempotent
   - `init` (no argument) — asks user to choose, then delegates to `init global` or `init local`
-- `commands/self-improve.md` — `argument-hint` updated to `[init global|init local|log|review|promote|resume|state]`
+- `commands/self-improve.md` — `argument-hint` updated to `[init [global|local]|log [LRN|ERR|FEAT]|promote <ID>|migrate [global|local]|status|resume|review|state]`
 - `commands/self-improve.md` — Path Resolution preamble updated to short-circuit on `init global` / `init local` before auto-detection
-- `references/agent-self-improve.md` — Bootstrap section updated with explicit subcommand examples
+- `references/agent-self-improve.md` — Bootstrap section updated with explicit subcommand examples; line 26 updated from bare `init` to `init global` / `init local` examples
 - `examples/agent-self-improve/HOW_IT_WORKS.md` — init section rewritten with both subcommands, idempotency note
+
+#### Self-Improve: new subcommands — `status` and `migrate`
+
+- `commands/self-improve.md` — new `## Mode: status` — read-only health summary: counts across all three log files, working-buffer age, sessions since last review, any WAL entries still PENDING, pending error count, and a prioritised action-item list
+- `commands/self-improve.md` — new `## Mode: migrate` — moves workspace between global and local scope; chooses merge or replace for conflicting entries; writes a WAL entry before moving any files; verifies write to new path and confirms deletion of old path; idempotent if already at target scope
+
+#### Self-Improve: `promote` supports global target
+
+- `commands/self-improve.md` — `promote` mode now includes `~/.claude/CLAUDE.md` as a valid target for rules that should apply across all projects (e.g. "never do X on any repo"); scope determination step added before drafting the promoted line
+- `references/agent-self-improve.md` — Promotion targets table updated with `~/.claude/CLAUDE.md` row
+
+#### Self-Improve: `review` flags stale resolved entries
+
+- `commands/self-improve.md` — `review` mode now reports entries with `Status: resolved` that are older than 30 days and have no `Action` containing "promoted", surfacing them as promotion candidates rather than silently aging out
+
+#### Self-Improve: `resume` warns on stale working buffer
+
+- `commands/self-improve.md` — `resume` mode now reads the `Last updated:` timestamp from `memory/working-buffer.md` before proceeding; warns if buffer is 3+ days old (task may be abandoned); blocks with an explicit confirmation prompt if 7+ days old
+
+#### Self-Improve: SKILL.md description updates
+
+- `SKILL.md` — self-improve reference line updated to mention global/project-local workspace, `init global`/`init local`, `status`/`migrate` subcommands
+- `SKILL.md` — `/platform-skills:self-improve` slash command description updated to reflect full capability set
+- `skills/platform-skills/SKILL.md` — same updates applied (kept in sync with root `SKILL.md`)
 
 #### Self-Improve: global path resolution for cross-project learnings
 

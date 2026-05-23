@@ -23,7 +23,7 @@ These two patterns address those failure modes at the source.
 
 ### Directory layout
 
-Bootstrap with `/platform-skills:self-improve init` or copy from `examples/agent-self-improve/`:
+Bootstrap with `/platform-skills:self-improve init global` (cross-project) or `/platform-skills:self-improve init local` (project-scoped), or copy from `examples/agent-self-improve/`:
 
 ```
 .learnings/
@@ -119,7 +119,8 @@ pending → resolved → promoted
 
 | Target file | When to promote there |
 |---|---|
-| `CLAUDE.md` / `AGENTS.md` | Agent-level rules for this project |
+| `~/.claude/CLAUDE.md` | Global agent-level rules — apply to all projects on this machine |
+| `CLAUDE.md` / `AGENTS.md` | Agent-level rules for this project only |
 | `.github/copilot-instructions.md` | GitHub Copilot workspace rules |
 | `references/` guide | Reusable pattern for the whole team |
 
