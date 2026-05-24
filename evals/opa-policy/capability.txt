@@ -1,1 +1,1 @@
-OPA/Rego policy authoring: write a deny rule with metadata, explain the policy intent, provide a conftest test, and document the pipeline integration.
+OPA/Conftest policy implementation: write a Rego deny rule with metadata annotation, import rego.v1, provide a conftest test file, and document CI pipeline integration for blocking wildcard IAM actions in Terraform.
