@@ -6,6 +6,15 @@
   "skills": {
     "platform-skills": { "path": "SKILL.md" }
   },
+  "exclude": [
+    "examples/agent-self-improve/scripts/**",
+    ".github/**",
+    ".claude-plugin/**",
+    ".tessl/**",
+    "tests/**",
+    "*.sh",
+    "*.ps1"
+  ],
   "private": false,
   "author": "Nitin Jain",
   "license": "Apache-2.0",
