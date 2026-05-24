@@ -1,10 +1,10 @@
 name: 'Kubernetes Deploy'
-description: 'Apply a Kubernetes manifest and wait for rollout to complete. Authenticates to EKS or AKS via OIDC — no long-lived credentials.'
+description: 'Apply a Kubernetes manifest and wait for rollout to complete. Authenticates to EKS, AKS, or GKE via OIDC — no long-lived credentials.'
 author: 'Platform Team'
 
 inputs:
   cloud_provider:
-    description: 'Cloud provider: aws or azure'
+    description: 'Cloud provider: aws | azure | gke'
     required: true
   # ── AWS / EKS ────────────────────────────────────────────────────────────────
   aws_role_arn:
@@ -32,6 +32,22 @@ inputs:
     required: false
   azure_resource_group:
     description: 'Resource group containing the AKS cluster (required when cloud_provider=azure)'
+    required: false
+  # ── GCP / GKE ────────────────────────────────────────────────────────────────
+  gcp_workload_identity_provider:
+    description: 'WIF provider resource name (required when cloud_provider=gke) — projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL/providers/PROVIDER'
+    required: false
+  gcp_service_account:
+    description: 'GCP service account email to impersonate via WIF (required when cloud_provider=gke)'
+    required: false
+  gcp_project:
+    description: 'GCP project ID (required when cloud_provider=gke)'
+    required: false
+  gcp_cluster_name:
+    description: 'GKE cluster name (required when cloud_provider=gke)'
+    required: false
+  gcp_cluster_location:
+    description: 'GKE cluster region or zone, e.g. us-central1 or us-central1-a (required when cloud_provider=gke)'
     required: false
   # ── Deployment ───────────────────────────────────────────────────────────────
   namespace:
@@ -81,6 +97,11 @@ runs:
         AZURE_SUBSCRIPTION_ID: ${{ inputs.azure_subscription_id }}
         AZURE_CLUSTER_NAME: ${{ inputs.azure_cluster_name }}
         AZURE_RESOURCE_GROUP: ${{ inputs.azure_resource_group }}
+        GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ inputs.gcp_workload_identity_provider }}
+        GCP_SERVICE_ACCOUNT: ${{ inputs.gcp_service_account }}
+        GCP_PROJECT: ${{ inputs.gcp_project }}
+        GCP_CLUSTER_NAME: ${{ inputs.gcp_cluster_name }}
+        GCP_CLUSTER_LOCATION: ${{ inputs.gcp_cluster_location }}
         NAMESPACE: ${{ inputs.namespace }}
         MANIFEST_PATH: ${{ inputs.manifest_path }}
         TIMEOUT: ${{ inputs.timeout }}
@@ -100,8 +121,15 @@ runs:
             [[ -n "$AZURE_CLUSTER_NAME" ]]    || ERRORS+=("azure_cluster_name is required when cloud_provider=azure")
             [[ -n "$AZURE_RESOURCE_GROUP" ]]  || ERRORS+=("azure_resource_group is required when cloud_provider=azure")
             ;;
+          gke)
+            [[ -n "$GCP_WORKLOAD_IDENTITY_PROVIDER" ]] || ERRORS+=("gcp_workload_identity_provider is required when cloud_provider=gke")
+            [[ -n "$GCP_SERVICE_ACCOUNT" ]]            || ERRORS+=("gcp_service_account is required when cloud_provider=gke")
+            [[ -n "$GCP_PROJECT" ]]                    || ERRORS+=("gcp_project is required when cloud_provider=gke")
+            [[ -n "$GCP_CLUSTER_NAME" ]]               || ERRORS+=("gcp_cluster_name is required when cloud_provider=gke")
+            [[ -n "$GCP_CLUSTER_LOCATION" ]]           || ERRORS+=("gcp_cluster_location is required when cloud_provider=gke")
+            ;;
           *)
-            ERRORS+=("cloud_provider must be 'aws' or 'azure' (got: '$CLOUD_PROVIDER')")
+            ERRORS+=("cloud_provider must be 'aws', 'azure', or 'gke' (got: '$CLOUD_PROVIDER')")
             ;;
         esac
 
@@ -176,7 +204,24 @@ runs:
         echo "kubelogin conversion complete (workloadidentity)"
         echo "::endgroup::"
 
-    # ── 4. Install kubectl ────────────────────────────────────────────────────
+    # ── 4a. GKE — authenticate via Workload Identity Federation ──────────────
+    - name: Authenticate to GCP via Workload Identity Federation
+      if: inputs.cloud_provider == 'gke'
+      uses: google-github-actions/auth@6fc4af4b145ae7821d527454aa9bd537d1f2dc5f  # v2.1.7
+      with:
+        workload_identity_provider: ${{ inputs.gcp_workload_identity_provider }}
+        service_account: ${{ inputs.gcp_service_account }}
+
+    # ── 4b. GKE — fetch cluster credentials ──────────────────────────────────
+    - name: Get GKE cluster credentials
+      if: inputs.cloud_provider == 'gke'
+      uses: google-github-actions/get-gke-credentials@20b2b9f6b9a6a5cc0b7a435e26fdb9cf6de2e1fa  # v2.3.1
+      with:
+        cluster_name: ${{ inputs.gcp_cluster_name }}
+        location: ${{ inputs.gcp_cluster_location }}
+        project_id: ${{ inputs.gcp_project }}
+
+    # ── 5. Install kubectl ────────────────────────────────────────────────────
     - name: Install kubectl
       shell: bash
       timeout-minutes: 3
@@ -194,7 +239,7 @@ runs:
         fi
         echo "::endgroup::"
 
-    # ── 5. Apply manifest ─────────────────────────────────────────────────────
+    # ── 6. Apply manifest ─────────────────────────────────────────────────────
     - name: Apply manifest
       id: apply
       shell: bash
@@ -232,7 +277,7 @@ runs:
         fi
         echo "::endgroup::"
 
-    # ── 6. Wait for rollout ───────────────────────────────────────────────────
+    # ── 7. Wait for rollout ───────────────────────────────────────────────────
     - name: Wait for rollout
       id: rollout
       shell: bash
@@ -264,7 +309,7 @@ runs:
         fi
         echo "::endgroup::"
 
-    # ── 7. Job summary ────────────────────────────────────────────────────────
+    # ── 8. Job summary ────────────────────────────────────────────────────────
     - name: Write job summary
       if: always()
       shell: bash
@@ -276,13 +321,19 @@ runs:
         ROLLOUT: ${{ steps.rollout.outputs.status }}
         DRY_RUN: ${{ inputs.dry_run }}
         RESOURCES: ${{ steps.apply.outputs.resources }}
+        GCP_PROJECT: ${{ inputs.gcp_project }}
       run: |
         {
           echo "## Kubernetes Deploy"
           echo ""
           echo "| Field | Value |"
           echo "|---|---|"
-          echo "| Cloud | \`$CLOUD_PROVIDER\` |"
+          case "$CLOUD_PROVIDER" in
+            aws)   echo "| Cloud | \`aws (EKS)\` |" ;;
+            azure) echo "| Cloud | \`azure (AKS)\` |" ;;
+            gke)   echo "| Cloud | \`gke (GKE — project: $GCP_PROJECT)\` |" ;;
+            *)     echo "| Cloud | \`$CLOUD_PROVIDER\` |" ;;
+          esac
           echo "| Namespace | \`$NAMESPACE\` |"
           echo "| Manifest | \`$MANIFEST\` |"
           echo "| Dry run | ${DRY_RUN} |"
