@@ -29,7 +29,17 @@ Determine which workflow applies from the input. If it is ambiguous, ask exactly
 
 Use when something is broken or not reconciling on a live cluster. Invoke as `/platform-skills:gitops debug`.
 
-Works through 5 structured workflows in order:
+**If the input already contains error output** (flux get, kubectl describe, pod logs): skip directly to the relevant workflow — do NOT start from installation check. Match the error to the layer first:
+
+| Error pattern | Layer | Jump to |
+|---|---|---|
+| `rendered manifests contain a resource that already exists` / `invalid ownership metadata` | chart rendering | HelmRelease trace (Workflow 3) |
+| `Helm install failed` / `upgrade retries exhausted` | chart rendering / reconciliation | HelmRelease trace (Workflow 3) |
+| `FetchFailed` / `unauthorized` | source | Source workflow (Workflow 2) |
+| `kustomize build failed` / `BuildFailed` | reconciliation | Kustomization trace (Workflow 4) |
+| Controller pod not running | installation | Installation check (Workflow 1) |
+
+Works through 5 structured workflows in order (when no evidence provided):
 
 1. **Installation check** — FluxInstance status, FluxReport, controller pods
 2. **Source failures** — GitRepository FetchFailed, OCIRepository auth, Cosign verify
@@ -40,7 +50,13 @@ Works through 5 structured workflows in order:
 Produces a 5-section report: Summary → Resource Analysis → Dependency Chain → Root Cause → Recommendations.
 
 ```bash
-# Quick health check to start
+# HelmRelease ownership conflict evidence
+flux logs --kind=HelmRelease --name=<name> --namespace=<ns>
+kubectl get clusterrole <name>
+helm list -n <ns>
+kubectl get events -n <ns>
+
+# Quick health check to start (when no evidence provided)
 flux get all -A
 kubectl get fluxinstance flux -n flux-system -o yaml   # if using Flux Operator
 kubectl get fluxreport flux -n flux-system -o yaml

@@ -54,7 +54,7 @@ If a task spans multiple areas, decide which layer owns the source of truth and 
 - Prefer OIDC or workload identity over static cloud credentials.
 - Model environments explicitly. Promotion should be visible in Git history and reversible by commit rollback.
 - For Linux and networking changes, validate at each layer before escalating: confirm the process is listening (`ss -tulnp`), then L3 reachability (`ping`), L4 connectivity (`nc -zv`), L7 response (`curl -v`), and security group / NACL rules last. Do not skip layers.
-- For every Terraform change, enforce in order: `terraform fmt -check -recursive`, `terraform validate`, `tflint --recursive`, security scan (`tfsec` or `checkov`), then `plan`. Do not let format or lint failures reach the plan step.
+- For every Terraform change, enforce in order: `terraform fmt -check -recursive`, `terraform validate`, `conftest test` (OPA/Rego policy gates — runs **after validate, before plan** as a blocking gate), `tflint --recursive`, security scan (`tfsec` or `checkov`), then `plan`. Do not let format, lint, or policy failures reach the plan step.
 - For every Helm chart change, enforce in order: `helm lint --strict`, `helm template --debug`, `kubeconform -strict -summary` on rendered output, `checkov` on rendered manifests, then `helm test` in-cluster. Fail CI on any `helm lint --strict` warning.
 - Enforce a tag baseline on all cloud resources. The specific keys are an organizational decision. Use AWS `default_tags` (provider level) or Azure `merge(local.common_tags, {...})` (module local) so the baseline is applied once, not repeated per resource. Back it with AWS Tag Policies or Azure Policy so resources created outside Terraform are also covered.
 

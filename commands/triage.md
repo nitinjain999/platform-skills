@@ -113,9 +113,12 @@ gh pr comment <pr_number> --body "<reply>"
 Reply rules:
 - First-person, concise, no filler
 - Reference the specific line or file
-- **ACTIONABLE_FIX**: one sentence describing what changed and why, referencing the specific file (e.g. `deployment.yaml`). Reply MUST end with exactly: `✅ Fixed`
+- **ACTIONABLE_FIX**: one sentence describing what changed and why, referencing the specific file (e.g. `apps/api/deployment.yaml`). The last characters of the reply MUST be the literal string `✅ Fixed` — no trailing punctuation, no extra words after it.
 - **INFORMATIONAL**: answer or acknowledge, explain why no code change. End with: `ℹ️ No change needed.`
 - **NOT_APPLICABLE**: state why this does not apply. End with: `❌ Not applicable.`
+
+Example ACTIONABLE_FIX reply:
+> Added `resources.requests` (cpu: 100m, memory: 128Mi) and `resources.limits` (memory: 256Mi) to the `api` container in `apps/api/deployment.yaml`. ✅ Fixed
 
 ---
 

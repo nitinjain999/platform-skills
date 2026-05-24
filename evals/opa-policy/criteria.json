@@ -29,7 +29,7 @@
     },
     {
       "name": "ci_placement",
-      "description": "States conftest runs after terraform validate and before (or alongside) terraform plan as a gate",
+      "description": "Provides the exact conftest command to run the policy in CI (e.g. `conftest test --policy ./policies ./main.tf` or similar), either as a standalone step or as part of a GitHub Actions workflow",
       "max_score": 1
     }
   ]
