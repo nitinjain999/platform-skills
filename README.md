@@ -1,6 +1,6 @@
 # Platform Skills
 
-> A practical handbook for developers and DevOps engineers working with Kubernetes, GitOps, Terraform, GitHub Actions, cloud infrastructure, and secrets management — with an optional Claude plugin layer for interactive guidance.
+> A production-grade handbook for platform engineers — 35 domain guides covering Kubernetes, Flux CD, Terraform, GitHub Actions, AWS, OPA/Rego, KEDA, supply chain security, Falco, observability, and more. Use it on GitHub, as a local reference, or install as a Claude skill for interactive guidance with blast radius, validation steps, and rollback plans built in.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-v1.25.20-0e1117)](CHANGELOG.md)
