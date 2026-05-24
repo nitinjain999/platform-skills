@@ -1,16 +1,14 @@
 apiVersion: kustomize.toolkit.fluxcd.io/v1
 kind: Kustomization
 metadata:
-  name: tenants
+  name: platform
   namespace: flux-system
 spec:
-  interval: 5m
+  interval: 10m
   prune: true
   wait: true
-  timeout: 3m
-  dependsOn:
-    - name: platform          # ClusterRole and NetworkPolicies must exist before tenant RBAC
+  timeout: 5m
   sourceRef:
     kind: GitRepository
     name: flux-system
-  path: ./tenants
+  path: ./platform

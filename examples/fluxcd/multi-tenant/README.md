@@ -20,22 +20,17 @@ The platform team owns the cluster bootstrap and tenant onboarding. Tenant teams
 multi-tenant/
 ├── clusters/
 │   └── production/
-│       ├── flux-system.yaml     # Flux controller bootstrap (or FluxInstance)
-│       └── tenants.yaml         # Kustomization pointing to tenants/
+│       ├── platform.yaml        # Kustomization for ClusterRole + NetworkPolicy
+│       └── tenants.yaml         # Kustomization pointing to tenants/ (dependsOn: platform)
 ├── tenants/
-│   ├── team-a/
-│   │   ├── namespace.yaml
-│   │   ├── serviceaccount.yaml
-│   │   ├── rolebinding.yaml
-│   │   ├── gitrepository.yaml
-│   │   └── kustomization.yaml
-│   └── team-b/
+│   └── team-a/
 │       ├── namespace.yaml
-│       ├── serviceaccount.yaml
+│       ├── serviceaccount.yaml  # Created in flux-system namespace
 │       ├── rolebinding.yaml
 │       ├── gitrepository.yaml
 │       └── kustomization.yaml
 └── platform/
+    ├── kustomization.yaml       # Kustomize config listing rbac + network-policy
     ├── rbac/
     │   └── tenant-role.yaml     # ClusterRole with namespace-scoped permissions
     └── network-policy/
@@ -100,8 +95,9 @@ flux get kustomizations -n flux-system | grep team-
 flux get kustomization team-a -n flux-system
 
 # Check RBAC — is the ServiceAccount missing permissions?
+# SA is in flux-system namespace, not the tenant namespace
 kubectl auth can-i create deployments \
-  --as=system:serviceaccount:team-a:team-a -n team-a
+  --as=system:serviceaccount:flux-system:team-a -n team-a
 
 # Check NetworkPolicy is not blocking cross-namespace traffic unexpectedly
 kubectl describe networkpolicy -n team-a
