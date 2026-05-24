@@ -87,6 +87,7 @@ When asked to generate code, start from the thinnest useful slice that proves th
 - For AI-assisted FluxCD debugging via the Flux MCP server (installation, core workflows, log analysis) — read [references/fluxcd-mcp.md](references/fluxcd-mcp.md).
 - For Flux API migration (v2.7 v1beta1 removals, v2.8 v1beta2 removals, CLI and Operator 3-step upgrade paths, CI gate) — read [references/fluxcd-migration.md](references/fluxcd-migration.md).
 - For FluxCD security audit (secrets management, hardcoded credential grep patterns, source auth, OCI supply chain, RBAC, image automation security) — read [references/fluxcd-security.md](references/fluxcd-security.md).
+- For a scannable incident cheat-sheet (controller / source / Kustomization / HelmRelease / ResourceSet failures — symptom → cause → fix, label-based ownership tracing, general debugging checklist) — read [references/fluxcd-troubleshooting.md](references/fluxcd-troubleshooting.md).
 - For Argo CD app delivery and application set patterns, read [references/argocd.md](references/argocd.md).
 - For AWS landing zones, IAM, and EKS-oriented patterns, read [references/aws.md](references/aws.md).
 - For Azure management groups, identity, and AKS-oriented patterns, read [references/azure.md](references/azure.md).

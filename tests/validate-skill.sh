@@ -53,6 +53,7 @@ REQUIRED_REFERENCES=(
   references/fluxcd-mcp.md
   references/fluxcd-migration.md
   references/fluxcd-security.md
+  references/fluxcd-troubleshooting.md
   references/argocd.md
   references/aws.md
   references/azure.md

@@ -94,13 +94,29 @@ kubectl describe ocirepository <name> -n flux-system
 Trace: HelmRelease spec/status → managing object → `valuesFrom` references → chart source → managed inventory → pod logs.
 
 ```bash
+# Step 1: Check HelmRelease status
 flux get helmrelease <name> -n <namespace>
 kubectl describe helmrelease <name> -n <namespace>
 flux logs --kind=HelmRelease --name=<name> --namespace=<namespace>
+
+# Step 2: Trace the managing object via labels — don't guess, read the labels
+kubectl get helmrelease <name> -n <namespace> \
+  -o jsonpath='{.metadata.labels}' | jq
+# Look for:
+#   kustomize.toolkit.fluxcd.io/name  → parent Kustomization
+#   resourceset.fluxcd.io/name        → parent ResourceSet
+
+# Step 3: Check valuesFrom ConfigMaps / Secrets
 kubectl get configmap,secret -n <namespace>
+
+# Step 4: Check chart source
 flux get sources oci -A
 flux get sources helm -A
+
+# Step 5: Check managed inventory resources
 kubectl get all -n <namespace>
+
+# Step 6: Check pod logs if workload exists
 kubectl logs -n <namespace> deploy/<name> | tail -50
 ```
 
@@ -120,13 +136,27 @@ kubectl logs -n <namespace> deploy/<name> | tail -50
 Trace: Kustomization spec/status → parent object → `substituteFrom` references → source → managed resources → pod logs.
 
 ```bash
+# Step 1: Check Kustomization status
 flux get kustomization <name> -n flux-system
 kubectl describe kustomization <name> -n flux-system
 flux logs --kind=Kustomization --name=<name>
+
+# Step 2: Find resources managed by this Kustomization (label-based)
+kubectl get all -A -l kustomize.toolkit.fluxcd.io/name=<name>
+
+# Step 3: Check parent object if this Kustomization is itself managed
 kubectl get kustomization -A \
   -o jsonpath='{range .items[*]}{.metadata.name}{" dependsOn: "}{.spec.dependsOn}{"\n"}{end}'
-kubectl get configmap,secret -n flux-system -l reconcile.fluxcd.io/watch=Enabled
+
+# Step 4: Check substituteFrom references
+kubectl get configmap,secret -n flux-system \
+  -l reconcile.fluxcd.io/watch=Enabled
+
+# Step 5: Check source
 flux get sources git -A
+flux get sources oci -A
+
+# Step 6: Check managed resources
 kubectl get all -n <target-namespace>
 ```
 
@@ -168,6 +198,8 @@ kubectl logs -n <namespace> <pod-name> --tail=100
 **Edge cases:**
 - Flux-managed resources: warn before manual changes — Flux will revert them on next reconciliation.
 - Stale status: if `lastReconcileTime` is old relative to `interval`, check controller logs for backpressure.
+
+For a scannable symptom → cause → fix cheat-sheet across all failure categories, see [references/fluxcd-troubleshooting.md](../references/fluxcd-troubleshooting.md).
 
 ---
 
