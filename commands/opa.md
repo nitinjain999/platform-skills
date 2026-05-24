@@ -21,6 +21,7 @@ Steps:
    - Generate a descriptive `msg` that includes the offending resource name/value and a remediation hint
    - Use `some` for iteration, `in` for membership, `startswith`/`contains` for string matching
 4. Show the Conftest command to test the policy against sample input
+5. State CI placement: conftest runs **after `terraform validate`** and **before `terraform plan`** as a blocking gate — failing conftest must prevent plan from running
 
 Reference: `references/opa.md` → Rule Types, Input Shape, Rego v1 Syntax
 

@@ -113,9 +113,9 @@ gh pr comment <pr_number> --body "<reply>"
 Reply rules:
 - First-person, concise, no filler
 - Reference the specific line or file
-- **ACTIONABLE_FIX**: describe what was changed and why. End with: `✅ Fixed — thread resolved.`
-- **INFORMATIONAL**: answer or acknowledge, explain why no code change. End with: `ℹ️ Thread resolved — no code change needed.`
-- **NOT_APPLICABLE**: state why this does not apply. End with: `❌ Not applicable — thread resolved.`
+- **ACTIONABLE_FIX**: one sentence describing what changed and why, referencing the specific file (e.g. `deployment.yaml`). Reply MUST end with exactly: `✅ Fixed`
+- **INFORMATIONAL**: answer or acknowledge, explain why no code change. End with: `ℹ️ No change needed.`
+- **NOT_APPLICABLE**: state why this does not apply. End with: `❌ Not applicable.`
 
 ---
 
