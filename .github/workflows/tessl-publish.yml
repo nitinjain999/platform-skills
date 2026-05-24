@@ -2,16 +2,11 @@ name: Tessl Publish
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'SKILL.md'
-      - 'tile.json'
-      - 'skills/platform-skills/**'
-      - 'references/**'
-      - 'commands/**'
-      - 'examples/**'
-      - 'evals/**'
+    inputs:
+      version:
+        description: 'Version to publish (e.g. 1.26.15)'
+        required: true
+        type: string
 
 jobs:
   publish:
@@ -24,5 +19,8 @@ jobs:
       - uses: tesslio/setup-tessl@25ec223fc0da33b41b8044ff5ab2b85235f4f91e # v2
         with:
           token: ${{ secrets.TESSL_TOKEN }}
+      - name: Set version in tile.json
+        run: |
+          jq --arg v "${{ inputs.version }}" '.version = $v' tile.json > tile.json.tmp && mv tile.json.tmp tile.json
       - name: Publish skill
-        run: tessl tile publish . --bump patch
+        run: tessl tile publish .
