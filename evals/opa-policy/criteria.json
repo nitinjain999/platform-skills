@@ -3,28 +3,34 @@
   "context": "The agent was asked to write an OPA/Rego policy blocking wildcard IAM actions in Terraform, with metadata annotation, a conftest test file, and CI pipeline placement guidance.",
   "checklist": [
     {
-      "item": "Policy uses `import rego.v1` (not legacy implicit future.keywords import)",
-      "weight": 2
+      "name": "rego_v1_import",
+      "description": "Policy uses `import rego.v1` (not legacy implicit future.keywords import)",
+      "max_score": 2
     },
     {
-      "item": "Policy has a METADATA block with at least title and entrypoint: true",
-      "weight": 1
+      "name": "metadata_annotation",
+      "description": "Policy has a METADATA block with at least title and entrypoint: true",
+      "max_score": 1
     },
     {
-      "item": "deny rule catches both `\"Action\": \"*\"` (string) and `\"Action\": [\"*\"]` (array) forms using `contains msg if` syntax",
-      "weight": 2
+      "name": "deny_rule_correct",
+      "description": "deny rule catches both `\"Action\": \"*\"` (string) and `\"Action\": [\"*\"]` (array) forms using `contains msg if` syntax",
+      "max_score": 2
     },
     {
-      "item": "deny message includes the resource name (e.g. sprintf with [name])",
-      "weight": 1
+      "name": "deny_message_names_resource",
+      "description": "deny message includes the resource name (e.g. sprintf with [name])",
+      "max_score": 1
     },
     {
-      "item": "Provides a policy_test.rego with at least one test_deny_ case (wildcard → deny) and one test_allow_ case (scoped action → no deny)",
-      "weight": 2
+      "name": "test_file",
+      "description": "Provides a policy_test.rego with at least one test_deny_ case (wildcard → deny) and one test_allow_ case (scoped action → no deny)",
+      "max_score": 2
     },
     {
-      "item": "States conftest runs after terraform validate and before (or alongside) terraform plan as a gate",
-      "weight": 1
+      "name": "ci_placement",
+      "description": "States conftest runs after terraform validate and before (or alongside) terraform plan as a gate",
+      "max_score": 1
     }
   ]
 }

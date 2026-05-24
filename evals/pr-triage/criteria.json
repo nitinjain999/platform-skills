@@ -3,24 +3,29 @@
   "context": "The agent was asked to triage a PR review comment about missing resource limits on a Kubernetes container, classify it, produce corrected YAML, and write a review reply.",
   "checklist": [
     {
-      "item": "Classifies the comment as ACTIONABLE_FIX (missing resource limits is a real safety issue)",
-      "weight": 2
+      "name": "correct_classification",
+      "description": "Classifies the comment as ACTIONABLE_FIX — missing resource limits is a real safety issue that must be fixed",
+      "max_score": 2
     },
     {
-      "item": "Provides corrected YAML with resources.requests (cpu + memory) and resources.limits (memory). CPU limit is omitted or justified — CPU limits cause throttling.",
-      "weight": 2
+      "name": "correct_yaml",
+      "description": "Provides corrected YAML with resources.requests (cpu + memory) and resources.limits (memory). CPU limit is omitted or justified — CPU limits cause throttling.",
+      "max_score": 2
     },
     {
-      "item": "States blast radius: rolling update replaces pods; if requests exceed actual usage, pods may be rescheduled",
-      "weight": 1
+      "name": "blast_radius",
+      "description": "States blast radius: rolling update replaces pods; if requests exceed actual usage, pods may be rescheduled",
+      "max_score": 1
     },
     {
-      "item": "Provides a rollback plan: revert manifest and re-apply, or kubectl rollout undo",
-      "weight": 1
+      "name": "rollback_plan",
+      "description": "Provides a rollback plan: revert manifest and re-apply, or kubectl rollout undo",
+      "max_score": 1
     },
     {
-      "item": "Review reply is concise, references the file, and ends with ✅ Fixed",
-      "weight": 1
+      "name": "reply_quality",
+      "description": "Review reply is concise, references the file, and ends with ✅ Fixed",
+      "max_score": 1
     }
   ]
 }
