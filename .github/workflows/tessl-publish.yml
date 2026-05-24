@@ -22,4 +22,4 @@ jobs:
         with:
           token: ${{ secrets.TESSL_TOKEN }}
       - name: Publish skill
-        run: tessl tile publish skills/platform-skills
+        run: tessl tile publish .
