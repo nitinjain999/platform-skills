@@ -5,6 +5,12 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.26.0] - 2026-05-24
+
+### Added
+
+- Tessl evaluation scenarios (`evals/`) for quality testing: `pr-triage`, `opa-policy`, `flux-helmrelease`. Each scenario includes `task.md`, `criteria.json`, and `capability.txt`.
+
 ## [1.25.4] - 2026-05-24
 
 ### Changed
