@@ -1,34 +1,30 @@
 {
-  "criteria": [
+  "type": "weighted_checklist",
+  "context": "The agent was given a Flux CD HelmRelease failure (ClusterRole ownership conflict) and asked to classify the layer, collect evidence, identify root cause, provide a fix, state blast radius, and give validation steps.",
+  "checklist": [
     {
-      "name": "correct_layer",
-      "description": "Classifies the failure as the `chart rendering` or `reconciliation` layer — NOT source or runtime. The chart rendered successfully but ClusterRole ownership conflict prevents install.",
-      "required": true
+      "item": "Classifies the failure as the chart rendering or reconciliation layer — NOT source or runtime",
+      "weight": 2
     },
     {
-      "name": "evidence_commands",
-      "description": "Lists at least 2 of these evidence commands: `flux logs --kind=HelmRelease --name=cert-manager`, `kubectl get clusterrole cert-manager-cainjector -o yaml`, `helm list -n cert-manager`, `kubectl get events -n cert-manager`.",
-      "required": true
+      "item": "Lists at least 2 evidence commands: flux logs --kind=HelmRelease, kubectl get clusterrole, helm list -n cert-manager, or kubectl get events -n cert-manager",
+      "weight": 2
     },
     {
-      "name": "root_cause",
-      "description": "Correctly identifies the root cause: a pre-existing ClusterRole from a prior manual or helm install is not owned by this Flux-managed HelmRelease, causing the ownership conflict.",
-      "required": true
+      "item": "Correctly identifies root cause: pre-existing ClusterRole not owned by this HelmRelease causes ownership conflict",
+      "weight": 2
     },
     {
-      "name": "fix",
-      "description": "Fix includes either: (a) `helm uninstall cert-manager -n cert-manager` followed by `flux reconcile helmrelease cert-manager -n cert-manager`, or (b) annotating/labeling the conflicting resource with the correct Helm release metadata to adopt it.",
-      "required": true
+      "item": "Fix includes helm uninstall cert-manager followed by flux reconcile helmrelease, or resource adoption via Helm metadata annotation",
+      "weight": 2
     },
     {
-      "name": "blast_radius",
-      "description": "Notes that `helm uninstall` will delete all cert-manager managed resources (certificates, CRDs) and cause a brief lapse in certificate issuance. Recommends draining or suspending dependent workloads first.",
-      "required": true
+      "item": "Blast radius notes that helm uninstall deletes cert-manager resources (certificates, CRDs) causing a brief certificate issuance lapse",
+      "weight": 1
     },
     {
-      "name": "validation",
-      "description": "Validation includes: `flux get helmrelease cert-manager -n cert-manager` shows Ready=True, and `kubectl get pods -n cert-manager` shows all pods running.",
-      "required": true
+      "item": "Validation includes: flux get helmrelease shows Ready=True and kubectl get pods -n cert-manager shows all pods running",
+      "weight": 1
     }
   ]
 }
