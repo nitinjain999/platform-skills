@@ -36,7 +36,15 @@ Start here based on your task:
 | Ownership boundaries and repo topology | [references/platform-operating-model.md](references/platform-operating-model.md) |
 | Kubernetes baseline patterns | [references/kubernetes.md](references/kubernetes.md) |
 | Terraform module and state design | [references/terraform.md](references/terraform.md) |
-| Flux GitOps patterns | [references/flux.md](references/flux.md) |
+| FluxCD GitOps patterns (overview) | [references/fluxcd.md](references/fluxcd.md) |
+| FluxCD source CRDs | [references/fluxcd-sources.md](references/fluxcd-sources.md) |
+| FluxCD ResourceSet and fleet templating | [references/fluxcd-resourcesets.md](references/fluxcd-resourcesets.md) |
+| FluxCD notifications (Alert, Receiver) | [references/fluxcd-notifications.md](references/fluxcd-notifications.md) |
+| FluxCD Operator (FluxInstance, FluxReport) | [references/fluxcd-operator.md](references/fluxcd-operator.md) |
+| FluxCD Kustomization advanced | [references/fluxcd-kustomization.md](references/fluxcd-kustomization.md) |
+| FluxCD HelmRelease advanced | [references/fluxcd-helmrelease.md](references/fluxcd-helmrelease.md) |
+| FluxCD Terraform bootstrap | [references/fluxcd-terraform.md](references/fluxcd-terraform.md) |
+| FluxCD MCP server (AI debugging) | [references/fluxcd-mcp.md](references/fluxcd-mcp.md) |
 | Argo CD patterns | [references/argocd.md](references/argocd.md) |
 | AWS platform guidance | [references/aws.md](references/aws.md) |
 | Azure platform guidance | [references/azure.md](references/azure.md) |

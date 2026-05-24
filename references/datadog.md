@@ -533,3 +533,121 @@ claude plugin install dd-pup dd-apm dd-logs dd-monitors dd-docs
 > **Note**: Labs skills use the `pup` CLI under the hood — ensure `DD_API_KEY`, `DD_APP_KEY`, and `DD_SITE` are set in your shell before invoking them.
 
 ---
+
+## FluxCD Integration
+
+Datadog has a built-in FluxCD integration (bundled in Agent **7.51.0+**, minimum Agent 7.49.1). It collects reconciliation metrics from all Flux controllers via OpenMetrics.
+
+### Supported controllers
+
+- `source-controller`
+- `kustomize-controller`
+- `helm-controller`
+- `notification-controller`
+
+### Setup — pod annotations
+
+Annotate Flux controller pods to enable metric scraping:
+
+```yaml
+# Applied via FluxInstance spec.kustomize.patches
+apiVersion: fluxcd.controlplane.io/v1
+kind: FluxInstance
+metadata:
+  name: flux
+  namespace: flux-system
+spec:
+  kustomize:
+    patches:
+      - target:
+          kind: Deployment
+          labelSelector: "app.kubernetes.io/part-of=flux"
+        patch: |
+          - op: add
+            path: /spec/template/metadata/annotations/ad.datadoghq.com~1fluxcd.checks
+            value: |
+              {
+                "fluxcd": {
+                  "instances": [
+                    {
+                      "openmetrics_endpoint": "http://%%host%%:8080/metrics"
+                    }
+                  ]
+                }
+              }
+```
+
+### Log collection
+
+Disabled by default. Enable in the Datadog Agent DaemonSet:
+
+```yaml
+logs:
+  enabled: true
+  config:
+    - source: fluxcd
+      service: "<controller-name>"    # e.g. kustomize-controller
+```
+
+### Key metrics
+
+| Metric | Description |
+|---|---|
+| `fluxcd.gotk.reconcile.duration.seconds` | Reconciliation latency per controller and resource kind |
+| `fluxcd.gotk.reconcile.condition` | Reconciliation success/failure (`Ready=True/False`) |
+| `fluxcd.workqueue.depth` | Pending reconciliation queue depth |
+| `fluxcd.workqueue.retries.total` | Retry count — elevated values indicate failing resources |
+| `fluxcd.controller.runtime.active_workers` | Active reconciliation workers vs max concurrency |
+| `fluxcd.process.cpu_seconds.total` | Controller CPU usage |
+| `fluxcd.process.resident_memory_bytes` | Controller memory footprint |
+| `fluxcd.leader_election.master_status` | `1` = leader, `0` = standby |
+
+### Recommended monitors
+
+**HelmRelease reconciliation failure:**
+
+```json
+{
+  "name": "FluxCD HelmRelease reconciliation failing",
+  "type": "metric alert",
+  "query": "sum(last_5m):sum:fluxcd.gotk.reconcile.condition{ready:false,kind:helmrelease} by {name,namespace} > 0",
+  "message": "HelmRelease {{name.name}} in {{namespace.name}} is not Ready. Check: flux get helmrelease {{name.name}} -n {{namespace.name}}"
+}
+```
+
+**Kustomization reconciliation failure:**
+
+```json
+{
+  "name": "FluxCD Kustomization reconciliation failing",
+  "type": "metric alert",
+  "query": "sum(last_5m):sum:fluxcd.gotk.reconcile.condition{ready:false,kind:kustomization} by {name,namespace} > 0",
+  "message": "Kustomization {{name.name}} in {{namespace.name}} is not Ready."
+}
+```
+
+**Workqueue saturation:**
+
+```json
+{
+  "name": "FluxCD workqueue depth elevated",
+  "type": "metric alert",
+  "query": "avg(last_10m):avg:fluxcd.workqueue.depth{*} by {name} > 50",
+  "message": "FluxCD {{name.name}} workqueue is backing up — reconciliation may be slow."
+}
+```
+
+### Service check
+
+`fluxcd.openmetrics.health` — returns `CRITICAL` if the OpenMetrics endpoint is unreachable. Alert on this to detect controller pod restarts or port changes.
+
+### Datadog dashboard
+
+Import the community FluxCD dashboard from the Datadog integrations page, or build one with:
+- Reconciliation success rate by kind (Kustomization, HelmRelease)
+- Reconciliation duration P95 by controller
+- Workqueue depth over time
+- Active workers vs concurrency limit
+- Leader election status
+
+---

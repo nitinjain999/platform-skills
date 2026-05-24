@@ -38,7 +38,7 @@ declare -a REQUIRED_PATHS=(
   "references/terraform.md"
   "references/kubernetes.md"
   "references/openshift.md"
-  "references/flux.md"
+  "references/fluxcd.md"
   "references/argocd.md"
   "references/aws.md"
   "references/azure.md"

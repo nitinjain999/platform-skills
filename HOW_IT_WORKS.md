@@ -50,7 +50,7 @@ You: My Flux Kustomization is stuck in a NotReady state after a merge.
 
 Claude:
   1. Reads SKILL.md → identifies this as a Flux reconciliation problem
-  2. Reads references/flux.md → loads reconciliation troubleshooting section
+  2. Reads references/fluxcd.md → loads reconciliation troubleshooting section
   3. Asks for or reads your Kustomization manifest and Flux events
   4. Classifies the failure type (source | artifact | reconciliation | runtime)
   5. Produces: symptom → evidence to collect → hypothesis → fix → validation → rollback

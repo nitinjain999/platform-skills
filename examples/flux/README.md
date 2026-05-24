@@ -69,6 +69,6 @@ All examples follow these conventions:
 
 ## Troubleshooting
 
-See [references/flux.md](../../references/flux.md) for the full CRD reference table, source selection decision matrix, Flux Operator patterns, ResourceSet patterns, common mistakes, and image automation models.
+See [references/fluxcd.md](../../references/fluxcd.md) for the full CRD reference table, source selection decision matrix, Flux Operator patterns, ResourceSet patterns, common mistakes, and image automation models.
 
 For live cluster debugging use `/platform-skills:gitops`. For repo auditing use `/platform-skills:gitops-audit`.

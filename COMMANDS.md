@@ -2143,4 +2143,4 @@ Reference: `commands/composite-actions.md`, `references/composite-actions.md`, a
 /platform-skills:gitops-audit — security focus: check for plain secrets, missing Cosign verification
 ```
 
-Reference: `commands/gitops-audit.md`, `references/flux.md`, and `examples/flux/`
+Reference: `commands/gitops-audit.md`, `references/fluxcd.md`, and `examples/flux/`
