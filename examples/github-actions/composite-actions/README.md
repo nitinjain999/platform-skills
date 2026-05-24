@@ -12,7 +12,7 @@ Status: Stable
 |---|---|---|
 | [docker-build-push](docker-build-push/) | Build + push to GHCR | OIDC, multi-platform, SLSA provenance, SBOM |
 | [notify-slack](notify-slack/) | Slack build status notification | `::add-mask::`, secrets-as-inputs, payload via printf |
-| [k8s-deploy](k8s-deploy/) | Apply manifest + rollout wait | kubeconfig tempfile, chmod 600, cleanup always |
+| [k8s-deploy](k8s-deploy/) | Apply manifest + rollout wait | EKS/AKS/GKE OIDC, kubelogin, no static secrets |
 | [terraform-plan](terraform-plan/) | tf fmt → validate → plan → PR comment | AWS+Azure OIDC, idempotent comment upsert |
 | [security-scan](security-scan/) | Trivy image/fs scan + gate | Severity enum, SARIF output, inline annotations |
 | [release-tag](release-tag/) | Semver bump + GitHub release | Conventional commits, `$GITHUB_OUTPUT` chaining |

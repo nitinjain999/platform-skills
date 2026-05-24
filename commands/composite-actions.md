@@ -538,7 +538,7 @@ Full documentation: `references/composite-actions.md`
 Examples:
 - `examples/github-actions/composite-actions/docker-build-push/` — GHCR push, OIDC, multi-platform
 - `examples/github-actions/composite-actions/notify-slack/` — Slack webhook, secrets flow
-- `examples/github-actions/composite-actions/k8s-deploy/` — kubectl, kubeconfig secret
+- `examples/github-actions/composite-actions/k8s-deploy/` — kubectl, EKS/AKS/GKE OIDC
 - `examples/github-actions/composite-actions/terraform-plan/` — Terraform plan, PR comment
 - `examples/github-actions/composite-actions/security-scan/` — Trivy, severity gate, annotations
 - `examples/github-actions/composite-actions/release-tag/` — semver bump, `$GITHUB_OUTPUT` chaining
