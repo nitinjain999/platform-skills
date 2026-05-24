@@ -148,7 +148,16 @@ runs:
         tenant-id: ${{ inputs.azure_tenant_id }}
         subscription-id: ${{ inputs.azure_subscription_id }}
 
-    # ── 3b. Azure — fetch AKS kubeconfig ─────────────────────────────────────
+    # ── 3b. Azure — install kubelogin (required for AAD-enabled clusters) ─────
+    - name: Install kubelogin
+      if: inputs.cloud_provider == 'azure'
+      shell: bash
+      run: |
+        echo "::group::Install kubelogin"
+        az aks install-cli
+        echo "::endgroup::"
+
+    # ── 3c. Azure — fetch AKS kubeconfig + convert for non-interactive auth ───
     - name: Update kubeconfig for AKS
       if: inputs.cloud_provider == 'azure'
       shell: bash
@@ -161,6 +170,7 @@ runs:
           --resource-group "$RESOURCE_GROUP" \
           --name "$CLUSTER_NAME" \
           --overwrite-existing
+        kubelogin convert-kubeconfig -l workloadidentity
         echo "::endgroup::"
 
     # ── 4. Install kubectl ────────────────────────────────────────────────────
