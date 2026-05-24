@@ -7,7 +7,7 @@
   "plugins": [
     {
       "name": "platform-skills",
-      "version": "1.26.13",
+      "version": "1.26.14",
       "description": "Production-grade platform engineering handbook for Claude. 29 slash commands covering: Kubernetes, Helm, Terraform (blast radius, SOC 2, IAM), Flux CD (Flux Operator, FluxInstance, gitless OCI delivery, 5-workflow cluster debug, 6-phase repo audit), Argo CD, GitHub Actions (composite actions, SHA pinning, OIDC), AWS (CloudFront, WAF, Lambda@Edge), Kyverno, OPA/Rego, KEDA autoscaling, supply chain security (Cosign, SBOM, SLSA), Falco runtime security, chaos engineering (Litmus/Chaos Mesh), DORA metrics, Datadog, Dynatrace, Linkerd, and animated docs. Every answer includes blast radius, validation steps, and rollback plan.",
       "author": {
         "name": "Nitin Jain"
