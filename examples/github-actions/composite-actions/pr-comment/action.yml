@@ -154,15 +154,15 @@ runs:
             return;
           }
 
-          // Find existing comment with the marker
+          // Find existing comment with the marker — paginate to handle PRs with many comments
           async function findComment(prNum, marker) {
-            const comments = await github.rest.issues.listComments({
+            const comments = await github.paginate(github.rest.issues.listComments, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: prNum,
               per_page: 100,
             });
-            return comments.data.find(c => c.body.startsWith(marker));
+            return comments.find(c => c.body.startsWith(marker));
           }
 
           const existing = shouldUpdate ? await findComment(prNumber, marker) : null;

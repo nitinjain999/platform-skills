@@ -41,7 +41,8 @@ jobs:
           echo "image_tag=${{ steps.build.outputs.image_tag }}"
           [[ -n "${{ steps.build.outputs.image_uri }}" ]] || { echo "::error::image_uri is empty"; exit 1; }
           [[ -n "${{ steps.build.outputs.image_tag }}" ]] || { echo "::error::image_tag is empty"; exit 1; }
-          [[ ${#{{steps.build.outputs.image_tag}}} -le 7 ]] || echo "::warning::image_tag longer than 7 chars"
+          IMAGE_TAG="${{ steps.build.outputs.image_tag }}"
+          [[ ${#IMAGE_TAG} -le 7 ]] || echo "::warning::image_tag longer than 7 chars"
 
   # Test 2 — multi-platform build (no push)
   test-multiplatform:

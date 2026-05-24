@@ -100,7 +100,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Thanks to [@geetika-sv](https://github.com/geetika-sv) for contributing the self-improve global workspace, cross-platform support, and `init global`/`init local`/`status`/`migrate` subcommands in this release.
 
-## [1.24.0] - 2026-05-23
+## [1.24.0] - 2026-05-24
 
 ### Added
 

@@ -1,5 +1,5 @@
 name: 'Database Migration'
-description: 'Run database migrations safely with advisory lock, health check, verification, and automatic rollback on failure'
+description: 'Run database migrations safely with advisory lock, health check, dry-run, and post-migration verification'
 author: 'Platform Team'
 
 inputs:
@@ -78,15 +78,16 @@ runs:
     - name: Health check
       id: health
       shell: bash
-      timeout-minutes: 2
       env:
         DATABASE_URL: ${{ inputs.database_url }}
       run: |
         echo "::group::Database health check"
-        # Extract host:port from URL (supports postgres://, mysql://, etc.)
-        HOST_PORT=$(echo "$DATABASE_URL" | sed -E 's|.*://[^@]+@([^/]+)/.*|\1|')
-        HOST=$(echo "$HOST_PORT" | cut -d: -f1)
-        PORT=$(echo "$HOST_PORT" | cut -d: -f2)
+        # Extract host:port from URL — handles both credentialed and plain URLs:
+        #   postgres://user:pass@host:port/db  →  host:port
+        #   postgres://host:port/db            →  host:port
+        STRIPPED=$(echo "$DATABASE_URL" | sed -E 's|.*://([^@]+@)?([^/]+)/.*|\2|')
+        HOST=$(echo "$STRIPPED" | cut -d: -f1)
+        PORT=$(echo "$STRIPPED" | cut -d: -f2)
         PORT="${PORT:-5432}"   # default to postgres port if none specified
 
         RETRIES=10
@@ -139,7 +140,6 @@ runs:
     - name: Run migrations
       id: migrate
       shell: bash
-      timeout-minutes: 15
       env:
         DATABASE_URL: ${{ inputs.database_url }}
         MIGRATION_TOOL: ${{ inputs.migration_tool }}
@@ -155,8 +155,6 @@ runs:
 
         case "$MIGRATION_TOOL" in
           golang-migrate)
-            DB_DRIVER=$(echo "$DATABASE_URL" | cut -d: -f1)
-
             if [[ "$DRY_RUN" == "true" ]]; then
               echo "Pending migrations (dry run):"
               DRY_OUTPUT=$(migrate -path "$MIGRATION_DIR" -database "$DATABASE_URL" version 2>&1 || true)
@@ -215,7 +213,6 @@ runs:
     - name: Verify schema health
       if: inputs.verify_after == 'true' && inputs.dry_run == 'false'
       shell: bash
-      timeout-minutes: 2
       env:
         DATABASE_URL: ${{ inputs.database_url }}
         MIGRATION_TOOL: ${{ inputs.migration_tool }}

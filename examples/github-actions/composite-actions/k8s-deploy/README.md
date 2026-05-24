@@ -16,7 +16,7 @@ permissions:
   contents: read
 
 steps:
-  - uses: actions/checkout@v4
+  - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
   - uses: your-org/actions/k8s-deploy@v2
     with:
       cloud_provider: aws
@@ -36,7 +36,7 @@ permissions:
   contents: read
 
 steps:
-  - uses: actions/checkout@v4
+  - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
   - uses: your-org/actions/k8s-deploy@v2
     with:
       cloud_provider: azure
@@ -58,7 +58,7 @@ permissions:
   contents: read
 
 steps:
-  - uses: actions/checkout@v4
+  - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
   - uses: your-org/actions/k8s-deploy@v2
     with:
       cloud_provider: gke

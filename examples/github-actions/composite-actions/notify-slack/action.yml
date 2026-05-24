@@ -106,7 +106,7 @@ runs:
         # Mention on failure
         MENTION_TEXT=""
         if [[ "$STATUS" == "failure" && -n "$MENTION" ]]; then
-          MENTION_TEXT=" <!${MENTION}>"
+          MENTION_TEXT=" <@${MENTION}>"
         fi
 
         TEXT="${EMOJI} *${REPO}* (${REF}) — ${STATUS}${MENTION_TEXT}"
@@ -171,6 +171,7 @@ runs:
         STATUS: ${{ inputs.status }}
         EMOJI: ${{ steps.build_payload.outputs.emoji }}
         HTTP: ${{ steps.send.outputs.http_status }}
+        CHANNEL: ${{ inputs.channel }}
       run: |
         {
           echo "## Slack Notification"
@@ -181,8 +182,6 @@ runs:
           echo "| HTTP response | \`${HTTP:-n/a}\` |"
           echo "| Channel override | \`${CHANNEL:-webhook default}\` |"
         } >> "$GITHUB_STEP_SUMMARY"
-      env:
-        CHANNEL: ${{ inputs.channel }}
 
 branding:
   icon: 'send'
