@@ -5,6 +5,16 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.26.13] - 2026-05-24
+
+### Fixed
+
+- Eval scores: 100% with-context average across all 3 scenarios (PR triage, OPA policy, HelmRelease).
+- OPA `ci_placement` criteria updated to check for runnable `conftest test` command presence.
+- FluxCD debug mode: error-pattern routing table prevents HelmRelease errors from being routed through installation check workflow.
+- HelmRelease ownership conflict (`rendered manifests contain a resource that already exists`) added to troubleshooting reference with evidence commands and fix.
+- Triage reply format: concrete example and literal `✅ Fixed` ending requirement added to `commands/triage.md`.
+
 ## [1.26.0] - 2026-05-24
 
 ### Added

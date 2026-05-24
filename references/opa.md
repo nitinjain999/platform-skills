@@ -451,6 +451,30 @@ conftest test \
 
 ---
 
+## Terraform CI Pipeline Placement
+
+For Terraform policies, conftest runs **after `terraform validate` and before `terraform plan`** as a blocking gate. If conftest fails, the plan step must not run.
+
+```yaml
+- run: terraform validate
+- run: conftest test --policy ./policies ./main.tf   # AFTER validate, BEFORE plan
+- run: terraform plan -out=tfplan.binary
+```
+
+This ordering ensures:
+1. `terraform validate` confirms HCL syntax and provider schema
+2. `conftest test` enforces policy rules (IAM wildcards, tagging, encryption) on the **source** — before a plan is generated
+3. `terraform plan` only runs if both validate and policy gates pass
+
+For plan-level analysis (checking what Terraform *will do*), run conftest a second time on `tfplan.json` alongside plan:
+
+```bash
+terraform show -json tfplan.binary > tfplan.json
+conftest test --policy ./policies tfplan.json
+```
+
+---
+
 ## GitHub Actions Integration
 
 ```yaml

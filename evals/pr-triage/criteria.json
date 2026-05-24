@@ -24,7 +24,7 @@
     },
     {
       "name": "reply_quality",
-      "description": "Review reply is concise, references the file, and ends with ✅ Fixed",
+      "description": "Review reply is concise and references the specific file (`apps/api/deployment.yaml`) and/or the specific change made (resource requests/limits added)",
       "max_score": 1
     }
   ]
