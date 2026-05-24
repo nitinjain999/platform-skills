@@ -44,8 +44,8 @@ inputs:
     default: ''
   registry_password:
     description: |
-      Registry password or token for pulling private images.
-      SECRET — pass as: registry_password: ${{ secrets.REGISTRY_PASSWORD }}
+      Registry password or token for pulling private images. SECRET — pass
+      the value of your registry password secret via inputs.
     required: false
     default: ''
 
@@ -105,7 +105,6 @@ runs:
     # ── 3. Install Trivy ──────────────────────────────────────────────────────
     - name: Install Trivy
       shell: bash
-      timeout-minutes: 3
       env:
         TRIVY_VERSION: ${{ inputs.trivy_version }}
       run: |
@@ -123,7 +122,6 @@ runs:
     - name: Run Trivy scan
       id: scan
       shell: bash
-      timeout-minutes: 15
       env:
         SCAN_TARGET: ${{ inputs.scan_target }}
         SCAN_TYPE: ${{ inputs.scan_type }}

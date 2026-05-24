@@ -33,7 +33,7 @@ outputs:
     value: ${{ steps.installed_version.outputs.version }}
   cache_hit:
     description: 'true if the dependency cache was restored.'
-    value: ${{ steps.cache.outputs.cache-hit }}
+    value: ${{ steps.cache-node.outputs.cache-hit || steps.cache-python.outputs.cache-hit || steps.cache-go.outputs.cache-hit }}
 
 runs:
   using: 'composite'
@@ -80,7 +80,7 @@ runs:
 
     - name: Restore npm cache
       if: inputs.runtime == 'node' && inputs.enable_cache == 'true'
-      id: cache
+      id: cache-node
       uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684  # v4.2.3
       with:
         path: ~/.npm
@@ -107,7 +107,7 @@ runs:
 
     - name: Restore pip cache
       if: inputs.runtime == 'python' && inputs.enable_cache == 'true'
-      id: cache
+      id: cache-python
       uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684  # v4.2.3
       with:
         path: ~/.cache/pip
@@ -139,7 +139,7 @@ runs:
 
     - name: Restore Go module cache
       if: inputs.runtime == 'go' && inputs.enable_cache == 'true'
-      id: cache
+      id: cache-go
       uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684  # v4.2.3
       with:
         path: |
@@ -181,7 +181,7 @@ runs:
       env:
         RUNTIME: ${{ inputs.runtime }}
         VERSION: ${{ steps.installed_version.outputs.version }}
-        CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
+        CACHE_HIT: ${{ steps.cache-node.outputs.cache-hit || steps.cache-python.outputs.cache-hit || steps.cache-go.outputs.cache-hit }}
         ENABLE_CACHE: ${{ inputs.enable_cache }}
       run: |
         {

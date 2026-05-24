@@ -6,7 +6,7 @@ inputs:
   github_token:
     description: |
       GitHub token with pull-requests:write permission.
-      Pass as: github_token: ${{ secrets.GITHUB_TOKEN }}
+      Pass the value of secrets.GITHUB_TOKEN (or a PAT with pull-requests:write).
     required: true
   title:
     description: 'Comment heading (Markdown supported, e.g. ## Terraform Plan).'
@@ -69,7 +69,7 @@ runs:
         ERRORS=()
 
         [[ -z "$GITHUB_TOKEN_INPUT" ]] && \
-          ERRORS+=("github_token is required — pass \${{ secrets.GITHUB_TOKEN }}")
+          ERRORS+=("github_token is required — pass the value of secrets.GITHUB_TOKEN via inputs")
         [[ -z "$TITLE" ]] && ERRORS+=("title is required")
         [[ -z "$BODY" ]] && ERRORS+=("body is required")
 

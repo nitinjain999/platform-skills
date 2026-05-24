@@ -23,7 +23,7 @@ inputs:
 outputs:
   terraform_version:
     description: 'Exact installed Terraform version string'
-    value: ${{ steps.setup.outputs.terraform_version }}
+    value: ${{ steps.get_version.outputs.terraform_version }}
   cache_hit:
     description: 'true if the provider cache was restored from a prior run'
     value: ${{ steps.cache.outputs.cache-hit }}
@@ -74,12 +74,16 @@ runs:
         terraform_version: ${{ inputs.terraform_version }}
         terraform_wrapper: ${{ inputs.terraform_wrapper }}
 
-    # Verify
+    # Verify and capture installed version
     - name: Verify Terraform installation
+      id: get_version
       shell: bash
       run: |
         echo "::group::Terraform version"
         terraform version
+        TF_VER=$(terraform version -json 2>/dev/null | jq -r '.terraform_version' 2>/dev/null \
+          || terraform version | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)
+        echo "terraform_version=$TF_VER" >> "$GITHUB_OUTPUT"
         echo "::endgroup::"
 
     # Job summary
