@@ -110,7 +110,6 @@ jobs:
         run: |
           [[ "${{ steps.cloud.outcome }}" == "failure" ]] || \
             { echo "::error::Expected failure when gcp_workload_identity_provider is missing"; exit 1; }
-          echo "::notice::Validation correctly rejected missing gcp_workload_identity_provider"
 
   # Test 6 — GKE without gcp_service_account fails
   test-gke-missing-service-account:
@@ -132,7 +131,6 @@ jobs:
         run: |
           [[ "${{ steps.cloud.outcome }}" == "failure" ]] || \
             { echo "::error::Expected failure when gcp_service_account is missing"; exit 1; }
-          echo "::notice::Validation correctly rejected missing gcp_service_account"
 
   # Test 7 — GKE/WIF inputs pass validation; action fails at OIDC step (expected in CI)
   test-gke-input-validation-passes:
