@@ -1,6 +1,6 @@
 ---
 name: platform-skills
-description: "Hands-on guidance for platform engineers: Kubernetes, Terraform, Flux CD (Operator, FluxInstance, gitless OCI, cluster debug, repo audit), Argo CD, GitHub Actions (composite actions, OIDC, SHA pinning), AWS, Azure, GKE, Linkerd, Linux, networking, KEDA autoscaling, supply chain security (Cosign, SBOM, SLSA), Falco runtime security, Chaos Engineering (Litmus, Chaos Mesh, GameDay), DORA metrics, Datadog/Dynatrace observability, LLM Observability, SOC 2 compliance, PR review and triage, and animated docs. Every answer includes blast radius, validation steps, and rollback plan."
+description: "Use when working on platform engineering tasks: Kubernetes, Terraform, Flux CD (Operator, FluxInstance, gitless OCI, cluster debug, repo audit), Argo CD, GitHub Actions (composite actions, OIDC, SHA pinning), AWS, Azure, GKE, Linkerd, Linux, networking, KEDA autoscaling, supply chain security (Cosign, SBOM, SLSA), Falco runtime security, Chaos Engineering (Litmus, Chaos Mesh, GameDay), DORA metrics, Datadog/Dynatrace observability, LLM Observability, SOC 2 compliance, PR review and triage, and animated docs. Every answer includes blast radius, validation steps, and rollback plan."
 ---
 
 # Platform Skills
