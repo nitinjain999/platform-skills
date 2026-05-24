@@ -27,4 +27,4 @@ jobs:
       - name: Publish skill
         run: tessl tile publish . --skip-evals
       - name: Run eval scenarios
-        run: tessl eval run . --context-ref ${{ github.sha }} --label "ci-${{ github.sha }}"
+        run: tessl eval run . --label "ci-${{ github.sha }}"
