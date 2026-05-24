@@ -27,6 +27,7 @@ jobs:
       - name: Publish skill
         run: tessl tile publish . --skip-evals --bump patch
       - name: Run eval scenarios
+        continue-on-error: true
         run: |
           tessl project create platform-skills --workspace nitinjain999 || true
-          tessl eval run . --label "ci-${{ github.sha }}" || echo "⚠ Eval run failed (Tessl server-side 500) — publish succeeded"
+          tessl eval run . --label "ci-${{ github.sha }}"
