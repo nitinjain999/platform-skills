@@ -20,7 +20,7 @@ Use this skill for hands-on help with Kubernetes, GitOps, cloud infrastructure, 
 | `Linkerd` | Automatic mTLS, golden-signal observability, traffic management |
 | `Linux & Networking` | DNS, load balancer routing, VPC/VNet, kernel tuning, connectivity |
 | `Compliance` | SOC 2 controls in Terraform — IAM, encryption, audit logging, Checkov |
-| `Helm` | Chart scaffolding, lint/validate pipeline, values design, security hardening |
+| `Helm (Helmcheck)` | Chart scaffolding, lint/validate pipeline, values design, security hardening |
 | `MCP` | Build/debug MCP servers — tools, resources, transports, auth |
 | `Observability` | Prometheus, OpenTelemetry, Grafana, alerting, k6 load tests, capacity |
 | `Documentation` | Docstrings (Google/NumPy/JSDoc), OpenAPI 3.1, MkDocs, guides |
