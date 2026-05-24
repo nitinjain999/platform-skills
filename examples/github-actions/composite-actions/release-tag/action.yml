@@ -274,7 +274,7 @@ runs:
             echo "| Tag | \`$TAG\` |"
             echo "| Draft | $DRAFT |"
             echo "| Pre-release | $PRERELEASE |"
-            [[ -n "$RELEASE_URL" ]] && echo "| Release | [$RELEASE_URL]($RELEASE_URL) |"
+            [[ -n "$RELEASE_URL" ]] && echo "| Release | [$RELEASE_URL]($RELEASE_URL) |" || true
           else
             echo "## ⏭️ Release skipped"
             echo ""

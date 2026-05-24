@@ -204,7 +204,7 @@ runs:
           echo "|---|---|"
           echo "| Action | \`${ACTION_TAKEN:-n/a}\` |"
           echo "| Marker | \`${MARKER}\` |"
-          [[ -n "$COMMENT_URL" ]] && echo "| Comment | [$COMMENT_URL]($COMMENT_URL) |"
+          [[ -n "$COMMENT_URL" ]] && echo "| Comment | [$COMMENT_URL]($COMMENT_URL) |" || true
         } >> "$GITHUB_STEP_SUMMARY"
 
 branding:
