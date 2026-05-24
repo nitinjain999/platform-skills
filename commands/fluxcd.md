@@ -51,9 +51,12 @@ Produces a 5-section report: Summary → Resource Analysis → Dependency Chain 
 
 ```bash
 # HelmRelease ownership conflict evidence
-flux logs --kind=HelmRelease --name=<name> --namespace=<ns>
-kubectl get clusterrole <name>
-helm list -n <ns>
+# Step 1: get the conflicting resource name from the error message (not the HelmRelease name)
+flux logs --kind=HelmRelease --name=<helmrelease-name> --namespace=<ns>
+# Step 2: check ownership annotations on the conflicting resource
+kubectl get <kind> <resource-name-from-error> -o yaml | grep "meta.helm.sh"
+# Step 3: find the owning release across ALL namespaces (owner may be in a different ns)
+helm list -A
 kubectl get events -n <ns>
 
 # Quick health check to start (when no evidence provided)
