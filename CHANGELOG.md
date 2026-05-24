@@ -5,7 +5,7 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.25.0] - 2026-05-24
+## [1.24.3] - 2026-05-24
 
 ### Added
 
@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `k8s-deploy/CHANGELOG.md` — v2.0.0 breaking-change entry added (kubeconfig → OIDC migration guide)
 - `examples/github-actions/composite-actions/README.md` — k8s-deploy row updated from "kubeconfig tempfile, chmod 600" → "EKS/AKS/GKE OIDC, kubelogin, no static secrets"
 - `commands/composite-actions.md` — stale "kubectl, kubeconfig secret" reference updated to "kubectl, EKS/AKS/GKE OIDC"
-- `.github/copilot-instructions.md` — version bumped to v1.25.0; GKE WIF added to preferred-auth guidance; `references/composite-actions.md` added to reference file list
+- `.github/copilot-instructions.md` — version bumped to v1.24.3; GKE WIF added to preferred-auth guidance; `references/composite-actions.md` added to reference file list
 
 ## [1.24.2] - 2026-05-23
 
