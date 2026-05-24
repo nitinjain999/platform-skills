@@ -324,10 +324,13 @@ jobs:
             { echo "::error::Expected failure for empty title"; exit 1; }
 
   pr-comment-non-pr-skips-gracefully:
+    # Only meaningful on push — fork PRs cannot write to upstream issues/PRs
+    # regardless of permissions, so the skip-gracefully behaviour can only
+    # be verified in a non-PR (push) context.
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       - id: comment

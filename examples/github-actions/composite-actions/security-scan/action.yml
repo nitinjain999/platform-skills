@@ -166,7 +166,10 @@ runs:
         set -e
 
         # Count vulnerabilities from output
-        VULN_COUNT=$(grep -cE '^\s*(CRITICAL|HIGH|MEDIUM|LOW|UNKNOWN)\s' /tmp/trivy-output.txt 2>/dev/null || echo 0)
+        # grep -c always prints the count (even 0) then exits 1 on no matches;
+        # || true prevents the non-zero exit from aborting the step.
+        VULN_COUNT=$(grep -cE '^\s*(CRITICAL|HIGH|MEDIUM|LOW|UNKNOWN)\s' /tmp/trivy-output.txt 2>/dev/null || true)
+        VULN_COUNT=${VULN_COUNT:-0}
         echo "vuln_count=$VULN_COUNT" >> "$GITHUB_OUTPUT"
         [[ -n "$SARIF_PATH" ]] && echo "sarif_path=$SARIF_PATH" >> "$GITHUB_OUTPUT"
 
