@@ -1,0 +1,14 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: fleet-manifests
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: oci://ghcr.io/my-org/fleet-manifests
+  ref:
+    tag: latest
+  secretRef:
+    name: registry-auth
+  verify:
+    provider: cosign             # verify Cosign signature before applying

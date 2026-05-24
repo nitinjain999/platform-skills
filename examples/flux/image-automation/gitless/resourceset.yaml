@@ -1,0 +1,26 @@
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSet
+metadata:
+  name: my-app
+  namespace: flux-system
+spec:
+  inputsFrom:
+    - kind: ResourceSetInputProvider
+      name: app-image-tag
+  resources:
+    - apiVersion: kustomize.toolkit.fluxcd.io/v1
+      kind: Kustomization
+      metadata:
+        name: my-app
+        namespace: flux-system
+      spec:
+        interval: 10m
+        prune: true
+        wait: true
+        timeout: 5m
+        sourceRef:
+          kind: OCIRepository
+          name: my-app-manifests
+        postBuild:
+          substitute:
+            APP_IMAGE_TAG: "<< inputs.tag >>"   # gitless: no Git commit required

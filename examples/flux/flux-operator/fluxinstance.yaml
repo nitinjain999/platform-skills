@@ -1,0 +1,31 @@
+apiVersion: fluxcd.controlplane.io/v1
+kind: FluxInstance
+metadata:
+  name: flux                    # must be named 'flux' — only one per cluster
+  namespace: flux-system
+  annotations:
+    fluxcd.controlplane.io/reconcileEvery: "1h"
+    fluxcd.controlplane.io/reconcileTimeout: "5m"
+spec:
+  distribution:
+    version: "2.x"
+    registry: "ghcr.io/fluxcd"
+    artifact: "oci://ghcr.io/controlplaneio-fluxcd/flux-operator-manifests"
+  components:
+    - source-controller
+    - kustomize-controller
+    - helm-controller
+    - notification-controller
+    - image-reflector-controller
+    - image-automation-controller
+  cluster:
+    type: kubernetes
+    multitenant: false
+    networkPolicy: true          # restricts Flux controller inter-pod communication
+    domain: "cluster.local"
+  sync:
+    kind: OCIRepository
+    url: "oci://ghcr.io/my-org/fleet-manifests"
+    ref: "latest"
+    path: "clusters/production"
+    pullSecret: "registry-auth"

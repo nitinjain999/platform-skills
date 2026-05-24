@@ -43,6 +43,7 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:awesome-docs](#platform-skillsawesome-docs) | Generate any animated Markdown doc (README, architecture guide, runbook, tutorial, RFC, post-mortem, or custom), convert existing Markdown, update/diff/audit, preview, export |
 | [/platform-skills:aws](#platform-skillsaws) | CloudFront, WAF, Lambda@Edge, Firewall Manager multi-account enforcement, and Terraform module generation |
 | [/platform-skills:composite-actions](#platform-skillscomposite-actions) | Generate, review, secure, and test composite GitHub Actions |
+| [/platform-skills:gitops-audit](#platform-skillsgitops-audit) | Audit a Flux CD GitOps repository: 6-phase analysis → prioritized report (Critical / Warning / Info) |
 
 ---
 
@@ -2120,3 +2121,26 @@ Reference: `commands/aws.md`, `references/aws-cloudfront.md`, `references/aws-wa
 ```
 
 Reference: `commands/composite-actions.md`, `references/composite-actions.md`, and `examples/github-actions/composite-actions/`
+
+---
+
+## `/platform-skills:gitops-audit`
+
+**What it does:** Six-phase read-only audit of a Flux CD GitOps repository — discovery (repo pattern, gotk-sync.yaml detection), manifest validation (YAML syntax, kustomize build, kubeconform), API compliance (deprecated apiVersions, flux migrate dry-run), best practices (prune, wait, dependsOn, RetryOnFailure, valuesFrom watch labels, ResourceSet delimiters), security review (SOPS, Workload Identity, Cosign OCI verification, multi-tenant RBAC), and a prioritized report (Critical / Warning / Info).
+
+**Usage:** `/platform-skills:gitops-audit <repo path or pasted output>`
+
+```
+/platform-skills:gitops-audit ./my-gitops-repo
+/platform-skills:gitops-audit [paste directory listing or flux get output]
+```
+
+**Examples:**
+
+```
+/platform-skills:gitops-audit ./clusters — audit my Flux repo rooted at ./clusters
+/platform-skills:gitops-audit [paste kubectl get kustomization -A output] — triage reconciliation failures
+/platform-skills:gitops-audit — security focus: check for plain secrets, missing Cosign verification
+```
+
+Reference: `commands/gitops-audit.md`, `references/flux.md`, and `examples/flux/`

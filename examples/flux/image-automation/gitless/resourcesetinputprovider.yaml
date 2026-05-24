@@ -1,0 +1,13 @@
+apiVersion: fluxcd.controlplane.io/v1
+kind: ResourceSetInputProvider
+metadata:
+  name: app-image-tag
+  namespace: flux-system
+spec:
+  type: OCIArtifactTag
+  url: "oci://ghcr.io/my-org/my-app"
+  filter:
+    semver: "1.x"
+  interval: 5m
+  secretRef:
+    name: registry-auth

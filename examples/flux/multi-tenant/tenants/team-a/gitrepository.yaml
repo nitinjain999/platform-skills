@@ -1,0 +1,12 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: team-a-app
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: https://github.com/my-org/team-a-app.git
+  ref:
+    branch: main
+  secretRef:
+    name: team-a-deploy-key

@@ -4,94 +4,71 @@ This directory contains reference implementations for Flux CD GitOps patterns.
 
 Status: Stable
 
-`basic-monorepo/` is runnable today. The other patterns below are handbook roadmap items, not committed example directories yet.
-
 ## Examples
 
-### 1. Basic Monorepo Structure
+| Example | Pattern | Status |
+|---|---|---|
+| [basic-monorepo/](basic-monorepo/) | Single team, Kustomize overlays per environment | Stable |
+| [multi-tenant/](multi-tenant/) | Multiple teams sharing a cluster, RBAC isolation per tenant | Beta |
+| [helm-releases/](helm-releases/) | Helm chart management via OCIRepository, environment value overlays | Beta |
+| [image-automation/](image-automation/) | Automated image tag updates — Git-based and gitless (OCIArtifactTag) side-by-side | Beta |
+| [flux-operator/](flux-operator/) | Flux Operator + FluxInstance + gitless OCI sync + Cosign verification | Beta |
 
-[basic-monorepo/](basic-monorepo/) - Simple monorepo with environment overlays
+## Choosing the right pattern
 
-**Use case:** Single team, multiple environments  
-**Pattern:** Kustomize overlays for environment differences  
-**Components:**
-- Cluster bootstrap configuration
-- Infrastructure layer (ingress, cert-manager)
-- Application layer with environment overlays
-
-### 2. Multi-Tenant Repository
-
-Planned handbook pattern: separate tenant repositories with central platform
-
-**Use case:** Multiple teams with independent release cycles  
-**Pattern:** Platform repo references tenant repos  
-**Components:**
-- Platform repository with tenant configurations
-- Example tenant repository structure
-- RBAC boundaries per tenant
-
-### 3. Helm Release Management
-
-Planned handbook pattern: HelmRelease value hierarchy and chart management
-
-**Use case:** Managing third-party Helm charts  
-**Pattern:** Base values with environment-specific overrides  
-**Components:**
-- HelmRepository definitions
-- HelmRelease with value composition
-- Secret management integration
-
-### 4. Image Automation
-
-Planned handbook pattern: automated image updates with policies
-
-**Use case:** Auto-update container images on new versions  
-**Pattern:** ImageRepository + ImagePolicy + ImageUpdateAutomation  
-**Components:**
-- Image repository scanning
-- Semver policy configuration
-- Git commit automation setup
-
-## Quick Start
-
-The runnable example currently included is:
-- `basic-monorepo/` - setup instructions plus Flux and Kustomize manifests
+| Need | Example |
+|---|---|
+| Single team, simple environment promotion | `basic-monorepo/` |
+| Multiple teams on one cluster, isolated blast radius | `multi-tenant/` |
+| Third-party Helm charts with environment value overrides | `helm-releases/` |
+| Automate image tag updates from CI to cluster | `image-automation/` |
+| Manage Flux itself via Kubernetes CRD, no bootstrap script | `flux-operator/` |
+| Gitless delivery — no Git credentials on clusters | `flux-operator/` + `image-automation/gitless/` |
 
 ## Prerequisites
 
-- Kubernetes cluster (1.28+)
-- Flux CLI (2.2+)
-- kubectl configured for cluster access
-- Git repository for GitOps
+- Kubernetes 1.28+
+- Flux CLI 2.2+ (`brew install fluxcd/tap/flux`)
+- `kubectl` with cluster access
+- Flux Operator examples additionally require: `helm` CLI
 
-## Common Commands
+## Common commands
 
 ```bash
-# Check all sources
-flux get sources all -A
+# Check all Flux resources across namespaces
+flux get all -A
 
-# Check reconciliation status
-flux get kustomizations -A
-flux get helmreleases -A
+# Force immediate reconciliation of a Kustomization
+flux reconcile kustomization <name> --with-source
 
-# Force reconciliation
-flux reconcile kustomization apps --with-source
+# Suspend and resume reconciliation
+flux suspend kustomization <name>
+flux resume kustomization <name>
 
-# Suspend during maintenance
-flux suspend kustomization apps
-flux resume kustomization apps
+# Stream controller logs for a specific resource
+flux logs --kind=HelmRelease --name=<name> --namespace=<namespace>
 
-# View logs
-flux logs --kind=kustomize-controller --since=10m
-flux logs --kind=helm-controller --since=10m
+# Check cluster-wide health (Flux Operator only)
+kubectl get fluxreport flux -n flux-system -o yaml
 ```
+
+## Shared best practices
+
+All examples follow these conventions:
+
+| Practice | Why |
+|---|---|
+| `spec.prune: true` on all Kustomizations | Removes orphaned resources when files are deleted from Git |
+| `spec.wait: true` with `timeout` | Blocks dependent resources until health checks pass |
+| `dependsOn` for ordered apply | infrastructure must be ready before apps |
+| `spec.chartRef` (OCI) over `spec.chart.spec` (HTTPS) | OCI charts are immutable and signable |
+| `install.strategy.name: RetryOnFailure` | Modern remediation API |
+| `reconcile.fluxcd.io/watch: Enabled` on `valuesFrom` ConfigMaps | Immediate HelmRelease reconciliation when values change |
+| Workload Identity over static credentials | No long-lived tokens on clusters |
+| SOPS or External Secrets for secrets | No plain secrets in Git |
 
 ## Troubleshooting
 
-See [references/flux.md](../../references/flux.md) for detailed troubleshooting patterns.
+See [references/flux.md](../../references/flux.md) for the full CRD reference table, source selection decision matrix, Flux Operator patterns, ResourceSet patterns, common mistakes, and image automation models.
 
-Common issues:
-- **Source not updating**: Check GitRepository credentials and network access
-- **Reconciliation failing**: Check RBAC permissions and resource conflicts
-- **Helm chart errors**: Validate values against chart schema
-- **Runtime issues**: Not a Flux problem - check pod logs and events
+For live cluster debugging use `/platform-skills:gitops`. For repo auditing use `/platform-skills:gitops-audit`.

@@ -1,0 +1,27 @@
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: cert-manager
+  namespace: cert-manager
+spec:
+  interval: 1h
+  chartRef:
+    kind: OCIRepository
+    name: cert-manager-chart
+    namespace: cert-manager
+  install:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+    crds: CreateReplace
+  upgrade:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 5m
+    crds: CreateReplace
+  driftDetection:
+    mode: enabled
+  valuesFrom:
+    - kind: ConfigMap
+      name: cert-manager-values
+      valuesKey: values.yaml

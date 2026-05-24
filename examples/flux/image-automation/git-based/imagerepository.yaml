@@ -1,0 +1,10 @@
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: my-app
+  namespace: flux-system
+spec:
+  image: ghcr.io/my-org/my-app
+  interval: 5m
+  secretRef:
+    name: registry-credentials   # docker-registry Secret
