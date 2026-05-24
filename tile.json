@@ -12,8 +12,8 @@
     ".claude-plugin/**",
     ".tessl/**",
     "tests/**",
-    "*.sh",
-    "*.ps1"
+    "**/*.sh",
+    "**/*.ps1"
   ],
   "private": false,
   "author": "Nitin Jain",
