@@ -5,27 +5,6 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.24.0] - 2026-05-24
-
-### Added
-
-#### Composite GitHub Actions (Domain 28)
-
-- `references/composite-actions.md` — new reference guide; sections: composite vs reusable workflow decision table, private repo access patterns (same-repo path / GitHub App token / PAT), org mono-repo strategy, debug logging (`::debug::` + `RUNNER_DEBUG`), context availability table (`github.*`/`runner.*`/`env.*`/`inputs.*` ✓; `secrets.*`/`needs.*`/`matrix.*` ✗), OIDC cloud trust configuration (AWS trust policy, Azure federated credential, Terraform provider ambient auth), `continue-on-error` vs `if: always()` semantics, Kubernetes cluster authentication (EKS + AKS + GKE patterns, EKS/AKS/GKE decision table)
-- `commands/composite-actions.md` — `/platform-skills:composite-actions` slash command (6 modes: scaffold, migrate, publish, review, debug, improve)
-- `examples/github-actions/composite-actions/` — 11 production-ready examples:
-  - `docker-build-push` — multi-platform build, cache, attestation
-  - `notify-slack` — success/failure channel notifications
-  - `k8s-deploy` — EKS/AKS/GKE OIDC auth (`cloud_provider` switch); AKS kubelogin workload-identity conversion (`az aks install-cli --kubelogin-install-location` + `kubelogin convert-kubeconfig -l workloadidentity`); GKE via `google-github-actions/auth` WIF + `get-gke-credentials`; `--dry-run=server`; rollout status with diagnostics; SHA-pinned actions
-  - `terraform-plan` — fmt/validate/plan with PR comment
-  - `security-scan` — Trivy + Semgrep gates
-  - `release-tag` — semver tagging and GitHub Release creation
-  - `pr-comment` — idempotent PR comment upsert
-  - `setup-env` — environment variable injection
-  - `configure-cloud` — EKS/AKS/GKE OIDC credential configuration (`cloud_provider` switch); GKE via Workload Identity Federation; SHA-pinned actions
-  - `setup-terraform` — version install, plugin cache, wrapper toggle
-  - `db-migrate` — Flyway/Liquibase/golang-migrate; `::add-mask::` on `database_url`; `nc` health check; dry-run; verify-after; rollback guide
-
 ## [1.23.0] - 2026-05-23
 
 ### Changed
@@ -112,7 +91,7 @@ Thanks to [@geetika-sv](https://github.com/geetika-sv) for contributing the self
   - `review`: audit existing `action.yml` — CRITICAL (unpinned tags, missing `shell:`, injection, direct secrets access) / WARNING (no validation, unmasked secrets, relative paths, no summary, no timeout) / INFORMATIONAL (branding, descriptions, dependabot, test workflow) — scored N/20
   - `secure`: fix in place — resolve tags to SHAs via `gh api`, add `shell: bash`, move `inputs.*` to `env:` blocks, add `::add-mask::`, inject validation step, inject job summary step
   - `test`: generate test workflow with local path reference and matrix, plus `act` commands for all key input variants
-- Eight production-ready examples under `examples/github-actions/composite-actions/`:
+- Eleven production-ready examples under `examples/github-actions/composite-actions/`:
   - `docker-build-push/` — full repo structure: `action.yml` (multi-platform Buildx, GHCR via ephemeral `GITHUB_TOKEN`, GHA layer cache, SLSA provenance + SBOM attestations, input validation, `::group::` phases, `$GITHUB_STEP_SUMMARY`), `README.md` (architecture diagram, variables & secrets flow, build-args secret guidance), `CHANGELOG.md`, `.github/workflows/test-action.yml` (4 test jobs: defaults, multi-platform, validation failure assertion, custom Dockerfile), `.github/workflows/release.yml` (actionlint gate + SHA pinning check + floating major tag), `.github/dependabot.yml`, `.actionlint.yaml`
   - `notify-slack/` — full repo structure: `action.yml` (webhook URL masked immediately with `::add-mask::`, payload built via `printf` to avoid quoting issues, channel override, `@mention` on failure, `status_emoji` + `http_status` outputs, 1-minute timeout on curl), `README.md` (secrets flow diagram, logged vs masked table, Slack webhook setup guide), `CHANGELOG.md`, `.github/workflows/test-action.yml` (3 test jobs: invalid webhook validation, invalid status validation, status/emoji matrix), `.github/workflows/release.yml`, `.github/dependabot.yml`, `.actionlint.yaml`
   - `k8s-deploy/` — `action.yml` (base64 kubeconfig decoded to chmod-600 temp file, `::add-mask::` on decoded content, kubectl apply with `--dry-run=server` support, `rollout status` with configurable timeout, `kubectl events` on failure, cleanup post-step runs `if: always()`), `README.md` (kubeconfig secret flow, logged vs masked table, minimum RBAC snippet, base64 encoding commands, service account setup), `.github/workflows/test-action.yml`, `.github/workflows/release.yml`, `.github/dependabot.yml`, `.actionlint.yaml`
@@ -121,7 +100,10 @@ Thanks to [@geetika-sv](https://github.com/geetika-sv) for contributing the self
   - `release-tag/` — `action.yml` (conventional commit auto-detection: `feat!`/`BREAKING CHANGE` → major, `feat` → minor, `fix`/`perf`/etc → patch; `$GITHUB_OUTPUT` chaining across 4 steps: bump → git_tag → changelog → create_release; floating major tag update; draft + prerelease support; `is_new_release=false` skip path), `README.md` (output chaining diagram, secrets flow, idempotency note, combined release + notify example), `.github/workflows/test-action.yml`, `.github/workflows/release.yml`, `.github/dependabot.yml`, `.actionlint.yaml`
   - `pr-comment/` — `action.yml` (idempotent upsert via hidden HTML marker, `listComments` pagination, collapsible `<details>` wrapper, `delete_on_close` for PR closed event, `update_existing` toggle, `github-script` with explicit token, `comment_id`/`comment_url`/`action_taken` outputs), `README.md` (unique marker pattern for multiple instances, delete-on-close example, token scoping), `.github/workflows/test-action.yml`, `.github/workflows/release.yml`, `.github/dependabot.yml`, `.actionlint.yaml`
   - `setup-env/` — tutorial-baseline multi-runtime action: `action.yml` (Node.js/Python/Go runtime choice, per-runtime version defaults, dependency cache restore: `~/.npm`/`~/.cache/pip`/`~/go/pkg/mod`, optional `install_dependencies` flag, `runtime_version` + `cache_hit` outputs, input validation, `$GITHUB_STEP_SUMMARY`), `README.md` (runtime matrix usage example), `CHANGELOG.md`, `.github/workflows/test-action.yml` (4 test jobs: invalid runtime assertion, matrix across all runtimes/versions, default versions, cache disabled), `.github/workflows/release.yml`, `.github/dependabot.yml`, `.actionlint.yaml`
-- `examples/github-actions/composite-actions/README.md` — index with 8-example quick-reference table, decision guide ("Need to build a container image? → docker-build-push"), shared best-practices matrix (shell on every run step, SHA pinning, secrets-as-inputs, masking, env isolation, input validation, job summary, log groups, annotations, timeout, idempotency, dependabot, release workflow)
+  - `configure-cloud/` — `action.yml` (AWS + Azure + GKE OIDC via `cloud_provider` switch; GKE uses `google-github-actions/auth` WIF + `get-gke-credentials`; full required-input validation per provider; SHA-pinned actions; `aws_account_id` output), `README.md` (per-provider quick-start examples, OIDC trust prerequisites)
+  - `setup-terraform/` — `action.yml` (version install via `hashicorp/setup-terraform`, provider plugin cache at `~/.terraform.d/plugin-cache`, `terraform_wrapper` toggle, working directory support, `terraform_version` output), `README.md` (cache key strategy, workspace pattern)
+  - `db-migrate/` — `action.yml` (Flyway / Liquibase / golang-migrate; `::add-mask::` on `database_url`; `nc` health check with retry loop; advisory lock timeout; dry-run; post-migration verify; job summary), `README.md` (per-tool quick-start, rollback guide, connection URL format)
+- `examples/github-actions/composite-actions/README.md` — index with 11-example quick-reference table, decision guide ("Need to build a container image? → docker-build-push"), shared best-practices matrix (shell on every run step, SHA pinning, secrets-as-inputs, masking, env isolation, input validation, job summary, log groups, annotations, timeout, idempotency, dependabot, release workflow)
 - `commands/composite-actions.md` — extended with two new modes:
   - `migrate`: scan `.github/workflows/` for repeated step sequences (3+ occurrences), rank by impact (count × step-count), extract to composite action, rewrite callers
   - `publish`: GitHub Actions Marketplace checklist — prerequisite verification (root placement, unique name, description length, branding), Feather icon/color suggestions per action type, release tag commands, submit walkthrough
@@ -131,7 +113,11 @@ Thanks to [@geetika-sv](https://github.com/geetika-sv) for contributing the self
   - Self-hosted runner considerations — tool availability, persistent vs ephemeral state, network restrictions, runner requirement documentation pattern
   - Ephemeral runner security — risk table (persistent vs ephemeral), GitHub Enterprise policy enforcement, README callout template
   - Troubleshooting — 9 common errors with exact diagnosis and fix: missing `shell:`, empty `${{ secrets.* }}`, `::add-mask::` not working, `uses: ./` not found, actionlint shellcheck errors, empty step outputs (3 causes), floating tag not updated, boolean comparison always false
-- `references/github-actions.md` — extended with composite actions section: key rules summary, pointer to `references/composite-actions.md`, slash command, and links to all 8 examples
+- `references/github-actions.md` — extended with composite actions section: key rules summary, pointer to `references/composite-actions.md`, slash command, and links to all 11 examples
+
+### Contributors
+
+Thanks to [@geetika-sv](https://github.com/geetika-sv) for contributing the composite GitHub Actions skill — 11 production-ready examples, the `/platform-skills:composite-actions` command, and `references/composite-actions.md` in this release.
 
 ## [1.22.0] - 2026-05-22
 
@@ -386,7 +372,7 @@ Enhanced `/platform-skills:review` with structured output for automated PR comme
 #### Wiki
 
 - Full GitHub wiki published at https://github.com/nitinjain999/platform-skills/wiki
-- 50 pages covering all 27 commands and 25 domains
+- 50 pages covering all 28 commands and 25 domains
 - Navigation index, Quick Start, Installation, Editor Integrations, How It Works, Contributing
 - One page per command with Claude Code slash syntax, Copilot Chat prompts, and what gets checked
 - One page per domain with key patterns, code examples, and links to the full reference guide
