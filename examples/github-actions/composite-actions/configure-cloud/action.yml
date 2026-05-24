@@ -1,10 +1,10 @@
 name: 'Configure Cloud Credentials'
-description: 'Configure AWS or Azure credentials using OIDC — no long-lived secrets'
+description: 'Configure AWS, Azure, or GCP credentials using OIDC — no long-lived secrets'
 author: 'Platform Team'
 
 inputs:
   cloud_provider:
-    description: 'Cloud provider: aws or azure'
+    description: 'Cloud provider: aws | azure | gke'
     required: true
   aws_role_arn:
     description: 'AWS IAM role ARN to assume via OIDC (required when cloud_provider=aws)'
@@ -22,13 +22,28 @@ inputs:
   azure_subscription_id:
     description: 'Azure subscription ID (required when cloud_provider=azure)'
     required: false
+  gcp_workload_identity_provider:
+    description: 'WIF provider resource name (required when cloud_provider=gke) — projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/POOL/providers/PROVIDER'
+    required: false
+  gcp_service_account:
+    description: 'GCP service account email to impersonate via WIF (required when cloud_provider=gke)'
+    required: false
+  gcp_project:
+    description: 'GCP project ID (required when cloud_provider=gke)'
+    required: false
+  gcp_cluster_name:
+    description: 'GKE cluster name (required when cloud_provider=gke)'
+    required: false
+  gcp_cluster_location:
+    description: 'GKE cluster region or zone, e.g. us-central1 or us-central1-a (required when cloud_provider=gke)'
+    required: false
 
 outputs:
   cloud_provider:
-    description: 'The configured cloud provider (aws or azure)'
+    description: 'The configured cloud provider (aws, azure, or gke)'
     value: ${{ inputs.cloud_provider }}
   aws_account_id:
-    description: 'AWS account ID — empty string when cloud_provider=azure'
+    description: 'AWS account ID — empty string when cloud_provider is not aws'
     value: ${{ steps.aws_config.outputs.aws-account-id }}
 
 runs:
@@ -43,6 +58,8 @@ runs:
         AZURE_CLIENT_ID: ${{ inputs.azure_client_id }}
         AZURE_TENANT_ID: ${{ inputs.azure_tenant_id }}
         AZURE_SUBSCRIPTION_ID: ${{ inputs.azure_subscription_id }}
+        GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ inputs.gcp_workload_identity_provider }}
+        GCP_SERVICE_ACCOUNT: ${{ inputs.gcp_service_account }}
       run: |
         case "$CLOUD_PROVIDER" in
           aws)
@@ -57,8 +74,14 @@ runs:
             [[ -n "$AZURE_SUBSCRIPTION_ID" ]] || \
               { echo "::error::azure_subscription_id is required when cloud_provider=azure"; exit 1; }
             ;;
+          gke)
+            [[ -n "$GCP_WORKLOAD_IDENTITY_PROVIDER" ]] || \
+              { echo "::error::gcp_workload_identity_provider is required when cloud_provider=gke"; exit 1; }
+            [[ -n "$GCP_SERVICE_ACCOUNT" ]] || \
+              { echo "::error::gcp_service_account is required when cloud_provider=gke"; exit 1; }
+            ;;
           *)
-            echo "::error::cloud_provider must be 'aws' or 'azure', got: $CLOUD_PROVIDER"
+            echo "::error::cloud_provider must be 'aws', 'azure', or 'gke', got: $CLOUD_PROVIDER"
             exit 1
             ;;
         esac
@@ -102,6 +125,22 @@ runs:
         az account show --output table
         echo "::endgroup::"
 
+    # GKE path
+    - name: Authenticate to GCP via Workload Identity Federation
+      if: inputs.cloud_provider == 'gke'
+      uses: google-github-actions/auth@6fc4af4b145ae7821d527454aa9bd537d1f2dc5f  # v2.1.7
+      with:
+        workload_identity_provider: ${{ inputs.gcp_workload_identity_provider }}
+        service_account: ${{ inputs.gcp_service_account }}
+
+    - name: Verify GCP credentials
+      if: inputs.cloud_provider == 'gke'
+      shell: bash
+      run: |
+        echo "::group::GCP identity"
+        gcloud auth list
+        echo "::endgroup::"
+
     # Job summary
     - name: Write job summary
       if: always()
@@ -110,17 +149,18 @@ runs:
         CLOUD_PROVIDER: ${{ inputs.cloud_provider }}
         AWS_REGION: ${{ inputs.aws_region }}
         AZURE_SUBSCRIPTION: ${{ inputs.azure_subscription_id }}
+        GCP_PROJECT: ${{ inputs.gcp_project }}
       run: |
         {
           echo "## Cloud Credentials"
           echo "| Key | Value |"
           echo "|---|---|"
           echo "| Provider | \`$CLOUD_PROVIDER\` |"
-          if [[ "$CLOUD_PROVIDER" == "aws" ]]; then
-            echo "| Region | \`$AWS_REGION\` |"
-          else
-            echo "| Subscription | \`$AZURE_SUBSCRIPTION\` |"
-          fi
+          case "$CLOUD_PROVIDER" in
+            aws)   echo "| Region | \`$AWS_REGION\` |" ;;
+            azure) echo "| Subscription | \`$AZURE_SUBSCRIPTION\` |" ;;
+            gke)   echo "| Project | \`$GCP_PROJECT\` |" ;;
+          esac
           echo "| Auth method | OIDC (no long-lived secrets) |"
         } >> "$GITHUB_STEP_SUMMARY"
 
