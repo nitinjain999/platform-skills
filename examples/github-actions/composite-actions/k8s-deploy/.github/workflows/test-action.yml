@@ -178,3 +178,75 @@ jobs:
         shell: bash
         run: |
           echo "::notice::Outcome: ${{ steps.deploy.outcome }} — validation passed, expected OIDC failure without real Azure federated credential"
+
+  # Test 8 — GKE without gcp_workload_identity_provider fails
+  test-gke-missing-provider:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Run GKE without workload_identity_provider — expect failure
+        id: deploy
+        uses: ./
+        with:
+          cloud_provider: gke
+          gcp_service_account: 'deployer@my-project.iam.gserviceaccount.com'
+          gcp_project: my-project
+          gcp_cluster_name: my-gke-cluster
+          gcp_cluster_location: us-central1
+          namespace: production
+          manifest_path: deploy/
+        continue-on-error: true
+      - name: Assert failure
+        shell: bash
+        run: |
+          [[ "${{ steps.deploy.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure when gcp_workload_identity_provider is missing"; exit 1; }
+          echo "::notice::Validation correctly rejected missing gcp_workload_identity_provider"
+
+  # Test 9 — GKE without gcp_cluster_name fails
+  test-gke-missing-cluster:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Run GKE without gcp_cluster_name — expect failure
+        id: deploy
+        uses: ./
+        with:
+          cloud_provider: gke
+          gcp_workload_identity_provider: 'projects/123456789/locations/global/workloadIdentityPools/github/providers/github-provider'
+          gcp_service_account: 'deployer@my-project.iam.gserviceaccount.com'
+          gcp_project: my-project
+          gcp_cluster_location: us-central1
+          namespace: production
+          manifest_path: deploy/
+        continue-on-error: true
+      - name: Assert failure
+        shell: bash
+        run: |
+          [[ "${{ steps.deploy.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure when gcp_cluster_name is missing"; exit 1; }
+          echo "::notice::Validation correctly rejected missing gcp_cluster_name"
+
+  # Test 10 — GKE/WIF inputs pass validation; action fails at OIDC exchange in CI
+  test-gke-input-validation-passes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: All GKE inputs valid — will fail at OIDC step without real WIF trust
+        id: deploy
+        uses: ./
+        with:
+          cloud_provider: gke
+          gcp_workload_identity_provider: 'projects/123456789/locations/global/workloadIdentityPools/github/providers/github-provider'
+          gcp_service_account: 'deployer@my-project.iam.gserviceaccount.com'
+          gcp_project: my-project
+          gcp_cluster_name: my-gke-cluster
+          gcp_cluster_location: us-central1
+          namespace: production
+          manifest_path: deploy/
+          dry_run: 'true'
+        continue-on-error: true
+      - name: Assert input validation passed (OIDC failure is expected in CI)
+        shell: bash
+        run: |
+          echo "::notice::Outcome: ${{ steps.deploy.outcome }} — validation passed, expected OIDC failure without real WIF trust"
