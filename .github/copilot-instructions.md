@@ -1,5 +1,5 @@
 # Platform Engineering Instructions for GitHub Copilot
-# Version: 1.23.0
+# Version: 1.25.0
 # Source: https://github.com/nitinjain999/platform-skills
 # Scope: project-level — applies to every Copilot Chat in this workspace
 # Upgrade: git pull in the platform-skills clone → copy updated file → commit
@@ -108,7 +108,7 @@ spec:
 }
 ```
 
-Always prefer IRSA (EKS) or workload identity (AKS) over static credentials.
+Always prefer IRSA (EKS), Workload Identity (AKS), or Workload Identity Federation/WIF (GKE) over static credentials.
 
 ## Terraform
 
@@ -267,6 +267,7 @@ When reviewing any PR that touches infrastructure, check all six dimensions:
 - `references/azure.md` — AKS, workload identity, RBAC
 - `references/terraform.md` — module design, state, testing
 - `references/github-actions.md` — workflow security, OIDC
+- `references/composite-actions.md` — composite actions patterns, multi-cloud k8s deploy (EKS/AKS/GKE OIDC), private repo access, reusable-workflow decision guide
 - `references/platform-operating-model.md` — cross-cutting architecture
 - `references/compliance.md` — SOC 2 controls in Terraform
 - `references/helm.md` — chart scaffolding, lint pipeline

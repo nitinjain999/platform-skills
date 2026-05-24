@@ -5,6 +5,27 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.25.0] - 2026-05-24
+
+### Added
+
+#### Composite GitHub Actions — GKE support, AKS kubelogin fix, stale-doc refresh
+
+- `k8s-deploy/action.yml` — GKE cloud_provider path: `google-github-actions/auth` (Workload Identity Federation) → `google-github-actions/get-gke-credentials`; five new GCP inputs (`gcp_workload_identity_provider`, `gcp_service_account`, `gcp_project`, `gcp_cluster_name`, `gcp_cluster_location`); job summary shows GCP project; SHA-pinned actions (`auth@6fc4af4`, `get-gke-credentials@20b2b9f`)
+- `k8s-deploy/action.yml` — AKS kubelogin fix: new "Install kubelogin" step (`az aks install-cli --kubelogin-install-location` — installs kubelogin only, no kubectl overwrite) and "Update kubeconfig for AKS" step (`az aks get-credentials` + `kubelogin convert-kubeconfig -l workloadidentity`); prevents kubectl hanging on browser-auth prompts on AAD-enabled clusters; `timeout-minutes: 3` on kubelogin install
+- `configure-cloud/action.yml` — GKE cloud_provider path: `google-github-actions/auth` (WIF) + credential verification step; five new GCP inputs; job summary shows GCP project; SHA-pinned actions
+- `k8s-deploy/.github/workflows/test-action.yml` — three new GKE test jobs: missing-provider, missing-cluster, input-validation-passes (all with `continue-on-error: true`)
+- `configure-cloud/.github/workflows/test-action.yml` — `id-token: write` permission added; three new GKE test jobs: missing-provider, missing-service-account, input-validation-passes
+- `references/composite-actions.md` — new "Kubernetes cluster authentication" section: EKS (`configure-aws-credentials` + `aws eks update-kubeconfig`, IAM trust policy), AKS (`azure/login` + `az aks get-credentials` + why `kubelogin convert-kubeconfig -l workloadidentity` is required on AAD clusters), GKE (WIF pool + provider, Terraform setup, attribute condition scoped to repo), EKS/AKS/GKE decision table
+
+### Changed
+
+- `k8s-deploy/README.md` — rewritten with EKS/AKS/GKE quick-start examples, updated architecture diagram (OIDC paths replace kubeconfig decode), per-provider input tables, required permissions block
+- `k8s-deploy/CHANGELOG.md` — v2.0.0 breaking-change entry added (kubeconfig → OIDC migration guide)
+- `examples/github-actions/composite-actions/README.md` — k8s-deploy row updated from "kubeconfig tempfile, chmod 600" → "EKS/AKS/GKE OIDC, kubelogin, no static secrets"
+- `commands/composite-actions.md` — stale "kubectl, kubeconfig secret" reference updated to "kubectl, EKS/AKS/GKE OIDC"
+- `.github/copilot-instructions.md` — version bumped to v1.25.0; GKE WIF added to preferred-auth guidance; `references/composite-actions.md` added to reference file list
+
 ## [1.24.2] - 2026-05-23
 
 ### Added
