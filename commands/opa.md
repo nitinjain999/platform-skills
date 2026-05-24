@@ -21,11 +21,13 @@ Steps:
    - Generate a descriptive `msg` that includes the offending resource name/value and a remediation hint
    - Use `some` for iteration, `in` for membership, `startswith`/`contains` for string matching
 4. Show the Conftest command to test the policy against sample input
-5. Output the exact CI command and placement — always include both the runnable `conftest test` command and the ordering note:
+5. Output the CI step — always emit the exact runnable command inline in the response (do not just describe it):
+   ```yaml
+   - run: terraform validate
+   - run: conftest test --policy ./policies ./main.tf
+   - run: terraform plan -out=tfplan.binary
    ```
-   conftest test --policy ./policies ./main.tf
-   ```
-   Runs **after `terraform validate`** and **before `terraform plan`** as a blocking gate — failing conftest must prevent plan from running
+   conftest runs **after `terraform validate`** and **before `terraform plan`** as a blocking gate — if conftest fails, plan must not run
 
 Reference: `references/opa.md` → Rule Types, Input Shape, Rego v1 Syntax
 
