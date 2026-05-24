@@ -552,6 +552,150 @@ provider "azurerm" {
 }
 ```
 
+## Kubernetes cluster authentication
+
+After OIDC credentials are configured, the runner needs a kubeconfig that points at the cluster. Each cloud has a different CLI command and a non-obvious requirement.
+
+### EKS — aws eks update-kubeconfig
+
+```yaml
+- name: Configure AWS credentials via OIDC
+  uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7  # v6.0.0
+  with:
+    role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+    aws-region: us-east-1
+
+- name: Update kubeconfig for EKS
+  shell: bash
+  run: aws eks update-kubeconfig --name my-cluster --region us-east-1
+```
+
+No extra tooling. `aws eks update-kubeconfig` writes a kubeconfig entry that calls `aws eks get-token` as a credential exec plugin — token refresh is automatic. The calling IAM role needs `eks:DescribeCluster` plus a Kubernetes RBAC binding.
+
+**Kubernetes RBAC — bind the IAM role:**
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: github-actions-deploy
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: edit
+subjects:
+  - kind: User
+    name: arn:aws:iam::123456789012:role/github-actions-deploy
+    apiGroup: rbac.authorization.k8s.io
+```
+
+---
+
+### AKS — az aks get-credentials + kubelogin
+
+```yaml
+- name: Azure login via OIDC
+  uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43  # v3.0.0
+  with:
+    client-id: ${{ vars.AZURE_CLIENT_ID }}
+    tenant-id: ${{ vars.AZURE_TENANT_ID }}
+    subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+- name: Install kubelogin
+  shell: bash
+  timeout-minutes: 3
+  run: |
+    az aks install-cli --only-show-errors \
+      --kubelogin-install-location /usr/local/bin/kubelogin
+
+- name: Get AKS credentials
+  shell: bash
+  run: |
+    az aks get-credentials \
+      --resource-group my-rg \
+      --name my-cluster \
+      --overwrite-existing
+    kubelogin convert-kubeconfig -l workloadidentity
+```
+
+**Why kubelogin is required:** AKS clusters with Azure AD / Entra ID integration generate a kubeconfig that uses `kubelogin` as an exec credential plugin in `devicelogin` mode — which opens a browser and hangs in CI. `kubelogin convert-kubeconfig -l workloadidentity` rewrites the exec plugin to use the ambient workload identity tokens already present after `azure/login`. Skip this step and every `kubectl` command hangs indefinitely.
+
+`az aks install-cli --kubelogin-install-location /usr/local/bin/kubelogin` installs only kubelogin, leaving the runner's kubectl version unaffected. If kubelogin is already present, the command is idempotent.
+
+**Grant the service principal cluster access:**
+
+```bash
+# Cluster User Role — allows az aks get-credentials
+az role assignment create \
+  --assignee <service-principal-object-id> \
+  --role "Azure Kubernetes Service Cluster User Role" \
+  --scope /subscriptions/SUB/resourceGroups/RG/providers/Microsoft.ContainerService/managedClusters/CLUSTER
+
+# Then bind to a Kubernetes Role/ClusterRole inside the cluster using the SP object ID or an AAD group
+```
+
+---
+
+### GKE — google-github-actions/auth + get-gke-credentials
+
+```yaml
+- name: Authenticate to GCP
+  uses: google-github-actions/auth@6fc4af4b145ae7821d527454aa9bd537d1f2dc5f  # v2.1.7
+  with:
+    workload_identity_provider: projects/123456789/locations/global/workloadIdentityPools/github/providers/github
+    service_account: deployer@my-project.iam.gserviceaccount.com
+
+- name: Get GKE credentials
+  uses: google-github-actions/get-gke-credentials@20b2b9f6b9a6a5cc0b7a435e26fdb9cf6de2e1fa  # v2.3.1
+  with:
+    cluster_name: my-cluster
+    location: us-central1
+    project_id: my-project
+```
+
+No extra kubeconfig manipulation. `get-gke-credentials` installs `gke-gcloud-auth-plugin` and writes a kubeconfig entry that uses it — token refresh is automatic.
+
+**Workload Identity Federation setup (Terraform):**
+
+```hcl
+resource "google_iam_workload_identity_pool" "github" {
+  workload_identity_pool_id = "github-actions"
+}
+
+resource "google_iam_workload_identity_pool_provider" "github" {
+  workload_identity_pool_id          = google_iam_workload_identity_pool.github.workload_identity_pool_id
+  workload_identity_pool_provider_id = "github-provider"
+  oidc { issuer_uri = "https://token.actions.githubusercontent.com" }
+  attribute_mapping = {
+    "google.subject"       = "assertion.sub"
+    "attribute.repository" = "assertion.repository"
+  }
+  attribute_condition = "assertion.repository == 'org/repo'"
+}
+
+resource "google_service_account_iam_member" "wif_binding" {
+  service_account_id = google_service_account.deployer.name
+  role               = "roles/iam.workloadIdentityUser"
+  member             = "principalSet://iam.googleapis.com/${google_iam_workload_identity_pool.github.name}/attribute.repository/org/repo"
+}
+```
+
+**Required GKE IAM roles:**
+- `roles/container.developer` — full kubectl access (broad)
+- Or `roles/container.viewer` + a Kubernetes RBAC ClusterRoleBinding for least privilege
+
+---
+
+### Decision table
+
+| | EKS | AKS | GKE |
+|---|---|---|---|
+| Kubeconfig command | `aws eks update-kubeconfig` | `az aks get-credentials` | `get-gke-credentials` action |
+| Extra tool needed | None | `kubelogin` (scoped install via `az aks install-cli`) | `gke-gcloud-auth-plugin` (action installs it) |
+| Non-interactive quirk | None | Must run `kubelogin convert-kubeconfig -l workloadidentity` | None |
+| OIDC trust setup | IAM role trust policy | App registration federated credential | WIF pool + provider + SA IAM binding |
+| Kubernetes RBAC subject | IAM role ARN | AAD group or SP object ID | Service account email |
+
 ---
 
 ## Inputs and outputs
