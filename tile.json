@@ -8,6 +8,7 @@
   },
   "exclude": [
     "examples/agent-self-improve/scripts/**",
+    "skills/**",
     ".github/**",
     ".claude-plugin/**",
     ".tessl/**",
