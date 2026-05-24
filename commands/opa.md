@@ -20,11 +20,10 @@ Steps:
    - Use `deny` for hard failures, `warn` for advisory violations, `violation` for OPA framework integrations (Gatekeeper, Conftest policy sets)
    - Generate a descriptive `msg` that includes the offending resource name/value and a remediation hint
    - Use `some` for iteration, `in` for membership, `startswith`/`contains` for string matching
-4. Show the Conftest command to test the policy against sample input
-5. Output the CI step — always emit the exact runnable command inline in the response (do not just describe it):
+4. Provide the CI integration — always emit this exact block inline (do not just describe it):
    ```yaml
    - run: terraform validate
-   - run: conftest test --policy ./policies ./main.tf
+   - run: conftest test --policy ./policies ./main.tf   # AFTER validate, BEFORE plan
    - run: terraform plan -out=tfplan.binary
    ```
    conftest runs **after `terraform validate`** and **before `terraform plan`** as a blocking gate — if conftest fails, plan must not run
