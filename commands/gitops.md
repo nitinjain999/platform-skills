@@ -275,6 +275,8 @@ SCRIPTS=/tmp/flux-agent-skills/skills/gitops-repo-audit/scripts
 
 **Prerequisites:** `awk` (discover), `yq >= 4.50` + `kustomize >= 5.8` + `kubeconform >= 0.7` (validate), `flux` CLI (check-deprecated).
 
+> Scripts copyright The Flux authors, Apache-2.0. Source: https://github.com/fluxcd/agent-skills
+
 ---
 
 ### Phase 1 — Discovery

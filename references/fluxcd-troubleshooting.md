@@ -1,5 +1,7 @@
 # FluxCD Troubleshooting — Failure Pattern Quick Reference
 
+<!-- Adapted from https://github.com/fluxcd/agent-skills (Apache-2.0, The Flux authors) -->
+
 Scannable incident cheat-sheet. Symptom → most likely cause → exact fix.
 For the full 5-workflow debug procedure, use `/platform-skills:gitops debug`.
 
