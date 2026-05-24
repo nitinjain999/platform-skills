@@ -52,9 +52,35 @@ kubectl logs -n flux-system deploy/kustomize-controller | tail -50
 kubectl logs -n flux-system deploy/helm-controller | tail -50
 ```
 
-**Edge cases:**
-- `spec.suspend: true` on FluxInstance — intentional; do not flag as error unless activity is expected.
-- `Ready: Unknown` / Progressing — wait for reconciliation; note `lastTransitionTime` relative to `interval`.
+**Controller failure modes:**
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Controller pod not running | Resource pressure, image pull failure, missing CRDs | Check `kubectl describe pod`, node conditions, image pull secrets |
+| Controller `OOMKilled` / crashlooping | Insufficient memory limits | Increase limits via `FluxInstance spec.kustomize.patches` or delete pod to reset |
+| `spec.suspend: true` on FluxInstance | Intentional pause | Do not flag as error — check if intended; resume with `kubectl patch fluxinstance flux --type=merge -p '{"spec":{"suspend":false}}'` |
+| `Ready: Unknown` / Progressing | Reconciliation in flight | Wait; check `lastTransitionTime` relative to `interval` |
+| Missing CRDs after upgrade | Flux component not upgraded | Re-run bootstrap or update `FluxInstance.spec.distribution.version` |
+
+### Workflow 1b — Source failures
+
+Check sources separately when controllers are healthy but resources are not reconciling.
+
+```bash
+flux get sources all -A
+kubectl describe gitrepository <name> -n flux-system
+kubectl describe ocirepository <name> -n flux-system
+```
+
+**Source failure modes:**
+
+| Source | Symptom | Cause | Fix |
+|---|---|---|---|
+| `GitRepository` | `FetchFailed` | Wrong credentials, expired token, wrong SSH key | Check `secretRef`; verify `identity`/`known_hosts` keys exist; note SSH scp-style URLs (`git@host:repo`) are NOT supported — use `ssh://git@host/repo` |
+| `OCIRepository` | `FetchFailed` | Cloud registry auth misconfigured | Check `spec.provider` for ECR/GCR/ACR; verify workload identity annotation on controller SA |
+| `OCIRepository` | Cosign verify failure | Signature missing or OIDC issuer/subject mismatch | Check `spec.verify.matchOIDCIdentity`; verify signature was pushed by CI |
+| `HelmChart` | Not ready | Referenced `HelmRepository` not ready | Fix the source first — HelmChart inherits source failures |
+| `HelmRepository` (OCI type) | No status conditions | OCI HelmRepositories show no status — use `OCIRepository` instead | Migrate to `OCIRepository` with `spec.chartRef` |
 
 ### Workflow 2 — HelmRelease trace
 
@@ -89,9 +115,11 @@ kubectl logs -n <namespace> deploy/<name> | tail -50
 | Symptom | Cause | Fix |
 |---|---|---|
 | `install retries exhausted` | Hook timeout, resource conflict, or values type mismatch | Check `helm-controller` logs; validate values against chart schema |
+| `Remediation exhausted` | Max retries reached — manual intervention needed | Switch to `install.strategy.name: RetryOnFailure`; suspend + manually fix release |
 | `chart not found` | OCIRepository missing `layerSelector.mediaType` | Add `layerSelector.mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip` |
 | `valuesFrom` key missing | ConfigMap or Secret doesn't have `reconcile.fluxcd.io/watch: Enabled` or wrong key | Verify key name and add watch label |
 | `spec.chart.spec` and `spec.chartRef` both set | Mutually exclusive fields | Remove `spec.chart.spec`; use `spec.chartRef` for OCI sources |
+| HelmRelease stuck after `spec.force: true` | Force recreates but hooks fail | Disable `force` after the immutable field change is resolved |
 
 ### Workflow 3 — Kustomization trace
 
@@ -125,8 +153,10 @@ kubectl get all -n <target-namespace>
 |---|---|---|
 | `kustomize build failed` | Missing resource, invalid overlay patch, or wrong path | Run `kustomize build ./path` locally to reproduce |
 | `health check timeout` | Dependency `dependsOn` not ready, or workload stuck | Check `dependsOn` chain; inspect dependent resource status |
-| Variable substitution not applied | Missing `${VAR}` in manifest or ConfigMap not watched | Add `reconcile.fluxcd.io/watch: Enabled` label to ConfigMap |
+| Variable substitution not applied | `${VAR}` in manifest but ConfigMap not watched or wrong Kustomization | Add `reconcile.fluxcd.io/watch: Enabled` to ConfigMap; ensure `substituteFrom` is on the Kustomization that owns the manifest (not a sibling) |
 | `pruning disabled` | `spec.prune: false` — orphaned resources remain | Set `prune: true` unless orphan retention is intentional |
+| Immutable field conflict | Field cannot be patched in place | Set `spec.force: true` temporarily to recreate the resource; remove after |
+| `Variable substitution error: missing ConfigMap/Secret` | `substituteFrom` references an object that doesn't exist in the namespace | Create the missing ConfigMap/Secret in the Kustomization's namespace |
 
 ### Workflow 4 — ResourceSet trace
 

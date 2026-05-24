@@ -10,32 +10,57 @@ The repository to audit is: $ARGUMENTS
 
 Work through all six phases in order. Read files from the repository to gather evidence. Do not apply any changes — this is a read-only analysis.
 
+### Tooling setup (one-time)
+
+The audit uses the official Flux repo audit scripts from [fluxcd/agent-skills](https://github.com/fluxcd/agent-skills). Clone once and reference by path:
+
+```bash
+git clone --depth=1 https://github.com/fluxcd/agent-skills.git /tmp/flux-agent-skills
+SCRIPTS=/tmp/flux-agent-skills/skills/gitops-repo-audit/scripts
+```
+
+**Prerequisites:** `awk` (discover), `yq >= 4.50` + `kustomize >= 5.8` + `kubeconform >= 0.7` (validate), `flux` CLI (check-deprecated).
+
+The `validate.sh` script uses Flux OpenAPI schemas bundled in the agent-skills repo — it validates every CRD against the authoritative Flux API spec.
+
 ---
 
 ## Phase 1 — Discovery
 
 **Goal:** Understand the repository structure and classify its pattern.
 
-1. List all directories and identify Kubernetes resource files:
-   ```bash
-   find . -name "*.yaml" -o -name "*.yml" | head -100
-   ```
+Use the official Flux discovery script for a structured JSON inventory:
 
-2. Count resources by kind:
-   ```bash
-   grep -rh "^kind:" . | sort | uniq -c | sort -rn
-   ```
+```bash
+# One-time setup (or use an existing local clone)
+git clone --depth=1 https://github.com/fluxcd/agent-skills.git /tmp/flux-agent-skills
+SCRIPTS=/tmp/flux-agent-skills/skills/gitops-repo-audit/scripts
 
-3. Classify the repo pattern:
-   - **basic-monorepo** — `clusters/`, `apps/`, `infrastructure/` directories; single team
-   - **multi-repo fleet** — platform repo references tenant repos via GitRepository + Kustomization
-   - **fleet-with-resourcesets** — ResourceSet + ResourceSetInputProvider for N-tenant templating
-   - **gitless** — OCIRepository as primary source; FluxInstance with `sync.kind: OCIRepository`
+# Run discovery — outputs JSON: fluxResources.byKind, kubernetesResources.byKind, kustomizeOverlays.byDirectory
+bash $SCRIPTS/discover.sh -d .
 
-4. Check for `gotk-sync.yaml` in the repo root or `clusters/` directories:
-   - If present: this repo was bootstrapped with `flux bootstrap` — flag for migration to Flux Operator for lifecycle management
+# Exclude specific directories if needed (e.g. terraform/)
+bash $SCRIPTS/discover.sh -d . -e terraform
+```
 
-5. Note the Flux API versions in use (check for v2beta1/v2beta2 HelmRelease, v1beta2 Kustomization).
+The script auto-skips Terraform (`*.tf`) and Helm chart (`Chart.yaml`) directories. Git-aware — respects `.gitignore`.
+
+Classify the repo pattern from the inventory output:
+
+| Signal | Pattern |
+|---|---|
+| `apps/base/` + `apps/<env>/` overlays | **basic-monorepo** |
+| `ArtifactGenerator` resources | Monorepo with source decomposition |
+| `tenants/` directory + per-tenant GitRepository/Kustomization | **multi-repo fleet** |
+| `ResourceSet` + `ResourceSetInputProvider` resources | **fleet-with-resourcesets** |
+| `FluxInstance` + OCIRepository sync | **gitless** |
+| `postBuild.substituteFrom` across clusters | Multi-cluster with per-cluster variables |
+| `update/` or `update-policies/` directory | Repo with image automation |
+
+Check for `gotk-sync.yaml` in the repo root or `clusters/` directories:
+- If present: bootstrapped with `flux bootstrap` — flag for Flux Operator migration
+
+Note the Flux API versions in use (check for `v2beta1`/`v2beta2` HelmRelease, `v1beta2` Kustomization).
 
 ---
 
@@ -43,28 +68,29 @@ Work through all six phases in order. Read files from the repository to gather e
 
 **Goal:** Catch YAML syntax errors, schema violations, and broken Kustomize builds.
 
-1. Validate YAML syntax:
-   ```bash
-   find . -name "*.yaml" | xargs -I{} sh -c 'python3 -c "import yaml,sys; yaml.safe_load_all(open(sys.argv[1]))" {} 2>&1 | grep -v "^$" && echo "OK: {}"' 2>&1
-   ```
+Use the official Flux validation script — validates YAML syntax, Kubernetes manifests, and every kustomize overlay against Flux OpenAPI schemas:
 
-2. Build each Kustomize overlay:
-   ```bash
-   find . -name "kustomization.yaml" -exec dirname {} \; | sort -u | while read dir; do
-     echo "=== $dir ==="; kustomize build "$dir" > /dev/null && echo "OK" || echo "FAILED"
-   done
-   ```
+```bash
+# Prerequisites: yq >= 4.50, kustomize >= 5.8, kubeconform >= 0.7
+# The script uses Flux OpenAPI schemas bundled in the agent-skills repo
 
-3. Validate rendered manifests against Kubernetes schemas:
-   ```bash
-   kustomize build ./clusters/production | kubeconform -strict -summary
-   ```
+bash $SCRIPTS/validate.sh -d .
 
-**Skip rules (these are valid, not errors):**
-- SOPS-encrypted Secrets containing `sops:` metadata blocks — skip schema validation for these
-- Third-party CRDs (cert-manager, Kyverno, KEDA etc.) — `skipped` in kubeconform output is expected
-- `kustomize.config.k8s.io/v1beta1` resources — Kustomize build configs, not Kubernetes resources
-- `${VARIABLE}` patterns — valid Flux postBuild substitution; not broken YAML
+# Exclude directories if needed
+bash $SCRIPTS/validate.sh -d . -e terraform -e helm-charts
+```
+
+What the script does:
+1. **YAML syntax** — validates every `.yaml` file with `yq`
+2. **Kubernetes manifests** — runs `kubeconform -strict` against each file (plus Flux CRD schemas)
+3. **Kustomize overlays** — `kustomize build <overlay> | kubeconform` per `kustomization.yaml` found
+4. Auto-skips: Terraform dirs (`*.tf`), Helm charts (`Chart.yaml`), Kubernetes Secrets (SOPS fields fail schema)
+
+**Skip rules (valid, not errors):**
+- SOPS-encrypted Secrets with `sops:` metadata — intentionally skipped by the script
+- Third-party CRDs (cert-manager, Kyverno, KEDA) — `skipped` in kubeconform output is expected
+- `kustomize.config.k8s.io/v1beta1` — Kustomize build configs, not Kubernetes resources
+- `${VARIABLE}` patterns — valid Flux `postBuild` substitution; not broken YAML
 - `gotk-components.yaml` — auto-generated by `flux bootstrap`; do not audit for best practices
 
 ---
@@ -73,34 +99,37 @@ Work through all six phases in order. Read files from the repository to gather e
 
 **Goal:** Identify deprecated or removed Flux API versions.
 
-1. Check for deprecated HelmRelease API versions:
-   ```bash
-   grep -rn "helm.toolkit.fluxcd.io/v2beta" .
-   ```
-   All HelmReleases must use `helm.toolkit.fluxcd.io/v2`.
+Use the official deprecation check script (requires `flux` CLI):
 
-2. Check for deprecated Kustomization API versions:
-   ```bash
-   grep -rn "kustomize.toolkit.fluxcd.io/v1beta" .
-   ```
-   All Kustomizations must use `kustomize.toolkit.fluxcd.io/v1`.
+```bash
+# Exits 1 if deprecated APIs found — safe to use as a CI gate
+bash $SCRIPTS/check-deprecated.sh -d .
+```
 
-3. Check for deprecated source API versions:
-   ```bash
-   grep -rn "source.toolkit.fluxcd.io/v1beta" .
-   ```
+What it checks: runs `flux migrate -f . --dry-run` which detects all `v1beta1` (removed in v2.7) and `v1beta2` (removed in v2.8) versions across all toolkits.
 
-4. Check Flux Operator CRD versions (if present):
-   ```bash
-   grep -rn "fluxcd.controlplane.io" . | grep "apiVersion"
-   ```
-   FluxInstance, ResourceSet, ResourceSetInputProvider must use `fluxcd.controlplane.io/v1`.
+Also check manually for Flux Operator CRDs:
 
-5. Dry-run migration check (if `flux` CLI is available):
-   ```bash
-   flux migrate --dry-run 2>&1
-   ```
-   Exit code 1 indicates deprecated APIs found.
+```bash
+# FluxInstance, ResourceSet, ResourceSetInputProvider must use fluxcd.controlplane.io/v1
+grep -rn "fluxcd.controlplane.io" . | grep "apiVersion"
+
+# HelmRepository with type: oci — migrate to OCIRepository
+grep -rn "type: oci" . --include="*.yaml"
+```
+
+**Current stable API versions:**
+
+| Kind | Required apiVersion |
+|---|---|
+| GitRepository, OCIRepository, HelmRepository, HelmChart, Bucket | `source.toolkit.fluxcd.io/v1` |
+| Kustomization | `kustomize.toolkit.fluxcd.io/v1` |
+| HelmRelease | `helm.toolkit.fluxcd.io/v2` |
+| Provider, Alert | `notification.toolkit.fluxcd.io/v1beta3` |
+| Receiver | `notification.toolkit.fluxcd.io/v1` |
+| FluxInstance, ResourceSet, ResourceSetInputProvider | `fluxcd.controlplane.io/v1` |
+
+For migration steps, see [references/fluxcd-migration.md](../references/fluxcd-migration.md).
 
 ---
 
@@ -142,38 +171,86 @@ Check each category that applies to what was discovered:
 - [ ] All GitRepository resources have explicit `ref` (branch, tag, or commit) — no empty ref
 - [ ] All sources have `interval` set — no missing poll interval
 
+### Repository structure
+- [ ] `clusters/`, `apps/`, `infrastructure/` clearly separated (monorepo) or dedicated repos (fleet)
+- [ ] Base + overlay pattern — no duplicated full manifests across environments
+- [ ] `flux-system/` lives under `clusters/<cluster>/` — not in `apps/` or `infrastructure/`
+- [ ] No overlapping Kustomization paths (where one path is a prefix of another)
+- [ ] No workloads in the `default` namespace
+
+### Operational
+- [ ] Error-severity Alert configured with a Provider — at minimum for production clusters
+- [ ] Receiver configured for immediate reconciliation on Git push
+- [ ] `flux-runtime-info` ConfigMap present for multi-cluster variable substitution (if multi-cluster)
+- [ ] `storageNamespace` matches `targetNamespace` on HelmReleases — prevents Helm storage namespace mismatch
+
 ---
 
 ## Phase 5 — Security Review
 
 **Goal:** Identify security risks in the repository and cluster configuration.
 
+Run the security grep patterns from [references/fluxcd-security.md](../references/fluxcd-security.md) — scan all categories regardless of earlier findings. Key patterns:
+
+```bash
+# Unencrypted Secrets
+grep -rn "kind: Secret" . --include="*.yaml" | while read m; do
+  f=$(echo "$m" | cut -d: -f1)
+  grep -q "sops:" "$f" || grep -q "ENC\[" "$f" || echo "UNENCRYPTED: $f"
+done
+
+# Hardcoded credentials
+grep -rn -e "password:" -e "token:" -e "apiKey:" -e "_SECRET=" -e "ACCESS_KEY=" --include="*.yaml" .
+
+# Insecure sources
+grep -rn "insecure: true" . --include="*.yaml"
+
+# Cloud registries without Workload Identity
+grep -rn "ecr\.\|\.gcr\.io\|\.azurecr\.io" . --include="*.yaml" -B5 | grep -v "provider:"
+
+# Cross-namespace source references
+grep -rn "sourceRef:" . --include="*.yaml" -A3 | grep "namespace:" | grep -v "flux-system"
+
+# OCIRepository without Cosign verification
+grep -rn "kind: OCIRepository" . --include="*.yaml" -A20 | grep -v "verify:"
+
+# cluster-admin bindings
+grep -rn "cluster-admin" . --include="*.yaml"
+
+# Image automation pushing directly to main
+grep -rn "kind: ImageUpdateAutomation" . --include="*.yaml" -A20 | grep "branch: main\|branch: master"
+```
+
+Checklist:
+
 ### Secrets management
-- [ ] No plain Kubernetes Secret YAML in Git — must use SOPS encryption or External Secrets Operator
+- [ ] No plain Kubernetes Secret YAML in Git — must use SOPS, ESO, or Sealed Secrets
 - [ ] SOPS `.sops.yaml` rules file present and scoped to sensitive paths only
-- [ ] No credentials, tokens, or passwords in ConfigMaps
+- [ ] No credentials, tokens, or passwords in ConfigMaps or `postBuild.substitute`
 
 ### Source authentication
-- [ ] Private GitRepository sources use SSH deploy key or GitHub App token (not PAT in Secret)
-- [ ] Private OCIRepository sources use Workload Identity (IRSA / AKS WI / GKE WIF) over static registry credentials where possible
-- [ ] ECR credential refresh automation in place if using AWS ECR (12-hour token TTL)
+- [ ] Private GitRepository sources use SSH deploy key or GitHub App token (preferred over PAT)
+- [ ] Cloud registry sources (ECR/GCR/ACR) use `spec.provider` (Workload Identity) not static credentials
+- [ ] ECR credential refresh automation in place if using static credentials (12-hour TTL)
+- [ ] No sources with `insecure: true`
 
 ### OCI source integrity
-- [ ] OCIRepository sources have `spec.verify.provider: cosign` for signed artifacts
+- [ ] OCIRepository sources in production have `spec.verify.provider: cosign`
 - [ ] Image tags are immutable (SHA-pinned or semver, not `:latest`)
+- [ ] No `HelmRepository` with `type: oci` — migrate to `OCIRepository`
 
 ### Multi-tenancy isolation (if multi-tenant pattern)
-- [ ] Each tenant Kustomization has `spec.serviceAccountName` pointing to a tenant-scoped ServiceAccount
-- [ ] No cross-namespace references without explicit admission policy
+- [ ] Each tenant Kustomization has `spec.serviceAccountName` scoped to that tenant
+- [ ] No cross-namespace `sourceRef` without explicit admission policy
 - [ ] NetworkPolicy default-deny in place per tenant namespace
-- [ ] Tenant ServiceAccounts have minimum RBAC — no cluster-admin bindings
+- [ ] No `cluster-admin` bindings for application service accounts
 
 ### Image automation security (if Git-based model)
-- [ ] Automation deploy key is write-scoped to a staging branch only — not `main`
-- [ ] Separate deploy key for image automation (not reusing the bootstrap key)
+- [ ] Automation pushes to a staging/feature branch — not directly to `main`
+- [ ] Separate read (pull) and write (push) credentials — do not reuse bootstrap key
 
 ### FluxInstance security (if Flux Operator)
-- [ ] `spec.cluster.networkPolicy: enabled` — restricts Flux controller inter-pod communication
+- [ ] `spec.cluster.networkPolicy` not explicitly set to `false` (default is `true`)
 - [ ] Registry pull secret is a dedicated read-only token, not a user PAT
 
 ---

@@ -45,6 +45,8 @@ Start here based on your task:
 | FluxCD HelmRelease advanced | [references/fluxcd-helmrelease.md](references/fluxcd-helmrelease.md) |
 | FluxCD Terraform bootstrap | [references/fluxcd-terraform.md](references/fluxcd-terraform.md) |
 | FluxCD MCP server (AI debugging) | [references/fluxcd-mcp.md](references/fluxcd-mcp.md) |
+| FluxCD API migration (v2.7/v2.8) | [references/fluxcd-migration.md](references/fluxcd-migration.md) |
+| FluxCD security audit checklist | [references/fluxcd-security.md](references/fluxcd-security.md) |
 | Argo CD patterns | [references/argocd.md](references/argocd.md) |
 | AWS platform guidance | [references/aws.md](references/aws.md) |
 | Azure platform guidance | [references/azure.md](references/azure.md) |

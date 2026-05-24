@@ -51,6 +51,8 @@ REQUIRED_REFERENCES=(
   references/fluxcd-helmrelease.md
   references/fluxcd-terraform.md
   references/fluxcd-mcp.md
+  references/fluxcd-migration.md
+  references/fluxcd-security.md
   references/argocd.md
   references/aws.md
   references/azure.md

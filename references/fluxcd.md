@@ -70,23 +70,60 @@ Flux should consume a prepared cluster. Bootstrap the cluster and its cloud prer
 
 ## Repository patterns
 
-Common layout:
+Three primary patterns — identify which one applies before auditing or extending a repo:
+
+### Monorepo
+
+Everything in one repo. Best for smaller teams or those starting their GitOps journey.
 
 ```text
 clusters/
-  prod/
+  production/
   staging/
 apps/
-  base/
-  overlays/
+  base/          # shared definitions
+  production/    # environment overlay
+  staging/       # environment overlay
 infrastructure/
-  controllers/
-  add-ons/
+  controllers/   # installs CRDs (cert-manager, kyverno)
+  configs/       # creates CRs (ClusterIssuer, policies)
 ```
+
+Dependency chain: `infra-controllers` → `infra-configs` → `apps`
+
+Use `ArtifactGenerator` to split the repo into independent source streams — only the affected component's artifact gets a new revision when its path changes.
+
+### Multi-repo (Git-based)
+
+Separate repos for platform and application teams. A fleet repo orchestrates via `GitRepository` resources pointing to tenant repos. Each tenant gets a scoped `ServiceAccount` with `RoleBinding`.
+
+### Multi-repo (OCI-based / Gitless)
+
+Most advanced. `FluxInstance` syncs from an OCI registry. `ResourceSet` templates generate per-tenant resources. OCI artifacts are immutable, Cosign-signable, and require no Git credentials on clusters.
+
+Tag promotion strategy: `latest` → staging, `latest-stable` → production.
+
+### Identification heuristics
+
+| Signal in the repo | Likely pattern |
+|---|---|
+| `apps/base/` + `apps/<env>/` overlays | Monorepo with Kustomize overlays |
+| `ArtifactGenerator` resources | Monorepo with source decomposition |
+| `tenants/` directory + per-tenant GitRepository/Kustomization | Multi-repo fleet (Git-based) |
+| `ResourceSet` + `ResourceSetInputProvider` resources | Fleet with N-input templating |
+| `FluxInstance` with `sync.kind: OCIRepository` | Gitless OCI-based fleet |
+| `postBuild.substituteFrom` referencing `flux-runtime-info` | Multi-cluster with per-cluster variables |
+| `update/` or `update-policies/` directory | Repo with image automation |
+| `gotk-sync.yaml` in `clusters/` | Bootstrapped with `flux bootstrap` — consider migrating to Flux Operator |
+
+### Common layout rules
 
 - `clusters/` defines what each cluster reconciles.
 - `apps/` defines application or service workloads.
-- `infrastructure/` contains in-cluster platform components such as ingress, cert-manager, external-dns, or observability stacks.
+- `infrastructure/` contains in-cluster platform components (ingress, cert-manager, observability).
+- `flux-system/` belongs under `clusters/<cluster>/` — never in `apps/` or `infrastructure/`.
+- Do not let overlapping Kustomization paths exist (where one path is a prefix of another).
+- No workloads in the `default` namespace.
 
 ## Reconciliation model
 
