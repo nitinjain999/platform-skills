@@ -127,7 +127,8 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:debug` — structured troubleshooting for any platform symptom
 - `/platform-skills:review` — production-readiness review of any manifest, Terraform, or workflow
 - `/platform-skills:terraform` — full fmt/validate/tflint/security pipeline + blast radius review
-- `/platform-skills:gitops` — Flux CD and Argo CD reconciliation troubleshooting
+- `/platform-skills:fluxcd` — FluxCD entry point: routes to debug (live cluster issue), audit (repo health check), or helm (chart review) based on your input
+- `/platform-skills:gitops` — Flux CD and Argo CD reconciliation troubleshooting (5-workflow structured debug)
 - `/platform-skills:linkerd` — Linkerd mTLS, injection, policy, and multi-cluster diagnostics
 - `/platform-skills:linux` — Linux administration, DNS, load balancing, VPC/VNet, and connectivity troubleshooting
 - `/platform-skills:product` — product thinking, friction audits, DevEx, RFC/ADR, incident updates, post-mortems
@@ -153,3 +154,4 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:aws` — CloudFront distributions, WAF web ACLs, Lambda@Edge, CloudFront Functions, Firewall Manager multi-account enforcement, and Terraform module generation with best practices
 - `/platform-skills:composite-actions` — generate a full composite action repo scaffold, review an existing action.yml, harden with SHA pinning and env isolation, or generate a test workflow
 - `/platform-skills:gitops-audit` — audit a Flux CD GitOps repository: 6-phase analysis (discovery, manifest validation, API compliance, best practices, security review) → prioritized report (Critical / Warning / Info)
+- Working Flux CD examples: [examples/fluxcd/](examples/fluxcd/)

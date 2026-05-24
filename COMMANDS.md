@@ -44,6 +44,7 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:aws](#platform-skillsaws) | CloudFront, WAF, Lambda@Edge, Firewall Manager multi-account enforcement, and Terraform module generation |
 | [/platform-skills:composite-actions](#platform-skillscomposite-actions) | Generate, review, secure, and test composite GitHub Actions |
 | [/platform-skills:gitops-audit](#platform-skillsgitops-audit) | Audit a Flux CD GitOps repository: 6-phase analysis → prioritized report (Critical / Warning / Info) |
+| [/platform-skills:fluxcd](#platform-skillsfluxcd) | FluxCD entry point — routes to debug, audit, or helm review based on your input |
 
 ---
 
@@ -2143,4 +2144,39 @@ Reference: `commands/composite-actions.md`, `references/composite-actions.md`, a
 /platform-skills:gitops-audit — security focus: check for plain secrets, missing Cosign verification
 ```
 
-Reference: `commands/gitops-audit.md`, `references/fluxcd.md`, and `examples/flux/`
+Reference: `commands/gitops-audit.md`, `references/fluxcd.md`, and `examples/fluxcd/`
+
+---
+
+## `/platform-skills:fluxcd`
+
+**What it does:** Smart entry point for all FluxCD work. Identifies the right workflow from your input — live cluster debugging (5-workflow structured trace), GitOps repository audit (6-phase analysis), or Helm chart review — and routes directly to the correct command.
+
+**Usage:** `/platform-skills:fluxcd [describe your situation, error, repo path, or intent]`
+
+```
+/platform-skills:fluxcd [error message or flux get output]         # → debug mode
+/platform-skills:fluxcd [repo path or "audit"]                     # → audit mode
+/platform-skills:fluxcd [Chart.yaml or "helm"]                     # → helm mode
+/platform-skills:fluxcd [Kustomization or HelmRelease YAML]        # → review mode
+```
+
+**Routing logic:**
+
+| If your input contains… | Routes to |
+|---|---|
+| Error message, `flux get` output, pod logs, "not reconciling" | `/platform-skills:gitops` — 5-workflow debug |
+| Repo path, "audit", "review", "before merge", "is this correct" | `/platform-skills:gitops-audit` — 6-phase audit |
+| Helm chart path, `Chart.yaml`, `values.yaml`, "helm", "chart" | `/platform-skills:helmcheck` — chart review |
+| A manifest to review (Kustomization, HelmRelease, FluxInstance YAML) | `/platform-skills:review` — production-readiness check |
+
+**Examples:**
+
+```
+/platform-skills:fluxcd — my HelmRelease is stuck in "Progressing" after a values change
+/platform-skills:fluxcd ./clusters — audit our GitOps repo before the Monday release
+/platform-skills:fluxcd — is this FluxInstance YAML production-ready? [paste YAML]
+/platform-skills:fluxcd — review this Chart.yaml and values.yaml for security issues
+```
+
+Reference: `commands/fluxcd.md`, `references/fluxcd.md`, `references/fluxcd-sources.md`, `references/fluxcd-operator.md`, and `examples/fluxcd/`

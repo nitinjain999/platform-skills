@@ -99,7 +99,7 @@ EXAMPLE_DOMAINS=(
   examples/kubernetes
   examples/openshift
   examples/argocd
-  examples/flux
+  examples/fluxcd
   examples/terraform
   examples/github-actions
   examples/compliance

@@ -41,16 +41,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `examples/flux/flux-operator/` — Flux Operator bootstrap: `fluxinstance.yaml` (gitless OCI sync, `networkPolicy: true`, all 6 components, reconcile annotations), `ocirepository.yaml` (Cosign verify), `verify-policy.yaml` (keyless Cosign with OIDC issuer + subject matching for GitHub Actions). README covers Flux Operator vs `flux bootstrap` comparison table, install steps, push-and-sign CI commands, health checks, and migration from `flux bootstrap`.
 - `examples/flux/README.md` — updated from "planned patterns" stubs to full 5-example index table with pattern descriptions, choose-the-right-pattern guide, and shared best practices matrix.
 
+#### FluxCD command router + examples rename
+
+- `commands/fluxcd.md` — new `/platform-skills:fluxcd` slash command. Smart entry point that identifies the right workflow from input: error/logs/symptom → `/platform-skills:gitops` (5-workflow debug); repo path/audit intent → `/platform-skills:gitops-audit` (6-phase audit); helm chart path → `/platform-skills:helmcheck`; manifest YAML → `/platform-skills:review`. Includes quick reference apiVersion table for all 18 FluxCD CRDs and links to all 11 `fluxcd-*.md` reference files.
+- `examples/flux/` → renamed to `examples/fluxcd/` — consistent naming with `references/fluxcd.md`, `commands/fluxcd.md`, and `examples/argocd/`. All 5 subdirectories preserved: `basic-monorepo/`, `multi-tenant/`, `helm-releases/`, `image-automation/`, `flux-operator/`.
+
 ### Changed
 
-- `references/flux.md` → renamed to `references/fluxcd.md` — consistent naming with `argocd.md`, `datadog.md`, `kyverno.md`; all references updated across SKILL.md, HOW_IT_WORKS.md, GETTING_STARTED.md, README.md, COMMANDS.md, CONTRIBUTING.md, tests/*.sh, examples/flux/README.md.
-- `SKILL.md` — added Domain 29 `GitOps Audit`; updated Flux/FluxCD reference descriptions; added 8 new FluxCD reference pointers; added `/platform-skills:gitops-audit` slash command.
+- `references/flux.md` → renamed to `references/fluxcd.md` — consistent naming with `argocd.md`, `datadog.md`, `kyverno.md`; all references updated across SKILL.md, HOW_IT_WORKS.md, GETTING_STARTED.md, README.md, COMMANDS.md, CONTRIBUTING.md, tests/*.sh, examples/fluxcd/README.md.
+- `SKILL.md` — added Domain 29 `GitOps Audit`; updated Flux/FluxCD reference descriptions; added 8 new FluxCD reference pointers; added `/platform-skills:gitops-audit` and `/platform-skills:fluxcd` slash commands; updated `examples/fluxcd/` path.
 - `skills/platform-skills/SKILL.md` — synced with root SKILL.md.
-- `COMMANDS.md` — added `/platform-skills:gitops-audit` to command index table and added full command section with modes, examples, and reference.
-- `HOW_IT_WORKS.md` — added `/platform-skills:gitops-audit` to command reference table.
-- `GETTING_STARTED.md` — updated to "All 29 command workflows"; added `gitops-audit` row; expanded FluxCD reference table with all 9 new fluxcd-*.md entries.
+- `COMMANDS.md` — added `/platform-skills:gitops-audit` and `/platform-skills:fluxcd` to command index table and added full command sections with modes, routing logic, examples, and references.
+- `HOW_IT_WORKS.md` — added `/platform-skills:gitops-audit` and `/platform-skills:fluxcd` to command reference table.
+- `GETTING_STARTED.md` — updated to "All 30 command workflows"; added `gitops-audit` and `fluxcd` rows; expanded FluxCD reference table with all 9 new fluxcd-*.md entries.
 - `INSTALLATION.md` — version string updated to `v1.25.0`.
-- `.claude-plugin/plugin.json` — version bumped to `1.25.0`; `./commands/gitops-audit.md` added to commands array.
+- `.claude-plugin/plugin.json` — version bumped to `1.25.0`; `./commands/gitops-audit.md` and `./commands/fluxcd.md` added to commands array.
 - `.claude-plugin/marketplace.json` — version bumped to `1.25.0`; description rewritten to 628 chars (was 1,784 chars over the 1,024 limit); added `gitops-audit`, `flux-operator`, `fluxinstance`, `resourceset`, `gitless-delivery`, `oci-gitops` keywords.
 
 ## [1.24.0] - 2026-05-24

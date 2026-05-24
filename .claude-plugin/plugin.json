@@ -105,6 +105,7 @@
     "./commands/awesome-docs.md",
     "./commands/aws.md",
     "./commands/composite-actions.md",
-    "./commands/gitops-audit.md"
+    "./commands/gitops-audit.md",
+    "./commands/fluxcd.md"
   ]
 }

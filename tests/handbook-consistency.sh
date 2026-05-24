@@ -43,7 +43,7 @@ declare -a REQUIRED_PATHS=(
   "references/aws.md"
   "references/azure.md"
   "references/github-actions.md"
-  "examples/flux/basic-monorepo"
+  "examples/fluxcd/basic-monorepo"
   "examples/argocd/app-of-apps/application.yaml"
   "examples/argocd/projects/platform-project.yaml"
   "examples/terraform/eks-cluster/main.tf"

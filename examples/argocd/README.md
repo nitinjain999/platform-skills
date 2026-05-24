@@ -78,7 +78,7 @@ spec:
       source:
         repoURL: https://github.com/nitinjain999/platform-skills
         targetRevision: main
-        path: examples/flux/basic-monorepo/infrastructure/production
+        path: examples/fluxcd/basic-monorepo/infrastructure/production
       destination:
         name: '{{cluster}}'
         namespace: '{{namespace}}'

@@ -117,6 +117,7 @@ Slash commands are predefined workflows. Use them instead of writing a long prom
 | `/platform-skills:aws` | CloudFront distributions, WAF web ACLs, Lambda@Edge, CloudFront Functions, Firewall Manager multi-account enforcement, and Terraform module generation with best practices |
 | `/platform-skills:composite-actions` | Generate, review, secure, and test composite GitHub Actions — scaffold, SHA pinning, secrets-as-inputs, observability, input validation, versioning |
 | `/platform-skills:gitops-audit` | Audit a Flux CD GitOps repository: 6-phase analysis (discovery, manifest validation, API compliance, best practices, security review) → prioritized report (Critical / Warning / Info) |
+| `/platform-skills:fluxcd` | FluxCD entry point: debug a live cluster issue, audit a GitOps repo, or review a Helm chart — smart router to the right workflow |
 
 Invoke a command by typing it at the start of your message:
 
