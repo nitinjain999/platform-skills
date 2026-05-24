@@ -25,7 +25,7 @@ jobs:
         with:
           token: ${{ secrets.TESSL_TOKEN }}
       - name: Publish skill
-        run: tessl tile publish . --skip-evals
+        run: tessl tile publish . --skip-evals --bump patch
       - name: Run eval scenarios
         run: |
           tessl project create platform-skills --workspace nitinjain999 || true
