@@ -152,7 +152,7 @@ See [COMMANDS.md](COMMANDS.md) for every command with modes and example prompts:
 | `review` | Production-readiness check on any manifest, Terraform, workflow |
 | `debug` | Structured troubleshooting for any platform symptom |
 | `terraform` | Blast radius, IAM least privilege, SOC 2, state impact |
-| `gitops` | Flux / Argo CD reconciliation issues |
+| `gitops` | Flux / Argo CD — `debug` live issues or `audit` a GitOps repo |
 | `helmcheck` | Scaffold, review, or security-audit a Helm chart |
 | `kyverno` | Generate, test, audit, or migrate Kyverno policies |
 | `opa` | Generate, test, or debug OPA/Conftest Rego policies |
@@ -177,7 +177,7 @@ See [COMMANDS.md](COMMANDS.md) for every command with modes and example prompts:
 | `awesome-docs` | Generate any animated Markdown doc (README, architecture guide, runbook, tutorial, RFC, post-mortem, or custom), convert existing Markdown, update/diff/audit diagrams, export |
 | `aws` | Generate or review CloudFront, WAF, Lambda@Edge, CloudFront Functions, and Firewall Manager patterns |
 | `composite-actions` | Scaffold, review, secure, debug, publish, and improve composite GitHub Actions |
-| `gitops-audit` | Audit a Flux CD GitOps repository: 6-phase analysis → prioritized report (Critical / Warning / Info) |
+| `fluxcd` | FluxCD entry point — routes to `gitops debug`, `gitops audit`, `helmcheck`, or `review` based on input |
 
 ### How the agent and skill system work
 

@@ -91,7 +91,8 @@ Slash commands are predefined workflows. Use them instead of writing a long prom
 | `/platform-skills:review` | You have a manifest, Terraform file, or workflow and want a production-readiness check |
 | `/platform-skills:terraform` | You want the full fmt/validate/tflint/security pipeline run against your Terraform |
 | `/platform-skills:debug` | You have a platform symptom and want structured diagnosis |
-| `/platform-skills:gitops` | Flux or Argo CD is not reconciling as expected |
+| `/platform-skills:gitops debug` | Flux or Argo CD live cluster issue — structured 5-workflow debug |
+| `/platform-skills:gitops audit` | Audit a Flux CD GitOps repo — 6-phase analysis, Critical/Warning/Info report |
 | `/platform-skills:helmcheck` | You want to create, review, or security-audit a Helm chart |
 | `/platform-skills:linkerd` | mTLS, proxy injection, or traffic policy issues |
 | `/platform-skills:linux` | DNS, load balancer, VPC connectivity, or kernel issue |
@@ -116,7 +117,6 @@ Slash commands are predefined workflows. Use them instead of writing a long prom
 | `/platform-skills:awesome-docs` | Generate any animated Markdown doc (README, architecture guide, runbook, tutorial, RFC, post-mortem, or custom), convert existing Markdown, update/diff/audit, preview, export to Confluence/Notion |
 | `/platform-skills:aws` | CloudFront distributions, WAF web ACLs, Lambda@Edge, CloudFront Functions, Firewall Manager multi-account enforcement, and Terraform module generation with best practices |
 | `/platform-skills:composite-actions` | Generate, review, secure, and test composite GitHub Actions — scaffold, SHA pinning, secrets-as-inputs, observability, input validation, versioning |
-| `/platform-skills:gitops-audit` | Audit a Flux CD GitOps repository: 6-phase analysis (discovery, manifest validation, API compliance, best practices, security review) → prioritized report (Critical / Warning / Info) |
 | `/platform-skills:fluxcd` | FluxCD entry point: debug a live cluster issue, audit a GitOps repo, or review a Helm chart — smart router to the right workflow |
 
 Invoke a command by typing it at the start of your message:

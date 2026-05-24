@@ -26,8 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `references/fluxcd-migration.md` — Flux API migration guide: v2.7 `v1beta1` removals (all 5 toolkits), v2.8 `v1beta2` removals (4 toolkits), current stable apiVersion table, CLI 3-step upgrade (migrate files → migrate in-cluster → upgrade components), Flux Operator 3-step upgrade (upgrade operator → migrate files → update FluxInstance version), CI gate pattern, common post-migration issues.
 - `references/fluxcd-security.md` — Security audit checklist with grep commands: unencrypted secrets (Secret without `sops:`/`ENC[`), hardcoded credentials (`password:`, `token:`, `ACCESS_KEY=`), insecure sources (`insecure: true`), cloud registries without Workload Identity, cross-namespace source refs, OCIRepository without Cosign, cluster-admin bindings, image automation pushing to main. Automated scan via upstream `validate.sh` and `check-deprecated.sh`.
-- `commands/gitops-audit.md` — Phase 1 now references `discover.sh` (JSON inventory: fluxResources.byKind, kubernetesResources.byKind, kustomizeOverlays.byDirectory) with repo pattern identification heuristics table (8 signal → pattern entries). Phase 2 now references `validate.sh` (YAML syntax + kubeconform + kustomize build per overlay, Flux OpenAPI schemas from agent-skills). Phase 3 now references `check-deprecated.sh` (exits 1 on deprecated APIs, CI-safe) plus current stable apiVersion table. Phase 4 expanded with repository structure and operational checklists. Phase 5 replaced with grep command blocks + full security checklist. Tooling setup section added (one-time clone + prerequisites).
-- `commands/gitops.md` — Workflow 1 expanded with controller failure modes table (Not Running, OOMKilled, suspend intent, Progressing). Added Workflow 1b for source failures: GitRepository FetchFailed, OCIRepository cloud auth, Cosign verify failure, HelmChart source inheritance, OCI HelmRepository status note. Workflow 2 adds `Remediation exhausted` and `spec.force` failure modes. Workflow 3 adds `substituteFrom` scoping failure and immutable field conflict.
+- `commands/gitops.md` — merged `gitops-audit` into `gitops` as a subcommand. Command now has two modes: `debug` (five structured Flux debug workflows: installation check, source failures, HelmRelease trace, Kustomization trace, ResourceSet trace — plus Argo CD diagnostics, producing a 5-section report) and `audit` (six-phase read-only repo analysis: discovery via `discover.sh`, manifest validation via `validate.sh`, API compliance via `check-deprecated.sh`, best practices checklist, security grep patterns, Critical/Warning/Info report). `commands/gitops-audit.md` deleted — its content lives in the `audit` subcommand.
 - `references/fluxcd.md` — Repository patterns section expanded: three pattern descriptions (monorepo, multi-repo Git-based, multi-repo OCI-based), identification heuristics table (8 signals), layout rules (flux-system placement, no overlapping paths, no workloads in default namespace).
 
 #### FluxCD Skills Enhancement (Domain 29 — GitOps Audit)
@@ -49,13 +48,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - `references/flux.md` → renamed to `references/fluxcd.md` — consistent naming with `argocd.md`, `datadog.md`, `kyverno.md`; all references updated across SKILL.md, HOW_IT_WORKS.md, GETTING_STARTED.md, README.md, COMMANDS.md, CONTRIBUTING.md, tests/*.sh, examples/fluxcd/README.md.
-- `SKILL.md` — added Domain 29 `GitOps Audit`; updated Flux/FluxCD reference descriptions; added 8 new FluxCD reference pointers; added `/platform-skills:gitops-audit` and `/platform-skills:fluxcd` slash commands; updated `examples/fluxcd/` path.
+- `SKILL.md` — Domain 29 updated to `GitOps` (debug + audit subcommands); updated Flux/FluxCD reference descriptions; added 8 new FluxCD reference pointers; added `/platform-skills:fluxcd` slash command; removed `/platform-skills:gitops-audit`; updated `examples/fluxcd/` path.
 - `skills/platform-skills/SKILL.md` — synced with root SKILL.md.
-- `COMMANDS.md` — added `/platform-skills:gitops-audit` and `/platform-skills:fluxcd` to command index table and added full command sections with modes, routing logic, examples, and references.
-- `HOW_IT_WORKS.md` — added `/platform-skills:gitops-audit` and `/platform-skills:fluxcd` to command reference table.
-- `GETTING_STARTED.md` — updated to "All 30 command workflows"; added `gitops-audit` and `fluxcd` rows; expanded FluxCD reference table with all 9 new fluxcd-*.md entries.
+- `COMMANDS.md` — added `/platform-skills:fluxcd` to command index table; updated `gitops` section to document `debug` and `audit` subcommands; removed `gitops-audit` section.
+- `HOW_IT_WORKS.md` — updated `gitops` row to `gitops debug` / `gitops audit`; removed `gitops-audit`; added `fluxcd` row.
+- `GETTING_STARTED.md` — updated `gitops` row to show `debug`/`audit` subcommands; replaced `gitops-audit` row with `fluxcd` entry; expanded FluxCD reference table with all 9 new fluxcd-*.md entries.
 - `INSTALLATION.md` — version string updated to `v1.25.0`.
-- `.claude-plugin/plugin.json` — version bumped to `1.25.0`; `./commands/gitops-audit.md` and `./commands/fluxcd.md` added to commands array.
+- `.claude-plugin/plugin.json` — version bumped to `1.25.0`; `./commands/fluxcd.md` added; `./commands/gitops-audit.md` removed (merged into `gitops`).
 - `.claude-plugin/marketplace.json` — version bumped to `1.25.0`; description rewritten to 628 chars (was 1,784 chars over the 1,024 limit); added `gitops-audit`, `flux-operator`, `fluxinstance`, `resourceset`, `gitless-delivery`, `oci-gitops` keywords.
 
 ## [1.24.0] - 2026-05-24

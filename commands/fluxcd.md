@@ -18,8 +18,8 @@ Determine which workflow applies from the input. If it is ambiguous, ask exactly
 
 | If the input contains... | Use |
 |---|---|
-| An error message, `flux get` output, pod logs, or "not reconciling" | **Debug** → run `/platform-skills:gitops` |
-| A repo path, "audit", "review", "before merge", "is this correct" | **Audit** → run `/platform-skills:gitops-audit` |
+| An error message, `flux get` output, pod logs, or "not reconciling" | **Debug** → run `/platform-skills:gitops debug` |
+| A repo path, "audit", "review", "before merge", "is this correct" | **Audit** → run `/platform-skills:gitops audit` |
 | A Helm chart path, `Chart.yaml`, `values.yaml`, "helm", "chart" | **Helm** → run `/platform-skills:helmcheck` |
 | A manifest to review (Kustomization, HelmRelease, FluxInstance YAML) | **Review** → run `/platform-skills:review` |
 
@@ -27,7 +27,7 @@ Determine which workflow applies from the input. If it is ambiguous, ask exactly
 
 ## Debug mode — live cluster issue
 
-Use when something is broken or not reconciling on a live cluster.
+Use when something is broken or not reconciling on a live cluster. Invoke as `/platform-skills:gitops debug`.
 
 Works through 5 structured workflows in order:
 
@@ -50,7 +50,7 @@ kubectl get fluxreport flux -n flux-system -o yaml
 
 ## Audit mode — GitOps repository health check
 
-Use before merging, before a release, or when onboarding an unfamiliar repo.
+Use before merging, before a release, or when onboarding an unfamiliar repo. Invoke as `/platform-skills:gitops audit`.
 
 Runs 6 phases using the official Flux audit scripts:
 
