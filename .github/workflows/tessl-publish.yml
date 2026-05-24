@@ -25,9 +25,4 @@ jobs:
         with:
           token: ${{ secrets.TESSL_TOKEN }}
       - name: Publish skill
-        run: tessl tile publish . --skip-evals --bump patch
-      - name: Run eval scenarios
-        continue-on-error: true
-        run: |
-          tessl project create platform-skills --workspace nitinjain999 || true
-          tessl eval run . --label "ci-${{ github.sha }}"
+        run: tessl tile publish . --bump patch
