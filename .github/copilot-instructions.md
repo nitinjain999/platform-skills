@@ -1,5 +1,5 @@
 # Platform Engineering Instructions for GitHub Copilot
-# Version: 1.25.3
+# Version: 1.25.4
 # Source: https://github.com/nitinjain999/platform-skills
 # Scope: project-level — applies to every Copilot Chat in this workspace
 # Upgrade: git pull in the platform-skills clone → copy updated file → commit
