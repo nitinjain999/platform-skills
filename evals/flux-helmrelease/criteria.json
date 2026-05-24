@@ -3,28 +3,34 @@
   "context": "The agent was given a Flux CD HelmRelease failure (ClusterRole ownership conflict) and asked to classify the layer, collect evidence, identify root cause, provide a fix, state blast radius, and give validation steps.",
   "checklist": [
     {
-      "item": "Classifies the failure as the chart rendering or reconciliation layer — NOT source or runtime",
-      "weight": 2
+      "name": "correct_layer",
+      "description": "Classifies the failure as the chart rendering or reconciliation layer — NOT source or runtime",
+      "max_score": 2
     },
     {
-      "item": "Lists at least 2 evidence commands: flux logs --kind=HelmRelease, kubectl get clusterrole, helm list -n cert-manager, or kubectl get events -n cert-manager",
-      "weight": 2
+      "name": "evidence_commands",
+      "description": "Lists at least 2 evidence commands: flux logs --kind=HelmRelease, kubectl get clusterrole, helm list -n cert-manager, or kubectl get events -n cert-manager",
+      "max_score": 2
     },
     {
-      "item": "Correctly identifies root cause: pre-existing ClusterRole not owned by this HelmRelease causes ownership conflict",
-      "weight": 2
+      "name": "root_cause",
+      "description": "Correctly identifies root cause: pre-existing ClusterRole not owned by this HelmRelease causes ownership conflict",
+      "max_score": 2
     },
     {
-      "item": "Fix includes helm uninstall cert-manager followed by flux reconcile helmrelease, or resource adoption via Helm metadata annotation",
-      "weight": 2
+      "name": "fix",
+      "description": "Fix includes helm uninstall cert-manager followed by flux reconcile helmrelease, or resource adoption via Helm metadata annotation",
+      "max_score": 2
     },
     {
-      "item": "Blast radius notes that helm uninstall deletes cert-manager resources (certificates, CRDs) causing a brief certificate issuance lapse",
-      "weight": 1
+      "name": "blast_radius",
+      "description": "Blast radius notes that helm uninstall deletes cert-manager resources (certificates, CRDs) causing a brief certificate issuance lapse",
+      "max_score": 1
     },
     {
-      "item": "Validation includes: flux get helmrelease shows Ready=True and kubectl get pods -n cert-manager shows all pods running",
-      "weight": 1
+      "name": "validation",
+      "description": "Validation includes: flux get helmrelease shows Ready=True and kubectl get pods -n cert-manager shows all pods running",
+      "max_score": 1
     }
   ]
 }
