@@ -5,62 +5,26 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.24.3] - 2026-05-24
-
-### Added
-
-#### Composite GitHub Actions — GKE support, AKS kubelogin fix, stale-doc refresh
-
-- `k8s-deploy/action.yml` — GKE cloud_provider path: `google-github-actions/auth` (Workload Identity Federation) → `google-github-actions/get-gke-credentials`; five new GCP inputs (`gcp_workload_identity_provider`, `gcp_service_account`, `gcp_project`, `gcp_cluster_name`, `gcp_cluster_location`); job summary shows GCP project; SHA-pinned actions (`auth@6fc4af4`, `get-gke-credentials@20b2b9f`)
-- `k8s-deploy/action.yml` — AKS kubelogin fix: new "Install kubelogin" step (`az aks install-cli --kubelogin-install-location` — installs kubelogin only, no kubectl overwrite) and "Update kubeconfig for AKS" step (`az aks get-credentials` + `kubelogin convert-kubeconfig -l workloadidentity`); prevents kubectl hanging on browser-auth prompts on AAD-enabled clusters; `timeout-minutes: 3` on kubelogin install
-- `configure-cloud/action.yml` — GKE cloud_provider path: `google-github-actions/auth` (WIF) + credential verification step; five new GCP inputs; job summary shows GCP project; SHA-pinned actions
-- `k8s-deploy/.github/workflows/test-action.yml` — three new GKE test jobs: missing-provider, missing-cluster, input-validation-passes (all with `continue-on-error: true`)
-- `configure-cloud/.github/workflows/test-action.yml` — `id-token: write` permission added; three new GKE test jobs: missing-provider, missing-service-account, input-validation-passes
-- `references/composite-actions.md` — new "Kubernetes cluster authentication" section: EKS (`configure-aws-credentials` + `aws eks update-kubeconfig`, IAM trust policy), AKS (`azure/login` + `az aks get-credentials` + why `kubelogin convert-kubeconfig -l workloadidentity` is required on AAD clusters), GKE (WIF pool + provider, Terraform setup, attribute condition scoped to repo), EKS/AKS/GKE decision table
-
-### Changed
-
-- `k8s-deploy/README.md` — rewritten with EKS/AKS/GKE quick-start examples, updated architecture diagram (OIDC paths replace kubeconfig decode), per-provider input tables, required permissions block
-- `k8s-deploy/CHANGELOG.md` — v2.0.0 breaking-change entry added (kubeconfig → OIDC migration guide)
-- `examples/github-actions/composite-actions/README.md` — k8s-deploy row updated from "kubeconfig tempfile, chmod 600" → "EKS/AKS/GKE OIDC, kubelogin, no static secrets"
-- `commands/composite-actions.md` — stale "kubectl, kubeconfig secret" reference updated to "kubectl, EKS/AKS/GKE OIDC"
-- `.github/copilot-instructions.md` — version bumped to v1.24.3; GKE WIF added to preferred-auth guidance; `references/composite-actions.md` added to reference file list
-
-## [1.24.2] - 2026-05-23
-
-### Added
-
-#### Composite GitHub Actions — context, OIDC setup, step semantics, db-migrate example
-
-- `examples/github-actions/composite-actions/db-migrate/` — new example: safely run database migrations with health check, dry-run, multi-tool support, and rollback guide: `action.yml` (Flyway / Liquibase / golang-migrate; `::add-mask::` on `database_url` as first operation; `nc` health check with 10 retries; `dry_run` mode; `verify_after` schema validation; `if: always()` summary; `timeout-minutes` on health-check and migration steps; `migrations_applied` + `current_version` + `dry_run_output` outputs), `README.md` (pipeline example chaining dry-run PR comment → migration → deploy; rollback commands per tool; concurrency anti-pattern callout), `CHANGELOG.md`, `.github/workflows/test-action.yml` (5 tests: empty URL failure, invalid tool failure, unreachable host failure, dry-run with live Postgres service container, tool install matrix), `.github/workflows/release.yml`, `.github/dependabot.yml`, `.actionlint.yaml`
-- `examples/github-actions/composite-actions/README.md` — updated index to include `db-migrate` (11 examples total)
-- `references/composite-actions.md` — three new sections:
-  - **Context availability in composite actions**: full table of which contexts are available (`github.*` ✓, `runner.*` ✓, `env.*` ✓, `inputs.*` ✓, `steps.*` partial, `job.*` partial, `secrets.*` ✗, `needs.*` ✗, `matrix.*` ✗, `strategy.*` ✗) with threading patterns for matrix values and caller step outputs
-  - **OIDC cloud trust configuration**: AWS IAM trust policy JSON with condition key options (branch / environment / PR / wildcard), OIDC provider creation command, Azure federated credential fields + `az ad app federated-credential create` command + role assignment, Terraform provider config for ambient OIDC credentials
-  - **`continue-on-error` vs `if: always()` semantics**: comparison table (outcome vs conclusion, job outcome effect), the cleanup-step footgun (cleanup skipped if prior step fails without `if: always()`), correct patterns for both use cases
-
-## [1.24.1] - 2026-05-23
-
-### Added
-
-#### Composite GitHub Actions — improvements
-
-- `examples/github-actions/composite-actions/configure-cloud/` — completed from stub to full repo structure: updated `action.yml` (input validation with conditional required-field checks per provider, `::group::` log grouping, `if: always()` job summary), `README.md` (OIDC flow diagram, conditional inputs table, no-secrets explanation, multi-cloud deploy example), `CHANGELOG.md`, `.github/workflows/test-action.yml` (4 failure-assertion tests), `.github/workflows/release.yml`, `.github/dependabot.yml`, `.actionlint.yaml`
-- `examples/github-actions/composite-actions/setup-terraform/` — completed from stub to full repo structure: updated `action.yml` (input validation, `enable_cache` flag, `working_directory` input for multi-module repos, `::debug::` log when cache dir created, `if: always()` job summary), `README.md` (cache key flow diagram, plan pipeline example chaining with `configure-cloud` and `terraform-plan`), `CHANGELOG.md`, `.github/workflows/test-action.yml` (4 test jobs: empty version failure, version matrix `1.6/1.7/1.8`, cache disabled, wrapper disabled), `.github/workflows/release.yml`, `.github/dependabot.yml`, `.actionlint.yaml`
-- `examples/github-actions/composite-actions/README.md` — updated index to include `configure-cloud` and `setup-terraform` (10 examples total)
-- `references/composite-actions.md` — four new sections:
-  - **Composite actions vs reusable workflows**: decision table (unit of reuse, calling syntax, secret handling, outputs, concurrency, matrix, context visibility, permissions, log grouping), when-to-use guide, calling syntax side-by-side
-  - **Using composite actions from private repositories**: three patterns (same-repo relative path, private cross-repo via GitHub App token, PAT fallback), why App token beats PAT, "can't find action.yml" diagnostic checklist
-  - **Organisation action repository strategy**: mono-repo vs per-action-repo trade-offs, decision guide, floating tag strategy
-  - **Debug logging `::debug::` and `RUNNER_DEBUG`**: `::debug::` with cache key example, `RUNNER_DEBUG` conditional verbose block, `ACTIONS_STEP_DEBUG` secret tip, complete logging command summary table
-
-## [1.24.0] - 2026-05-23
+## [1.24.0] - 2026-05-24
 
 ### Added
 
 #### Composite GitHub Actions (Domain 28)
 
-- `references/composite-actions.md`, `commands/composite-actions.md`, 8 production-ready examples (`docker-build-push`, `notify-slack`, `k8s-deploy`, `terraform-plan`, `security-scan`, `release-tag`, `pr-comment`, `setup-env`) — see v1.24.0 PR for full detail
+- `references/composite-actions.md` — new reference guide; sections: composite vs reusable workflow decision table, private repo access patterns (same-repo path / GitHub App token / PAT), org mono-repo strategy, debug logging (`::debug::` + `RUNNER_DEBUG`), context availability table (`github.*`/`runner.*`/`env.*`/`inputs.*` ✓; `secrets.*`/`needs.*`/`matrix.*` ✗), OIDC cloud trust configuration (AWS trust policy, Azure federated credential, Terraform provider ambient auth), `continue-on-error` vs `if: always()` semantics, Kubernetes cluster authentication (EKS + AKS + GKE patterns, EKS/AKS/GKE decision table)
+- `commands/composite-actions.md` — `/platform-skills:composite-actions` slash command (6 modes: scaffold, migrate, publish, review, debug, improve)
+- `examples/github-actions/composite-actions/` — 11 production-ready examples:
+  - `docker-build-push` — multi-platform build, cache, attestation
+  - `notify-slack` — success/failure channel notifications
+  - `k8s-deploy` — EKS/AKS/GKE OIDC auth (`cloud_provider` switch); AKS kubelogin workload-identity conversion (`az aks install-cli --kubelogin-install-location` + `kubelogin convert-kubeconfig -l workloadidentity`); GKE via `google-github-actions/auth` WIF + `get-gke-credentials`; `--dry-run=server`; rollout status with diagnostics; SHA-pinned actions
+  - `terraform-plan` — fmt/validate/plan with PR comment
+  - `security-scan` — Trivy + Semgrep gates
+  - `release-tag` — semver tagging and GitHub Release creation
+  - `pr-comment` — idempotent PR comment upsert
+  - `setup-env` — environment variable injection
+  - `configure-cloud` — EKS/AKS/GKE OIDC credential configuration (`cloud_provider` switch); GKE via Workload Identity Federation; SHA-pinned actions
+  - `setup-terraform` — version install, plugin cache, wrapper toggle
+  - `db-migrate` — Flyway/Liquibase/golang-migrate; `::add-mask::` on `database_url`; `nc` health check; dry-run; verify-after; rollback guide
 
 ## [1.23.0] - 2026-05-23
 
