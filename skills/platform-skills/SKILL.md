@@ -9,37 +9,37 @@ Use this skill for hands-on help with Kubernetes, GitOps, cloud infrastructure, 
 
 ## Pick the right tool for the job
 
-Match the task to the right layer:
-
-1. `Terraform`: Provision cloud primitives, cluster bootstrap, shared services, identity, networking, and policy foundations.
-2. `Kubernetes`: Define workload, namespace, RBAC, service, policy, and platform baseline patterns that apply across distributions.
-3. `OpenShift`: Adapt Kubernetes patterns to OpenShift-native routing, security, operator, and tenancy constraints.
-4. `Flux` or `Argo CD`: Reconcile in-cluster desired state after bootstrap and manage promotion of workloads or platform add-ons.
-5. `GitHub Actions`: Validate, package, test, and promote changes. Keep workflows declarative and reusable.
-6. `AWS` or `Azure`: Apply provider-specific account, subscription, identity, and governance patterns.
-7. `Linkerd`: Apply service mesh for automatic mTLS, golden-signal observability, and traffic management between workloads.
-8. `Linux & Networking`: Diagnose Linux systems and network problems — DNS resolution, load balancer routing, VPC/VNet design, kernel tuning, and connectivity troubleshooting.
-9. `Platform Mindset`: Treat developers as customers. Apply product thinking, friction audits, DevEx metrics, RFC/ADR processes, incident communication, and blameless post-mortems.
-10. `Cross-platform`: Design repo boundaries, ownership, promotion flows, and security controls first.
-11. `Compliance`: Implement SOC 2 Trust Services Criteria controls in Terraform — IAM least privilege, encryption, audit logging, network security, and change management. Run Checkov for continuous enforcement and collect evidence for auditors.
-12. `Helm (Helmcheck)`: Build, lint, and audit Helm charts — scaffolding, values design, template patterns, dependency management, security hardening, and the full lint/validation pipeline.
-13. `MCP (Model Context Protocol)`: Build, review, and debug MCP servers and clients — tool and resource handlers, Zod/Pydantic schema validation, stdio/HTTP/SSE transports, protocol compliance, auth, and rate limiting.
-14. `Observability`: Instrument services with structured logging, Prometheus metrics, and OpenTelemetry tracing. Build Grafana dashboards, write alerting rules, run k6 load tests, and plan capacity.
-15. `Documentation`: Generate and validate inline docstrings (Google/NumPy/JSDoc), OpenAPI 3.1 specs, documentation sites (MkDocs, TypeDoc), and getting started guides.
-16. `Datadog`: Deploy and configure the Datadog Agent on Kubernetes, instrument services with APM and log correlation, write monitors, dashboards, SLOs, and synthetic tests — all as Terraform-managed resources.
-17. `Dynatrace`: Deploy OneAgent via the Kubernetes Operator with automatic injection, configure anomaly detection, ingest custom metrics, define SLOs, and manage dashboards and alerting profiles with the Dynatrace Terraform provider.
-18. `Conventional Commits`: Analyze git diffs, generate commit messages that explain WHY a change was made, intelligently stage files for atomic commits, and validate messages against the Conventional Commits specification.
-19. `OPA / Conftest`: Generate Rego policies with correct rule types and namespacing, write unit tests, run the full validation pipeline (fmt → regal lint → conftest verify → integration test), explain existing policies, and debug why a rule is not firing.
-20. `Kyverno`: Write and maintain Kubernetes-native admission policies using the CEL-based types — ValidatingPolicy, MutatingPolicy, GeneratingPolicy, ImageValidatingPolicy (all `policies.kyverno.io/v1`). Covers matchConstraints, matchConditions, CEL validations/mutations, generator.Apply(), Audit→Deny promotion, PolicyException, and kyverno-cli testing.
-21. `PR Review`: Comprehensive pre-merge risk review across six dimensions — cost impact, environment drift, ownership and governance gaps, SOC 2 compliance, deprecated API / version hygiene, and rollback feasibility scoring.
-22. `PR Comment Triage`: Triage bot or human PR comments, classify them as ACTIONABLE_FIX / INFORMATIONAL / NOT_APPLICABLE, make the minimal fix when valid, reply on the thread, and resolve it through `gh`.
-23. `KEDA`: Design, generate, debug, and review KEDA ScaledObject and ScaledJob resources. Covers all major scalers (Prometheus, SQS, Kafka, Redis, Cron, HTTP Add-on, Azure Service Bus), TriggerAuthentication with IRSA/Workload Identity, scaling lifecycle tuning, scale-to-zero patterns, and GitOps integration.
-24. `Agent Self-Improvement`: Bootstrap and operate self-improving, proactive agent workspaces. Covers `.learnings/` directory setup, LRN/ERR/FEAT entry lifecycle, recurring pattern detection, promotion to project memory, WAL protocol, working buffer, VFM scoring, ADL decision logic, Six Operating Pillars, heartbeat, and reverse prompting.
-25. `Supply Chain Security`: Secure the build pipeline and image lifecycle with Cosign keyless signing (Sigstore/Rekor), Syft SBOM generation and attestation, Trivy/Grype CVE scanning with severity gates, SLSA Level 2 provenance, and Kyverno ImageValidatingPolicy admission enforcement. All open-source, no license cost.
-26. `Runtime Security`: Detect in-container threats at the syscall level with Falco (eBPF driver, CNCF, no license cost). Covers eBPF driver deployment on EKS/GKE, custom rule authoring, Falcosidekick alert routing to Slack/PagerDuty/webhook, rule debugging, and bridging runtime signals to Kyverno admission enforcement.
-27. `Awesome Docs`: Generate, convert, and maintain animated GitHub-safe Markdown documents — any doc type (README, architecture guide, runbook, tutorial, API reference, how-it-works, RFC, post-mortem, or custom). Four SVG patterns: architecture flow, lifecycle loop, field explainer carousel, and timeline phases. Covers guided interview for new docs, converting existing plain Markdown, updating individual diagrams, diffing for stale diagrams, quality auditing, local preview, and multi-platform export (GitHub SVG, Confluence/Notion HTML, PNG guidance). Supports `github-dark`, `docs-light`, and custom color themes.
-28. `Composite GitHub Actions`: Generate, review, secure, and test composite GitHub Actions following best practices. Covers interview-driven scaffold (full repo structure including `action.yml`, README, test workflow, release workflow, `dependabot.yml`), PR creation on existing repos via `gh`, SHA pinning vs semver strategy, secrets-as-inputs pattern, `::add-mask::`, `$GITHUB_ENV` / `$GITHUB_OUTPUT` / `$GITHUB_PATH` / `$GITHUB_STEP_SUMMARY`, input validation, log grouping, inline PR annotations, multi-OS patterns, idempotency, breaking-change guide, and actionlint validation. Eleven production-ready examples: docker-build-push, notify-slack, k8s-deploy, terraform-plan, security-scan, release-tag, pr-comment, setup-env, configure-cloud, setup-terraform, and db-migrate.
-29. `GitOps`: Flux CD and Argo CD in two modes — `debug` (five structured workflows: installation check, source failures, HelmRelease trace, Kustomization trace, ResourceSet trace → five-section report with root cause and recommendations) and `audit` (six-phase read-only repo analysis: discovery, manifest validation, API compliance, best practices, security review → prioritized Critical/Warning/Info report).
+| Layer | When to use |
+|---|---|
+| `Terraform` | Cloud primitives, cluster bootstrap, IAM, networking, secrets backends |
+| `Kubernetes` | Workload, RBAC, network policy, platform baseline across distributions |
+| `OpenShift` | Kubernetes patterns adapted to OpenShift routing, SCC, and OLM |
+| `Flux` / `Argo CD` | In-cluster reconciliation, Helm releases, workload promotion |
+| `GitHub Actions` | Validate, package, gate, and promote. Keep workflows declarative. |
+| `AWS` / `Azure` / `GKE` | Provider-specific account, identity, and governance patterns |
+| `Linkerd` | Automatic mTLS, golden-signal observability, traffic management |
+| `Linux & Networking` | DNS, load balancer routing, VPC/VNet, kernel tuning, connectivity |
+| `Compliance` | SOC 2 controls in Terraform — IAM, encryption, audit logging, Checkov |
+| `Helm (Helmcheck)` | Chart scaffolding, lint/validate pipeline, values design, security hardening |
+| `MCP` | Build/debug MCP servers — tools, resources, transports, auth |
+| `Observability` | Prometheus, OpenTelemetry, Grafana, alerting, k6 load tests, capacity |
+| `Documentation` | Docstrings (Google/NumPy/JSDoc), OpenAPI 3.1, MkDocs, guides |
+| `Datadog` | Agent on Kubernetes, APM, monitors, dashboards, SLOs, LLMObs |
+| `Dynatrace` | OneAgent Operator, auto-instrumentation, anomaly detection, SLOs |
+| `Conventional Commits` | Generate WHY-driven commit messages, atomic staging, validate |
+| `OPA / Conftest` | Rego policies, unit tests, fmt/regal/verify pipeline, debug |
+| `Kyverno` | CEL-based ValidatingPolicy, MutatingPolicy, ImageValidatingPolicy |
+| `PR Review` | Cost, drift, ownership, SOC 2, deprecated APIs, rollback feasibility |
+| `PR Triage` | Classify comments ACTIONABLE_FIX/INFORMATIONAL/NOT_APPLICABLE, fix, reply |
+| `KEDA` | ScaledObject/ScaledJob, all scalers, TriggerAuthentication, scale-to-zero |
+| `Agent Self-Improvement` | `.learnings/` workspace, LRN/ERR lifecycle, WAL, VFM, ADL |
+| `Supply Chain Security` | Cosign signing, Syft SBOM, Trivy/Grype CVE gates, SLSA Level 2 |
+| `Runtime Security` | Falco eBPF, custom rules, Falcosidekick routing, Kyverno enforcement |
+| `Awesome Docs` | Animated SVG Markdown — README, runbook, RFC, architecture, post-mortem |
+| `Composite Actions` | Full action repo scaffold, SHA pinning, secrets-as-inputs, actionlint |
+| `GitOps debug` | 5-workflow structured debug → 5-section report with root cause |
+| `GitOps audit` | 6-phase repo audit → prioritized Critical/Warning/Info report |
+| `Platform Mindset` | DevEx, friction audits, RFC/ADR, incident communication, post-mortems |
 
 If a task spans multiple areas, decide which layer owns the source of truth and keep the other layers consumers of that state.
 
@@ -72,54 +72,56 @@ When asked to generate code, start from the thinnest useful slice that proves th
 
 ## Pick the Right Reference Files
 
-- For repo topology, boundaries, and promotion flow, read [references/platform-operating-model.md](references/platform-operating-model.md).
-- For Terraform module, environment, testing, and state guidance, read [references/terraform.md](references/terraform.md).
-- For cluster baseline, workload, RBAC, and policy guidance, read [references/kubernetes.md](references/kubernetes.md).
-- For OpenShift-specific operating patterns, read [references/openshift.md](references/openshift.md).
-- For Flux bootstrap, reconciliation, Flux Operator (FluxInstance, FluxReport), ResourceSet, gitless OCI delivery, source selection, image automation (Git-based and gitless), and common mistakes — read [references/fluxcd.md](references/fluxcd.md).
-- For FluxCD source CRDs (GitRepository, OCIRepository, HelmRepository, Bucket, ArtifactGenerator) — read [references/fluxcd-sources.md](references/fluxcd-sources.md).
-- For ResourceSet templating, ResourceSetInputProvider types, input strategies (Flatten/Permute), gitless fleet and preview environment patterns — read [references/fluxcd-resourcesets.md](references/fluxcd-resourcesets.md).
-- For Flux notification-controller (Provider, Alert, Receiver), Slack/Datadog/GitHub commit status, and Receiver webhook patterns — read [references/fluxcd-notifications.md](references/fluxcd-notifications.md).
-- For Flux Operator deep dive (FluxInstance cluster sizing, multi-tenancy, kustomize patches, runtime ConfigMap, FluxReport) — read [references/fluxcd-operator.md](references/fluxcd-operator.md).
-- For Kustomization advanced features (CEL readyExpr, postBuild substitution, SOPS, health check expressions, SSA apply annotations, remote cluster) — read [references/fluxcd-kustomization.md](references/fluxcd-kustomization.md).
-- For HelmRelease deep dive (chartRef vs chart.spec, drift detection modes, post-renderers, CRD lifecycle, CEL health checks) — read [references/fluxcd-helmrelease.md](references/fluxcd-helmrelease.md).
-- For bootstrapping Flux Operator via Terraform (Job-based bootstrap, gitops vs managed resources, runtime info, secret handling, node scheduling) — read [references/fluxcd-terraform.md](references/fluxcd-terraform.md).
-- For AI-assisted FluxCD debugging via the Flux MCP server (installation, core workflows, log analysis) — read [references/fluxcd-mcp.md](references/fluxcd-mcp.md).
-- For Flux API migration (v2.7 v1beta1 removals, v2.8 v1beta2 removals, CLI and Operator 3-step upgrade paths, CI gate) — read [references/fluxcd-migration.md](references/fluxcd-migration.md).
-- For FluxCD security audit (secrets management, hardcoded credential grep patterns, source auth, OCI supply chain, RBAC, image automation security) — read [references/fluxcd-security.md](references/fluxcd-security.md).
-- For a scannable incident cheat-sheet (controller / source / Kustomization / HelmRelease / ResourceSet failures — symptom → cause → fix, label-based ownership tracing, general debugging checklist) — read [references/fluxcd-troubleshooting.md](references/fluxcd-troubleshooting.md).
-- For Argo CD app delivery and application set patterns, read [references/argocd.md](references/argocd.md).
-- For AWS landing zones, IAM, and EKS-oriented patterns, read [references/aws.md](references/aws.md).
-- For Azure management groups, identity, and AKS-oriented patterns, read [references/azure.md](references/azure.md).
-- For reusable workflows, OIDC, and delivery controls, read [references/github-actions.md](references/github-actions.md).
-- For secrets strategy, External Secrets Operator, and Sealed Secrets patterns, read [references/secrets.md](references/secrets.md).
-- For Linkerd service mesh, mTLS, observability, traffic management, and multi-cluster, read [references/linkerd.md](references/linkerd.md).
-- For Linux administration, DNS, load balancing, VPC/VNet design, kernel tuning, and network troubleshooting, read [references/linux-networking.md](references/linux-networking.md).
-- For product mindset, developer experience, friction audits, RFC/ADR, incident communication, post-mortems, and capacity planning, read [references/platform-mindset.md](references/platform-mindset.md).
-- For SOC 2 Trust Services Criteria controls in Terraform — IAM, encryption, audit logging, network security, change management, Checkov enforcement, and audit evidence — read [references/compliance.md](references/compliance.md).
-- For Helm chart scaffolding, template patterns, values design, lint pipeline, and GitOps integration, read [references/helm.md](references/helm.md).
-- For MCP server and client development — protocol, TypeScript/Python SDKs, schema validation, transports, security, and testing — read [references/mcp.md](references/mcp.md).
-- For observability instrumentation, Prometheus metrics, OpenTelemetry tracing, alerting rules, Grafana dashboards, load testing, and capacity planning, read [references/observability.md](references/observability.md).
-- For code documentation — Python docstrings, JSDoc, OpenAPI 3.1 specs, documentation sites, and developer guides — read [references/documentation.md](references/documentation.md).
-- For Datadog Agent setup, APM, log management, monitors, dashboards, SLOs, synthetic tests, pup CLI, Datadog Labs Claude skills, and FluxCD reconciliation monitoring — read [references/datadog.md](references/datadog.md).
-- For LLM Observability — LLMObs instrumentation (Python/Node.js), eval bootstrap, trace RCA, and experiment analysis — read [references/llm-observability.md](references/llm-observability.md).
-- For Dynatrace OneAgent Operator, auto-instrumentation, custom metrics, SLOs, anomaly detection, Terraform provider, and FluxCD reconciliation monitoring via Prometheus ingestion — read [references/dynatrace.md](references/dynatrace.md).
-- For Conventional Commits — type classification, scope rules, breaking changes, message structure, atomic commits, commitlint, husky, semantic-release, and validation rules — read [references/conventional-commits.md](references/conventional-commits.md).
-- For OPA / Conftest — Rego v1 syntax, rule types, package namespacing, input shapes, unit tests, validation pipeline (fmt/regal/verify), GitHub Actions integration, and troubleshooting — read [references/opa.md](references/opa.md).
-- For Kyverno CEL-based admission policies — ValidatingPolicy, MutatingPolicy, GeneratingPolicy, ImageValidatingPolicy, matchConstraints, matchConditions, Audit→Deny promotion, PolicyException, kyverno-cli testing, and migration from legacy ClusterPolicy — read [references/kyverno.md](references/kyverno.md).
-- For comprehensive PR review — cost impact, environment drift, ownership gaps, SOC 2 compliance, deprecated APIs, version hygiene, rollback feasibility, and bot comment triage — read [references/pr-review.md](references/pr-review.md).
-- For KEDA event-driven autoscaling — ScaledObject, ScaledJob, TriggerAuthentication, IRSA, scalers (Prometheus, SQS, Kafka, Redis, Cron, HTTP Add-on, Azure Service Bus), scaling lifecycle, security patterns, and troubleshooting — read [references/keda.md](references/keda.md).
-- For agent self-improvement patterns — global and project-local `.learnings/` workspace, `init global`/`init local`, WAL protocol, VFM scoring, ADL Protocol, working buffer, `status`/`migrate` subcommands, and proactive agent behavior — read [references/agent-self-improve.md](references/agent-self-improve.md).
-- For supply chain security — Cosign keyless signing, Syft SBOM generation and attestation, Trivy/Grype CVE scanning, SLSA Level 2 provenance, and Kyverno ImageValidatingPolicy enforcement — read [references/supply-chain.md](references/supply-chain.md).
-- For Kubernetes runtime security — Falco eBPF deployment on EKS/GKE, custom rule authoring, Falcosidekick alert routing, and bridging Falco signals to Kyverno admission enforcement — read [references/runtime-security.md](references/runtime-security.md).
-- For Chaos Engineering — Litmus Chaos v3 and Chaos Mesh v2 fault injection, steady-state hypothesis, blast radius scoping, GameDay workflow, and DORA feedback loop — read [references/chaos.md](references/chaos.md).
-- For DORA metrics — Deployment Frequency, Lead Time for Changes, Change Failure Rate, and MTTR instrumentation via GitHub Actions and Prometheus, SaaS tool selection, and anti-pattern detection — read [references/dora.md](references/dora.md).
-- For animated Markdown document generation — SVG blueprints (architecture flow, lifecycle loop, field carousel, timeline phases), GitHub animation constraints, timing math, theme system, and multi-platform export — read [references/awesome-docs.md](references/awesome-docs.md).
-- For AWS CloudFront CDN — distributions, Origin Access Control (OAC), cache policies, security headers, Lambda@Edge, CloudFront Functions, geo restriction, logging, and multi-account patterns — read [references/aws-cloudfront.md](references/aws-cloudfront.md).
-- For AWS WAF — web ACLs, managed rule groups, rate limiting, Bot Control, CAPTCHA, Firewall Manager multi-account enforcement, and Shield Advanced integration — read [references/aws-waf.md](references/aws-waf.md).
-- For composite GitHub Actions — interview-driven scaffold, full repo structure, SHA pinning, secrets-as-inputs, `$GITHUB_OUTPUT` chaining, observability (`$GITHUB_STEP_SUMMARY`, `::group::`, `::error::`), input validation, multi-OS patterns, idempotency, breaking changes, versioning, and `dependabot.yml` — read [references/composite-actions.md](references/composite-actions.md).
-
 Load only the files needed for the current request.
+
+| File | Scope |
+|---|---|
+| [references/platform-operating-model.md](references/platform-operating-model.md) | Repo topology, ownership boundaries, promotion flow |
+| [references/terraform.md](references/terraform.md) | Module patterns, environments, state, testing |
+| [references/kubernetes.md](references/kubernetes.md) | Cluster baseline, workload, RBAC, policy |
+| [references/openshift.md](references/openshift.md) | OpenShift routing, SCC, OLM, tenancy |
+| [references/fluxcd.md](references/fluxcd.md) | Bootstrap, reconciliation, FluxInstance, ResourceSet, image automation |
+| [references/fluxcd-sources.md](references/fluxcd-sources.md) | GitRepository, OCIRepository, HelmRepository, Bucket, ArtifactGenerator |
+| [references/fluxcd-resourcesets.md](references/fluxcd-resourcesets.md) | ResourceSet templating, input strategies, gitless fleet patterns |
+| [references/fluxcd-notifications.md](references/fluxcd-notifications.md) | Provider, Alert, Receiver, Slack/Datadog/GitHub commit status |
+| [references/fluxcd-operator.md](references/fluxcd-operator.md) | FluxInstance sizing, multi-tenancy, kustomize patches, FluxReport |
+| [references/fluxcd-kustomization.md](references/fluxcd-kustomization.md) | CEL readyExpr, postBuild substitution, SOPS, SSA annotations |
+| [references/fluxcd-helmrelease.md](references/fluxcd-helmrelease.md) | chartRef vs chart.spec, drift detection, post-renderers, CRD lifecycle |
+| [references/fluxcd-terraform.md](references/fluxcd-terraform.md) | Flux Operator bootstrap via Terraform |
+| [references/fluxcd-mcp.md](references/fluxcd-mcp.md) | AI-assisted FluxCD debugging via Flux MCP server |
+| [references/fluxcd-migration.md](references/fluxcd-migration.md) | v2.7/v2.8 API removals, CLI and Operator upgrade paths |
+| [references/fluxcd-security.md](references/fluxcd-security.md) | Secrets, source auth, OCI supply chain, RBAC, image automation security |
+| [references/fluxcd-troubleshooting.md](references/fluxcd-troubleshooting.md) | Incident cheat-sheet — symptom → cause → fix per controller |
+| [references/argocd.md](references/argocd.md) | App delivery, ApplicationSet, sync policies |
+| [references/aws.md](references/aws.md) | Landing zones, IAM, EKS patterns |
+| [references/azure.md](references/azure.md) | Management groups, identity, AKS patterns |
+| [references/aws-cloudfront.md](references/aws-cloudfront.md) | CloudFront distributions, OAC, Lambda@Edge, security headers |
+| [references/aws-waf.md](references/aws-waf.md) | Web ACLs, managed rules, rate limiting, Firewall Manager |
+| [references/github-actions.md](references/github-actions.md) | Reusable workflows, OIDC, delivery controls |
+| [references/composite-actions.md](references/composite-actions.md) | Composite action scaffold, SHA pinning, secrets-as-inputs, actionlint |
+| [references/secrets.md](references/secrets.md) | External Secrets Operator, Sealed Secrets, secrets strategy |
+| [references/linkerd.md](references/linkerd.md) | mTLS, observability, traffic management, multi-cluster |
+| [references/linux-networking.md](references/linux-networking.md) | DNS, load balancing, VPC/VNet, kernel tuning, connectivity |
+| [references/platform-mindset.md](references/platform-mindset.md) | DevEx, friction audits, RFC/ADR, incident communication, post-mortems |
+| [references/compliance.md](references/compliance.md) | SOC 2 controls, IAM, encryption, audit logging, Checkov evidence |
+| [references/helm.md](references/helm.md) | Chart scaffolding, lint pipeline, values design, GitOps integration |
+| [references/mcp.md](references/mcp.md) | MCP protocol, SDKs, transports, schema validation, auth, testing |
+| [references/observability.md](references/observability.md) | Prometheus, OpenTelemetry, Grafana, alerting, k6, capacity |
+| [references/documentation.md](references/documentation.md) | Docstrings, OpenAPI 3.1, MkDocs, developer guides |
+| [references/datadog.md](references/datadog.md) | Agent, APM, monitors, dashboards, SLOs, LLMObs, FluxCD monitoring |
+| [references/llm-observability.md](references/llm-observability.md) | LLMObs instrumentation, eval bootstrap, trace RCA |
+| [references/dynatrace.md](references/dynatrace.md) | OneAgent, auto-instrumentation, anomaly detection, SLOs, Terraform |
+| [references/conventional-commits.md](references/conventional-commits.md) | Commit message structure, atomic staging, commitlint, semantic-release |
+| [references/opa.md](references/opa.md) | Rego v1 syntax, rule types, unit tests, fmt/regal/verify pipeline |
+| [references/kyverno.md](references/kyverno.md) | ValidatingPolicy, MutatingPolicy, ImageValidatingPolicy, CEL, kyverno-cli |
+| [references/pr-review.md](references/pr-review.md) | Cost, drift, ownership, compliance, deprecated APIs, rollback scoring |
+| [references/keda.md](references/keda.md) | ScaledObject, ScaledJob, scalers, TriggerAuthentication, scale-to-zero |
+| [references/agent-self-improve.md](references/agent-self-improve.md) | `.learnings/` workspace, WAL, VFM, ADL, status/migrate |
+| [references/supply-chain.md](references/supply-chain.md) | Cosign, Syft SBOM, Trivy/Grype, SLSA Level 2, ImageValidatingPolicy |
+| [references/runtime-security.md](references/runtime-security.md) | Falco eBPF, custom rules, Falcosidekick, Kyverno enforcement |
+| [references/chaos.md](references/chaos.md) | Litmus Chaos, Chaos Mesh, steady-state hypothesis, GameDay |
+| [references/dora.md](references/dora.md) | Deployment Frequency, Lead Time, CFR, MTTR, Prometheus instrumentation |
+| [references/awesome-docs.md](references/awesome-docs.md) | Animated SVG Markdown — architecture flow, lifecycle, carousel, timeline |
 
 ## Slash Commands
 
