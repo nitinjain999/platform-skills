@@ -41,6 +41,7 @@ Start here based on your task:
 | AWS platform guidance | [references/aws.md](references/aws.md) |
 | Azure platform guidance | [references/azure.md](references/azure.md) |
 | GitHub Actions security | [references/github-actions.md](references/github-actions.md) |
+| Composite GitHub Actions | [references/composite-actions.md](references/composite-actions.md) |
 | SOC 2 controls in Terraform | [references/compliance.md](references/compliance.md) |
 | Helm chart patterns | [references/helm.md](references/helm.md) |
 | Kyverno admission policies | [references/kyverno.md](references/kyverno.md) |

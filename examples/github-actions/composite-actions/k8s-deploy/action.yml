@@ -1,13 +1,39 @@
 name: 'Kubernetes Deploy'
-description: 'Apply a Kubernetes manifest and wait for rollout to complete. Kubeconfig is written to a temp file and cleaned up after the job.'
+description: 'Apply a Kubernetes manifest and wait for rollout to complete. Authenticates to EKS or AKS via OIDC — no long-lived credentials.'
 author: 'Platform Team'
 
 inputs:
-  kubeconfig:
-    description: |
-      Base64-encoded kubeconfig content.
-      SECRET — pass as: kubeconfig: ${{ secrets.KUBECONFIG }}
+  cloud_provider:
+    description: 'Cloud provider: aws or azure'
     required: true
+  # ── AWS / EKS ────────────────────────────────────────────────────────────────
+  aws_role_arn:
+    description: 'IAM role ARN to assume via OIDC (required when cloud_provider=aws)'
+    required: false
+  aws_region:
+    description: 'AWS region where the EKS cluster lives'
+    required: false
+    default: 'us-east-1'
+  aws_cluster_name:
+    description: 'EKS cluster name (required when cloud_provider=aws)'
+    required: false
+  # ── Azure / AKS ──────────────────────────────────────────────────────────────
+  azure_client_id:
+    description: 'App registration client ID for federated credentials (required when cloud_provider=azure)'
+    required: false
+  azure_tenant_id:
+    description: 'Azure AD tenant ID (required when cloud_provider=azure)'
+    required: false
+  azure_subscription_id:
+    description: 'Azure subscription ID (required when cloud_provider=azure)'
+    required: false
+  azure_cluster_name:
+    description: 'AKS cluster name (required when cloud_provider=azure)'
+    required: false
+  azure_resource_group:
+    description: 'Resource group containing the AKS cluster (required when cloud_provider=azure)'
+    required: false
+  # ── Deployment ───────────────────────────────────────────────────────────────
   namespace:
     description: 'Kubernetes namespace to deploy into.'
     required: true
@@ -47,7 +73,14 @@ runs:
     - name: Validate inputs
       shell: bash
       env:
-        KUBECONFIG_B64: ${{ inputs.kubeconfig }}
+        CLOUD_PROVIDER: ${{ inputs.cloud_provider }}
+        AWS_ROLE_ARN: ${{ inputs.aws_role_arn }}
+        AWS_CLUSTER_NAME: ${{ inputs.aws_cluster_name }}
+        AZURE_CLIENT_ID: ${{ inputs.azure_client_id }}
+        AZURE_TENANT_ID: ${{ inputs.azure_tenant_id }}
+        AZURE_SUBSCRIPTION_ID: ${{ inputs.azure_subscription_id }}
+        AZURE_CLUSTER_NAME: ${{ inputs.azure_cluster_name }}
+        AZURE_RESOURCE_GROUP: ${{ inputs.azure_resource_group }}
         NAMESPACE: ${{ inputs.namespace }}
         MANIFEST_PATH: ${{ inputs.manifest_path }}
         TIMEOUT: ${{ inputs.timeout }}
@@ -55,14 +88,25 @@ runs:
         echo "::group::Input validation"
         ERRORS=()
 
-        [[ -z "$KUBECONFIG_B64" ]] && ERRORS+=("kubeconfig is required — pass \${{ secrets.KUBECONFIG }}")
-        [[ -z "$NAMESPACE" ]] && ERRORS+=("namespace is required")
-        [[ -z "$MANIFEST_PATH" ]] && ERRORS+=("manifest_path is required")
+        case "$CLOUD_PROVIDER" in
+          aws)
+            [[ -n "$AWS_ROLE_ARN" ]]     || ERRORS+=("aws_role_arn is required when cloud_provider=aws")
+            [[ -n "$AWS_CLUSTER_NAME" ]] || ERRORS+=("aws_cluster_name is required when cloud_provider=aws")
+            ;;
+          azure)
+            [[ -n "$AZURE_CLIENT_ID" ]]       || ERRORS+=("azure_client_id is required when cloud_provider=azure")
+            [[ -n "$AZURE_TENANT_ID" ]]       || ERRORS+=("azure_tenant_id is required when cloud_provider=azure")
+            [[ -n "$AZURE_SUBSCRIPTION_ID" ]] || ERRORS+=("azure_subscription_id is required when cloud_provider=azure")
+            [[ -n "$AZURE_CLUSTER_NAME" ]]    || ERRORS+=("azure_cluster_name is required when cloud_provider=azure")
+            [[ -n "$AZURE_RESOURCE_GROUP" ]]  || ERRORS+=("azure_resource_group is required when cloud_provider=azure")
+            ;;
+          *)
+            ERRORS+=("cloud_provider must be 'aws' or 'azure' (got: '$CLOUD_PROVIDER')")
+            ;;
+        esac
 
-        if [[ -n "$KUBECONFIG_B64" ]]; then
-          echo "$KUBECONFIG_B64" | base64 -d > /dev/null 2>&1 || \
-            ERRORS+=("kubeconfig is not valid base64")
-        fi
+        [[ -n "$NAMESPACE" ]]     || ERRORS+=("namespace is required")
+        [[ -n "$MANIFEST_PATH" ]] || ERRORS+=("manifest_path is required")
 
         if ! echo "$TIMEOUT" | grep -qE '^[0-9]+(s|m|h)$'; then
           ERRORS+=("timeout must be a duration like 5m, 300s, or 1h (got: $TIMEOUT)")
@@ -74,7 +118,52 @@ runs:
         fi
         echo "::endgroup::"
 
-    # ── 2. Install kubectl ────────────────────────────────────────────────────
+    # ── 2a. AWS — assume role via OIDC ────────────────────────────────────────
+    - name: Configure AWS credentials via OIDC
+      if: inputs.cloud_provider == 'aws'
+      uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7  # v6.0.0
+      with:
+        role-to-assume: ${{ inputs.aws_role_arn }}
+        aws-region: ${{ inputs.aws_region }}
+        role-session-name: k8s-deploy-${{ github.run_id }}
+
+    # ── 2b. AWS — fetch EKS kubeconfig ────────────────────────────────────────
+    - name: Update kubeconfig for EKS
+      if: inputs.cloud_provider == 'aws'
+      shell: bash
+      env:
+        CLUSTER_NAME: ${{ inputs.aws_cluster_name }}
+        AWS_REGION: ${{ inputs.aws_region }}
+      run: |
+        echo "::group::EKS kubeconfig"
+        aws eks update-kubeconfig --name "$CLUSTER_NAME" --region "$AWS_REGION"
+        echo "::endgroup::"
+
+    # ── 3a. Azure — login via OIDC (federated credential) ────────────────────
+    - name: Azure login via OIDC
+      if: inputs.cloud_provider == 'azure'
+      uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43  # v3.0.0
+      with:
+        client-id: ${{ inputs.azure_client_id }}
+        tenant-id: ${{ inputs.azure_tenant_id }}
+        subscription-id: ${{ inputs.azure_subscription_id }}
+
+    # ── 3b. Azure — fetch AKS kubeconfig ─────────────────────────────────────
+    - name: Update kubeconfig for AKS
+      if: inputs.cloud_provider == 'azure'
+      shell: bash
+      env:
+        CLUSTER_NAME: ${{ inputs.azure_cluster_name }}
+        RESOURCE_GROUP: ${{ inputs.azure_resource_group }}
+      run: |
+        echo "::group::AKS kubeconfig"
+        az aks get-credentials \
+          --resource-group "$RESOURCE_GROUP" \
+          --name "$CLUSTER_NAME" \
+          --overwrite-existing
+        echo "::endgroup::"
+
+    # ── 4. Install kubectl ────────────────────────────────────────────────────
     - name: Install kubectl
       shell: bash
       timeout-minutes: 3
@@ -92,33 +181,7 @@ runs:
         fi
         echo "::endgroup::"
 
-    # ── 3. Write kubeconfig to temp file — masked immediately ─────────────────
-    - name: Configure kubeconfig
-      id: kubeconfig
-      shell: bash
-      env:
-        KUBECONFIG_B64: ${{ inputs.kubeconfig }}
-      run: |
-        echo "::group::Configure kubeconfig"
-
-        # Mask raw kubeconfig content — it contains credentials
-        KUBECONFIG_CONTENT=$(echo "$KUBECONFIG_B64" | base64 -d)
-        echo "::add-mask::$KUBECONFIG_CONTENT"
-
-        # Write to a temp file with restricted permissions
-        KUBECONFIG_PATH=$(mktemp /tmp/kubeconfig-XXXXXX)
-        chmod 600 "$KUBECONFIG_PATH"
-        echo "$KUBECONFIG_CONTENT" > "$KUBECONFIG_PATH"
-
-        # Export path for subsequent steps
-        echo "KUBECONFIG=$KUBECONFIG_PATH" >> "$GITHUB_ENV"
-        echo "path=$KUBECONFIG_PATH" >> "$GITHUB_OUTPUT"
-
-        # Verify cluster connectivity (masked output)
-        kubectl cluster-info 2>&1 | grep -v "token\|password\|certificate" || true
-        echo "::endgroup::"
-
-    # ── 4. Apply manifest ─────────────────────────────────────────────────────
+    # ── 5. Apply manifest ─────────────────────────────────────────────────────
     - name: Apply manifest
       id: apply
       shell: bash
@@ -139,7 +202,6 @@ runs:
           $DRY_RUN_FLAG \
           --output=json 2>&1)
 
-        # Extract resource list
         RESOURCES=$(echo "$APPLY_OUTPUT" | \
           jq -r '.items[]? | "\(.kind)/\(.metadata.name)"' 2>/dev/null || \
           echo "$APPLY_OUTPUT" | grep -oE '[a-z]+/[a-z0-9-]+' | head -20)
@@ -157,7 +219,7 @@ runs:
         fi
         echo "::endgroup::"
 
-    # ── 5. Wait for rollout ───────────────────────────────────────────────────
+    # ── 6. Wait for rollout ───────────────────────────────────────────────────
     - name: Wait for rollout
       id: rollout
       shell: bash
@@ -189,11 +251,12 @@ runs:
         fi
         echo "::endgroup::"
 
-    # ── 6. Job summary ────────────────────────────────────────────────────────
+    # ── 7. Job summary ────────────────────────────────────────────────────────
     - name: Write job summary
       if: always()
       shell: bash
       env:
+        CLOUD_PROVIDER: ${{ inputs.cloud_provider }}
         NAMESPACE: ${{ inputs.namespace }}
         MANIFEST: ${{ inputs.manifest_path }}
         DEPLOYMENT: ${{ inputs.deployment_name }}
@@ -206,6 +269,7 @@ runs:
           echo ""
           echo "| Field | Value |"
           echo "|---|---|"
+          echo "| Cloud | \`$CLOUD_PROVIDER\` |"
           echo "| Namespace | \`$NAMESPACE\` |"
           echo "| Manifest | \`$MANIFEST\` |"
           echo "| Dry run | ${DRY_RUN} |"
@@ -219,18 +283,6 @@ runs:
             echo '```'
           fi
         } >> "$GITHUB_STEP_SUMMARY"
-
-    # ── 7. Cleanup kubeconfig — always runs ───────────────────────────────────
-    - name: Cleanup kubeconfig
-      if: always()
-      shell: bash
-      env:
-        KUBECONFIG_PATH: ${{ steps.kubeconfig.outputs.path }}
-      run: |
-        if [[ -f "$KUBECONFIG_PATH" ]]; then
-          rm -f "$KUBECONFIG_PATH"
-          echo "::notice::Kubeconfig temp file removed"
-        fi
 
 branding:
   icon: 'layers'

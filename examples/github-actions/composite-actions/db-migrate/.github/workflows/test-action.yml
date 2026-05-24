@@ -17,6 +17,9 @@ on:
 # DATABASE_URL is available. Use a local Postgres container with act:
 #   act ... --env DATABASE_URL=postgres://user:pass@localhost:5432/testdb
 
+permissions:
+  contents: read
+
 jobs:
   # Test 1 — empty database_url fails
   test-empty-database-url:
@@ -96,11 +99,9 @@ jobs:
         shell: bash
         run: |
           mkdir -p migrations
-          printf '%s' '-- Create users table
-CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name TEXT NOT NULL);' \
-            > migrations/000001_create_users.up.sql
-          printf '%s' 'DROP TABLE IF EXISTS users;' \
-            > migrations/000001_create_users.down.sql
+          echo '-- Create users table' > migrations/000001_create_users.up.sql
+          echo 'CREATE TABLE IF NOT EXISTS users (id SERIAL PRIMARY KEY, name TEXT NOT NULL);' >> migrations/000001_create_users.up.sql
+          echo 'DROP TABLE IF EXISTS users;' > migrations/000001_create_users.down.sql
 
       - name: Dry run
         id: migrate

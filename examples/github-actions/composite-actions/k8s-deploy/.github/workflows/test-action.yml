@@ -15,19 +15,92 @@ on:
 #   act -W .github/workflows/test-action.yml \
 #       -P ubuntu-latest=catthehacker/ubuntu:act-22.04
 
+permissions:
+  contents: read
+  id-token: write   # required for OIDC credential exchange
+
 jobs:
-  # Test 1 — empty namespace should fail
+  # Test 1 — missing cloud_provider fails input validation
+  test-missing-cloud-provider:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Run with missing cloud_provider — expect failure
+        id: deploy
+        uses: ./
+        with:
+          cloud_provider: ''
+          namespace: production
+          manifest_path: deploy/
+        continue-on-error: true
+      - name: Assert failure
+        shell: bash
+        run: |
+          [[ "${{ steps.deploy.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure for missing cloud_provider"; exit 1; }
+          echo "::notice::Validation correctly rejected missing cloud_provider"
+
+  # Test 2 — cloud_provider=aws with missing aws_role_arn fails
+  test-aws-missing-role-arn:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Run with aws but no role ARN — expect failure
+        id: deploy
+        uses: ./
+        with:
+          cloud_provider: aws
+          aws_cluster_name: my-cluster
+          aws_region: us-east-1
+          namespace: production
+          manifest_path: deploy/
+        continue-on-error: true
+      - name: Assert failure
+        shell: bash
+        run: |
+          [[ "${{ steps.deploy.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure for missing aws_role_arn"; exit 1; }
+          echo "::notice::Validation correctly rejected missing aws_role_arn"
+
+  # Test 3 — cloud_provider=azure with missing azure_client_id fails
+  test-azure-missing-client-id:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: Run with azure but no client ID — expect failure
+        id: deploy
+        uses: ./
+        with:
+          cloud_provider: azure
+          azure_cluster_name: my-aks-cluster
+          azure_resource_group: my-rg
+          azure_tenant_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+          azure_subscription_id: 'ffffffff-0000-1111-2222-333333333333'
+          namespace: production
+          manifest_path: deploy/
+        continue-on-error: true
+      - name: Assert failure
+        shell: bash
+        run: |
+          [[ "${{ steps.deploy.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure for missing azure_client_id"; exit 1; }
+          echo "::notice::Validation correctly rejected missing azure_client_id"
+
+  # Test 4 — missing namespace fails regardless of cloud provider
   test-missing-namespace:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
-      - name: Run with missing namespace — expect failure
+      - name: Run with empty namespace — expect failure
         id: deploy
         uses: ./
         with:
-          kubeconfig: 'dGVzdA=='   # valid base64 but not a real kubeconfig
+          cloud_provider: aws
+          aws_role_arn: 'arn:aws:iam::123456789012:role/github-actions-deploy'
+          aws_cluster_name: my-cluster
+          aws_region: us-east-1
           namespace: ''
-          manifest_path: 'deploy/'
+          manifest_path: deploy/
         continue-on-error: true
       - name: Assert failure
         shell: bash
@@ -36,39 +109,22 @@ jobs:
             { echo "::error::Expected failure for empty namespace"; exit 1; }
           echo "::notice::Validation correctly rejected empty namespace"
 
-  # Test 2 — invalid base64 kubeconfig should fail
-  test-invalid-kubeconfig-base64:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
-      - name: Run with invalid base64 — expect failure
-        id: deploy
-        uses: ./
-        with:
-          kubeconfig: 'not-valid-base64!!!'
-          namespace: production
-          manifest_path: 'deploy/'
-        continue-on-error: true
-      - name: Assert failure
-        shell: bash
-        run: |
-          [[ "${{ steps.deploy.outcome }}" == "failure" ]] || \
-            { echo "::error::Expected failure for invalid base64"; exit 1; }
-          echo "::notice::Validation correctly rejected invalid base64"
-
-  # Test 3 — invalid timeout format should fail
+  # Test 5 — invalid timeout format fails
   test-invalid-timeout:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
-      - name: Run with invalid timeout — expect failure
+      - name: Run with bad timeout — expect failure
         id: deploy
         uses: ./
         with:
-          kubeconfig: 'dGVzdA=='
+          cloud_provider: aws
+          aws_role_arn: 'arn:aws:iam::123456789012:role/github-actions-deploy'
+          aws_cluster_name: my-cluster
+          aws_region: us-east-1
           namespace: production
-          manifest_path: 'deploy/'
-          timeout: '5minutes'   # invalid format — should be 5m
+          manifest_path: deploy/
+          timeout: '5minutes'   # must be 5m / 300s / 1h
         continue-on-error: true
       - name: Assert failure
         shell: bash
@@ -77,24 +133,48 @@ jobs:
             { echo "::error::Expected failure for invalid timeout format"; exit 1; }
           echo "::notice::Validation correctly rejected invalid timeout"
 
-  # Test 4 — valid input format passes validation step
-  test-input-validation-passes:
+  # Test 6 — AWS/EKS inputs pass validation; action fails at OIDC exchange in CI
+  test-aws-input-validation-passes:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
-      - name: Validate inputs pass — action will fail at kubectl install/connect step
+      - name: All EKS inputs valid — will fail at OIDC step without real AWS trust
         id: deploy
         uses: ./
         with:
-          kubeconfig: ${{ toJSON('apiVersion: v1\nkind: Config') | toJSON }}
+          cloud_provider: aws
+          aws_role_arn: 'arn:aws:iam::123456789012:role/github-actions-deploy'
+          aws_cluster_name: my-eks-cluster
+          aws_region: us-east-1
           namespace: production
           manifest_path: deploy/
-          timeout: 5m
           dry_run: 'true'
         continue-on-error: true
-      - name: Assert input validation passed (failure is ok at kubectl step)
+      - name: Assert input validation passed (OIDC failure is expected in CI)
         shell: bash
         run: |
-          # Outcome may be failure (no real cluster) but we confirm it was not
-          # the validation step that failed by checking the step summary was started
-          echo "::notice::Outcome: ${{ steps.deploy.outcome }} — expected failure at kubectl, not validation"
+          echo "::notice::Outcome: ${{ steps.deploy.outcome }} — validation passed, expected OIDC failure without real AWS trust"
+
+  # Test 7 — Azure/AKS inputs pass validation; action fails at OIDC exchange in CI
+  test-azure-input-validation-passes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - name: All AKS inputs valid — will fail at OIDC step without real Azure federated credential
+        id: deploy
+        uses: ./
+        with:
+          cloud_provider: azure
+          azure_client_id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+          azure_tenant_id: 'ffffffff-0000-1111-2222-333333333333'
+          azure_subscription_id: '11111111-2222-3333-4444-555555555555'
+          azure_cluster_name: my-aks-cluster
+          azure_resource_group: my-rg
+          namespace: production
+          manifest_path: deploy/
+          dry_run: 'true'
+        continue-on-error: true
+      - name: Assert input validation passed (OIDC failure is expected in CI)
+        shell: bash
+        run: |
+          echo "::notice::Outcome: ${{ steps.deploy.outcome }} — validation passed, expected OIDC failure without real Azure federated credential"

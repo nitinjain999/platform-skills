@@ -115,6 +115,7 @@ Slash commands are predefined workflows. Use them instead of writing a long prom
 | `/platform-skills:dora` | Instrument DORA metrics, generate Grafana dashboards, benchmark against performance bands, debug metric gaps |
 | `/platform-skills:awesome-docs` | Generate any animated Markdown doc (README, architecture guide, runbook, tutorial, RFC, post-mortem, or custom), convert existing Markdown, update/diff/audit, preview, export to Confluence/Notion |
 | `/platform-skills:aws` | CloudFront distributions, WAF web ACLs, Lambda@Edge, CloudFront Functions, Firewall Manager multi-account enforcement, and Terraform module generation with best practices |
+| `/platform-skills:composite-actions` | Generate, review, secure, and test composite GitHub Actions — scaffold, SHA pinning, secrets-as-inputs, observability, input validation, versioning |
 
 Invoke a command by typing it at the start of your message:
 

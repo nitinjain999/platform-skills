@@ -14,6 +14,9 @@ on:
 #       -P ubuntu-latest=catthehacker/ubuntu:act-22.04 \
 #       --secret GITHUB_TOKEN=$GITHUB_TOKEN
 
+permissions:
+  contents: read
+
 jobs:
   # Test 1 — missing working_directory fails
   test-missing-working-dir:

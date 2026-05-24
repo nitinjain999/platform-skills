@@ -13,6 +13,9 @@ on:
 #   act -W .github/workflows/test-action.yml \
 #       -P ubuntu-latest=catthehacker/ubuntu:act-22.04
 
+permissions:
+  contents: read
+
 jobs:
   # Test 1 — invalid provider fails
   test-invalid-provider:

@@ -42,6 +42,7 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:dora](#platform-skillsdora) | Instrument DORA metrics, generate Grafana dashboards, benchmark against performance bands, debug metric gaps |
 | [/platform-skills:awesome-docs](#platform-skillsawesome-docs) | Generate any animated Markdown doc (README, architecture guide, runbook, tutorial, RFC, post-mortem, or custom), convert existing Markdown, update/diff/audit, preview, export |
 | [/platform-skills:aws](#platform-skillsaws) | CloudFront, WAF, Lambda@Edge, Firewall Manager multi-account enforcement, and Terraform module generation |
+| [/platform-skills:composite-actions](#platform-skillscomposite-actions) | Generate, review, secure, and test composite GitHub Actions |
 
 ---
 
@@ -2089,3 +2090,33 @@ Reference: `references/awesome-docs.md` and `examples/awesome-docs/`
 ```
 
 Reference: `commands/aws.md`, `references/aws-cloudfront.md`, `references/aws-waf.md`, and `examples/aws/`
+
+---
+
+## `/platform-skills:composite-actions`
+
+**What it does:** Interview-driven scaffold, review, hardening, and test generation for composite GitHub Actions. Enforces SHA pinning, secrets-as-inputs, `$GITHUB_OUTPUT` / `$GITHUB_STEP_SUMMARY` observability, input validation, and actionlint-clean workflows.
+
+**Usage:** `/platform-skills:composite-actions <mode>`
+
+```
+/platform-skills:composite-actions generate   # interview-driven full repo scaffold (action.yml, README, test/release workflows, dependabot.yml)
+/platform-skills:composite-actions review     # review an existing action.yml for correctness and security
+/platform-skills:composite-actions secure     # harden with SHA pinning, env isolation, ::add-mask::
+/platform-skills:composite-actions test       # generate a test workflow for the composite action
+/platform-skills:composite-actions migrate    # migrate a JS/Docker action to composite steps
+/platform-skills:composite-actions publish    # versioning, release workflow, dependabot.yml
+```
+
+**Examples:**
+
+```
+/platform-skills:composite-actions generate — build a composite action that deploys to Kubernetes with dry-run support
+/platform-skills:composite-actions review — here is my action.yml, check it for security issues
+/platform-skills:composite-actions secure — pin all uses: refs to SHAs and mask sensitive outputs
+/platform-skills:composite-actions test — generate a test-action.yml for my db-migrate composite action
+/platform-skills:composite-actions migrate — convert this Docker action to a composite action
+/platform-skills:composite-actions publish — set up semantic versioning and a release.yml workflow
+```
+
+Reference: `commands/composite-actions.md`, `references/composite-actions.md`, and `examples/github-actions/composite-actions/`
