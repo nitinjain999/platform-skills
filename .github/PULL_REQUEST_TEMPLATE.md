@@ -14,7 +14,7 @@
 ## Checklist
 
 - [ ] Technically accurate and tested in a real environment
-- [ ] Follows the [writing principles](CLAUDE.md#writing-principles) (problem-first, concrete examples, blast radius documented)
+- [ ] Follows the [writing principles](../CLAUDE.md#writing-principles) (problem-first, concrete examples, blast radius documented)
 - [ ] Security-conscious — least privilege defaults, no wildcard IAM
 - [ ] Includes rollback plan for any risky operation
 - [ ] `CHANGELOG.md` updated

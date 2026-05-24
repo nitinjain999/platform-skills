@@ -133,7 +133,7 @@ My Flux Kustomization `apps` is stuck in NotReady with: "context deadline exceed
 - It cannot see your cluster or cloud account — paste the relevant output
 - It works best on one concrete problem at a time, not "review everything"
 
-### All 27 command workflows
+### All 28 command workflows
 
 See [COMMANDS.md](COMMANDS.md) for every command with modes and example prompts:
 
@@ -165,6 +165,8 @@ See [COMMANDS.md](COMMANDS.md) for every command with modes and example prompts:
 | `chaos` | Install Litmus Chaos or Chaos Mesh, generate fault experiments, schedule chaos, run GameDay, debug, report |
 | `dora` | Instrument DORA metrics, generate Grafana dashboards, benchmark against performance bands, debug metric gaps |
 | `awesome-docs` | Generate any animated Markdown doc (README, architecture guide, runbook, tutorial, RFC, post-mortem, or custom), convert existing Markdown, update/diff/audit diagrams, export |
+| `aws` | Generate or review CloudFront, WAF, Lambda@Edge, CloudFront Functions, and Firewall Manager patterns |
+| `composite-actions` | Scaffold, review, secure, debug, publish, and improve composite GitHub Actions |
 
 ### How the agent and skill system work
 

@@ -260,7 +260,7 @@ After each experiment, record impact against DORA metrics:
 - Did error rate spike beyond SLO? → contributes to **change failure rate**
 - How long until steady-state was restored? → contributes to **MTTR**
 
-Feed these observations into DORA tracking. See [references/dora.md](references/dora.md).
+Feed these observations into DORA tracking. See [references/dora.md](dora.md).
 
 ---
 

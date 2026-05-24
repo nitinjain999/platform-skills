@@ -3,9 +3,9 @@
 > A practical handbook for developers and DevOps engineers working with Kubernetes, GitOps, Terraform, GitHub Actions, cloud infrastructure, and secrets management — with an optional Claude plugin layer for interactive guidance.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Domains](https://img.shields.io/badge/Domains-34-4c8eda)](references/)
-[![Commands](https://img.shields.io/badge/Commands-27-e87c2b)](commands/)
-[![Examples](https://img.shields.io/badge/Examples-30-6f42c1)](examples/)
+[![Domains](https://img.shields.io/badge/Domains-35-4c8eda)](references/)
+[![Commands](https://img.shields.io/badge/Commands-28-e87c2b)](commands/)
+[![Examples](https://img.shields.io/badge/Examples-27-6f42c1)](examples/)
 [![Editors](https://img.shields.io/badge/Editors-VSCode%20%7C%20Cursor%20%7C%20Copilot-2ea44f)](EDITOR_INTEGRATIONS.md)
 [![GitHub Stars](https://img.shields.io/github/stars/nitinjain999/platform-skills?style=flat&label=Stars&color=0e1117)](https://github.com/nitinjain999/platform-skills/stargazers)
 [![Skill Check](https://img.shields.io/badge/SkillCheck-Validated-brightgreen)](tests/validate-skill.sh)
@@ -55,6 +55,7 @@ Both layers work independently. The plugin is optional.
 | <img src="https://cdn.simpleicons.org/microsoftazure/0078D4" width="16" height="16" alt="Azure"> Azure | [references/azure.md](references/azure.md) | Workload identity, AKS, RBAC, resource tagging, Azure Policy |
 | <img src="https://cdn.simpleicons.org/terraform/844FBA" width="16" height="16" alt="Terraform"> Terraform | [references/terraform.md](references/terraform.md) | Module design, state management, testing, CI/CD integration |
 | <img src="https://cdn.simpleicons.org/githubactions/2088FF" width="16" height="16" alt="GitHub Actions"> GitHub Actions | [references/github-actions.md](references/github-actions.md) | Security hardening, OIDC, SHA pinning, reusable workflows |
+| <img src="https://cdn.simpleicons.org/githubactions/2088FF" width="16" height="16" alt="GitHub Actions"> Composite GitHub Actions | [references/composite-actions.md](references/composite-actions.md) | Composite action scaffolding, review, hardening, testing, release, private repo access |
 | 🗺️ Platform model | [references/platform-operating-model.md](references/platform-operating-model.md) | Ownership boundaries, promotion flows, cross-tool design |
 | 🔐 Secrets | [references/secrets.md](references/secrets.md) | External Secrets Operator, Sealed Secrets, provider setup, troubleshooting |
 | <img src="https://cdn.simpleicons.org/linkerd/2BEDA7" width="16" height="16" alt="Linkerd"> Linkerd | [references/linkerd.md](references/linkerd.md) | mTLS, proxy injection, AuthorizationPolicy, observability, multi-cluster |
@@ -206,7 +207,7 @@ platform-skills/
 
 ## Roadmap
 
-**Current release: v1.23.0** — 27 commands, 34 domain reference guides, 50+ wiki pages.
+**Current release: v1.24.0** — 28 commands, 35 domain reference guides, 50+ wiki pages.
 
 Full version history is in [CHANGELOG.md](CHANGELOG.md).
 

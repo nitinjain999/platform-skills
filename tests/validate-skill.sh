@@ -223,9 +223,26 @@ for cmd_file in commands/*.md; do
   cmd_name="$(awk '/^name:/{print $2; exit}' "$cmd_file")"
   [ -z "$cmd_name" ] && continue
 
-  # Check common example directory names for this command
-  for dir_candidate in "examples/${cmd_name}" "examples/${cmd_name}-networking" "examples/conventional-commits"; do
-    if [ "$dir_candidate" = "examples/commit-networking" ]; then continue; fi
+  dir_candidates=("examples/${cmd_name}")
+  case "$cmd_name" in
+    commit)
+      dir_candidates=("examples/conventional-commits")
+      ;;
+    document)
+      dir_candidates=("examples/documentation")
+      ;;
+    helmcheck)
+      dir_candidates=("examples/helm")
+      ;;
+    linux)
+      dir_candidates=("examples/linux-networking")
+      ;;
+    composite-actions)
+      dir_candidates=("examples/github-actions/composite-actions")
+      ;;
+  esac
+
+  for dir_candidate in "${dir_candidates[@]}"; do
     if [ -d "$dir_candidate" ]; then
       if [ -f "${dir_candidate}/README.md" ]; then
         pass "${dir_candidate}/README.md exists"

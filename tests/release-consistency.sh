@@ -34,6 +34,13 @@ else
   fail "CHANGELOG.md latest [$CHANGELOG_VERSION] ≠ plugin.json $PLUGIN_VERSION"
 fi
 
+DUPLICATE_CHANGELOG_VERSIONS="$(awk '$1 == "##" && $2 ~ /^\[[0-9]+\.[0-9]+\.[0-9]+\]$/ {gsub(/[][]/, "", $2); print $2}' CHANGELOG.md | sort | uniq -d)"
+if [ -z "$DUPLICATE_CHANGELOG_VERSIONS" ]; then
+  pass "CHANGELOG.md has no duplicate version headings"
+else
+  fail "CHANGELOG.md has duplicate version heading(s): $DUPLICATE_CHANGELOG_VERSIONS"
+fi
+
 # ---------------------------------------------------------------------------
 echo ""
 echo "=== marketplace.json source.sha ==="
