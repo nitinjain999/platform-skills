@@ -1,0 +1,512 @@
+name: Test composite actions
+
+on:
+  push:
+    paths:
+      - 'examples/github-actions/composite-actions/**'
+      - '.github/workflows/test-composite-actions.yml'
+  pull_request:
+    paths:
+      - 'examples/github-actions/composite-actions/**'
+      - '.github/workflows/test-composite-actions.yml'
+
+# act usage (run from repo root):
+#   act pull_request -W .github/workflows/test-composite-actions.yml \
+#       -P ubuntu-latest=catthehacker/ubuntu:act-22.04
+
+permissions:
+  contents: read
+
+jobs:
+
+  # ── configure-cloud ──────────────────────────────────────────────────────────
+
+  configure-cloud-invalid-provider:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - id: cloud
+        uses: ./examples/github-actions/composite-actions/configure-cloud
+        with:
+          cloud_provider: gcp   # must be aws | azure | gke
+        continue-on-error: true
+      - run: |
+          [[ "${{ steps.cloud.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure for invalid cloud_provider=gcp"; exit 1; }
+
+  configure-cloud-aws-missing-role:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - id: cloud
+        uses: ./examples/github-actions/composite-actions/configure-cloud
+        with:
+          cloud_provider: aws
+          # aws_role_arn intentionally omitted
+        continue-on-error: true
+      - run: |
+          [[ "${{ steps.cloud.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure when aws_role_arn is missing"; exit 1; }
+
+  configure-cloud-azure-missing-client-id:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - id: cloud
+        uses: ./examples/github-actions/composite-actions/configure-cloud
+        with:
+          cloud_provider: azure
+          azure_tenant_id: 'ffffffff-0000-1111-2222-333333333333'
+          azure_subscription_id: '11111111-2222-3333-4444-555555555555'
+          # azure_client_id intentionally omitted
+        continue-on-error: true
+      - run: |
+          [[ "${{ steps.cloud.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure when azure_client_id is missing"; exit 1; }
+
+  configure-cloud-gke-missing-provider:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - id: cloud
+        uses: ./examples/github-actions/composite-actions/configure-cloud
+        with:
+          cloud_provider: gke
+          gcp_service_account: 'deployer@my-project.iam.gserviceaccount.com'
+          gcp_project: my-project
+          gcp_cluster_name: my-gke-cluster
+          gcp_cluster_location: us-central1
+          # gcp_workload_identity_provider intentionally omitted
+        continue-on-error: true
+      - run: |
+          [[ "${{ steps.cloud.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure when gcp_workload_identity_provider is missing"; exit 1; }
+
+  # ── k8s-deploy ───────────────────────────────────────────────────────────────
+
+  k8s-deploy-missing-cloud-provider:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - id: deploy
+        uses: ./examples/github-actions/composite-actions/k8s-deploy
+        with:
+          cloud_provider: ''
+          namespace: production
+          manifest_path: deploy/
+        continue-on-error: true
+      - run: |
+          [[ "${{ steps.deploy.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure for missing cloud_provider"; exit 1; }
+
+  k8s-deploy-aws-missing-role-arn:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - id: deploy
+        uses: ./examples/github-actions/composite-actions/k8s-deploy
+        with:
+          cloud_provider: aws
+          aws_cluster_name: my-cluster
+          aws_region: us-east-1
+          namespace: production
+          manifest_path: deploy/
+          # aws_role_arn intentionally omitted
+        continue-on-error: true
+      - run: |
+          [[ "${{ steps.deploy.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure when aws_role_arn is missing"; exit 1; }
+
+  k8s-deploy-gke-missing-cluster:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - id: deploy
+        uses: ./examples/github-actions/composite-actions/k8s-deploy
+        with:
+          cloud_provider: gke
+          gcp_workload_identity_provider: 'projects/123456789/locations/global/workloadIdentityPools/github/providers/github-provider'
+          gcp_service_account: 'deployer@my-project.iam.gserviceaccount.com'
+          gcp_project: my-project
+          gcp_cluster_location: us-central1
+          namespace: production
+          manifest_path: deploy/
+          # gcp_cluster_name intentionally omitted
+        continue-on-error: true
+      - run: |
+          [[ "${{ steps.deploy.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure when gcp_cluster_name is missing"; exit 1; }
+
+  k8s-deploy-invalid-timeout:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - id: deploy
+        uses: ./examples/github-actions/composite-actions/k8s-deploy
+        with:
+          cloud_provider: aws
+          aws_role_arn: 'arn:aws:iam::123456789012:role/github-actions-deploy'
+          aws_cluster_name: my-cluster
+          aws_region: us-east-1
+          namespace: production
+          manifest_path: deploy/
+          timeout: '5minutes'   # must be 5m / 300s / 1h
+        continue-on-error: true
+      - run: |
+          [[ "${{ steps.deploy.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure for invalid timeout format"; exit 1; }
+
+  # ── docker-build-push ────────────────────────────────────────────────────────
+
+  docker-build-push-invalid-image-name:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - id: build
+        uses: ./examples/github-actions/composite-actions/docker-build-push
+        with:
+          image_name: 'UPPERCASE_INVALID'
+          push: 'false'
+        continue-on-error: true
+      - run: |
+          [[ "${{ steps.build.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure for UPPERCASE image_name"; exit 1; }
+
+  # ── notify-slack ─────────────────────────────────────────────────────────────
+
+  notify-slack-invalid-webhook:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - id: notify
+        uses: ./examples/github-actions/composite-actions/notify-slack
+        with:
+          webhook_url: 'https://not-slack.example.com/webhook'
+          status: success
+        continue-on-error: true
+      - run: |
+          [[ "${{ steps.notify.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure for non-Slack webhook URL"; exit 1; }
+
+  notify-slack-invalid-status:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - id: notify
+        uses: ./examples/github-actions/composite-actions/notify-slack
+        with:
+          webhook_url: 'https://hooks.slack.com/services/T00000000/B00000000/placeholder'
+          status: unknown-status
+        continue-on-error: true
+      - run: |
+          [[ "${{ steps.notify.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure for invalid status value"; exit 1; }
+
+  # ── terraform-plan ───────────────────────────────────────────────────────────
+
+  terraform-plan-missing-working-dir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - id: plan
+        uses: ./examples/github-actions/composite-actions/terraform-plan
+        with:
+          working_directory: ''
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+      - run: |
+          [[ "${{ steps.plan.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure for empty working_directory"; exit 1; }
+
+  terraform-plan-azure-missing-tenant:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - id: plan
+        uses: ./examples/github-actions/composite-actions/terraform-plan
+        with:
+          working_directory: .
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          azure_client_id: fake-client-id
+          azure_tenant_id: ''
+          azure_subscription_id: ''
+        continue-on-error: true
+      - run: |
+          [[ "${{ steps.plan.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure for Azure missing tenant_id"; exit 1; }
+
+  # ── security-scan ────────────────────────────────────────────────────────────
+
+  security-scan-invalid-severity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - id: scan
+        uses: ./examples/github-actions/composite-actions/security-scan
+        with:
+          scan_target: alpine:latest
+          severity: 'BLOCKER'   # not a valid Trivy severity
+        continue-on-error: true
+      - run: |
+          [[ "${{ steps.scan.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure for invalid severity BLOCKER"; exit 1; }
+
+  security-scan-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - id: scan
+        uses: ./examples/github-actions/composite-actions/security-scan
+        with:
+          scan_target: alpine:3.18
+          scan_type: image
+          severity: HIGH,CRITICAL
+          fail_on_findings: 'false'
+      - run: |
+          [[ "${{ steps.scan.outputs.scan_result }}" == "pass" ]] || \
+            { echo "::error::Expected scan_result=pass with fail_on_findings=false"; exit 1; }
+          echo "vulnerability_count=${{ steps.scan.outputs.vulnerability_count }}"
+
+  # ── release-tag ──────────────────────────────────────────────────────────────
+
+  release-tag-missing-token:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - id: release
+        uses: ./examples/github-actions/composite-actions/release-tag
+        with:
+          github_token: ''
+        continue-on-error: true
+      - run: |
+          [[ "${{ steps.release.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure for empty github_token"; exit 1; }
+
+  # ── pr-comment ───────────────────────────────────────────────────────────────
+
+  pr-comment-missing-title:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - id: comment
+        uses: ./examples/github-actions/composite-actions/pr-comment
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          title: ''
+          body: 'some body'
+        continue-on-error: true
+      - run: |
+          [[ "${{ steps.comment.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure for empty title"; exit 1; }
+
+  pr-comment-non-pr-skips-gracefully:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - id: comment
+        uses: ./examples/github-actions/composite-actions/pr-comment
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          title: Test Comment
+          body: 'Test body'
+        continue-on-error: true
+      - run: |
+          # On push/non-PR context the action should skip, not crash
+          echo "action_taken=${{ steps.comment.outputs.action_taken }}"
+          [[ "${{ steps.comment.outcome }}" != "failure" ]] || \
+            { echo "::error::pr-comment should not fail on non-PR events — it should skip"; exit 1; }
+
+  # ── setup-env ────────────────────────────────────────────────────────────────
+
+  setup-env-invalid-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - id: setup
+        uses: ./examples/github-actions/composite-actions/setup-env
+        with:
+          runtime: ruby   # not a supported runtime
+        continue-on-error: true
+      - run: |
+          [[ "${{ steps.setup.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure for unsupported runtime ruby"; exit 1; }
+
+  setup-env-node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - id: setup
+        uses: ./examples/github-actions/composite-actions/setup-env
+        with:
+          runtime: node
+          version: '20.x'
+          install_dependencies: 'false'
+      - run: |
+          node --version
+          [[ -n "${{ steps.setup.outputs.runtime_version }}" ]] || \
+            { echo "::error::runtime_version output is empty"; exit 1; }
+          echo "runtime_version=${{ steps.setup.outputs.runtime_version }}"
+
+  # ── setup-terraform ──────────────────────────────────────────────────────────
+
+  setup-terraform-empty-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - id: setup
+        uses: ./examples/github-actions/composite-actions/setup-terraform
+        with:
+          terraform_version: ''
+        continue-on-error: true
+      - run: |
+          [[ "${{ steps.setup.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure for empty terraform_version"; exit 1; }
+
+  setup-terraform-install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - id: setup
+        uses: ./examples/github-actions/composite-actions/setup-terraform
+        with:
+          terraform_version: '1.9.0'
+          enable_cache: 'false'
+      - run: |
+          terraform version
+          [[ -n "${{ steps.setup.outputs.terraform_version }}" ]] || \
+            { echo "::error::terraform_version output is empty"; exit 1; }
+          echo "terraform_version=${{ steps.setup.outputs.terraform_version }}"
+
+  # ── db-migrate ───────────────────────────────────────────────────────────────
+
+  db-migrate-empty-url:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - id: migrate
+        uses: ./examples/github-actions/composite-actions/db-migrate
+        with:
+          database_url: ''
+        continue-on-error: true
+      - run: |
+          [[ "${{ steps.migrate.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure for empty database_url"; exit 1; }
+
+  db-migrate-invalid-tool:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - id: migrate
+        uses: ./examples/github-actions/composite-actions/db-migrate
+        with:
+          database_url: 'postgres://user:pass@localhost:5432/db'
+          migration_tool: sqlalchemy   # not a supported tool
+        continue-on-error: true
+      - run: |
+          [[ "${{ steps.migrate.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure for unsupported migration_tool sqlalchemy"; exit 1; }
+
+  db-migrate-unreachable-host:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - id: migrate
+        uses: ./examples/github-actions/composite-actions/db-migrate
+        with:
+          database_url: 'postgres://user:pass@nonexistent.host.invalid:5432/db'
+          migration_tool: golang-migrate
+          lock_timeout_seconds: '5'
+        continue-on-error: true
+      - run: |
+          [[ "${{ steps.migrate.outcome }}" == "failure" ]] || \
+            { echo "::error::Expected failure for unreachable database host"; exit 1; }
+
+  # ── summary ──────────────────────────────────────────────────────────────────
+
+  summary:
+    runs-on: ubuntu-latest
+    if: always()
+    needs:
+      - configure-cloud-invalid-provider
+      - configure-cloud-aws-missing-role
+      - configure-cloud-azure-missing-client-id
+      - configure-cloud-gke-missing-provider
+      - k8s-deploy-missing-cloud-provider
+      - k8s-deploy-aws-missing-role-arn
+      - k8s-deploy-gke-missing-cluster
+      - k8s-deploy-invalid-timeout
+      - docker-build-push-invalid-image-name
+      - notify-slack-invalid-webhook
+      - notify-slack-invalid-status
+      - terraform-plan-missing-working-dir
+      - terraform-plan-azure-missing-tenant
+      - security-scan-invalid-severity
+      - security-scan-image
+      - release-tag-missing-token
+      - pr-comment-missing-title
+      - pr-comment-non-pr-skips-gracefully
+      - setup-env-invalid-runtime
+      - setup-env-node
+      - setup-terraform-empty-version
+      - setup-terraform-install
+      - db-migrate-empty-url
+      - db-migrate-invalid-tool
+      - db-migrate-unreachable-host
+    steps:
+      - name: Report results
+        run: |
+          cat << 'EOF' >> "$GITHUB_STEP_SUMMARY"
+          ## Composite Actions — Integration Test Results
+
+          | Action | Test | Result |
+          |--------|------|--------|
+          | configure-cloud | invalid provider rejected | ${{ needs.configure-cloud-invalid-provider.result == 'success' && '✅' || '❌' }} |
+          | configure-cloud | AWS missing role rejected | ${{ needs.configure-cloud-aws-missing-role.result == 'success' && '✅' || '❌' }} |
+          | configure-cloud | Azure missing client_id rejected | ${{ needs.configure-cloud-azure-missing-client-id.result == 'success' && '✅' || '❌' }} |
+          | configure-cloud | GKE missing WIF provider rejected | ${{ needs.configure-cloud-gke-missing-provider.result == 'success' && '✅' || '❌' }} |
+          | k8s-deploy | missing cloud_provider rejected | ${{ needs.k8s-deploy-missing-cloud-provider.result == 'success' && '✅' || '❌' }} |
+          | k8s-deploy | AWS missing role_arn rejected | ${{ needs.k8s-deploy-aws-missing-role-arn.result == 'success' && '✅' || '❌' }} |
+          | k8s-deploy | GKE missing cluster rejected | ${{ needs.k8s-deploy-gke-missing-cluster.result == 'success' && '✅' || '❌' }} |
+          | k8s-deploy | invalid timeout format rejected | ${{ needs.k8s-deploy-invalid-timeout.result == 'success' && '✅' || '❌' }} |
+          | docker-build-push | UPPERCASE image_name rejected | ${{ needs.docker-build-push-invalid-image-name.result == 'success' && '✅' || '❌' }} |
+          | notify-slack | non-Slack webhook rejected | ${{ needs.notify-slack-invalid-webhook.result == 'success' && '✅' || '❌' }} |
+          | notify-slack | invalid status rejected | ${{ needs.notify-slack-invalid-status.result == 'success' && '✅' || '❌' }} |
+          | terraform-plan | empty working_directory rejected | ${{ needs.terraform-plan-missing-working-dir.result == 'success' && '✅' || '❌' }} |
+          | terraform-plan | Azure missing tenant_id rejected | ${{ needs.terraform-plan-azure-missing-tenant.result == 'success' && '✅' || '❌' }} |
+          | security-scan | invalid severity rejected | ${{ needs.security-scan-invalid-severity.result == 'success' && '✅' || '❌' }} |
+          | security-scan | alpine:3.18 scan completes | ${{ needs.security-scan-image.result == 'success' && '✅' || '❌' }} |
+          | release-tag | empty github_token rejected | ${{ needs.release-tag-missing-token.result == 'success' && '✅' || '❌' }} |
+          | pr-comment | empty title rejected | ${{ needs.pr-comment-missing-title.result == 'success' && '✅' || '❌' }} |
+          | pr-comment | non-PR event skips gracefully | ${{ needs.pr-comment-non-pr-skips-gracefully.result == 'success' && '✅' || '❌' }} |
+          | setup-env | unsupported runtime rejected | ${{ needs.setup-env-invalid-runtime.result == 'success' && '✅' || '❌' }} |
+          | setup-env | node 20.x installs and outputs set | ${{ needs.setup-env-node.result == 'success' && '✅' || '❌' }} |
+          | setup-terraform | empty version rejected | ${{ needs.setup-terraform-empty-version.result == 'success' && '✅' || '❌' }} |
+          | setup-terraform | 1.9.0 installs and outputs set | ${{ needs.setup-terraform-install.result == 'success' && '✅' || '❌' }} |
+          | db-migrate | empty database_url rejected | ${{ needs.db-migrate-empty-url.result == 'success' && '✅' || '❌' }} |
+          | db-migrate | invalid tool rejected | ${{ needs.db-migrate-invalid-tool.result == 'success' && '✅' || '❌' }} |
+          | db-migrate | unreachable host fails health check | ${{ needs.db-migrate-unreachable-host.result == 'success' && '✅' || '❌' }} |
+          EOF
