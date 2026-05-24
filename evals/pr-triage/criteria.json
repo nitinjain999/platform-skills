@@ -1,29 +1,26 @@
 {
-  "criteria": [
+  "type": "weighted_checklist",
+  "context": "The agent was asked to triage a PR review comment about missing resource limits on a Kubernetes container, classify it, produce corrected YAML, and write a review reply.",
+  "checklist": [
     {
-      "name": "correct_classification",
-      "description": "Classifies the comment as ACTIONABLE_FIX (missing resource limits is a real correctness/safety issue that must be fixed)",
-      "required": true
+      "item": "Classifies the comment as ACTIONABLE_FIX (missing resource limits is a real safety issue)",
+      "weight": 2
     },
     {
-      "name": "correct_yaml",
-      "description": "Provides corrected YAML with both resources.requests (cpu, memory) and resources.limits (memory) set. CPU limit is intentionally omitted or justified — CPU limits cause throttling.",
-      "required": true
+      "item": "Provides corrected YAML with resources.requests (cpu + memory) and resources.limits (memory). CPU limit is omitted or justified — CPU limits cause throttling.",
+      "weight": 2
     },
     {
-      "name": "blast_radius",
-      "description": "Mentions blast radius: pods may be throttled or rescheduled if requests are set higher than current actual usage; rolling update will replace pods one by one.",
-      "required": true
+      "item": "States blast radius: rolling update replaces pods; if requests exceed actual usage, pods may be rescheduled",
+      "weight": 1
     },
     {
-      "name": "rollback_plan",
-      "description": "Provides a rollback approach: revert the manifest and re-apply, or use kubectl rollout undo.",
-      "required": true
+      "item": "Provides a rollback plan: revert manifest and re-apply, or kubectl rollout undo",
+      "weight": 1
     },
     {
-      "name": "reply_quality",
-      "description": "The review thread reply is concise, references the specific file and change, and ends with the appropriate resolution marker (✅ Fixed).",
-      "required": false
+      "item": "Review reply is concise, references the file, and ends with ✅ Fixed",
+      "weight": 1
     }
   ]
 }
