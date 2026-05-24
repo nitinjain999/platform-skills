@@ -1,0 +1,15 @@
+{
+  "name": "nitinjain999/platform-skills",
+  "mode": "vendored",
+  "dependencies": {
+    "nitinjain999/platform-skills": {
+      "version": "afb2b805c45b29630d1fe82f1fb866b1d73bacc0",
+      "source": "https://github.com/nitinjain999/platform-skills",
+      "include": {
+        "skills": [
+          "platform-skills"
+        ]
+      }
+    }
+  }
+}
