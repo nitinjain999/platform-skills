@@ -4,7 +4,7 @@
 # Scope: project-level — applies to every Copilot Chat in this workspace
 # Upgrade: git pull in the platform-skills clone → copy updated file → commit
 
-Use when troubleshooting, implementing, reviewing, or auditing platform infrastructure. Apply these patterns when generating or reviewing code across Kubernetes, Flux CD, Argo CD, Terraform, GitHub Actions (composite actions, OIDC, SHA pinning), AWS, Azure, GKE, Linkerd, KEDA autoscaling, supply chain security (Cosign, SBOM, SLSA), Falco runtime security, Chaos Engineering, DORA metrics, Datadog/Dynatrace/LLM observability, SOC 2 compliance, and PR review. Every answer includes blast radius, validation steps, and rollback plan.
+Use when troubleshooting, implementing, reviewing, or auditing platform infrastructure as a system — where Kubernetes, GitOps, CI/CD, and security concerns intersect. Apply these patterns when generating or reviewing code across Kubernetes, Flux CD, Argo CD, Terraform, GitHub Actions (composite actions, OIDC, SHA pinning), AWS, Azure, GKE, Linkerd, KEDA, supply chain security (Cosign, SBOM, SLSA), Falco, Chaos Engineering, DORA metrics, Datadog/Dynatrace/LLM observability, SOC 2, and PR review. Every answer includes blast radius, validation steps, and rollback plan.
 
 ## Core Principles
 

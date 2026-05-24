@@ -1,6 +1,6 @@
 ---
 name: platform-skills
-description: "Use when troubleshooting, implementing, reviewing, or auditing platform infrastructure. Provides structured diagnosis with blast radius, validation steps, and rollback plan for: Kubernetes, Flux CD, Argo CD, Terraform, GitHub Actions (composite actions, OIDC, SHA pinning), AWS, Azure, GKE, Linkerd, KEDA autoscaling, supply chain security (Cosign, SBOM, SLSA), Falco runtime security, Chaos Engineering, DORA metrics, Datadog/Dynatrace/LLM observability, SOC 2 compliance, and PR review."
+description: "Use when troubleshooting, implementing, reviewing, or auditing platform infrastructure as a system — where Kubernetes, GitOps, CI/CD, and security concerns intersect. Provides structured diagnosis with blast radius, validation steps, and rollback plan for: Kubernetes, Flux CD, Argo CD, Terraform, GitHub Actions (composite actions, OIDC, SHA pinning), AWS, Azure, GKE, Linkerd, KEDA, supply chain security (Cosign, SBOM, SLSA), Falco, Chaos Engineering, DORA metrics, Datadog/Dynatrace/LLM observability, SOC 2, and PR review."
 ---
 
 # Platform Skills
