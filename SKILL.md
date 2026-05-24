@@ -76,52 +76,52 @@ Load only the files needed for the current request.
 
 | File | Scope |
 |---|---|
-| [references/platform-operating-model.md](references/platform-operating-model.md) | Repo topology, ownership boundaries, promotion flow |
-| [references/terraform.md](references/terraform.md) | Module patterns, environments, state, testing |
-| [references/kubernetes.md](references/kubernetes.md) | Cluster baseline, workload, RBAC, policy |
-| [references/openshift.md](references/openshift.md) | OpenShift routing, SCC, OLM, tenancy |
-| [references/fluxcd.md](references/fluxcd.md) | Bootstrap, reconciliation, FluxInstance, ResourceSet, image automation |
-| [references/fluxcd-sources.md](references/fluxcd-sources.md) | GitRepository, OCIRepository, HelmRepository, Bucket, ArtifactGenerator |
-| [references/fluxcd-resourcesets.md](references/fluxcd-resourcesets.md) | ResourceSet templating, input strategies, gitless fleet patterns |
-| [references/fluxcd-notifications.md](references/fluxcd-notifications.md) | Provider, Alert, Receiver, Slack/Datadog/GitHub commit status |
-| [references/fluxcd-operator.md](references/fluxcd-operator.md) | FluxInstance sizing, multi-tenancy, kustomize patches, FluxReport |
-| [references/fluxcd-kustomization.md](references/fluxcd-kustomization.md) | CEL readyExpr, postBuild substitution, SOPS, SSA annotations |
-| [references/fluxcd-helmrelease.md](references/fluxcd-helmrelease.md) | chartRef vs chart.spec, drift detection, post-renderers, CRD lifecycle |
-| [references/fluxcd-terraform.md](references/fluxcd-terraform.md) | Flux Operator bootstrap via Terraform |
-| [references/fluxcd-mcp.md](references/fluxcd-mcp.md) | AI-assisted FluxCD debugging via Flux MCP server |
-| [references/fluxcd-migration.md](references/fluxcd-migration.md) | v2.7/v2.8 API removals, CLI and Operator upgrade paths |
-| [references/fluxcd-security.md](references/fluxcd-security.md) | Secrets, source auth, OCI supply chain, RBAC, image automation security |
-| [references/fluxcd-troubleshooting.md](references/fluxcd-troubleshooting.md) | Incident cheat-sheet — symptom → cause → fix per controller |
-| [references/argocd.md](references/argocd.md) | App delivery, ApplicationSet, sync policies |
-| [references/aws.md](references/aws.md) | Landing zones, IAM, EKS patterns |
-| [references/azure.md](references/azure.md) | Management groups, identity, AKS patterns |
-| [references/aws-cloudfront.md](references/aws-cloudfront.md) | CloudFront distributions, OAC, Lambda@Edge, security headers |
-| [references/aws-waf.md](references/aws-waf.md) | Web ACLs, managed rules, rate limiting, Firewall Manager |
-| [references/github-actions.md](references/github-actions.md) | Reusable workflows, OIDC, delivery controls |
-| [references/composite-actions.md](references/composite-actions.md) | Composite action scaffold, SHA pinning, secrets-as-inputs, actionlint |
-| [references/secrets.md](references/secrets.md) | External Secrets Operator, Sealed Secrets, secrets strategy |
-| [references/linkerd.md](references/linkerd.md) | mTLS, observability, traffic management, multi-cluster |
-| [references/linux-networking.md](references/linux-networking.md) | DNS, load balancing, VPC/VNet, kernel tuning, connectivity |
-| [references/platform-mindset.md](references/platform-mindset.md) | DevEx, friction audits, RFC/ADR, incident communication, post-mortems |
-| [references/compliance.md](references/compliance.md) | SOC 2 controls, IAM, encryption, audit logging, Checkov evidence |
-| [references/helm.md](references/helm.md) | Chart scaffolding, lint pipeline, values design, GitOps integration |
-| [references/mcp.md](references/mcp.md) | MCP protocol, SDKs, transports, schema validation, auth, testing |
-| [references/observability.md](references/observability.md) | Prometheus, OpenTelemetry, Grafana, alerting, k6, capacity |
-| [references/documentation.md](references/documentation.md) | Docstrings, OpenAPI 3.1, MkDocs, developer guides |
-| [references/datadog.md](references/datadog.md) | Agent, APM, monitors, dashboards, SLOs, LLMObs, FluxCD monitoring |
-| [references/llm-observability.md](references/llm-observability.md) | LLMObs instrumentation, eval bootstrap, trace RCA |
-| [references/dynatrace.md](references/dynatrace.md) | OneAgent, auto-instrumentation, anomaly detection, SLOs, Terraform |
-| [references/conventional-commits.md](references/conventional-commits.md) | Commit message structure, atomic staging, commitlint, semantic-release |
-| [references/opa.md](references/opa.md) | Rego v1 syntax, rule types, unit tests, fmt/regal/verify pipeline |
-| [references/kyverno.md](references/kyverno.md) | ValidatingPolicy, MutatingPolicy, ImageValidatingPolicy, CEL, kyverno-cli |
-| [references/pr-review.md](references/pr-review.md) | Cost, drift, ownership, compliance, deprecated APIs, rollback scoring |
-| [references/keda.md](references/keda.md) | ScaledObject, ScaledJob, scalers, TriggerAuthentication, scale-to-zero |
-| [references/agent-self-improve.md](references/agent-self-improve.md) | `.learnings/` workspace, WAL, VFM, ADL, status/migrate |
-| [references/supply-chain.md](references/supply-chain.md) | Cosign, Syft SBOM, Trivy/Grype, SLSA Level 2, ImageValidatingPolicy |
-| [references/runtime-security.md](references/runtime-security.md) | Falco eBPF, custom rules, Falcosidekick, Kyverno enforcement |
-| [references/chaos.md](references/chaos.md) | Litmus Chaos, Chaos Mesh, steady-state hypothesis, GameDay |
-| [references/dora.md](references/dora.md) | Deployment Frequency, Lead Time, CFR, MTTR, Prometheus instrumentation |
-| [references/awesome-docs.md](references/awesome-docs.md) | Animated SVG Markdown — architecture flow, lifecycle, carousel, timeline |
+| references/platform-operating-model.md | Repo topology, ownership boundaries, promotion flow |
+| references/terraform.md | Module patterns, environments, state, testing |
+| references/kubernetes.md | Cluster baseline, workload, RBAC, policy |
+| references/openshift.md | OpenShift routing, SCC, OLM, tenancy |
+| references/fluxcd.md | Bootstrap, reconciliation, FluxInstance, ResourceSet, image automation |
+| references/fluxcd-sources.md | GitRepository, OCIRepository, HelmRepository, Bucket, ArtifactGenerator |
+| references/fluxcd-resourcesets.md | ResourceSet templating, input strategies, gitless fleet patterns |
+| references/fluxcd-notifications.md | Provider, Alert, Receiver, Slack/Datadog/GitHub commit status |
+| references/fluxcd-operator.md | FluxInstance sizing, multi-tenancy, kustomize patches, FluxReport |
+| references/fluxcd-kustomization.md | CEL readyExpr, postBuild substitution, SOPS, SSA annotations |
+| references/fluxcd-helmrelease.md | chartRef vs chart.spec, drift detection, post-renderers, CRD lifecycle |
+| references/fluxcd-terraform.md | Flux Operator bootstrap via Terraform |
+| references/fluxcd-mcp.md | AI-assisted FluxCD debugging via Flux MCP server |
+| references/fluxcd-migration.md | v2.7/v2.8 API removals, CLI and Operator upgrade paths |
+| references/fluxcd-security.md | Secrets, source auth, OCI supply chain, RBAC, image automation security |
+| references/fluxcd-troubleshooting.md | Incident cheat-sheet — symptom → cause → fix per controller |
+| references/argocd.md | App delivery, ApplicationSet, sync policies |
+| references/aws.md | Landing zones, IAM, EKS patterns |
+| references/azure.md | Management groups, identity, AKS patterns |
+| references/aws-cloudfront.md | CloudFront distributions, OAC, Lambda@Edge, security headers |
+| references/aws-waf.md | Web ACLs, managed rules, rate limiting, Firewall Manager |
+| references/github-actions.md | Reusable workflows, OIDC, delivery controls |
+| references/composite-actions.md | Composite action scaffold, SHA pinning, secrets-as-inputs, actionlint |
+| references/secrets.md | External Secrets Operator, Sealed Secrets, secrets strategy |
+| references/linkerd.md | mTLS, observability, traffic management, multi-cluster |
+| references/linux-networking.md | DNS, load balancing, VPC/VNet, kernel tuning, connectivity |
+| references/platform-mindset.md | DevEx, friction audits, RFC/ADR, incident communication, post-mortems |
+| references/compliance.md | SOC 2 controls, IAM, encryption, audit logging, Checkov evidence |
+| references/helm.md | Chart scaffolding, lint pipeline, values design, GitOps integration |
+| references/mcp.md | MCP protocol, SDKs, transports, schema validation, auth, testing |
+| references/observability.md | Prometheus, OpenTelemetry, Grafana, alerting, k6, capacity |
+| references/documentation.md | Docstrings, OpenAPI 3.1, MkDocs, developer guides |
+| references/datadog.md | Agent, APM, monitors, dashboards, SLOs, LLMObs, FluxCD monitoring |
+| references/llm-observability.md | LLMObs instrumentation, eval bootstrap, trace RCA |
+| references/dynatrace.md | OneAgent, auto-instrumentation, anomaly detection, SLOs, Terraform |
+| references/conventional-commits.md | Commit message structure, atomic staging, commitlint, semantic-release |
+| references/opa.md | Rego v1 syntax, rule types, unit tests, fmt/regal/verify pipeline |
+| references/kyverno.md | ValidatingPolicy, MutatingPolicy, ImageValidatingPolicy, CEL, kyverno-cli |
+| references/pr-review.md | Cost, drift, ownership, compliance, deprecated APIs, rollback scoring |
+| references/keda.md | ScaledObject, ScaledJob, scalers, TriggerAuthentication, scale-to-zero |
+| references/agent-self-improve.md | `.learnings/` workspace, WAL, VFM, ADL, status/migrate |
+| references/supply-chain.md | Cosign, Syft SBOM, Trivy/Grype, SLSA Level 2, ImageValidatingPolicy |
+| references/runtime-security.md | Falco eBPF, custom rules, Falcosidekick, Kyverno enforcement |
+| references/chaos.md | Litmus Chaos, Chaos Mesh, steady-state hypothesis, GameDay |
+| references/dora.md | Deployment Frequency, Lead Time, CFR, MTTR, Prometheus instrumentation |
+| references/awesome-docs.md | Animated SVG Markdown — architecture flow, lifecycle, carousel, timeline |
 
 ## Slash Commands
 
@@ -157,4 +157,4 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:awesome-docs` — generate any animated Markdown document (README, architecture guide, runbook, tutorial, RFC, post-mortem, or custom), convert existing Markdown to animated, update diagrams, diff for staleness, audit quality, preview locally, or export to Confluence/Notion HTML
 - `/platform-skills:aws` — CloudFront distributions, WAF web ACLs, Lambda@Edge, CloudFront Functions, Firewall Manager multi-account enforcement, and Terraform module generation with best practices
 - `/platform-skills:composite-actions` — generate a full composite action repo scaffold, review an existing action.yml, harden with SHA pinning and env isolation, or generate a test workflow
-- Working Flux CD examples: [examples/fluxcd/](examples/fluxcd/)
+- Working Flux CD examples: examples/fluxcd/
