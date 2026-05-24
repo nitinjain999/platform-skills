@@ -207,7 +207,7 @@ metadata:
     fluxcd.controlplane.io/reconcileEvery: "2m"
 spec:
   type: OCIArtifactTag
-  url: ghcr.io/my-org/my-app
+  url: oci://ghcr.io/my-org/my-app
   secretRef:
     name: registry-auth
   filter:
