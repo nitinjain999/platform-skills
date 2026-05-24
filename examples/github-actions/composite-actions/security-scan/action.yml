@@ -174,12 +174,14 @@ runs:
         [[ -n "$SARIF_PATH" ]] && echo "sarif_path=$SARIF_PATH" >> "$GITHUB_OUTPUT"
 
         # Emit annotations for each critical finding
+        # || true: grep exits 1 when no lines match; with pipefail that would
+        # abort the step even though zero findings is a valid outcome.
         grep -E '^\s*CRITICAL' /tmp/trivy-output.txt | while read -r line; do
           echo "::error::CRITICAL vulnerability: $line"
-        done
+        done || true
         grep -E '^\s*HIGH' /tmp/trivy-output.txt | while read -r line; do
           echo "::warning::HIGH vulnerability: $line"
-        done
+        done || true
 
         # Store exit code for evaluation step
         echo "TRIVY_EXIT_CODE=$TRIVY_EXIT" >> "$GITHUB_ENV"
