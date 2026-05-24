@@ -1,6 +1,6 @@
 {
   "name": "platform-skills",
-  "version": "1.25.0",
+  "version": "1.25.1",
   "description": "Practical guidance for platform engineers: Kubernetes, Kyverno, Helm, Terraform, Flux CD (Flux Operator, FluxInstance, gitless OCI delivery, cluster debug, repo audit), Argo CD, GitHub Actions (composite actions, SHA pinning, OIDC, 11 production examples), AWS (CloudFront, WAF, Lambda@Edge, IAM, IRSA), Azure (AKS workload identity), GKE (Workload Identity Federation), Linkerd, Linux, networking, MCP development, observability, SOC 2 compliance, PR review, PR triage, KEDA autoscaling, supply chain security (Cosign, SBOM, SLSA), Falco runtime security, Chaos Engineering, DORA Metrics, LLM Observability (Datadog LLMObs), and animated docs. Every answer includes blast radius, validation steps, and rollback plan.",
   "author": {
     "name": "Nitin Jain",
