@@ -27,9 +27,9 @@ inputs:
     default: 'false'
     type: boolean
   trivy_version:
-    description: 'Trivy version to install (e.g. 0.58.0).'
+    description: 'Trivy version to install (e.g. 0.70.0).'
     required: false
-    default: '0.58.0'
+    default: '0.70.0'
   output_format:
     description: 'Trivy output format for the job summary.'
     required: false
@@ -113,7 +113,7 @@ runs:
           echo "Trivy $TRIVY_VERSION already installed"
         else
           TGZ="trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
-          curl -sSL \
+          curl -sSLf \
             "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/${TGZ}" \
             -o "/tmp/${TGZ}"
           tar xzf "/tmp/${TGZ}" -C /usr/local/bin trivy
