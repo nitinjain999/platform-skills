@@ -1,0 +1,1 @@
+Flux CD troubleshooting: classify a HelmRelease failure by layer (source/artifact/reconciliation/chart rendering/runtime), collect evidence, identify root cause, and provide a fix with rollback.

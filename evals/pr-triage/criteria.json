@@ -1,0 +1,29 @@
+{
+  "criteria": [
+    {
+      "name": "correct_classification",
+      "description": "Classifies the comment as ACTIONABLE_FIX (missing resource limits is a real correctness/safety issue that must be fixed)",
+      "required": true
+    },
+    {
+      "name": "correct_yaml",
+      "description": "Provides corrected YAML with both resources.requests (cpu, memory) and resources.limits (memory) set. CPU limit is intentionally omitted or justified — CPU limits cause throttling.",
+      "required": true
+    },
+    {
+      "name": "blast_radius",
+      "description": "Mentions blast radius: pods may be throttled or rescheduled if requests are set higher than current actual usage; rolling update will replace pods one by one.",
+      "required": true
+    },
+    {
+      "name": "rollback_plan",
+      "description": "Provides a rollback approach: revert the manifest and re-apply, or use kubectl rollout undo.",
+      "required": true
+    },
+    {
+      "name": "reply_quality",
+      "description": "The review thread reply is concise, references the specific file and change, and ends with the appropriate resolution marker (✅ Fixed).",
+      "required": false
+    }
+  ]
+}

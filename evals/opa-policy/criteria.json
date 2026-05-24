@@ -1,0 +1,34 @@
+{
+  "criteria": [
+    {
+      "name": "rego_v1_import",
+      "description": "Policy uses `import rego.v1` — not the legacy implicit future.keywords import.",
+      "required": true
+    },
+    {
+      "name": "metadata_annotation",
+      "description": "Policy has a METADATA block with at least `title` and `entrypoint: true`.",
+      "required": true
+    },
+    {
+      "name": "deny_rule_correct",
+      "description": "The deny rule correctly catches both `\"Action\": \"*\"` (string) and `\"Action\": [\"*\"]` (array) forms. Uses `contains msg if` syntax (not the deprecated `msg { ... }` form).",
+      "required": true
+    },
+    {
+      "name": "deny_message_names_resource",
+      "description": "The deny message includes the resource name (e.g. `sprintf(\"IAM policy '%s' must not use wildcard Action\", [name])`).",
+      "required": true
+    },
+    {
+      "name": "test_file",
+      "description": "Provides a `policy_test.rego` with at least one `test_deny_` case (wildcard → deny) and one `test_allow_` case (scoped action → no deny).",
+      "required": true
+    },
+    {
+      "name": "ci_placement",
+      "description": "Correctly states conftest runs after `terraform validate` and before `terraform plan` (or alongside plan as a gate).",
+      "required": true
+    }
+  ]
+}
