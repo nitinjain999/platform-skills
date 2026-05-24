@@ -9,11 +9,9 @@ inputs:
       SECRET — pass as: webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
     required: true
   status:
-    description: 'Build status to report.'
+    description: 'Build status to report: success, failure, or cancelled.'
     required: false
     default: ${{ job.status }}
-    type: choice
-    options: [success, failure, cancelled]
   message:
     description: 'Optional custom message appended to the notification.'
     required: false

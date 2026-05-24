@@ -22,12 +22,10 @@ inputs:
     description: 'Update an existing comment with the same marker instead of creating a new one.'
     required: false
     default: 'true'
-    type: boolean
   delete_on_close:
     description: 'Remove the comment when the PR is closed or merged. Requires the workflow to trigger on pull_request closed event.'
     required: false
     default: 'false'
-    type: boolean
   icon:
     description: 'Emoji or icon prepended to the title (e.g. ✅ ❌ ⚠️ 📋).'
     required: false
@@ -36,7 +34,6 @@ inputs:
     description: 'Wrap the body in a <details> block so it is collapsed by default.'
     required: false
     default: 'false'
-    type: boolean
   collapsible_summary:
     description: 'Summary text shown for the collapsed details block.'
     required: false

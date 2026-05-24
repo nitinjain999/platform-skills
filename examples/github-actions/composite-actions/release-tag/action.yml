@@ -9,11 +9,9 @@ inputs:
       Pass as: github_token: ${{ secrets.GITHUB_TOKEN }}
     required: true
   version_type:
-    description: 'Semver bump type, or auto to derive from conventional commit messages.'
+    description: 'Semver bump type: major, minor, patch, or auto to derive from conventional commit messages.'
     required: false
     default: 'auto'
-    type: choice
-    options: [major, minor, patch, auto]
   release_branch:
     description: 'Branch that is allowed to create releases.'
     required: false
@@ -22,12 +20,10 @@ inputs:
     description: 'Create the release as a draft (not publicly visible until published).'
     required: false
     default: 'false'
-    type: boolean
   prerelease:
     description: 'Mark the release as a pre-release.'
     required: false
     default: 'false'
-    type: boolean
   tag_prefix:
     description: 'Prefix added to the version number when creating the tag (e.g. v).'
     required: false

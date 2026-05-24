@@ -7,11 +7,9 @@ inputs:
     description: 'Image URI or filesystem path to scan (e.g. ghcr.io/org/app:sha, .).'
     required: true
   scan_type:
-    description: 'Target type to scan.'
+    description: 'Target type to scan: image, fs, or repo.'
     required: false
     default: 'image'
-    type: choice
-    options: [image, fs, repo]
   severity:
     description: 'Comma-separated severity levels to report (e.g. HIGH,CRITICAL).'
     required: false
@@ -20,22 +18,18 @@ inputs:
     description: 'Exit non-zero when vulnerabilities are found at or above the severity threshold.'
     required: false
     default: 'true'
-    type: boolean
   ignore_unfixed:
     description: 'Ignore vulnerabilities with no available fix.'
     required: false
     default: 'false'
-    type: boolean
   trivy_version:
     description: 'Trivy version to install (e.g. 0.70.0).'
     required: false
     default: '0.70.0'
   output_format:
-    description: 'Trivy output format for the job summary.'
+    description: 'Trivy output format for the job summary: table, json, or sarif.'
     required: false
     default: 'table'
-    type: choice
-    options: [table, json, sarif]
   registry_username:
     description: |
       Registry username for pulling private images.

@@ -72,7 +72,6 @@ inputs:
     description: 'Run kubectl apply with --dry-run=server to validate without applying.'
     required: false
     default: 'false'
-    type: boolean
 
 outputs:
   rollout_status:

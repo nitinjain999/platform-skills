@@ -60,6 +60,9 @@ runs:
         AZURE_SUBSCRIPTION_ID: ${{ inputs.azure_subscription_id }}
         GCP_WORKLOAD_IDENTITY_PROVIDER: ${{ inputs.gcp_workload_identity_provider }}
         GCP_SERVICE_ACCOUNT: ${{ inputs.gcp_service_account }}
+        GCP_PROJECT: ${{ inputs.gcp_project }}
+        GCP_CLUSTER_NAME: ${{ inputs.gcp_cluster_name }}
+        GCP_CLUSTER_LOCATION: ${{ inputs.gcp_cluster_location }}
       run: |
         case "$CLOUD_PROVIDER" in
           aws)
@@ -79,6 +82,12 @@ runs:
               { echo "::error::gcp_workload_identity_provider is required when cloud_provider=gke"; exit 1; }
             [[ -n "$GCP_SERVICE_ACCOUNT" ]] || \
               { echo "::error::gcp_service_account is required when cloud_provider=gke"; exit 1; }
+            [[ -n "$GCP_PROJECT" ]] || \
+              { echo "::error::gcp_project is required when cloud_provider=gke"; exit 1; }
+            [[ -n "$GCP_CLUSTER_NAME" ]] || \
+              { echo "::error::gcp_cluster_name is required when cloud_provider=gke"; exit 1; }
+            [[ -n "$GCP_CLUSTER_LOCATION" ]] || \
+              { echo "::error::gcp_cluster_location is required when cloud_provider=gke"; exit 1; }
             ;;
           *)
             echo "::error::cloud_provider must be 'aws', 'azure', or 'gke', got: $CLOUD_PROVIDER"

@@ -30,7 +30,6 @@ inputs:
     description: 'Push the image to the registry after a successful build.'
     required: false
     default: 'true'
-    type: boolean
   registry:
     description: 'Container registry host.'
     required: false

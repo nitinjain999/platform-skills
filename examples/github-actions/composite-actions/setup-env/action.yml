@@ -4,10 +4,8 @@ author: 'Platform Team'
 
 inputs:
   runtime:
-    description: 'Language runtime to install.'
+    description: 'Language runtime to install: node, python, or go.'
     required: true
-    type: choice
-    options: [node, python, go]
   version:
     description: 'Runtime version (e.g. 20.x for Node, 3.12 for Python, 1.22.x for Go).'
     required: false
@@ -16,7 +14,6 @@ inputs:
     description: 'Restore the dependency cache (npm/pip/go module cache).'
     required: false
     default: 'true'
-    type: boolean
   working_directory:
     description: 'Directory containing the lock file used for cache key generation.'
     required: false
@@ -25,7 +22,6 @@ inputs:
     description: 'Run the install command after setup (npm ci / pip install -r requirements.txt / go mod download).'
     required: false
     default: 'true'
-    type: boolean
 
 outputs:
   runtime_version:
