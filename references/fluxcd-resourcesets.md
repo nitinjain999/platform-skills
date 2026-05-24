@@ -101,11 +101,15 @@ spec:
 | `defaultValues` | Merged defaults added to every exported entry |
 | `schedule` | Cron expression for reconciliation windows |
 
-Reconciliation interval is controlled via annotation, not spec:
+Reconciliation interval is set via `spec.interval` on the ResourceSetInputProvider. The annotation form is also supported as an override:
 
 ```yaml
-annotations:
-  fluxcd.controlplane.io/reconcileEvery: "5m"
+spec:
+  interval: 5m         # polling interval on the provider
+
+# Optional override via annotation (takes precedence over spec.interval):
+# annotations:
+#   fluxcd.controlplane.io/reconcileEvery: "5m"
 ```
 
 ---

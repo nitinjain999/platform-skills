@@ -22,7 +22,7 @@ spec:
     type: kubernetes
     multitenant: false
     networkPolicy: true          # restricts Flux controller inter-pod communication
-    domain: "cluster.local"
+    clusterDomain: "cluster.local"
   sync:
     kind: OCIRepository
     url: "oci://ghcr.io/my-org/fleet-manifests"

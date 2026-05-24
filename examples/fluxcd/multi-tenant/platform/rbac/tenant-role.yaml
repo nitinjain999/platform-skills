@@ -4,7 +4,7 @@ metadata:
   name: tenant-reconciler
 rules:
   - apiGroups: [""]
-    resources: ["namespaces", "serviceaccounts", "configmaps", "secrets", "services", "persistentvolumeclaims"]
+    resources: ["serviceaccounts", "configmaps", "secrets", "services", "persistentvolumeclaims"]
     verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
   - apiGroups: ["apps"]
     resources: ["deployments", "replicasets", "statefulsets", "daemonsets"]

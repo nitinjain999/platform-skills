@@ -19,8 +19,8 @@ grep -rn "kind: Secret" . | grep -v "SealedSecret\|ExternalSecret" | while read 
   fi
 done
 
-# Find secretGenerator with plaintext in kustomization.yaml
-grep -rn "secretGenerator\|literals:\|envs:\|files:" kustomization.yaml
+# Find secretGenerator with plaintext in any kustomization.yaml (recursive)
+grep -rn "secretGenerator\|literals:\|envs:\|files:" . --include="kustomization.yaml"
 
 # Find configMapGenerator with credential-like values
 grep -rn "configMapGenerator" . -A 10 | grep -iE "password|token|secret|key|credential"
