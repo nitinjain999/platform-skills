@@ -112,8 +112,12 @@ runs:
         if command -v trivy > /dev/null 2>&1 && trivy --version | grep -q "$TRIVY_VERSION"; then
           echo "Trivy $TRIVY_VERSION already installed"
         else
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-            | sh -s -- -b /usr/local/bin "v${TRIVY_VERSION}"
+          TGZ="trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          curl -sSL \
+            "https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}/${TGZ}" \
+            -o "/tmp/${TGZ}"
+          tar xzf "/tmp/${TGZ}" -C /usr/local/bin trivy
+          rm "/tmp/${TGZ}"
           echo "Installed Trivy $(trivy --version | head -1)"
         fi
         echo "::endgroup::"

@@ -325,6 +325,9 @@ jobs:
 
   pr-comment-non-pr-skips-gracefully:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
       - id: comment
