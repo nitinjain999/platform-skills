@@ -14,11 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
-      contents: write
-      pull-requests: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
-      - uses: tesslio/patch-version-publish@v1
+      - uses: tesslio/setup-tessl@v2
         with:
           token: ${{ secrets.TESSL_TOKEN }}
-          path: skills/platform-skills
+      - name: Publish skill
+        run: tessl tile publish skills/platform-skills
