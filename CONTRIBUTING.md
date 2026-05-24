@@ -298,7 +298,7 @@ kind: ConfigMap
 
 Use relative links for internal docs:
 ```markdown
-See [Flux CD patterns](references/flux.md) for details.
+See [Flux CD patterns](references/fluxcd.md) for details.
 ```
 
 Use absolute links for external resources:

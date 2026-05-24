@@ -39,6 +39,7 @@ Match the task to the right layer:
 26. `Runtime Security`: Detect in-container threats at the syscall level with Falco (eBPF driver, CNCF, no license cost). Covers eBPF driver deployment on EKS/GKE, custom rule authoring, Falcosidekick alert routing to Slack/PagerDuty/webhook, rule debugging, and bridging runtime signals to Kyverno admission enforcement.
 27. `Awesome Docs`: Generate, convert, and maintain animated GitHub-safe Markdown documents — any doc type (README, architecture guide, runbook, tutorial, API reference, how-it-works, RFC, post-mortem, or custom). Four SVG patterns: architecture flow, lifecycle loop, field explainer carousel, and timeline phases. Covers guided interview for new docs, converting existing plain Markdown, updating individual diagrams, diffing for stale diagrams, quality auditing, local preview, and multi-platform export (GitHub SVG, Confluence/Notion HTML, PNG guidance). Supports `github-dark`, `docs-light`, and custom color themes.
 28. `Composite GitHub Actions`: Generate, review, secure, and test composite GitHub Actions following best practices. Covers interview-driven scaffold (full repo structure including `action.yml`, README, test workflow, release workflow, `dependabot.yml`), PR creation on existing repos via `gh`, SHA pinning vs semver strategy, secrets-as-inputs pattern, `::add-mask::`, `$GITHUB_ENV` / `$GITHUB_OUTPUT` / `$GITHUB_PATH` / `$GITHUB_STEP_SUMMARY`, input validation, log grouping, inline PR annotations, multi-OS patterns, idempotency, breaking-change guide, and actionlint validation. Eleven production-ready examples: docker-build-push, notify-slack, k8s-deploy, terraform-plan, security-scan, release-tag, pr-comment, setup-env, configure-cloud, setup-terraform, and db-migrate.
+29. `GitOps`: Flux CD and Argo CD in two modes — `debug` (five structured workflows: installation check, source failures, HelmRelease trace, Kustomization trace, ResourceSet trace → five-section report with root cause and recommendations) and `audit` (six-phase read-only repo analysis: discovery, manifest validation, API compliance, best practices, security review → prioritized Critical/Warning/Info report).
 
 If a task spans multiple areas, decide which layer owns the source of truth and keep the other layers consumers of that state.
 
@@ -75,7 +76,18 @@ When asked to generate code, start from the thinnest useful slice that proves th
 - For Terraform module, environment, testing, and state guidance, read [references/terraform.md](references/terraform.md).
 - For cluster baseline, workload, RBAC, and policy guidance, read [references/kubernetes.md](references/kubernetes.md).
 - For OpenShift-specific operating patterns, read [references/openshift.md](references/openshift.md).
-- For Flux bootstrap, reconciliation, image automation, and app delivery guidance, read [references/flux.md](references/flux.md).
+- For Flux bootstrap, reconciliation, Flux Operator (FluxInstance, FluxReport), ResourceSet, gitless OCI delivery, source selection, image automation (Git-based and gitless), and common mistakes — read [references/fluxcd.md](references/fluxcd.md).
+- For FluxCD source CRDs (GitRepository, OCIRepository, HelmRepository, Bucket, ArtifactGenerator) — read [references/fluxcd-sources.md](references/fluxcd-sources.md).
+- For ResourceSet templating, ResourceSetInputProvider types, input strategies (Flatten/Permute), gitless fleet and preview environment patterns — read [references/fluxcd-resourcesets.md](references/fluxcd-resourcesets.md).
+- For Flux notification-controller (Provider, Alert, Receiver), Slack/Datadog/GitHub commit status, and Receiver webhook patterns — read [references/fluxcd-notifications.md](references/fluxcd-notifications.md).
+- For Flux Operator deep dive (FluxInstance cluster sizing, multi-tenancy, kustomize patches, runtime ConfigMap, FluxReport) — read [references/fluxcd-operator.md](references/fluxcd-operator.md).
+- For Kustomization advanced features (CEL readyExpr, postBuild substitution, SOPS, health check expressions, SSA apply annotations, remote cluster) — read [references/fluxcd-kustomization.md](references/fluxcd-kustomization.md).
+- For HelmRelease deep dive (chartRef vs chart.spec, drift detection modes, post-renderers, CRD lifecycle, CEL health checks) — read [references/fluxcd-helmrelease.md](references/fluxcd-helmrelease.md).
+- For bootstrapping Flux Operator via Terraform (Job-based bootstrap, gitops vs managed resources, runtime info, secret handling, node scheduling) — read [references/fluxcd-terraform.md](references/fluxcd-terraform.md).
+- For AI-assisted FluxCD debugging via the Flux MCP server (installation, core workflows, log analysis) — read [references/fluxcd-mcp.md](references/fluxcd-mcp.md).
+- For Flux API migration (v2.7 v1beta1 removals, v2.8 v1beta2 removals, CLI and Operator 3-step upgrade paths, CI gate) — read [references/fluxcd-migration.md](references/fluxcd-migration.md).
+- For FluxCD security audit (secrets management, hardcoded credential grep patterns, source auth, OCI supply chain, RBAC, image automation security) — read [references/fluxcd-security.md](references/fluxcd-security.md).
+- For a scannable incident cheat-sheet (controller / source / Kustomization / HelmRelease / ResourceSet failures — symptom → cause → fix, label-based ownership tracing, general debugging checklist) — read [references/fluxcd-troubleshooting.md](references/fluxcd-troubleshooting.md).
 - For Argo CD app delivery and application set patterns, read [references/argocd.md](references/argocd.md).
 - For AWS landing zones, IAM, and EKS-oriented patterns, read [references/aws.md](references/aws.md).
 - For Azure management groups, identity, and AKS-oriented patterns, read [references/azure.md](references/azure.md).
@@ -89,9 +101,9 @@ When asked to generate code, start from the thinnest useful slice that proves th
 - For MCP server and client development — protocol, TypeScript/Python SDKs, schema validation, transports, security, and testing — read [references/mcp.md](references/mcp.md).
 - For observability instrumentation, Prometheus metrics, OpenTelemetry tracing, alerting rules, Grafana dashboards, load testing, and capacity planning, read [references/observability.md](references/observability.md).
 - For code documentation — Python docstrings, JSDoc, OpenAPI 3.1 specs, documentation sites, and developer guides — read [references/documentation.md](references/documentation.md).
-- For Datadog Agent setup, APM, log management, monitors, dashboards, SLOs, synthetic tests, pup CLI, and Datadog Labs Claude skills — read [references/datadog.md](references/datadog.md).
+- For Datadog Agent setup, APM, log management, monitors, dashboards, SLOs, synthetic tests, pup CLI, Datadog Labs Claude skills, and FluxCD reconciliation monitoring — read [references/datadog.md](references/datadog.md).
 - For LLM Observability — LLMObs instrumentation (Python/Node.js), eval bootstrap, trace RCA, and experiment analysis — read [references/llm-observability.md](references/llm-observability.md).
-- For Dynatrace OneAgent Operator, auto-instrumentation, custom metrics, SLOs, anomaly detection, and Terraform provider — read [references/dynatrace.md](references/dynatrace.md).
+- For Dynatrace OneAgent Operator, auto-instrumentation, custom metrics, SLOs, anomaly detection, Terraform provider, and FluxCD reconciliation monitoring via Prometheus ingestion — read [references/dynatrace.md](references/dynatrace.md).
 - For Conventional Commits — type classification, scope rules, breaking changes, message structure, atomic commits, commitlint, husky, semantic-release, and validation rules — read [references/conventional-commits.md](references/conventional-commits.md).
 - For OPA / Conftest — Rego v1 syntax, rule types, package namespacing, input shapes, unit tests, validation pipeline (fmt/regal/verify), GitHub Actions integration, and troubleshooting — read [references/opa.md](references/opa.md).
 - For Kyverno CEL-based admission policies — ValidatingPolicy, MutatingPolicy, GeneratingPolicy, ImageValidatingPolicy, matchConstraints, matchConditions, Audit→Deny promotion, PolicyException, kyverno-cli testing, and migration from legacy ClusterPolicy — read [references/kyverno.md](references/kyverno.md).
@@ -116,7 +128,9 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:debug` — structured troubleshooting for any platform symptom
 - `/platform-skills:review` — production-readiness review of any manifest, Terraform, or workflow
 - `/platform-skills:terraform` — full fmt/validate/tflint/security pipeline + blast radius review
-- `/platform-skills:gitops` — Flux CD and Argo CD reconciliation troubleshooting
+- `/platform-skills:fluxcd` — FluxCD entry point: routes to debug (live cluster issue), audit (repo health check), or helm (chart review) based on your input
+- `/platform-skills:gitops debug` — Flux CD and Argo CD live cluster troubleshooting (5-workflow structured debug)
+- `/platform-skills:gitops audit` — Flux CD GitOps repository 6-phase audit (discovery, validation, API compliance, best practices, security, report)
 - `/platform-skills:linkerd` — Linkerd mTLS, injection, policy, and multi-cluster diagnostics
 - `/platform-skills:linux` — Linux administration, DNS, load balancing, VPC/VNet, and connectivity troubleshooting
 - `/platform-skills:product` — product thinking, friction audits, DevEx, RFC/ADR, incident updates, post-mortems
@@ -141,3 +155,4 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:awesome-docs` — generate any animated Markdown document (README, architecture guide, runbook, tutorial, RFC, post-mortem, or custom), convert existing Markdown to animated, update diagrams, diff for staleness, audit quality, preview locally, or export to Confluence/Notion HTML
 - `/platform-skills:aws` — CloudFront distributions, WAF web ACLs, Lambda@Edge, CloudFront Functions, Firewall Manager multi-account enforcement, and Terraform module generation with best practices
 - `/platform-skills:composite-actions` — generate a full composite action repo scaffold, review an existing action.yml, harden with SHA pinning and env isolation, or generate a test workflow
+- Working Flux CD examples: [examples/fluxcd/](examples/fluxcd/)

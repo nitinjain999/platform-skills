@@ -42,7 +42,18 @@ REQUIRED_REFERENCES=(
   references/terraform.md
   references/kubernetes.md
   references/openshift.md
-  references/flux.md
+  references/fluxcd.md
+  references/fluxcd-sources.md
+  references/fluxcd-resourcesets.md
+  references/fluxcd-notifications.md
+  references/fluxcd-operator.md
+  references/fluxcd-kustomization.md
+  references/fluxcd-helmrelease.md
+  references/fluxcd-terraform.md
+  references/fluxcd-mcp.md
+  references/fluxcd-migration.md
+  references/fluxcd-security.md
+  references/fluxcd-troubleshooting.md
   references/argocd.md
   references/aws.md
   references/azure.md
@@ -89,7 +100,7 @@ EXAMPLE_DOMAINS=(
   examples/kubernetes
   examples/openshift
   examples/argocd
-  examples/flux
+  examples/fluxcd
   examples/terraform
   examples/github-actions
   examples/compliance

@@ -82,7 +82,7 @@
     },
     {
       "description": "Update Flux CD version in documentation",
-      "fileMatch": ["^examples/flux/.*\\.md$"],
+      "fileMatch": ["^examples/fluxcd/.*\\.md$"],
       "matchStrings": [
         "Flux CLI \\((?<currentValue>[^)]+)\\)"
       ],

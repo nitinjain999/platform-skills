@@ -368,3 +368,121 @@ curl -X POST "https://{env}.live.dynatrace.com/api/v2/problems/{problemId}/close
 | `dataIngestToken` | `metrics.ingest`, `logs.ingest` |
 
 Store both tokens in Kubernetes Secrets or a secrets manager — never in plain Helm values or Terraform state.
+
+---
+
+## FluxCD Integration
+
+Dynatrace does not ship a native FluxCD extension, but monitors FluxCD controllers via **Prometheus metric ingestion** — either through ActiveGate scraping (Extensions 2.0) or the OpenTelemetry Collector.
+
+### Method 1 — ActiveGate Prometheus scraping (recommended)
+
+FluxCD controllers expose Prometheus metrics on port `8080`. Annotate the pods and configure the DynaKube to scrape them:
+
+```yaml
+apiVersion: dynatrace.com/v1beta3
+kind: DynaKube
+metadata:
+  name: dynatrace
+  namespace: dynatrace
+spec:
+  metricIngest:
+    enabled: true
+  activeGate:
+    capabilities:
+      - prometheus-scraper
+```
+
+Then annotate Flux controller pods to trigger scraping:
+
+```yaml
+# Via FluxInstance spec.kustomize.patches
+spec:
+  kustomize:
+    patches:
+      - target:
+          kind: Deployment
+          labelSelector: "app.kubernetes.io/part-of=flux"
+        patch: |
+          - op: add
+            path: /spec/template/metadata/annotations/metrics.dynatrace.com~1scrape
+            value: "true"
+          - op: add
+            path: /spec/template/metadata/annotations/metrics.dynatrace.com~1port
+            value: "8080"
+          - op: add
+            path: /spec/template/metadata/annotations/metrics.dynatrace.com~1path
+            value: "/metrics"
+```
+
+### Method 2 — OpenTelemetry Collector pipeline
+
+Forward Flux Prometheus metrics through an OTel Collector to the Dynatrace OTLP endpoint:
+
+```yaml
+receivers:
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: fluxcd
+          static_configs:
+            - targets:
+                - source-controller.flux-system.svc:8080
+                - kustomize-controller.flux-system.svc:8080
+                - helm-controller.flux-system.svc:8080
+                - notification-controller.flux-system.svc:8080
+
+exporters:
+  otlphttp:
+    endpoint: "https://<tenant>.live.dynatrace.com/api/v2/otlp"
+    headers:
+      Authorization: "Api-Token <token-with-metrics.ingest-scope>"
+```
+
+### Key FluxCD metrics in Dynatrace
+
+After ingestion, metrics are available under the `gotk_` namespace:
+
+| Metric | Description |
+|---|---|
+| `gotk_reconcile_duration_seconds` | Reconciliation latency histogram |
+| `gotk_reconcile_condition` | `1` = Ready, `0` = Not Ready — facet by `kind`, `name`, `namespace` |
+| `workqueue_depth` | Pending work items per controller queue |
+| `workqueue_retries_total` | Retry count — elevated = failing resources |
+| `controller_runtime_active_workers` | Active workers vs `controller_runtime_max_concurrent_reconciles` |
+| `process_cpu_seconds_total` | Controller CPU usage |
+| `process_resident_memory_bytes` | Controller memory footprint |
+
+### Dynatrace metric expression for reconciliation failure rate
+
+```
+(100) * (avg(gotk_reconcile_condition:filter(eq(ready,false)):splitBy(kind,namespace,name)))
+```
+
+Use this as a custom metric in:
+- **Davis AI anomaly detection** — baseline normal failure rate and alert on deviations
+- **SLO target** — define `<1% reconciliation failure rate` as a platform SLO
+- **Dashboard tile** — reconciliation health by kind and namespace
+
+### Recommended Davis AI anomaly detection
+
+Enable auto-adaptive anomaly detection on:
+- `gotk_reconcile_condition` — detects sudden spikes in reconciliation failures
+- `workqueue_depth` — detects queue saturation before it impacts deployments
+- `process_resident_memory_bytes` per controller — detects memory leaks after upgrades
+
+### Log ingestion
+
+Forward Flux controller logs via the Dynatrace Log Ingest API or through the OTel Collector:
+
+```yaml
+logs:
+  service.name: kustomize-controller
+  dt.source_entity: CLOUD_APPLICATION_NAMESPACE-<namespace-id>
+```
+
+Apply log processing rules in Dynatrace to extract `kind`, `name`, `namespace`, and `error` fields from Flux's structured JSON log output.
+
+### Token scope required
+
+`metrics.ingest` — for Prometheus metric forwarding via OTLP or direct API push.

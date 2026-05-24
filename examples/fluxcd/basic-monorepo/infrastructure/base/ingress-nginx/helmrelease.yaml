@@ -1,0 +1,44 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ingress-nginx
+  namespace: ingress-nginx
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: ingress-nginx
+      version: '4.10.0'
+      sourceRef:
+        kind: HelmRepository
+        name: ingress-nginx
+        namespace: ingress-nginx
+      interval: 12h
+  maxHistory: 3
+  install:
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 3m
+  upgrade:
+    cleanupOnFail: true
+    strategy:
+      name: RetryOnFailure
+      retryInterval: 3m
+  uninstall:
+    keepHistory: false
+  values:
+    controller:
+      replicaCount: 3
+      resources:
+        requests:
+          cpu: 100m
+          memory: 128Mi
+        limits:
+          memory: 256Mi
+      service:
+        type: LoadBalancer
+      metrics:
+        enabled: true
+        serviceMonitor:
+          enabled: false  # Enable if Prometheus is installed

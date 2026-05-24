@@ -20,7 +20,7 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:review](#platform-skillsreview) | Production-readiness review of any config |
 | [/platform-skills:debug](#platform-skillsdebug) | Structured troubleshooting for any symptom |
 | [/platform-skills:terraform](#platform-skillsterraform) | Terraform validation pipeline + blast radius |
-| [/platform-skills:gitops](#platform-skillsgitops) | Flux CD / Argo CD reconciliation issues |
+| [/platform-skills:gitops](#platform-skillsgitops) | Flux CD / Argo CD — debug live cluster issues or audit a GitOps repo |
 | [/platform-skills:linkerd](#platform-skillslinkerd) | Linkerd mTLS, injection, policy, multi-cluster |
 | [/platform-skills:linux](#platform-skillslinux) | Linux, DNS, load balancing, VPC/VNet, networking |
 | [/platform-skills:helmcheck](#platform-skillshelmcheck) | Helm chart scaffold, review, security audit |
@@ -43,6 +43,7 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:awesome-docs](#platform-skillsawesome-docs) | Generate any animated Markdown doc (README, architecture guide, runbook, tutorial, RFC, post-mortem, or custom), convert existing Markdown, update/diff/audit, preview, export |
 | [/platform-skills:aws](#platform-skillsaws) | CloudFront, WAF, Lambda@Edge, Firewall Manager multi-account enforcement, and Terraform module generation |
 | [/platform-skills:composite-actions](#platform-skillscomposite-actions) | Generate, review, secure, and test composite GitHub Actions |
+| [/platform-skills:fluxcd](#platform-skillsfluxcd) | FluxCD entry point — routes to debug, audit, or helm review based on your input |
 
 ---
 
@@ -219,55 +220,40 @@ Check state isolation strategy:
 
 ## `/platform-skills:gitops`
 
-**What it does:** Flux CD and Argo CD reconciliation troubleshooting. Classifies by layer (source → artifact → reconciliation → runtime), provides exact evidence commands, and gives a fix with rollback.
+**What it does:** Two modes for all GitOps work. `debug` for live cluster issues — five structured Flux workflows (installation, source, HelmRelease, Kustomization, ResourceSet) plus Argo CD diagnostics, producing a 5-section report with root cause and rollback. `audit` for repo health — 6-phase read-only analysis (discovery, manifest validation, API compliance, best practices, security) producing a prioritized Critical / Warning / Info report.
+
+**Usage:** `/platform-skills:gitops <mode>`
 
 ```
-/platform-skills:gitops [describe the GitOps symptom, paste flux/argocd output, or share a manifest]
+/platform-skills:gitops debug [describe symptom or paste flux/argocd output]
+/platform-skills:gitops audit [repo path or paste directory listing]
 ```
-
-**Flux CD layers diagnosed:**
-
-| Layer | What it covers |
-|-------|---------------|
-| Source | GitRepository, OCIRepository, HelmRepository unreachable; auth failures |
-| Artifact | Kustomization build errors, HelmChart render failures, path not found |
-| Reconciliation | Kustomization apply conflicts, HelmRelease install/upgrade stuck, dependency ordering |
-| Runtime | Pod health check failures, hook timeouts, prune-deleted resources |
-
-**Argo CD layers diagnosed:**
-
-| Layer | What it covers |
-|-------|---------------|
-| Source | Repo credentials, branch/path misconfiguration |
-| Diff | ignoreDifferences collisions, server-side apply drift |
-| Sync | Sync waves, resource hooks, namespace creation ordering |
-| Health | Custom health checks, resource status not propagating |
 
 **Examples:**
 
-Flux Kustomization NotReady:
+Flux Kustomization not ready:
 ```
-/platform-skills:gitops flux get kustomizations -A shows apps kustomization NotReady: "dependency not found: infrastructure"
+/platform-skills:gitops debug flux get kustomizations -A shows apps NotReady: "dependency not found: infrastructure"
 ```
 
 HelmRelease stuck on upgrade:
 ```
-/platform-skills:gitops HelmRelease orders-service stuck in "upgrade retries exhausted" — error: "values don't match schema"
+/platform-skills:gitops debug HelmRelease orders-service stuck in "upgrade retries exhausted"
 ```
 
 Argo CD perpetually OutOfSync:
 ```
-/platform-skills:gitops ArgoCD application shows OutOfSync despite successful manual sync — sync keeps firing every 3 minutes
+/platform-skills:gitops debug ArgoCD application shows OutOfSync despite successful manual sync
 ```
 
-Image automation not updating:
+Audit a repo before a release:
 ```
-/platform-skills:gitops Flux ImageUpdateAutomation is not pushing updated image tags to Git — ImagePolicy shows correct latest tag
+/platform-skills:gitops audit ./clusters
 ```
 
-Rollback a bad HelmRelease:
+Security-focused audit:
 ```
-/platform-skills:gitops how do I safely suspend a HelmRelease, roll back to the previous chart version, and then re-enable reconciliation?
+/platform-skills:gitops audit — check for plain secrets and missing Cosign verification
 ```
 
 ---
@@ -2120,3 +2106,38 @@ Reference: `commands/aws.md`, `references/aws-cloudfront.md`, `references/aws-wa
 ```
 
 Reference: `commands/composite-actions.md`, `references/composite-actions.md`, and `examples/github-actions/composite-actions/`
+
+---
+
+## `/platform-skills:fluxcd`
+
+**What it does:** Smart entry point for all FluxCD work. Identifies the right workflow from your input — live cluster debugging (5-workflow structured trace), GitOps repository audit (6-phase analysis), or Helm chart review — and routes directly to the correct command.
+
+**Usage:** `/platform-skills:fluxcd [describe your situation, error, repo path, or intent]`
+
+```
+/platform-skills:fluxcd [error message or flux get output]         # → debug mode
+/platform-skills:fluxcd [repo path or "audit"]                     # → audit mode
+/platform-skills:fluxcd [Chart.yaml or "helm"]                     # → helm mode
+/platform-skills:fluxcd [Kustomization or HelmRelease YAML]        # → review mode
+```
+
+**Routing logic:**
+
+| If your input contains… | Routes to |
+|---|---|
+| Error message, `flux get` output, pod logs, "not reconciling" | `/platform-skills:gitops debug` — 5-workflow debug |
+| Repo path, "audit", "review", "before merge", "is this correct" | `/platform-skills:gitops audit` — 6-phase audit |
+| Helm chart path, `Chart.yaml`, `values.yaml`, "helm", "chart" | `/platform-skills:helmcheck` — chart review |
+| A manifest to review (Kustomization, HelmRelease, FluxInstance YAML) | `/platform-skills:review` — production-readiness check |
+
+**Examples:**
+
+```
+/platform-skills:fluxcd — my HelmRelease is stuck in "Progressing" after a values change
+/platform-skills:fluxcd ./clusters — audit our GitOps repo before the Monday release
+/platform-skills:fluxcd — is this FluxInstance YAML production-ready? [paste YAML]
+/platform-skills:fluxcd — review this Chart.yaml and values.yaml for security issues
+```
+
+Reference: `commands/fluxcd.md`, `references/fluxcd.md`, `references/fluxcd-sources.md`, `references/fluxcd-operator.md`, and `examples/fluxcd/`

@@ -36,7 +36,17 @@ Start here based on your task:
 | Ownership boundaries and repo topology | [references/platform-operating-model.md](references/platform-operating-model.md) |
 | Kubernetes baseline patterns | [references/kubernetes.md](references/kubernetes.md) |
 | Terraform module and state design | [references/terraform.md](references/terraform.md) |
-| Flux GitOps patterns | [references/flux.md](references/flux.md) |
+| FluxCD GitOps patterns (overview) | [references/fluxcd.md](references/fluxcd.md) |
+| FluxCD source CRDs | [references/fluxcd-sources.md](references/fluxcd-sources.md) |
+| FluxCD ResourceSet and fleet templating | [references/fluxcd-resourcesets.md](references/fluxcd-resourcesets.md) |
+| FluxCD notifications (Alert, Receiver) | [references/fluxcd-notifications.md](references/fluxcd-notifications.md) |
+| FluxCD Operator (FluxInstance, FluxReport) | [references/fluxcd-operator.md](references/fluxcd-operator.md) |
+| FluxCD Kustomization advanced | [references/fluxcd-kustomization.md](references/fluxcd-kustomization.md) |
+| FluxCD HelmRelease advanced | [references/fluxcd-helmrelease.md](references/fluxcd-helmrelease.md) |
+| FluxCD Terraform bootstrap | [references/fluxcd-terraform.md](references/fluxcd-terraform.md) |
+| FluxCD MCP server (AI debugging) | [references/fluxcd-mcp.md](references/fluxcd-mcp.md) |
+| FluxCD API migration (v2.7/v2.8) | [references/fluxcd-migration.md](references/fluxcd-migration.md) |
+| FluxCD security audit checklist | [references/fluxcd-security.md](references/fluxcd-security.md) |
 | Argo CD patterns | [references/argocd.md](references/argocd.md) |
 | AWS platform guidance | [references/aws.md](references/aws.md) |
 | Azure platform guidance | [references/azure.md](references/azure.md) |
@@ -133,7 +143,7 @@ My Flux Kustomization `apps` is stuck in NotReady with: "context deadline exceed
 - It cannot see your cluster or cloud account — paste the relevant output
 - It works best on one concrete problem at a time, not "review everything"
 
-### All 28 command workflows
+### All 29 command workflows
 
 See [COMMANDS.md](COMMANDS.md) for every command with modes and example prompts:
 
@@ -142,7 +152,7 @@ See [COMMANDS.md](COMMANDS.md) for every command with modes and example prompts:
 | `review` | Production-readiness check on any manifest, Terraform, workflow |
 | `debug` | Structured troubleshooting for any platform symptom |
 | `terraform` | Blast radius, IAM least privilege, SOC 2, state impact |
-| `gitops` | Flux / Argo CD reconciliation issues |
+| `gitops` | Flux / Argo CD — `debug` live issues or `audit` a GitOps repo |
 | `helmcheck` | Scaffold, review, or security-audit a Helm chart |
 | `kyverno` | Generate, test, audit, or migrate Kyverno policies |
 | `opa` | Generate, test, or debug OPA/Conftest Rego policies |
@@ -167,6 +177,7 @@ See [COMMANDS.md](COMMANDS.md) for every command with modes and example prompts:
 | `awesome-docs` | Generate any animated Markdown doc (README, architecture guide, runbook, tutorial, RFC, post-mortem, or custom), convert existing Markdown, update/diff/audit diagrams, export |
 | `aws` | Generate or review CloudFront, WAF, Lambda@Edge, CloudFront Functions, and Firewall Manager patterns |
 | `composite-actions` | Scaffold, review, secure, debug, publish, and improve composite GitHub Actions |
+| `fluxcd` | FluxCD entry point — routes to `gitops debug`, `gitops audit`, `helmcheck`, or `review` based on input |
 
 ### How the agent and skill system work
 

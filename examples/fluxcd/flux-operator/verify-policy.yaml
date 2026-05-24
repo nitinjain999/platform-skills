@@ -1,0 +1,19 @@
+# Cosign keyless verification — uses Sigstore/Rekor transparency log
+# The image must have been signed by the GitHub Actions OIDC identity below
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: fleet-manifests-verified
+  namespace: flux-system
+spec:
+  interval: 5m
+  url: oci://ghcr.io/my-org/fleet-manifests
+  ref:
+    tag: latest
+  secretRef:
+    name: registry-auth
+  verify:
+    provider: cosign
+    matchOIDCIdentity:
+      - issuer: "https://token.actions.githubusercontent.com"
+        subject: "https://github.com/my-org/platform-gitops/.github/workflows/push-manifests.yaml@refs/heads/main"

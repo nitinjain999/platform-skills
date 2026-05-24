@@ -1,0 +1,30 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../base/cert-manager
+patches:
+  - patch: |
+      - op: replace
+        path: /data/values.yaml
+        value: |
+          installCRDs: true
+          replicaCount: 3
+          podDisruptionBudget:
+            enabled: true
+            minAvailable: 2
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          affinity:
+            podAntiAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                - labelSelector:
+                    matchLabels:
+                      app.kubernetes.io/name: cert-manager
+                  topologyKey: kubernetes.io/hostname
+    target:
+      kind: ConfigMap
+      name: cert-manager-values
