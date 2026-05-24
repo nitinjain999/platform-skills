@@ -141,6 +141,21 @@ done
 
 ---
 
+## Image automation isolation
+
+For clusters with image automation enabled, run the `image-reflector-controller` and `image-automation-controller` on a **dedicated cluster** isolated from production workloads. The image-automation controller needs Git write access — isolating it limits the blast radius if the controller or its credentials are compromised.
+
+```yaml
+# Only enable image automation components on the dedicated automation cluster
+spec:
+  components:
+    - image-reflector-controller
+    - image-automation-controller
+# Production cluster: omit these two components entirely
+```
+
+---
+
 ## Image automation security
 
 ```bash

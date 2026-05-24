@@ -207,6 +207,20 @@ kubectl get kustomization apps -n flux-system -o jsonpath='{.status.inventory.en
 
 ---
 
+## Retry interval
+
+Configure `retryInterval` to recover faster from transient failures without waiting the full `interval`:
+
+```yaml
+spec:
+  interval: 30m
+  retryInterval: 5m    # retry every 5m on failure instead of waiting 30m
+```
+
+Without `retryInterval`, a failed Kustomization waits the full `spec.interval` before the next attempt.
+
+---
+
 ## Common mistakes
 
 | Mistake | Correct approach |
@@ -215,3 +229,4 @@ kubectl get kustomization apps -n flux-system -o jsonpath='{.status.inventory.en
 | `wait: false` with `dependsOn` | Dependency checks are only meaningful when `wait: true` |
 | `prune: true` without testing | Verify `status.inventory` before enabling — garbage collection is immediate |
 | Manual edit of a Flux-managed resource | Flux reverts on next reconciliation — add `ssa: Merge` annotation if co-ownership is needed |
+| No `retryInterval` set | Flux waits the full `spec.interval` between failure retries — set `retryInterval: 5m` |

@@ -99,12 +99,16 @@ spec:
   install:
     strategy:
       name: RetryOnFailure
+      retryInterval: 3m    # how long to wait between retries (default: interval)
   upgrade:
     strategy:
       name: RetryOnFailure
+      retryInterval: 3m
     cleanupOnFail: true
     force: false    # set true only for immutable field changes
 ```
+
+Set `retryInterval` shorter than `spec.interval` for faster recovery from transient failures. Without it, Flux waits the full reconciliation interval between retries.
 
 > Do not mix modern `install.strategy` with legacy `install.remediation.retries` — they are mutually exclusive.
 
@@ -261,6 +265,31 @@ kubectl get secret -n cert-manager sh.helm.release.v1.cert-manager.v1 -o jsonpat
 
 ---
 
+## Namespace management
+
+**Never use `targetNamespace` or `createNamespace` on a HelmRelease.** These bypass proper namespace lifecycle management — the namespace is created outside GitOps control and won't be pruned correctly.
+
+Instead, create the target namespace in the parent Kustomization or ResourceSet that deploys the component:
+
+```yaml
+# ❌ Wrong — namespace created outside lifecycle control
+spec:
+  targetNamespace: cert-manager
+  install:
+    createNamespace: true
+
+# ✅ Correct — namespace owned by the Kustomization
+# In the Kustomization that owns this HelmRelease, include a Namespace manifest:
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cert-manager
+```
+
+The namespace must exist before the HelmRelease runs — create it in the parent Kustomization or ResourceSet, never in the HelmRelease itself.
+
+---
+
 ## Common mistakes
 
 | Mistake | Correct approach |
@@ -269,3 +298,5 @@ kubectl get secret -n cert-manager sh.helm.release.v1.cert-manager.v1 -o jsonpat
 | `install.remediation.retries` (legacy) | Use `install.strategy.name: RetryOnFailure` |
 | `valuesFrom` ConfigMap without watch label | Add `reconcile.fluxcd.io/watch: Enabled` or changes won't trigger reconciliation |
 | `driftDetection.mode: enabled` without ignore rules | HPA-managed `replicas` will fight with Flux — always ignore `/spec/replicas` |
+| `targetNamespace` + `createNamespace: true` on HelmRelease | Create the namespace in the parent Kustomization/ResourceSet instead |
+| No `retryInterval` on strategy | Flux waits the full `spec.interval` between retries — set `strategy.retryInterval: 3m` for faster recovery |

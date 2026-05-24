@@ -138,6 +138,16 @@ Sources → Artifacts → Appliers → Managed Resources → Notifications
 - Prefer small, well-named `Kustomization` boundaries with clear dependencies.
 - Use `dependsOn`, health checks, and intervals deliberately rather than a single large root object.
 
+### Interval strategy
+
+| Layer | Recommended interval | Reason |
+|---|---|---|
+| Sources (GitRepository, OCIRepository) | `5m` | Detect new commits/artifacts quickly |
+| Appliers (Kustomization, HelmRelease) | `30m` | Reduce API server load; Receivers handle immediate triggers |
+| retryInterval (on failure) | `5m` (Kustomization), `3m` (HelmRelease) | Recover from transient failures without waiting the full interval |
+
+Receivers handle **immediate** reconciliation on Git push or OCI push events — applier intervals are the **fallback** for when no Receiver fires. Set Receivers up for every production GitRepository to avoid depending on the poll interval for fast feedback.
+
 ### GitRepository + Kustomization
 
 ```yaml

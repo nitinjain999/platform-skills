@@ -176,6 +176,45 @@ kubectl annotate fluxreport flux -n flux-system \
 
 ---
 
+## Tag promotion pattern
+
+Use separate tags per environment — `latest` tracks the main branch (staging), `latest-stable` tracks release tags (production). Each FluxInstance references its environment's tag:
+
+```yaml
+# staging FluxInstance
+spec:
+  sync:
+    url: "oci://ghcr.io/my-org/fleet-manifests"
+    ref: "latest"            # built from main branch
+
+# production FluxInstance
+spec:
+  sync:
+    url: "oci://ghcr.io/my-org/fleet-manifests"
+    ref: "latest-stable"     # built from release tags only
+```
+
+CI pushes both tags — `latest` on every merge to main, `latest-stable` only on tagged releases. This gives staging automatic updates and production explicit promotion.
+
+---
+
+## Flux Web UI
+
+The Flux Operator Helm chart bundles a Web UI that shows FluxInstance status, reconciler stats, and cluster sync state. Enable it via Helm values:
+
+```yaml
+# values for flux-operator Helm chart
+ui:
+  enabled: true
+  ingress:
+    enabled: true
+    host: flux.internal.example.com
+```
+
+Supports SSO via OIDC providers (Dex, Keycloak, Microsoft Entra ID, OpenShift). No additional installation — it is built into the operator Helm chart.
+
+---
+
 ## Migration from `flux bootstrap`
 
 1. Install the Flux Operator (`helm install flux-operator ...`)

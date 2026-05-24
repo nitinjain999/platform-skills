@@ -1,6 +1,8 @@
 # FluxCD Troubleshooting — Failure Pattern Quick Reference
 
-<!-- Adapted from https://github.com/fluxcd/agent-skills (Apache-2.0, The Flux authors) -->
+<!-- Adapted from https://github.com/fluxcd/agent-skills (Apache-2.0, The Flux authors)
+     Sources: skills/gitops-cluster-debug/references/troubleshooting.md
+              skills/gitops-knowledge/references/best-practices.md -->
 
 Scannable incident cheat-sheet. Symptom → most likely cause → exact fix.
 For the full 5-workflow debug procedure, use `/platform-skills:gitops debug`.
@@ -84,6 +86,7 @@ For the full 5-workflow debug procedure, use `/platform-skills:gitops debug`.
 | Drift detected but no correction | `spec.driftDetection.mode: warn` — detects but doesn't fix | Change to `mode: enabled` to allow Flux to correct drift |
 | HelmRelease stuck after `spec.force: true` | Force recreates but hooks fail on the recreated resource | Disable `force` after the immutable field conflict is resolved; check hook pod logs |
 | Release in `failed` state, Flux not retrying | Remediation exhausted — Flux gives up | `flux suspend helmrelease <name> -n <ns>`; `helm rollback <name> -n <ns>`; fix; `flux resume` |
+| Namespace created but never pruned | `targetNamespace` + `createNamespace: true` on HelmRelease — namespace created outside GitOps lifecycle | Remove `targetNamespace`/`createNamespace` from HelmRelease; create the namespace in the parent Kustomization or ResourceSet instead |
 
 ---
 
