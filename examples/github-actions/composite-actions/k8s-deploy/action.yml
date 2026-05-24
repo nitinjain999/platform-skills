@@ -152,9 +152,11 @@ runs:
     - name: Install kubelogin
       if: inputs.cloud_provider == 'azure'
       shell: bash
+      timeout-minutes: 3
       run: |
         echo "::group::Install kubelogin"
-        az aks install-cli
+        az aks install-cli --only-show-errors \
+          --kubelogin-install-location /usr/local/bin/kubelogin
         echo "::endgroup::"
 
     # ── 3c. Azure — fetch AKS kubeconfig + convert for non-interactive auth ───
@@ -171,6 +173,7 @@ runs:
           --name "$CLUSTER_NAME" \
           --overwrite-existing
         kubelogin convert-kubeconfig -l workloadidentity
+        echo "kubelogin conversion complete (workloadidentity)"
         echo "::endgroup::"
 
     # ── 4. Install kubectl ────────────────────────────────────────────────────
