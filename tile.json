@@ -4,7 +4,7 @@
   "summary": "Production-grade platform engineering handbook — Kubernetes, Terraform, Flux CD, GitHub Actions, AWS, and more.",
   "description": "Hands-on guidance for platform engineers: Kubernetes, Terraform, Flux CD (Operator, FluxInstance, gitless OCI, cluster debug, repo audit), Argo CD, GitHub Actions (composite actions, OIDC, SHA pinning), AWS, Azure, GKE, Linkerd, Linux, networking, KEDA autoscaling, supply chain security (Cosign, SBOM, SLSA), Falco runtime security, Chaos Engineering, DORA metrics, Datadog/Dynatrace observability, LLM Observability, SOC 2 compliance, PR review and triage, and animated docs.",
   "skills": {
-    "platform-skills": { "path": "skills/platform-skills/SKILL.md" }
+    "platform-skills": { "path": "SKILL.md" }
   },
   "private": false,
   "author": "Nitin Jain",
