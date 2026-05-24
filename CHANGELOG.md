@@ -40,6 +40,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Ephemeral runner security — risk table (persistent vs ephemeral), GitHub Enterprise policy enforcement, README callout template
   - Troubleshooting — 9 common errors with exact diagnosis and fix: missing `shell:`, empty `${{ secrets.* }}`, `::add-mask::` not working, `uses: ./` not found, actionlint shellcheck errors, empty step outputs (3 causes), floating tag not updated, boolean comparison always false
 - `references/github-actions.md` — extended with composite actions section: key rules summary, pointer to `references/composite-actions.md`, slash command, and links to all 11 examples
+
+### Contributors
+
+Thanks to [@geetika-sv](https://github.com/geetika-sv) for contributing the composite GitHub Actions skill — 11 production-ready examples, the `/platform-skills:composite-actions` command, and `references/composite-actions.md` in this release.
+
 ## [1.23.0] - 2026-05-23
 
 ### Changed
@@ -113,11 +118,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Contributors
 
 Thanks to [@geetika-sv](https://github.com/geetika-sv) for contributing the self-improve global workspace, cross-platform support, and `init global`/`init local`/`status`/`migrate` subcommands in this release.
-
-
-### Contributors
-
-Thanks to [@geetika-sv](https://github.com/geetika-sv) for contributing the composite GitHub Actions skill — 11 production-ready examples, the `/platform-skills:composite-actions` command, and `references/composite-actions.md` in this release.
 
 ## [1.22.0] - 2026-05-22
 
