@@ -22,6 +22,7 @@ Use this skill for hands-on help with Kubernetes, GitOps, cloud infrastructure, 
 | `Compliance` | SOC 2 controls in Terraform — IAM, encryption, audit logging, Checkov |
 | `Helm (Helmcheck)` | Chart scaffolding, lint/validate pipeline, values design, security hardening |
 | `MCP` | Build/debug MCP servers — tools, resources, transports, auth |
+| `AWS MCP Profiles` | Discover/switch AWS profiles across VS Code + Claude Code MCP configs — multi-account, SSO, Granted, credential_process |
 | `Observability` | Prometheus, OpenTelemetry, Grafana, alerting, k6 load tests, capacity |
 | `Documentation` | Docstrings (Google/NumPy/JSDoc), OpenAPI 3.1, MkDocs, guides |
 | `Datadog` | Agent on Kubernetes, APM, monitors, dashboards, SLOs, LLMObs |
@@ -139,6 +140,7 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:compliance` — SOC 2 gap analysis, control implementation, evidence collection, and Checkov remediation for Terraform
 - `/platform-skills:helmcheck` — Helm chart scaffolding, structural review, and security audit with full lint/validation pipeline
 - `/platform-skills:mcp` — MCP server/client scaffolding, protocol review, and integration debugging
+- `/platform-skills:aws-profile` — discover, switch, and validate AWS profiles for MCP servers across VS Code and Claude Code
 - `/platform-skills:observability` — instrument services, build dashboards, write alerts, run load tests, plan capacity
 - `/platform-skills:document` — generate docstrings, OpenAPI specs, documentation sites, and getting started guides
 - `/platform-skills:datadog` — Datadog Agent setup, APM instrumentation, monitors, dashboards, SLOs, pup CLI operations, LLM Observability instrumentation, evaluators, and debugging

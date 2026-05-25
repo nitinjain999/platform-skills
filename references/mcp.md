@@ -1,5 +1,15 @@
 # MCP (Model Context Protocol) Reference
 
+## AWS Multi-Account Profiles
+
+For managing AWS MCP servers across multiple accounts (SSO, Granted, assumed-role chains, credential_process, team sharing):
+
+→ See `references/aws-mcp-profiles.md`
+
+Commands: `/platform-skills:aws-profile` · `/platform-skills:mcp configure-aws`
+
+---
+
 ## Protocol Fundamentals
 
 MCP is a JSON-RPC 2.0 protocol that connects AI hosts (Claude Desktop, Claude Code) with servers exposing tools, resources, and prompts.
