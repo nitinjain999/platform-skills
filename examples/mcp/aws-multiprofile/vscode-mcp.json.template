@@ -1,0 +1,21 @@
+{
+  "_setup": "Run: AWS_PROFILE=your-profile AWS_REGION=eu-west-1 envsubst < .vscode/mcp.json.template > .vscode/mcp.json",
+  "mcpServers": {
+    "eks": {
+      "command": "uvx",
+      "args": ["awslabs.eks-mcp-server==0.1.31", "--region", "${AWS_REGION}"],
+      "env": {
+        "AWS_PROFILE": "${AWS_PROFILE}",
+        "AWS_REGION": "${AWS_REGION}"
+      }
+    },
+    "cloudwatch": {
+      "command": "uvx",
+      "args": ["awslabs.cloudwatch-mcp-server==0.1.4"],
+      "env": {
+        "AWS_PROFILE": "${AWS_PROFILE}",
+        "AWS_REGION": "${AWS_REGION}"
+      }
+    }
+  }
+}

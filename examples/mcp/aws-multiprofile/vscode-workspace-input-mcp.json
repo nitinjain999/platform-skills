@@ -1,0 +1,35 @@
+{
+  "_purpose": "VS Code interactive profile picker. VS Code prompts for profile and region at server start.",
+  "inputs": [
+    {
+      "id": "awsProfile",
+      "type": "promptString",
+      "description": "AWS profile name — run 'aws-profile discover' to list available profiles",
+      "default": "dev-sandbox"
+    },
+    {
+      "id": "awsRegion",
+      "type": "promptString",
+      "description": "AWS region",
+      "default": "eu-west-1"
+    }
+  ],
+  "mcpServers": {
+    "eks": {
+      "command": "uvx",
+      "args": ["awslabs.eks-mcp-server==0.1.31", "--region", "${input:awsRegion}"],
+      "env": {
+        "AWS_PROFILE": "${input:awsProfile}",
+        "AWS_REGION": "${input:awsRegion}"
+      }
+    },
+    "cloudwatch": {
+      "command": "uvx",
+      "args": ["awslabs.cloudwatch-mcp-server==0.1.4"],
+      "env": {
+        "AWS_PROFILE": "${input:awsProfile}",
+        "AWS_REGION": "${input:awsRegion}"
+      }
+    }
+  }
+}

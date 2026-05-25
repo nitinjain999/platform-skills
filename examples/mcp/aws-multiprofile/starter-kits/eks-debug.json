@@ -1,0 +1,23 @@
+{
+  "_kit": "eks-debug | ~3,750 tokens | Best for: cluster troubleshooting, nodegroup issues, pod debugging",
+  "mcpServers": {
+    "eks": {
+      "command": "uvx",
+      "args": ["awslabs.eks-mcp-server==0.1.31", "--region", "eu-west-1"],
+      "env": {
+        "AWS_PROFILE": "dev-sandbox",
+        "AWS_REGION": "eu-west-1"
+      },
+      "_account": "Account: 987654321 | Env: dev | Permission: Developer"
+    },
+    "cloudwatch": {
+      "command": "uvx",
+      "args": ["awslabs.cloudwatch-mcp-server==0.1.4"],
+      "env": {
+        "AWS_PROFILE": "dev-sandbox",
+        "AWS_REGION": "eu-west-1"
+      },
+      "_account": "Account: 987654321 | Env: dev | Permission: Developer"
+    }
+  }
+}
