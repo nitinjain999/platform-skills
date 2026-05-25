@@ -178,7 +178,8 @@ Emit ready-to-paste JSON for the target host(s). Always version-pin. Always set 
     "env": {
       "AWS_PROFILE": "prod-platform-eu",
       "AWS_REGION": "eu-west-1"
-    }
+    },
+    "_account": "Account: 123456789 | Env: prod | Permission: PowerUser"
   }
 }
 ```
