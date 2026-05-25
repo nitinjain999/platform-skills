@@ -35,7 +35,7 @@ security              static       890123456     -          -                 ne
    - Granted: `granted_sso_*` keys or `assume` binary in PATH
    - Static: `aws_access_key_id` directly in profile block → warn to rotate
 
-2. Parse `~/.aws/sso/cache/*.json` and `~/.aws/cli/cache/*.json` for `expiresAt` fields. Apply traffic-light TTL:
+2. Parse `~/.aws/sso/cache/*.json`, `~/.aws/cli/cache/*.json`, and `~/.granted/*.json` (if present) for `expiresAt` fields. Apply traffic-light TTL:
    - ✓ Green: >30 min
    - ⚠ Amber: 10–30 min
    - ✗ Red: <10 min or expired
@@ -118,10 +118,12 @@ aws-profile switch staging-assume --server eks-staging
 aws-profile switch --env prod --confirm
 ```
 
+**Pre-condition:** If `~/.aws-profile-tags.yaml` does not exist, run `aws-profile discover` first to generate it.
+
 **Steps:**
 
 1. Resolve target profile:
-   - If `--env <tag>`: look up profile in `~/.aws-profile-tags.yaml` that matches the tag. Error if multiple profiles share the tag — require explicit profile name.
+   - If `--env <tag>`: look up the profile in `~/.aws-profile-tags.yaml` that matches the tag — this selects which *profile* to switch to, not which servers to patch. Error if multiple profiles share the tag — require explicit profile name.
    - Otherwise: use the profile name directly.
 
 2. Safety check — if profile name contains `prod` or `production` or is tagged `prod` in `~/.aws-profile-tags.yaml`:
@@ -135,7 +137,7 @@ aws-profile switch --env prod --confirm
 3. Determine target files by `--scope`:
    - `global` (default): `~/.vscode/mcp.json` + `~/.claude/settings.json`
    - `workspace`: `.vscode/mcp.json` in current directory only
-   - `--server <name>`: patch only that named entry across all scopes
+   - `--server <name>`: patch only that named entry, searching all scope files regardless of `--scope` (overrides scope)
 
 4. For each matched server entry, update `env.AWS_PROFILE` to the new profile. If `--region` provided, also update `env.AWS_REGION` and any `--region` arg in the `args` array.
 
@@ -204,7 +206,7 @@ aws-profile login <profile>
      See: references/aws-mcp-profiles.md → Auth Flows
    ```
 
-3. After emitting the command, run `status` to show TTL confirmation.
+3. After emitting the command, run `status` to confirm that the TTL for `<profile>` now shows green (>30 min). Other expired profiles in the output are unrelated to this login.
 
 Reference: `references/aws-mcp-profiles.md` → Auth Flows
 
@@ -257,6 +259,7 @@ credential_process = granted credential-process --profile shared-services
 **Steps:**
 
 1. Run: `aws organizations list-accounts --profile <mgmt-profile> --output json`
+   If `--profile` is omitted, use the default profile from `~/.aws/config` (or `AWS_DEFAULT_PROFILE` if set).
 2. For each account, check if any profile in `~/.aws/config` references that account ID via `sso_account_id` or call `aws sts get-caller-identity --profile <p>` to resolve.
 3. Cross-reference `~/.aws-profile-tags.yaml` for env tags.
 4. If `--generate-profiles`: generate SSO stanzas using the `sso_start_url` and `sso_region` from an existing SSO profile as the template.

@@ -486,7 +486,7 @@ Any profile tagged `prod` or with a name containing `prod` or `production` requi
   This will update MCP server configs to use production credentials.
   Any AI-driven operations will execute against production.
   
-  Confirm with --confirm flag or type 'yes' to proceed.
+  Pass --confirm to proceed.
 ```
 
 **Recommended practice:**
