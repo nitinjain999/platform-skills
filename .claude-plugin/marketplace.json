@@ -7,8 +7,8 @@
   "plugins": [
     {
       "name": "platform-skills",
-      "version": "1.25.20",
-      "description": "Production-grade platform engineering handbook for Claude. 29 slash commands covering: Kubernetes, Helm, Terraform (blast radius, SOC 2, IAM), Flux CD (Flux Operator, FluxInstance, gitless OCI delivery, 5-workflow cluster debug, 6-phase repo audit), Argo CD, GitHub Actions (composite actions, SHA pinning, OIDC), AWS (CloudFront, WAF, Lambda@Edge), Kyverno, OPA/Rego, KEDA autoscaling, supply chain security (Cosign, SBOM, SLSA), Falco runtime security, chaos engineering (Litmus/Chaos Mesh), DORA metrics, Datadog, Dynatrace, Linkerd, and animated docs. Every answer includes blast radius, validation steps, and rollback plan.",
+      "version": "1.26.0",
+      "description": "Production-grade platform engineering handbook for Claude. 29 slash commands covering: Kubernetes, Helm, Terraform (blast radius, SOC 2, IAM), Flux CD (Flux Operator, FluxInstance, gitless OCI delivery, 5-workflow cluster debug, 6-phase repo audit), Argo CD, GitHub Actions (composite actions, SHA pinning, OIDC), AWS (CloudFront, WAF, Lambda@Edge), Kyverno, OPA/Rego, KEDA autoscaling, supply chain security (Cosign, SBOM, SLSA), Falco runtime security, chaos engineering (Litmus/Chaos Mesh), DORA metrics, Datadog, Dynatrace, Linkerd, and animated docs. Every answer includes blast radius, validation steps, and rollback plan., AWS MCP profile management (multi-account SSO, Granted, credential_process, profile discovery, VS Code and Claude Code config generation)",
       "author": {
         "name": "Nitin Jain"
       },
@@ -155,7 +155,15 @@
         "fluxinstance",
         "resourceset",
         "gitless-delivery",
-        "oci-gitops"
+        "oci-gitops",
+        "aws-mcp",
+        "aws-profile",
+        "mcp-server",
+        "aws-sso",
+        "granted",
+        "multi-account",
+        "credential-process",
+        "aws-identity-center"
       ],
       "source": {
         "source": "url",
