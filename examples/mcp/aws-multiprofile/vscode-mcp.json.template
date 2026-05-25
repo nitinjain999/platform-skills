@@ -1,5 +1,6 @@
 {
   "_setup": "Run: AWS_PROFILE=your-profile AWS_REGION=eu-west-1 envsubst < .vscode/mcp.json.template > .vscode/mcp.json",
+  "_note": "Both --region arg and AWS_REGION env are set intentionally: the EKS server requires the CLI flag; AWS_REGION env is a convention for other servers that read it directly.",
   "mcpServers": {
     "eks": {
       "command": "uvx",

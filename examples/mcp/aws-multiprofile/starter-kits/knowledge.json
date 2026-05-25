@@ -9,6 +9,7 @@
     "bedrock-kb": {
       "command": "uvx",
       "args": ["awslabs.bedrock-kb-retrieval-mcp-server==1.0.22"],
+      "_account": "Account: 987654321 | Env: dev | Permission: Developer",
       "env": {
         "AWS_PROFILE": "dev-sandbox",
         "AWS_REGION": "eu-west-1",
