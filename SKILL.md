@@ -95,6 +95,7 @@ Load only the files needed for the current request.
 | references/fluxcd-troubleshooting.md | Incident cheat-sheet — symptom → cause → fix per controller |
 | references/argocd.md | App delivery, ApplicationSet, sync policies |
 | references/aws.md | Landing zones, IAM, EKS patterns |
+| references/aws-mcp-profiles.md | AWS MCP profile management — multi-account SSO, Granted, credential_process, context budget, starter kits |
 | references/azure.md | Management groups, identity, AKS patterns |
 | references/aws-cloudfront.md | CloudFront distributions, OAC, Lambda@Edge, security headers |
 | references/aws-waf.md | Web ACLs, managed rules, rate limiting, Firewall Manager |

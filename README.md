@@ -51,6 +51,17 @@ Both layers work independently. The plugin is optional.
 | <img src="https://cdn.simpleicons.org/redhatopenshift/EE0000" width="16" height="16" alt="OpenShift"> OpenShift | [references/openshift.md](references/openshift.md) | Routes, SCC compatibility, operator usage, tenant isolation |
 | <img src="https://cdn.simpleicons.org/argo/EF7B4D" width="16" height="16" alt="Argo CD"> Argo CD | [references/argocd.md](references/argocd.md) | App-of-apps design, ApplicationSet, sync control, promotion flows |
 | <img src="https://cdn.simpleicons.org/flux/5468FF" width="16" height="16" alt="Flux CD"> Flux CD | [references/fluxcd.md](references/fluxcd.md) | Monorepo structure, reconciliation, multi-tenancy, image automation |
+| ↳ Flux CD Sources | [references/fluxcd-sources.md](references/fluxcd-sources.md) | GitRepository, OCIRepository, HelmRepository, Bucket, ArtifactGenerator |
+| ↳ Flux CD ResourceSets | [references/fluxcd-resourcesets.md](references/fluxcd-resourcesets.md) | ResourceSet templating, input strategies, gitless fleet patterns |
+| ↳ Flux CD Notifications | [references/fluxcd-notifications.md](references/fluxcd-notifications.md) | Provider, Alert, Receiver, Slack/Datadog/GitHub commit status |
+| ↳ Flux CD Operator | [references/fluxcd-operator.md](references/fluxcd-operator.md) | FluxInstance sizing, multi-tenancy, kustomize patches, FluxReport |
+| ↳ Flux CD Kustomization | [references/fluxcd-kustomization.md](references/fluxcd-kustomization.md) | CEL readyExpr, postBuild substitution, SOPS, SSA annotations |
+| ↳ Flux CD HelmRelease | [references/fluxcd-helmrelease.md](references/fluxcd-helmrelease.md) | chartRef vs chart.spec, drift detection, post-renderers, CRD lifecycle |
+| ↳ Flux CD Terraform | [references/fluxcd-terraform.md](references/fluxcd-terraform.md) | Flux Operator bootstrap via Terraform |
+| ↳ Flux CD MCP | [references/fluxcd-mcp.md](references/fluxcd-mcp.md) | AI-assisted FluxCD debugging via Flux MCP server |
+| ↳ Flux CD Migration | [references/fluxcd-migration.md](references/fluxcd-migration.md) | v2.7/v2.8 API removals, CLI and Operator upgrade paths |
+| ↳ Flux CD Security | [references/fluxcd-security.md](references/fluxcd-security.md) | Secrets, source auth, OCI supply chain, RBAC, image automation security |
+| ↳ Flux CD Troubleshooting | [references/fluxcd-troubleshooting.md](references/fluxcd-troubleshooting.md) | Incident cheat-sheet — symptom → cause → fix per controller |
 | <img src="https://cdn.simpleicons.org/amazonaws/FF9900" width="16" height="16" alt="AWS"> AWS | [references/aws.md](references/aws.md) | IAM least-privilege, IRSA, EKS, resource tagging, cost allocation |
 | <img src="https://cdn.simpleicons.org/amazonaws/FF9900" width="16" height="16" alt="AWS"> AWS CloudFront | [references/aws-cloudfront.md](references/aws-cloudfront.md) | Distributions, OAC, cache policies, security headers, Lambda@Edge, CloudFront Functions, multi-account |
 | <img src="https://cdn.simpleicons.org/amazonaws/FF9900" width="16" height="16" alt="AWS"> AWS WAF | [references/aws-waf.md](references/aws-waf.md) | Web ACLs, managed rule groups, rate limiting, Bot Control, Firewall Manager, Shield Advanced |
@@ -66,6 +77,7 @@ Both layers work independently. The plugin is optional.
 | 🔒 Compliance | [references/compliance.md](references/compliance.md) | SOC 2 Trust Services Criteria in Terraform: IAM, encryption, detection, audit logging, backup, Checkov enforcement |
 | <img src="https://cdn.simpleicons.org/helm/0F1689" width="16" height="16" alt="Helm"> Helm | [references/helm.md](references/helm.md) | Chart scaffolding, values design, template patterns, security hardening, lint/validation pipeline, GitOps integration |
 | 🔌 MCP | [references/mcp.md](references/mcp.md) | Model Context Protocol server/client development, TypeScript and Python SDKs, stdio/SSE transports, security, testing |
+| ☁️ AWS MCP Profiles | [references/aws-mcp-profiles.md](references/aws-mcp-profiles.md) | Multi-account AWS MCP server management — SSO, Granted, credential_process, profile discovery, VS Code and Claude Code config generation |
 | <img src="https://cdn.simpleicons.org/prometheus/E6522C" width="16" height="16" alt="Prometheus"> Observability | [references/observability.md](references/observability.md) | Structured logging, Prometheus metrics, OpenTelemetry tracing, Grafana dashboards, alerting rules, k6 load testing, capacity planning |
 | 📝 Documentation | [references/documentation.md](references/documentation.md) | Docstrings (Google/NumPy/JSDoc), OpenAPI 3.1 specs, doc sites (MkDocs/TypeDoc), developer guides |
 | <img src="https://cdn.simpleicons.org/datadog/632CA6" width="16" height="16" alt="Datadog"> Datadog | [references/datadog.md](references/datadog.md) | Agent Helm setup, APM instrumentation, log management, monitors/dashboards/SLOs as Terraform, pup CLI, Datadog Labs skills |

@@ -143,7 +143,7 @@ My Flux Kustomization `apps` is stuck in NotReady with: "context deadline exceed
 - It cannot see your cluster or cloud account — paste the relevant output
 - It works best on one concrete problem at a time, not "review everything"
 
-### All 29 command workflows
+### All 30 command workflows
 
 See [COMMANDS.md](COMMANDS.md) for every command with modes and example prompts:
 
@@ -166,6 +166,7 @@ See [COMMANDS.md](COMMANDS.md) for every command with modes and example prompts:
 | `dynatrace` | Operator, instrumentation, SLOs, Davis AI investigation |
 | `document` | Docstrings, OpenAPI specs, docs sites, guides |
 | `mcp` | Scaffold, review, or debug an MCP server |
+| `aws-profile` | Discover, switch, and validate AWS profiles for MCP servers |
 | `product` | DevEx audit, RFC/ADR, incident update, post-mortem |
 | `triage` | Use `/platform-skills:triage` to classify, fix, reply to, and resolve PR comments |
 | `keda` | Use `/platform-skills:keda` to generate, debug, review, or design a KEDA scaling strategy |
