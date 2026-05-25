@@ -79,7 +79,7 @@ All servers use `uvx` (Python). Pin versions in production configs — `uvx awsl
 ```bash
 # Look up current version before pinning
 pip index versions awslabs.eks-mcp-server 2>/dev/null | head -1
-# or: https://pypi.org/pypi/awslabs.eks-mcp-server/json | jq .info.version
+# or: curl -s https://pypi.org/pypi/awslabs.eks-mcp-server/json | jq -r .info.version
 ```
 
 **Version pin syntax in MCP config:**
@@ -120,7 +120,7 @@ dev-sandbox: dev
 security: shared-services
 ```
 
-If this file does not exist, run `/platform-skills:aws-profile discover` and it will generate a starter file from profile name heuristics for you to review.
+If this file does not exist, run `/platform-skills:aws-profile discover` (see `commands/aws-profile.md`) and it will generate a starter file from profile name heuristics for you to review.
 
 ---
 
@@ -137,7 +137,7 @@ aws sts get-caller-identity --profile prod-platform-eu
 ```bash
 assume prod-platform-eu
 # Or with a duration override:
-assume prod-platform-eu --duration 4h
+assume prod-platform-eu --duration 4h  # Granted v0.1.18+; older versions use seconds
 # Verify:
 aws sts get-caller-identity
 ```
@@ -225,8 +225,8 @@ for d in [json.loads(l) for l in sys.stdin if l.strip()]:
 
 **Configure in `~/.aws/config`:**
 
+**Option A — SSO via Granted (recommended if you use Granted):**
 ```ini
-# SSO via Granted (recommended for Granted users)
 [profile prod-platform-eu]
 sso_start_url = https://myorg.awsapps.com/start
 sso_region = eu-west-1
@@ -234,15 +234,21 @@ sso_account_id = 123456789
 sso_role_name = PowerUser
 region = eu-west-1
 credential_process = granted credential-process --profile prod-platform-eu
+```
 
-# SSO via aws-vault
+**Option B — SSO via aws-vault:**
+```ini
 [profile prod-platform-eu]
 credential_process = aws-vault export --format=json prod-platform-eu
+```
 
-# Assumed role chain — credential_process handles the full chain
+**Option C — Assumed role chain (aws-vault handles the full chain):**
+```ini
 [profile staging-assume]
 credential_process = aws-vault export --format=json staging-assume
 ```
+
+(These are mutually exclusive — pick the one that matches your toolchain.)
 
 **Verify it works:**
 ```bash
@@ -332,7 +338,7 @@ VS Code prompts the engineer for profile and region when the server starts.
 
 **When to use input variables vs `switch` command:**
 - Input variables: VS Code only, interactive per-session, good for teams who change accounts frequently
-- `switch` command: patches hardcoded values, works for both VS Code and Claude Code, good for long-lived workspace configs
+- `switch` command: patches hardcoded values, works for both VS Code and Claude Code, good for long-lived workspace configs (see `commands/aws-profile.md` → Mode: switch)
 
 These are separate patterns — not interchangeable.
 
@@ -500,6 +506,6 @@ Curated minimal server sets — use these as the starting point, not the full ca
 | `observe` | cloudwatch + prometheus | ~2,750 | Metrics and alerting |
 | `knowledge` | aws-docs + bedrock-kb | ~1,250 | AWS research + internal KB |
 | `deploy` | aws-api + serverless | ~3,750 | Serverless CI/CD debugging |
-| `cost` | billing-cost + pricing | ~2,000 | Cost investigation |
+| `cost` | billing-cost-management | ~1,000 | Cost investigation |
 
 See `examples/mcp/aws-multiprofile/starter-kits/` for ready-to-use JSON files.
