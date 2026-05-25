@@ -35,7 +35,11 @@ security              static       890123456     -          -                 ne
    - Granted: `granted_sso_*` keys or `assume` binary in PATH
    - Static: `aws_access_key_id` directly in profile block → warn to rotate
 
-2. Parse `~/.aws/sso/cache/*.json`, `~/.aws/cli/cache/*.json`, and `~/.granted/*.json` (if present) for `expiresAt` fields. Apply traffic-light TTL:
+2. Parse credential cache files for expiration timestamps. Field names differ by type:
+   - SSO (`~/.aws/sso/cache/*.json`): top-level `expiresAt`
+   - Assumed role (`~/.aws/cli/cache/*.json`): `Credentials.Expiration`
+   - Granted (`~/.granted/*.json`, if present): top-level `expiresAt`
+   Apply traffic-light TTL:
    - ✓ Green: >30 min
    - ⚠ Amber: 10–30 min
    - ✗ Red: <10 min or expired
