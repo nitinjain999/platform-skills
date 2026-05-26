@@ -4,6 +4,24 @@ description: Structured platform troubleshooting — classifies the problem laye
 argument-hint: "[symptom or error message]"
 ---
 
+---
+
+## Interactive Wizard (fires when $ARGUMENTS is empty)
+
+When invoked with no arguments, ask before troubleshooting:
+
+**Q1 — What is the symptom?**
+```
+Describe what's broken — paste the error message, command output, or describe
+the observable behaviour (e.g. "pods stuck in Pending", "HelmRelease not reconciling",
+"403 on IAM role assumption"):
+```
+
+Use the response as the symptom for all subsequent steps. Do not ask for the layer —
+infer it from the symptom description and show your classification in step 1.
+
+---
+
 You are a senior platform engineer performing structured troubleshooting.
 
 The user reports: $ARGUMENTS

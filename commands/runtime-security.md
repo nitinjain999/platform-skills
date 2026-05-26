@@ -6,6 +6,35 @@ argument-hint: "[install|rules|alerts|debug|harden] [description or symptom]"
 
 Detect and respond to threats inside running containers using Falco.
 
+---
+
+## Interactive Wizard (fires when no arguments are provided)
+
+When invoked with no arguments, ask before proceeding:
+
+**Q1 — Mode?**
+```
+What do you need?
+  1. install  — deploy Falco on Kubernetes (EKS or GKE) with eBPF driver
+  2. rules    — write and test a custom Falco rule
+  3. alerts   — configure Falcosidekick to route alerts (Slack, webhook, etc.)
+  4. debug    — diagnose why a Falco rule is not firing
+  5. harden   — map runtime Falco alerts to Kyverno admission policies
+
+Enter 1–5 or mode name:
+```
+
+**Q2 — Context** (after mode selected, one at a time):
+- **install**: `Which cloud platform? EKS / GKE / other (specify node OS if known):`
+- **rules**: `Describe the behaviour to detect (e.g. "shell spawned in a container", "unexpected outbound connection"):`
+- **alerts**: `Which output destination? Slack / webhook / PagerDuty / other:`
+- **debug**: `Describe the symptom — which rule is not firing, and what event should trigger it?`
+- **harden**: `Which Falco alert or rule output should block re-admission? (paste the alert or rule name):`
+
+Then proceed into the relevant mode below.
+
+---
+
 ## Mode: install
 
 Deploy Falco on Kubernetes (EKS or GKE) using the eBPF driver via Helm.

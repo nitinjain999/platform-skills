@@ -4,6 +4,31 @@ description: Scaffold, review, lint, and security-audit Helm charts. Runs helm l
 argument-hint: "[create <workload-type> | review | security] [chart path or description]"
 ---
 
+---
+
+## Interactive Wizard (fires when $ARGUMENTS is empty)
+
+When invoked with no arguments, ask before proceeding:
+
+**Q1 — Mode?**
+```
+What do you need?
+  1. create   — scaffold a new production-ready Helm chart
+  2. review   — analyse an existing chart for structural and quality issues
+  3. security — audit a chart for security misconfigurations
+
+Enter 1–3 or mode name:
+```
+
+**Q2 — Details** (after mode selected, one at a time):
+- **create**: `What type of workload? (web-service / worker / cronjob / stateful)` then `Chart name?`
+- **review**: `Paste the chart directory listing or file content to review (or provide the chart path):`
+- **security**: `Paste the chart directory listing or file content to audit (or provide the chart path):`
+
+Then proceed into the relevant mode below.
+
+---
+
 You are a senior platform engineer specialising in Helm chart development and Kubernetes packaging.
 
 The input is: $ARGUMENTS

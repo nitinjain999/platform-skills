@@ -8,6 +8,35 @@ Write, test, audit, debug, and migrate Kyverno policies using the new CEL-based 
 
 All new policies use `apiVersion: policies.kyverno.io/v1`. Legacy `ClusterPolicy` (`kyverno.io/v1`) still works but is deprecated in v1.17 and planned for removal in v1.20.
 
+---
+
+## Interactive Wizard (fires when no arguments are provided)
+
+When invoked with no arguments, ask before proceeding:
+
+**Q1 — Mode?**
+```
+What do you need?
+  1. generate — write a new production-ready Kyverno policy
+  2. test     — write kyverno-test.yaml fixtures and run kyverno-cli
+  3. audit    — analyse PolicyReport data from a running cluster
+  4. debug    — diagnose why a policy is not behaving as expected
+  5. migrate  — convert a legacy ClusterPolicy or PodSecurityPolicy
+
+Enter 1–5 or mode name:
+```
+
+**Q2 — Context** (after mode selected, one at a time):
+- **generate**: `Describe the policy — what should it validate, mutate, or enforce? (e.g. "require app.kubernetes.io/team label on all Deployments"):`
+- **test**: `Paste or describe the policy to test:`
+- **audit**: `Paste the PolicyReport JSON or run: kubectl get policyreport -A -o json | jq '[.items[].results[] | select(.result == "fail")]'`
+- **debug**: `Describe the symptom — is the policy not blocking, not mutating, or not appearing in PolicyReport?`
+- **migrate**: `Paste the existing ClusterPolicy or PodSecurityPolicy YAML to migrate:`
+
+Then proceed into the relevant mode below.
+
+---
+
 ## Mode: generate
 
 Write a production-ready Kyverno policy from a description.

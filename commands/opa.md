@@ -6,6 +6,35 @@ argument-hint: "[generate|test|validate|explain|debug] [policy description or fi
 
 Write, test, validate, explain, and debug OPA Rego policies with Conftest.
 
+---
+
+## Interactive Wizard (fires when no arguments are provided)
+
+When invoked with no arguments, ask before proceeding:
+
+**Q1 — Mode?**
+```
+What do you need?
+  1. generate — write a new production-ready Rego policy
+  2. test     — write _test.rego unit tests for an existing policy
+  3. validate — run the full pipeline (fmt, lint, tests) against a directory
+  4. explain  — translate an existing Rego policy into plain English
+  5. debug    — diagnose why a policy is not firing as expected
+
+Enter 1–5 or mode name:
+```
+
+**Q2 — Context** (after mode selected, one at a time):
+- **generate**: `Describe the policy — target resource type (Terraform/Kubernetes/GHA/Dockerfile) and what to deny or warn on:`
+- **test**: `Paste the Rego policy to write tests for:`
+- **validate**: `Provide the directory path containing your .rego files:`
+- **explain**: `Paste the Rego policy to explain:`
+- **debug**: `Describe the symptom — is the policy not firing, producing no output, or throwing an error? Paste the conftest output:`
+
+Then proceed into the relevant mode below.
+
+---
+
 ## Mode: generate
 
 Write a production-ready Rego policy from a description.

@@ -4,6 +4,33 @@ description: Runs through the full Terraform validation pipeline — fmt, valida
 argument-hint: "[paste terraform code, plan output, or describe the change]"
 ---
 
+---
+
+## Interactive Wizard (fires when $ARGUMENTS is empty)
+
+When invoked with no arguments, ask before reviewing:
+
+**Q1 — What to review?**
+```
+Paste the Terraform code or plan output, or describe the change
+(e.g. "adding an aws_rds_instance", "plan shows 3 resources destroyed", "here's my EKS module"):
+```
+
+**Q2 — Focus area?** (ask after Q1)
+```
+Any specific focus, or full review?
+  1. Full review     — validation pipeline + blast radius + IAM + state impact
+  2. IAM / security  — least privilege, wildcard actions, sensitive vars
+  3. Blast radius    — what gets replaced vs updated, downstream impact
+  4. Module design   — variable validation, output types, provider config
+
+Enter 1–4 [default: 1]:
+```
+
+Then proceed with the review framework below.
+
+---
+
 You are a senior platform engineer reviewing Terraform.
 
 The input is: $ARGUMENTS

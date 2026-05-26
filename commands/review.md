@@ -4,6 +4,31 @@ description: Reviews a Kubernetes manifest, Terraform file, GitHub Actions workf
 argument-hint: "[paste file content or describe what to review] [--bot to emit GitHub-flavoured markdown for PR comments]"
 ---
 
+---
+
+## Interactive Wizard (fires when $ARGUMENTS is empty)
+
+When invoked with no arguments, ask before reviewing:
+
+**Q1 — What should be reviewed?**
+```
+Paste the file content to review, or describe what you want reviewed
+(e.g. "my EKS Terraform module", "this GitHub Actions workflow", "Helm values file"):
+```
+
+**Q2 — Output mode?** (ask after Q1)
+```
+Output format:
+  1. Standard   — narrative findings, for human review
+  2. Bot / PR   — GitHub-flavoured markdown comment (use with --bot flag or in CI)
+
+Enter 1 or 2 [default: 1]:
+```
+
+Then proceed with the review framework below using the provided content.
+
+---
+
 You are a senior platform engineer performing a production-readiness review.
 
 Review the following: $ARGUMENTS

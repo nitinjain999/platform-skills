@@ -10,6 +10,33 @@ Reference: `references/aws-mcp-profiles.md`
 
 ---
 
+## Interactive Wizard (fires when no mode is provided)
+
+When invoked with no arguments, ask before proceeding:
+
+**Q1 — Mode?**
+```
+What do you need?
+  1. discover  — list all AWS profiles with type, account ID, env tag, and credential TTL
+  2. status    — show which profile each MCP server is using and whether credentials are fresh
+  3. switch    — update MCP config files to use a different profile
+  4. login     — authenticate and refresh credentials for a specific profile
+  5. org-scan  — list all AWS Organization accounts and cross-reference with configured profiles
+
+Enter 1–5 or mode name:
+```
+
+**Q2 — Mode-specific follow-up** (one question, after mode is selected):
+- **discover**: `Any filters? (e.g. --expired to show only expired, --type sso, --env prod) — or press enter to list all:`
+- **switch**: Read `~/.aws/config` and list available profiles, then ask: `Which profile should MCP servers switch to?`
+- **login**: Read `~/.aws/config` and list available profiles, then ask: `Which profile needs authentication?`
+- **status**: no follow-up — proceed directly
+- **org-scan**: `Which management account profile has organizations:ListAccounts permission? (default: current profile):`
+
+Then proceed into the relevant mode below.
+
+---
+
 ## Mode: discover
 
 Parse `~/.aws/config` and output a classified profile table with credential TTL.

@@ -6,6 +6,37 @@ argument-hint: "[audit|sign|sbom|scan|enforce|slsa] [description or file path]"
 
 Secure the software supply chain — from the build pipeline to running containers.
 
+---
+
+## Interactive Wizard (fires when no arguments are provided)
+
+When invoked with no arguments, ask before proceeding:
+
+**Q1 — Mode?**
+```
+What do you need?
+  1. audit    — review an existing CI/CD pipeline for supply chain security gaps
+  2. sign     — set up keyless image signing with Cosign (Sigstore/Rekor, no key management)
+  3. sbom     — generate and attest an SBOM with Syft
+  4. scan     — add a CVE vulnerability gate with Trivy or Grype
+  5. enforce  — write a Kyverno policy to block unsigned images at admission
+  6. slsa     — generate a SLSA Level 2 provenance workflow
+
+Enter 1–6 or mode name:
+```
+
+**Q2 — Context** (after mode selected, one at a time):
+- **audit**: `Paste your GitHub Actions workflow file(s) or describe your current CI/CD pipeline:`
+- **sign**: `Which container registry? (ECR / GHCR / Docker Hub / other):`
+- **sbom**: `Which image and registry? (e.g. ghcr.io/org/image):`
+- **scan**: `Which scanner preference? Trivy (recommended) or Grype — or no preference:`
+- **enforce**: `Which registry or image prefix should the policy cover? (e.g. ghcr.io/myorg/*):`
+- **slsa**: `Which registry and repo? (e.g. ghcr.io/org/image from github.com/org/repo):`
+
+Then proceed into the relevant mode below.
+
+---
+
 ## Mode: audit
 
 Review an existing CI/CD pipeline and cluster admission configuration for supply chain security gaps.
