@@ -5,7 +5,7 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.26.0] - 2026-05-25
+## [1.26.0] - 2026-05-26
 
 ### Added
 
@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `COMMANDS.md`: TOC entry and full `/platform-skills:aws-profile` command section (30 commands total).
 - `references/mcp.md`: AWS Multi-Account Profiles pointer section.
 - Tessl evaluation scenarios (`evals/`) for quality testing: `pr-triage`, `opa-policy`, `flux-helmrelease`. Each scenario includes `task.md`, `criteria.json`, and `capability.txt`.
+
+### Contributors
+
+- [@geetika-sv](https://github.com/geetika-sv) — AWS MCP profile management feature
 
 ## [1.25.20] - 2026-05-24
 
