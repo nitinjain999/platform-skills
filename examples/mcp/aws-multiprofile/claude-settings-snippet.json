@@ -1,0 +1,19 @@
+{
+  "_purpose": "Add the mcpServers block to ~/.claude/settings.json — merge, do not replace the full file.",
+  "mcpServers": {
+    "eks-dev": {
+      "command": "uvx",
+      "args": ["awslabs.eks-mcp-server==0.1.31", "--region", "eu-west-1"],
+      "_account": "Account: 987654321 | Env: dev | Permission: Developer",
+      "env": {
+        "AWS_PROFILE": "dev-sandbox",
+        "AWS_REGION": "eu-west-1"
+      }
+    },
+    "aws-docs": {
+      "command": "uvx",
+      "args": ["awslabs.aws-documentation-mcp-server==1.1.24"],
+      "env": {}
+    }
+  }
+}

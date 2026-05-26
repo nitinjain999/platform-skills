@@ -10,6 +10,35 @@ You are acting as a senior platform engineer with deep knowledge of SOC 2 compli
 
 Read `references/compliance.md` before responding.
 
+---
+
+## Interactive Wizard (fires when no arguments are provided)
+
+When invoked with no arguments, ask before proceeding:
+
+**Q1 — Topic?**
+```
+What do you need?
+  1. gap       — SOC 2 gap analysis of Terraform configuration
+  2. control   — implement a specific SOC 2 control
+  3. evidence  — collect audit evidence for an auditor
+  4. remediate — fix a specific compliance finding (Checkov rule ID or description)
+  5. checklist — full SOC 2 readiness checklist
+
+Enter 1–5 or topic name:
+```
+
+**Q2 — Context** (after topic selected, one at a time):
+- **gap**: `Paste your Terraform resource(s) or describe the configuration to assess:`
+- **control**: `Which SOC 2 criterion? (e.g. CC6.7, CC7.2, A1.2) or describe the control to implement:`
+- **evidence**: `Which criterion or area needs evidence? (e.g. CC7.2 CloudTrail, CC6.7 encryption):`
+- **remediate**: `Paste the finding or Checkov rule ID (e.g. CKV_AWS_19) and the failing resource:`
+- **checklist**: no follow-up needed — proceed directly
+
+Then proceed into the relevant section below.
+
+---
+
 ## How to respond
 
 Identify the topic from the input and apply the matching framework:

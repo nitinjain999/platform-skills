@@ -1,0 +1,11 @@
+{
+  "_kit": "cost | ~1,000 tokens | Best for: cost anomaly investigation, budget alerts, pricing queries",
+  "mcpServers": {
+    "billing": {
+      "command": "uvx",
+      "args": ["awslabs.billing-cost-management-mcp-server==0.0.22"],
+      "_account": "Account: 987654321 | Env: dev | Permission: Developer",
+      "env": { "AWS_PROFILE": "dev-sandbox", "AWS_REGION": "us-east-1" }
+    }
+  }
+}

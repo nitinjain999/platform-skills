@@ -1,0 +1,17 @@
+{
+  "_kit": "deploy | ~3,750 tokens | Best for: serverless debugging, Lambda lifecycle, S3/ECR via aws-api",
+  "mcpServers": {
+    "aws-api": {
+      "command": "uvx",
+      "args": ["awslabs.aws-api-mcp-server==1.3.38"],
+      "_account": "Account: 987654321 | Env: dev | Permission: Developer",
+      "env": { "AWS_PROFILE": "dev-sandbox", "AWS_REGION": "eu-west-1" }
+    },
+    "serverless": {
+      "command": "uvx",
+      "args": ["awslabs.aws-serverless-mcp-server==0.1.19"],
+      "_account": "Account: 987654321 | Env: dev | Permission: Developer",
+      "env": { "AWS_PROFILE": "dev-sandbox", "AWS_REGION": "eu-west-1" }
+    }
+  }
+}

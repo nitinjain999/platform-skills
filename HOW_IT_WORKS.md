@@ -99,6 +99,7 @@ Slash commands are predefined workflows. Use them instead of writing a long prom
 | `/platform-skills:compliance` | SOC 2 gap analysis or Checkov remediation for Terraform |
 | `/platform-skills:product` | RFC/ADR drafting, DevEx audit, incident communication, post-mortem |
 | `/platform-skills:mcp` | Scaffold, review, or debug an MCP server or client |
+| `/platform-skills:aws-profile` | Discover, switch, and validate AWS profiles for MCP servers across VS Code and Claude Code |
 | `/platform-skills:observability` | Instrument services, build dashboards, write alerts, run load tests, plan capacity |
 | `/platform-skills:document` | Generate docstrings, OpenAPI specs, documentation sites, or getting started guides |
 | `/platform-skills:datadog` | Datadog Agent setup, APM instrumentation, monitors, dashboards, SLOs, and debugging |

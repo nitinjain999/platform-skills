@@ -33,6 +33,7 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:dynatrace](#platform-skillsdynatrace) | Dynatrace Operator, OneAgent, SLOs, incidents |
 | [/platform-skills:document](#platform-skillsdocument) | Docstrings, OpenAPI specs, docs sites, guides |
 | [/platform-skills:mcp](#platform-skillsmcp) | MCP server scaffold, review, debug |
+| [/platform-skills:aws-profile](#platform-skillsaws-profile) | AWS profile management for MCP servers — discover, switch, login, org-scan |
 | [/platform-skills:product](#platform-skillsproduct) | DevEx, RFC/ADR, post-mortems, capacity, cost |
 | [/platform-skills:pr-review](#platform-skillspr-review) | Comprehensive PR risk review |
 | [/platform-skills:triage](#platform-skillstriage) | Triage and resolve PR comments |
@@ -1460,6 +1461,38 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | node dist/in
 ```
 ```
 /platform-skills:mcp debug schema validation rejecting a valid input — Zod error: "Expected string, received number"
+```
+
+---
+
+## `/platform-skills:aws-profile`
+
+**What it does:** Discover all AWS profiles from `~/.aws/config`, check credential TTL, switch profiles across VS Code and Claude Code MCP server configs, and scan AWS Organization accounts for unconfigured entries.
+
+```
+/platform-skills:aws-profile [discover|status|switch <profile>|login <profile>|org-scan] [flags]
+```
+
+**Modes:**
+
+| Mode | What it does |
+|------|-------------|
+| `discover` | List all profiles classified by type (SSO/assumed-role/Granted/static) with TTL and env tags |
+| `status` | Show which profile each MCP server uses and whether it will auto-refresh on expiry |
+| `switch` | Patch `AWS_PROFILE` in VS Code and/or Claude Code MCP configs, with prod safety guard |
+| `login` | Emit the correct auth command for the profile type (sso login / assume / role chain) |
+| `org-scan` | List all AWS Org accounts, flag those without configured profiles |
+
+**Common usage:**
+
+```
+/platform-skills:aws-profile discover
+/platform-skills:aws-profile discover --type sso --chain
+/platform-skills:aws-profile status --watch
+/platform-skills:aws-profile switch prod-platform-eu --scope workspace --confirm
+/platform-skills:aws-profile switch --env dev --scope global
+/platform-skills:aws-profile login dev-sandbox
+/platform-skills:aws-profile org-scan --profile org-management --generate-profiles
 ```
 
 ---

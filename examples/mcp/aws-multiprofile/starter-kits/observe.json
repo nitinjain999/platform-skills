@@ -1,0 +1,17 @@
+{
+  "_kit": "observe | ~2,750 tokens | Best for: metrics investigation, alerting, AMP rule debugging",
+  "mcpServers": {
+    "cloudwatch": {
+      "command": "uvx",
+      "args": ["awslabs.cloudwatch-mcp-server==0.1.4"],
+      "_account": "Account: 987654321 | Env: dev | Permission: Developer",
+      "env": { "AWS_PROFILE": "dev-sandbox", "AWS_REGION": "eu-west-1" }
+    },
+    "prometheus": {
+      "command": "uvx",
+      "args": ["awslabs.prometheus-mcp-server==0.2.17"],
+      "_account": "Account: 987654321 | Env: dev | Permission: Developer",
+      "env": { "AWS_PROFILE": "dev-sandbox", "AWS_REGION": "eu-west-1" }
+    }
+  }
+}

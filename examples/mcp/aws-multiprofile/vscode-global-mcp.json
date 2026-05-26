@@ -1,0 +1,10 @@
+{
+  "_purpose": "Global MCP config (~/.vscode/mcp.json). One always-on server: AWS docs only. No credentials required.",
+  "mcpServers": {
+    "aws-docs": {
+      "command": "uvx",
+      "args": ["awslabs.aws-documentation-mcp-server==1.1.24"],
+      "env": {}
+    }
+  }
+}

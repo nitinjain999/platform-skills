@@ -10,6 +10,39 @@ You are acting as a senior platform engineer with a product mindset. The user ha
 
 Read `references/platform-mindset.md` before responding.
 
+---
+
+## Interactive Wizard (fires when $ARGUMENTS is empty)
+
+When invoked with no arguments, ask before proceeding:
+
+**Q1 — Topic?**
+```
+What do you need?
+  1. devex      — Developer Experience audit and SPACE analysis
+  2. friction   — friction audit (onboarding, CI, secrets, environment, ownership)
+  3. rfc        — draft a full RFC document
+  4. adr        — draft an Architecture Decision Record
+  5. incident   — write a structured incident status update
+  6. postmortem — write a blameless post-mortem
+  7. capacity   — capacity planning for a service or platform
+  8. cost       — cost optimisation analysis
+  9. review     — platform health review
+
+Enter 1–9 or topic name:
+```
+
+**Q2 — Context** (after topic selected):
+- **devex / friction**: `Describe the friction point or what developers are complaining about:`
+- **rfc**: `What problem needs to be solved and why now? (1-2 sentences):`
+- **adr**: `What decision was made and what forced it?`
+- **incident**: `Severity, affected component, and what is known so far:`
+- **postmortem**: `Paste the incident timeline or describe what happened and when:`
+- **capacity**: `Service name, current baseline RPS/users, and projected growth over the next 6 months:`
+- **cost / review**: no follow-up — proceed directly
+
+---
+
 ## How to respond
 
 Identify the topic from the input and apply the matching framework:
@@ -27,18 +60,99 @@ Identify the topic from the input and apply the matching framework:
 4. Define "done" — what does success look like in measurable terms?
 
 ### rfc — RFC Draft
-Produce a complete RFC using the template:
-- Problem (what is broken, why now)
-- Proposal (concrete change)
-- Alternatives considered
-- Impact (which teams, what migration)
-- Open questions
+
+Produce a complete RFC document using this exact structure. Fill every section — no placeholders:
+
+```markdown
+# RFC-NNNN: <Title>
+
+**Status:** Draft  
+**Author:** <name>  
+**Date:** <YYYY-MM-DD>  
+**Stakeholders:** <teams who must approve or are affected>
+
+---
+
+## Problem
+
+<2–3 paragraphs. What is broken or suboptimal? What is the user-visible impact?
+Why is this the right time to fix it — what changed (scale, incident, compliance)?
+Do not describe the solution here.>
+
+## Proposal
+
+<Concrete description of the change. Be specific: what gets built, changed, or removed.
+Include: new components, changed APIs, data flows, configuration changes.
+A diagram or example config snippet is worth more than paragraphs.>
+
+## Alternatives Considered
+
+| Option | Pros | Cons | Why rejected |
+|--------|------|------|--------------|
+| Option A (proposed) | ... | ... | (not rejected) |
+| Option B | ... | ... | ... |
+| Do nothing | ... | ... | ... |
+
+## Impact
+
+**Teams affected:** <list>  
+**Migration path:** <what teams must change and by when>  
+**Rollout plan:** <phased / flag-gated / big-bang — with rollback trigger>  
+**Blast radius if this fails:** <what breaks and who notices>
+
+## Open Questions
+
+- [ ] <Question 1 — owner, due date>
+- [ ] <Question 2 — owner, due date>
+
+## Decision
+
+<Leave blank until RFC is approved. Record the outcome and who approved.>
+```
+
+→ **Next:** After the RFC is approved, run `/platform-skills:product adr` to record the final decision as an ADR.
 
 ### adr — Architecture Decision Record
-Produce a complete ADR using the template:
-- Context (what forced this decision)
-- Decision (what was decided)
-- Consequences (easier / harder / must monitor)
+
+Produce a complete ADR using this exact structure. ADRs are immutable once accepted — record the state at decision time:
+
+```markdown
+# ADR-NNNN: <Title>
+
+**Date:** <YYYY-MM-DD>  
+**Status:** Accepted  
+**Deciders:** <names or roles>
+
+---
+
+## Context
+
+<What situation forced this decision? Include: scale, incident, tool end-of-life,
+compliance requirement, or team constraint. State facts, not opinions.
+This section must be understandable by someone who wasn't in the room.>
+
+## Decision
+
+<What was decided, stated plainly. Use active voice: "We will use X" not "X was chosen".
+Include: what is being adopted, replaced, or deprecated.>
+
+## Consequences
+
+**Easier:**
+- <What becomes simpler or safer as a result>
+
+**Harder:**
+- <What becomes more complex, constrained, or requires new expertise>
+
+**Must monitor:**
+- <Metrics, alerts, or reviews needed to detect if this decision is working>
+
+## Alternatives Rejected
+
+| Alternative | Reason rejected |
+|------------|----------------|
+| ... | ... |
+```
 
 ### incident — Incident Update
 Produce a structured incident status update:

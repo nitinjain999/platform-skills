@@ -13,13 +13,17 @@ EXAMPLE_DIR="examples/supply-chain"
 echo ""
 echo "=== Supply Chain Examples: YAML syntax ==="
 
-for f in "$EXAMPLE_DIR"/*.yaml; do
-  if yq eval 'true' "$f" > /dev/null 2>&1; then
-    pass "$f is valid YAML"
-  else
-    fail "$f has invalid YAML"
-  fi
-done
+if ! command -v yq &> /dev/null; then
+  echo "  INFO: yq not found — skipping YAML lint (install: https://github.com/mikefarah/yq)"
+else
+  for f in "$EXAMPLE_DIR"/*.yaml; do
+    if yq eval 'true' "$f" > /dev/null 2>&1; then
+      pass "$f is valid YAML"
+    else
+      fail "$f has invalid YAML"
+    fi
+  done
+fi
 
 echo ""
 if [ "$ERRORS" -gt 0 ]; then

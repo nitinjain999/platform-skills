@@ -6,6 +6,37 @@ argument-hint: "[install|experiment|schedule|gameday|debug|report] [description 
 
 Design, run, and debug Chaos Engineering experiments on Kubernetes.
 
+---
+
+## Interactive Wizard (fires when no arguments are provided)
+
+When invoked with no arguments, ask before proceeding:
+
+**Q1 — Mode?**
+```
+What do you need?
+  1. install    — install Litmus Chaos or Chaos Mesh via Helm
+  2. experiment — design a fault injection experiment
+  3. schedule   — wrap an experiment in a recurring schedule
+  4. gameday    — run a structured GameDay experiment
+  5. debug      — diagnose a failed or stuck experiment
+  6. report     — summarize results after an experiment completes
+
+Enter 1–6 or mode name:
+```
+
+After collecting the mode, ask one follow-up:
+- **install**: `Which tool? Litmus Chaos (recommended default) or Chaos Mesh (network/IO faults)?`
+- **experiment**: `Describe the workload to target — name, namespace, fault type (pod-delete / network-loss / cpu-stress / node-drain):`
+- **schedule**: `Provide the experiment YAML or describe the experiment to wrap in a schedule:`
+- **gameday**: `State the steady-state hypothesis — what metric or probe proves the system is healthy?`
+- **debug**: `Describe the symptom or paste the ChaosEngine/ChaosResult status:`
+- **report**: `Paste the ChaosResult output or describe the experiment that ran:`
+
+Then proceed into the relevant mode below.
+
+---
+
 ## Mode: install
 
 Install Litmus Chaos or Chaos Mesh via Helm.

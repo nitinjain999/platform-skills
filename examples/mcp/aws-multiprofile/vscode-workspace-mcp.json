@@ -1,0 +1,23 @@
+{
+  "_purpose": "Workspace MCP config (.vscode/mcp.json). eks-debug kit — hardcoded profile. Add to .gitignore.",
+  "mcpServers": {
+    "eks-dev": {
+      "command": "uvx",
+      "args": ["awslabs.eks-mcp-server==0.1.31", "--region", "eu-west-1"],
+      "env": {
+        "AWS_PROFILE": "dev-sandbox",
+        "AWS_REGION": "eu-west-1"
+      },
+      "_account": "Account: 987654321 | Env: dev | Permission: Developer"
+    },
+    "cloudwatch-dev": {
+      "command": "uvx",
+      "args": ["awslabs.cloudwatch-mcp-server==0.1.4"],
+      "env": {
+        "AWS_PROFILE": "dev-sandbox",
+        "AWS_REGION": "eu-west-1"
+      },
+      "_account": "Account: 987654321 | Env: dev | Permission: Developer"
+    }
+  }
+}

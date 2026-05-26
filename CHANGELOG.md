@@ -5,6 +5,19 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.26.0] - 2026-05-25
+
+### Added
+
+- `commands/aws-profile.md`: new `/platform-skills:aws-profile` command with five modes — `discover` (profile table with TTL traffic-light), `status` (per-server credential health), `switch` (prod-gated profile patching across VS Code + Claude Code), `login` (type-aware auth command), `org-scan` (AWS Org account coverage).
+- `references/aws-mcp-profiles.md`: 15-section reference covering AWS MCP server catalog, context budget table, profile type detection, auth flows, credential lifecycle, `credential_process` pattern, config file locations, VS Code input variables, team sharing, multi-account EKS, health check checklist, and prod safety.
+- `commands/mcp.md`: new `configure-aws` mode with upfront cost/token warning, CLI-first alternative check, `credential_process` validation, version-pinned config generation for VS Code and Claude Code, `--multi-account` EKS named instances, and AWS MCP server catalog with 5 starter kits.
+- `examples/mcp/aws-multiprofile/`: 13 example files — VS Code global/workspace/input/template configs, Claude Code snippet, `aws-config-credential-process.ini`, `.gitignore.snippet`, and 5 starter-kit JSON files (eks-debug, observe, knowledge, deploy, cost) with real PyPI version pins.
+- `SKILL.md`: `AWS MCP Profiles` row in tool table; `/platform-skills:aws-profile` slash command entry.
+- `COMMANDS.md`: TOC entry and full `/platform-skills:aws-profile` command section (30 commands total).
+- `references/mcp.md`: AWS Multi-Account Profiles pointer section.
+- Tessl evaluation scenarios (`evals/`) for quality testing: `pr-triage`, `opa-policy`, `flux-helmrelease`. Each scenario includes `task.md`, `criteria.json`, and `capability.txt`.
+
 ## [1.25.20] - 2026-05-24
 
 ### Added
@@ -34,12 +47,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - FluxCD debug mode: error-pattern routing table prevents HelmRelease errors from being routed through installation check workflow.
 - HelmRelease ownership conflict (`rendered manifests contain a resource that already exists`) added to troubleshooting reference with evidence commands and fix.
 - Triage reply format: concrete example and literal `✅ Fixed` ending requirement added to `commands/triage.md`.
-
-## [1.26.0] - 2026-05-24
-
-### Added
-
-- Tessl evaluation scenarios (`evals/`) for quality testing: `pr-triage`, `opa-policy`, `flux-helmrelease`. Each scenario includes `task.md`, `criteria.json`, and `capability.txt`.
 
 ## [1.25.4] - 2026-05-24
 

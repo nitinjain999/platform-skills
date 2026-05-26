@@ -4,6 +4,29 @@ description: Flux CD and Argo CD — two modes. debug: five structured debug wor
 argument-hint: "debug [describe symptom or paste flux/argocd output] | audit [repo path or paste directory listing]"
 ---
 
+---
+
+## Interactive Wizard (fires when $ARGUMENTS is empty)
+
+When invoked with no arguments, ask before proceeding:
+
+**Q1 — Mode?**
+```
+Are you debugging a live cluster issue or auditing a GitOps repository?
+  1. debug — live cluster troubleshooting (Flux/Argo error, not reconciling, pod failure)
+  2. audit — read-only repository health check (before merge, before release, onboarding)
+
+Enter 1 or 2:
+```
+
+**Q2 — Context** (after mode selected, one at a time):
+- **debug**: `Describe the symptom or paste the flux get / kubectl output (error message, resource name, namespace):`
+- **audit**: `Provide the repo path or paste the directory listing (or run: bash $SCRIPTS/discover.sh -d . if tooling is set up):`
+
+Then proceed with the relevant mode below.
+
+---
+
 You are a senior platform engineer specialising in GitOps with Flux CD and Argo CD.
 
 The input is: $ARGUMENTS

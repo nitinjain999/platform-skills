@@ -1,0 +1,20 @@
+{
+  "_kit": "knowledge | ~1,250 tokens | Best for: AWS research, internal KB queries, runbook generation",
+  "mcpServers": {
+    "aws-docs": {
+      "command": "uvx",
+      "args": ["awslabs.aws-documentation-mcp-server==1.1.24"],
+      "env": {}
+    },
+    "bedrock-kb": {
+      "command": "uvx",
+      "args": ["awslabs.bedrock-kb-retrieval-mcp-server==1.0.22"],
+      "_account": "Account: 987654321 | Env: dev | Permission: Developer",
+      "env": {
+        "AWS_PROFILE": "dev-sandbox",
+        "AWS_REGION": "eu-west-1",
+        "KNOWLEDGE_BASE_IDS": "REPLACE_WITH_YOUR_KB_IDS"
+      }
+    }
+  }
+}
