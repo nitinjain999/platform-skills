@@ -15,7 +15,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `examples/mcp/aws-multiprofile/`: 13 example files — VS Code global/workspace/input/template configs, Claude Code snippet, `aws-config-credential-process.ini`, `.gitignore.snippet`, and 5 starter-kit JSON files (eks-debug, observe, knowledge, deploy, cost) with real PyPI version pins.
 - `SKILL.md`: `AWS MCP Profiles` row in tool table; `/platform-skills:aws-profile` slash command entry.
 - `COMMANDS.md`: TOC entry and full `/platform-skills:aws-profile` command section (30 commands total).
-- `references/aws-mcp-profiles.md`: new reference file added to skill coverage.
 - `references/mcp.md`: AWS Multi-Account Profiles pointer section.
 - Tessl evaluation scenarios (`evals/`) for quality testing: `pr-triage`, `opa-policy`, `flux-helmrelease`. Each scenario includes `task.md`, `criteria.json`, and `capability.txt`.
 

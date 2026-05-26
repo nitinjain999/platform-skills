@@ -221,7 +221,7 @@ for d in [json.loads(l) for l in sys.stdin if l.strip()]:
 
 ## 7. credential_process Pattern
 
-`credential_process` is the structural fix for stale credentials. Instead of the SDK caching credentials internally, it calls an external binary on every API call that needs fresh credentials.
+`credential_process` is the structural fix for stale credentials. Instead of the SDK reading credentials from a static file, it delegates to an external binary — invoked when credentials are needed or have expired, then cached in-memory until the next refresh boundary.
 
 **Configure in `~/.aws/config`:**
 
@@ -272,7 +272,7 @@ aws sts get-caller-identity --profile prod-platform-eu
 }
 ```
 
-When `prod-platform-eu` has `credential_process` configured, `AWS_PROFILE` in the MCP env block is safe — the SDK will call `credential_process` for every API call instead of using a cached token.
+When `prod-platform-eu` has `credential_process` configured, `AWS_PROFILE` in the MCP env block is safe — the credential provider refreshes credentials when they expire, so long-running MCP servers re-auth without restart.
 
 ---
 
