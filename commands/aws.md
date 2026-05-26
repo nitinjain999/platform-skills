@@ -8,6 +8,34 @@ argument-hint: "[cloudfront|waf|lambda-edge|multi-account|review|terraform] [des
 
 Structured guidance for AWS CloudFront, WAF, Lambda@Edge, and multi-account security patterns.
 
+## Interactive Wizard (fires when no mode is provided)
+
+When invoked with no arguments, ask before proceeding:
+
+**Q1 — Mode?**
+```
+What do you need?
+  1. cloudfront   — distributions, OAC, cache policies, security headers, Lambda@Edge
+  2. waf          — web ACLs, managed rule groups, rate limiting, false positive tuning
+  3. lambda-edge  — CloudFront Functions vs Lambda@Edge, viewer/origin events
+  4. multi-account — Firewall Manager, cross-account OAC, FMS WAF enforcement
+  5. orgs         — Organizations, SCPs, OU design, account vending, Control Tower
+  6. review       — production-readiness review of CloudFront + WAF config
+  7. terraform    — generate a Terraform module scaffold
+
+Enter 1–7 or mode name:
+```
+
+**Q2 — Context** (after mode selected):
+- **cloudfront**: `Describe the issue or what you want to build (distribution, OAC, cache, edge function):`
+- **waf**: `Describe the use case — new WebACL, false positive, adding a rule, or multi-account enforcement:`
+- **lambda-edge**: `What does the edge function need to do? (auth, URL rewrite, A/B test, dynamic routing):`
+- **multi-account**: `How many accounts? Do you have FMS administrator configured in the security account?`
+- **orgs**: `Describe what you need — SCP enforcement, OU design, account vending, or Control Tower setup:`
+- **review / terraform**: no follow-up needed — proceed directly
+
+---
+
 ## Activation
 
 Invoke with `/platform-skills:aws` followed by a mode, or describe your problem and the command will route automatically.
@@ -172,6 +200,97 @@ Steps:
 
 ---
 
+## Mode: orgs
+
+**Triggers:** Organizations, SCPs, OU, account vending, Control Tower, delegated admin, account factory, guardrails
+
+Steps:
+
+1. **Identify the request:**
+   - **SCP design** — what to restrict and at which OU level
+   - **OU structure** — hierarchy that reflects environment and risk boundary
+   - **Account vending** — automated account creation with baseline config
+   - **Control Tower** — managed landing zone setup and customizations
+
+2. **OU design principles:**
+
+   | OU | Accounts | SCP stance |
+   |----|----------|------------|
+   | Security | Log archive, Audit | Deny all except security tooling |
+   | Infrastructure | Network, Shared services | Restricted; platform team only |
+   | Workloads/Prod | Production app accounts | Deny risky actions (delete trail, disable GuardDuty) |
+   | Workloads/SDLC | Dev, staging accounts | More permissive; deny prod data access |
+   | Sandbox | Developer personal accounts | Deny spend > threshold; deny production-touching actions |
+
+3. **Essential SCPs (apply at root or Workloads OU):**
+   ```json
+   {
+     "Version": "2012-10-17",
+     "Statement": [
+       {
+         "Sid": "DenyLeavingOrg",
+         "Effect": "Deny",
+         "Action": "organizations:LeaveOrganization",
+         "Resource": "*"
+       },
+       {
+         "Sid": "DenyDisableCloudTrail",
+         "Effect": "Deny",
+         "Action": ["cloudtrail:StopLogging", "cloudtrail:DeleteTrail"],
+         "Resource": "*"
+       },
+       {
+         "Sid": "DenyDisableGuardDuty",
+         "Effect": "Deny",
+         "Action": ["guardduty:DeleteDetector", "guardduty:DisassociateFromMasterAccount"],
+         "Resource": "*"
+       },
+       {
+         "Sid": "DenyRootUser",
+         "Effect": "Deny",
+         "Action": "*",
+         "Resource": "*",
+         "Condition": {
+           "StringLike": { "aws:PrincipalArn": "arn:aws:iam::*:root" }
+         }
+       }
+     ]
+   }
+   ```
+
+4. **Account vending (Account Factory for Terraform — AFT):**
+   ```hcl
+   module "account_request" {
+     source = "github.com/aws-ia/terraform-aws-control_tower_account_factory"
+     control_tower_parameters = {
+       AccountEmail = "platform+prod-payments@company.com"
+       AccountName  = "prod-payments"
+       ManagedOrganizationalUnit = "Workloads/Prod"
+       SSOUserEmail = "admin@company.com"
+     }
+     account_tags = { env = "prod", team = "payments", cost-center = "eng" }
+     account_customizations_name = "prod-baseline"
+   }
+   ```
+
+5. **Delegated administrators** — always delegate to a dedicated account, never the management account:
+   - GuardDuty: `aws organizations register-delegated-administrator --service-principal guardduty.amazonaws.com`
+   - SecurityHub: `--service-principal securityhub.amazonaws.com`
+   - FMS: designated separately via FMS console or Terraform
+
+6. **Validate SCP effect before attaching:**
+   ```bash
+   # Simulate an action under the SCP (requires aws-cli v2)
+   aws iam simulate-custom-policy \
+     --policy-input-list file://scp.json \
+     --action-names cloudtrail:StopLogging \
+     --resource-arns "*"
+   ```
+
+→ **Next:** Run `/platform-skills:aws review` to audit the account configuration, or `/platform-skills:compliance checklist` to validate SOC 2 controls across the org.
+
+---
+
 ## Mode: review
 
 **Triggers:** review, production ready, production checklist, audit my CloudFront, audit my WAF
@@ -233,6 +352,17 @@ Then generate complete module files:
 ```
 
 **Non-negotiable patterns in every generated module:**
+
+---
+
+## Common mistakes
+
+- **WAF scope in wrong region** — `CLOUDFRONT` scope WebACLs must be created in `us-east-1`. Any other region returns `WAFInvalidParameterException`. Use a provider alias `aws.us_east_1` explicitly
+- **OAI instead of OAC** — OAI (Origin Access Identity) is legacy. New distributions must use OAC (`aws_cloudfront_origin_access_control`). OAI does not support non-S3 origins or newer signing protocols
+- **Lambda@Edge using `$LATEST`** — `$LATEST` is not a publishable version and cannot be associated with CloudFront. Set `publish = true` in the resource and reference `aws_lambda_function.this.qualified_arn`
+- **ACM certificate not in us-east-1** — CloudFront only accepts ACM certificates created in `us-east-1`, regardless of where the distribution serves traffic
+- **SCP accidentally blocking the management account** — SCPs do not apply to the management account. Policies intended to restrict member accounts work correctly; don't expect them to constrain root
+- **Attaching WAF rules directly in Block mode** — always Count first for 24–48h before switching to Block. A misconfigured rule in Block mode silently drops legitimate traffic
 
 ```hcl
 # versions.tf — always pin providers
