@@ -182,7 +182,7 @@ Two cache locations with different TTLs:
 |-------|----------|-----|-------------|
 | SSO token | `~/.aws/sso/cache/*.json` | 8–12h (org-configured) | All profiles using this SSO session |
 | Assumed role | `~/.aws/cli/cache/*.json` | 1h default | Specific role assumption |
-| Granted | `~/.granted/` | Org-configured | Granted session |
+| Granted | Same as SSO: `~/.aws/sso/cache/*.json` | Org-configured | No separate cache — delegates to SSO or role cache |
 
 **Parse expiry manually:**
 ```bash

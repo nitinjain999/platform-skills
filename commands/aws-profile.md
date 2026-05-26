@@ -38,7 +38,7 @@ security              static       890123456     -          -                 ne
 2. Parse credential cache files for expiration timestamps. Field names differ by type:
    - SSO (`~/.aws/sso/cache/*.json`): top-level `expiresAt`
    - Assumed role (`~/.aws/cli/cache/*.json`): `Credentials.Expiration`
-   - Granted (`~/.granted/*.json`, if present): top-level `expiresAt`
+   - Granted: no separate cache — SSO-backed profiles use `~/.aws/sso/cache/*.json` (`expiresAt`); role-chained profiles use `~/.aws/cli/cache/*.json` (`Credentials.Expiration`)
    Apply traffic-light TTL:
    - ✓ Green: >30 min
    - ⚠ Amber: 10–30 min
