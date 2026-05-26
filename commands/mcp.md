@@ -79,6 +79,106 @@ Generate version-pinned, credential_process-backed MCP server configs for AWS se
 /platform-skills:mcp configure-aws eks --profile prod-eu --region eu-west-1 --multi-account
 ```
 
+### Step 0: Gather Inputs (interactive — fires when any required value is missing)
+
+When the user invokes `configure-aws` without arguments, or omits any required value, prompt for each missing piece **one question at a time** before proceeding.
+
+**Question 1 — Service or kit** (skip if already provided as positional arg):
+```
+Which AWS service or starter kit do you need?
+
+Services:
+  eks         EKS cluster ops, nodegroups           (~2,000 tokens)
+  cloudwatch  Logs, metrics, alarms                 (~1,750 tokens)
+  prometheus  AMP metrics, rule groups              (~1,000 tokens)
+  iam         IAM queries, read-only                (~1,500 tokens)
+  bedrock-kb  Knowledge base retrieve + generate    (~750 tokens)
+  docs        Real-time AWS documentation           (~500 tokens)
+  api         All AWS services, catch-all           (~2,500 tokens)
+  billing     Cost Explorer, budgets                (~1,000 tokens)
+  serverless  SAM, Lambda lifecycle                 (~1,250 tokens)
+  dynamodb    Table ops, queries                    (~1,250 tokens)
+
+Starter kits (pre-bundled):
+  eks-debug   eks + cloudwatch                      (~3,750 tokens)
+  observe     cloudwatch + prometheus               (~2,750 tokens)
+  knowledge   docs + bedrock-kb                     (~1,250 tokens)
+  deploy      api + serverless                      (~3,750 tokens)
+  cost        billing                               (~1,000 tokens)
+
+Enter service or kit name:
+```
+
+**Question 2 — Host** (skip if `--host` provided):
+```
+Which tool are you configuring for?
+  1. VS Code
+  2. Claude Code
+  3. Both
+
+Enter 1, 2, or 3:
+```
+
+**Question 3 — AWS profile** (skip if `--profile` provided):
+
+Read `~/.aws/config`, list available profiles with type and environment tag (from `~/.aws-profile-tags.yaml` if present):
+```
+Which AWS profile should MCP servers use?
+
+Available profiles (from ~/.aws/config):
+  prod-platform-eu   SSO          [prod]     123456789
+  staging-assume     assumed-role [staging]  456789123
+  dev-sandbox        SSO          [dev]      987654321
+
+Enter profile name (or press enter for no profile — uses ambient credentials):
+```
+
+If `~/.aws/config` is not readable or has no profiles, show: `Could not read ~/.aws/config. Enter profile name manually (or press enter to skip):`
+
+**Question 4 — Region** (skip if `--region` provided):
+
+Detect the profile's `region` field from `~/.aws/config` and offer it as the default:
+```
+AWS region? [detected from profile 'prod-platform-eu': eu-west-1]
+Press enter to accept or type a different region:
+```
+
+If no region is detected in the profile: `AWS region? (e.g. us-east-1):`
+
+**Question 5 — Scope** (VS Code only; skip if `--scope` provided):
+```
+VS Code config scope?
+  1. Workspace — .vscode/mcp.json (this project only)
+  2. Global    — applies to all VS Code windows
+
+Enter 1 or 2:
+```
+
+**Question 6 — Multi-account** (`eks` service only; skip if `--multi-account` provided or service is not eks):
+```
+Generate named instances for all prod-tagged profiles? (multi-account mode)
+  This creates eks-prod-eu, eks-prod-us, etc. from ~/.aws-profile-tags.yaml.
+  Requires ~/.aws-profile-tags.yaml with env: prod entries.
+
+[y/N]:
+```
+
+After collecting all answers, confirm before proceeding:
+```
+Summary:
+  Service/kit : eks-debug (eks + cloudwatch)
+  Host        : both (VS Code + Claude Code)
+  Profile     : prod-platform-eu
+  Region      : eu-west-1
+  VS Code scope: workspace
+
+Proceeding with cost check...
+```
+
+Then continue with Steps 1–4 below using the collected values.
+
+---
+
 ### Step 1: Cost Warning
 
 Before generating any config, show tool count and token cost. If total exceeds 5,000 tokens, flag it:
