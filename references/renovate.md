@@ -87,10 +87,19 @@ Group related updates into one PR to reduce noise:
 
 ### Schedule recipes
 
+Weekly, low disruption:
 ```json
-"schedule": ["before 6am on monday"]          // Weekly, low disruption
-"schedule": ["after 10pm every weekday"]       // Nightly, non-work hours
-"schedule": ["at any time"]                    // Immediate (vulnerability alerts)
+{ "schedule": ["before 6am on monday"] }
+```
+
+Nightly, non-work hours:
+```json
+{ "schedule": ["after 10pm every weekday"] }
+```
+
+Immediate (vulnerability alerts):
+```json
+{ "schedule": ["at any time"] }
 ```
 
 ### `minimumReleaseAge` for supply chain safety
