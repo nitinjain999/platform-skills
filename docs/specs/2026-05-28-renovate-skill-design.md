@@ -1,7 +1,7 @@
 # Renovate Skill Design — v1.27.0
 
 **Date:** 2026-05-28  
-**Author:** Nitin Jain  
+**Author:** Geetika Jain  
 **Status:** Approved
 
 ---
