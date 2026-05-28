@@ -45,6 +45,7 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:aws](#platform-skillsaws) | CloudFront, WAF, Lambda@Edge, Firewall Manager multi-account enforcement, and Terraform module generation |
 | [/platform-skills:composite-actions](#platform-skillscomposite-actions) | Generate, review, secure, and test composite GitHub Actions |
 | [/platform-skills:fluxcd](#platform-skillsfluxcd) | FluxCD entry point — routes to debug, audit, or helm review based on your input |
+| [/platform-skills:renovate](#platform-skillsrenovate) | Generate renovate.json from repo scan or emit a GHA validation workflow |
 
 ---
 
@@ -2174,3 +2175,32 @@ Reference: `commands/composite-actions.md`, `references/composite-actions.md`, a
 ```
 
 Reference: `commands/fluxcd.md`, `references/fluxcd.md`, `references/fluxcd-sources.md`, `references/fluxcd-operator.md`, and `examples/fluxcd/`
+
+---
+
+## `/platform-skills:renovate`
+
+**What it does:** Scans your repo for dependency file types and emits a correct `renovate.json` covering only the ecosystems you use, or generates a GitHub Actions workflow that validates `renovate.json` on every PR that touches it. No secrets or tokens required.
+
+**Works on:** Any repo using GitHub Actions, Terraform, Helm, Go, Node, Python, Docker, Rust, Kubernetes manifests, or any combination.
+
+```
+/platform-skills:renovate [generate|workflow]
+```
+
+**Modes:**
+
+| Mode | What it does |
+|------|-------------|
+| `generate` | Scans repo → detects dep file types → emits renovate.json with per-ecosystem packageRules, minimumReleaseAge, and pinDigests for Actions |
+| `workflow` | Emits `.github/workflows/validate-renovate.yml` — schema + config-validator + coverage scan triggered on PRs that touch renovate.json |
+
+**Examples:**
+
+```
+/platform-skills:renovate generate
+/platform-skills:renovate workflow
+/platform-skills:renovate
+```
+
+**Reference:** `references/renovate.md`
