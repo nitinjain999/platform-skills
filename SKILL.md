@@ -41,6 +41,7 @@ Use this skill for hands-on help with Kubernetes, GitOps, cloud infrastructure, 
 | `GitOps debug` | 5-workflow structured debug → 5-section report with root cause |
 | `GitOps audit` | 6-phase repo audit → prioritized Critical/Warning/Info report |
 | `Platform Mindset` | DevEx, friction audits, RFC/ADR, incident communication, post-mortems |
+| `Renovate` | Dependency update automation — generate renovate.json from repo scan, emit GHA validation workflow |
 
 If a task spans multiple areas, decide which layer owns the source of truth and keep the other layers consumers of that state.
 
@@ -160,4 +161,5 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:awesome-docs` — generate any animated Markdown document (README, architecture guide, runbook, tutorial, RFC, post-mortem, or custom), convert existing Markdown to animated, update diagrams, diff for staleness, audit quality, preview locally, or export to Confluence/Notion HTML
 - `/platform-skills:aws` — CloudFront distributions, WAF web ACLs, Lambda@Edge, CloudFront Functions, Firewall Manager multi-account enforcement, and Terraform module generation with best practices
 - `/platform-skills:composite-actions` — generate a full composite action repo scaffold, review an existing action.yml, harden with SHA pinning and env isolation, or generate a test workflow
+- `/platform-skills:renovate` — generate renovate.json for any repo, or emit a GHA workflow to validate it on PR
 - Working Flux CD examples: examples/fluxcd/

@@ -45,6 +45,7 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:aws](#platform-skillsaws) | CloudFront, WAF, Lambda@Edge, Firewall Manager multi-account enforcement, and Terraform module generation |
 | [/platform-skills:composite-actions](#platform-skillscomposite-actions) | Generate, review, secure, and test composite GitHub Actions |
 | [/platform-skills:fluxcd](#platform-skillsfluxcd) | FluxCD entry point — routes to debug, audit, or helm review based on your input |
+| [/platform-skills:renovate](#platform-skillsrenovate) | Generate renovate.json (with private registry support), pre-commit hook, or GHA validation workflow |
 
 ---
 
@@ -2174,3 +2175,48 @@ Reference: `commands/composite-actions.md`, `references/composite-actions.md`, a
 ```
 
 Reference: `commands/fluxcd.md`, `references/fluxcd.md`, `references/fluxcd-sources.md`, `references/fluxcd-operator.md`, and `examples/fluxcd/`
+
+---
+
+## `/platform-skills:renovate`
+
+**What it does:** Interactive wizard that scans your repo for dependency file types and generates a complete Renovate setup — `renovate.json` with per-ecosystem rules, private registry auth, custom regex managers for internal sources, a pre-commit validation hook, and a GitHub Actions validation workflow. No secrets or tokens required for the workflow; registry credentials use env-var templating.
+
+**Works on:** Any repo using GitHub Actions, Terraform, Helm, Go, Node, Python, Docker, Rust, Kubernetes manifests, or any combination — including repos with internal GitHub org modules, private Terraform registries, ECR/GCR/ACR/Harbor image registries, and private Helm OCI or HTTP chart registries.
+
+```
+/platform-skills:renovate [generate|workflow|precommit|all]
+```
+
+**Wizard questions (asked when no arguments are given, or for any mode that emits renovate.json):**
+
+| Q | Asks | Options |
+|---|------|---------|
+| Q1 | Mode | generate / workflow / precommit / all |
+| Q2 | Pinning strategy | digest (SHA for Actions + images) / semver (version tags only) |
+| Q3 | Automerge scope | patch-only / minor+patch / none |
+| Q4 | Update schedule | weekday mornings / monday / weekend / always |
+| Q5 | Internal Terraform modules | GitHub org / private TF registry / no |
+| Q6 | Private Helm registry | OCI / HTTP / no |
+| Q7 | Private container registry | ECR / GCR / ACR / Harbor / no (multi-select) |
+
+**Modes:**
+
+| Mode | What it does |
+|------|-------------|
+| `generate` | Scans repo → detects ecosystems → emits `renovate.json` with per-manager packageRules, `hostRules` for private registries, `regexManagers` for internal module sources |
+| `precommit` | Emits `.pre-commit-config.yaml` with `renovatebot/pre-commit-hooks` for local validation before every commit |
+| `workflow` | Emits `.github/workflows/validate-renovate.yml` — JSON syntax check + `renovate-config-validator` (Node 24) + ecosystem coverage scan, triggered on PRs that touch `renovate.json` |
+| `all` | Runs generate → precommit → workflow in sequence, prints a single consolidated commit block at the end |
+
+**Examples:**
+
+```
+/platform-skills:renovate
+/platform-skills:renovate all
+/platform-skills:renovate generate
+/platform-skills:renovate precommit
+/platform-skills:renovate workflow
+```
+
+**Reference:** `references/renovate.md`

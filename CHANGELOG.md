@@ -5,6 +5,21 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.27.0] - 2026-05-28
+
+### Added
+
+- `commands/renovate.md`: new `/platform-skills:renovate` command with four modes — `generate` (scan repo for dep file types, emit renovate.json covering only detected ecosystems with per-manager automerge/schedule/grouping rules and `minimumReleaseAge: "3 days"`), `workflow` (emit `.github/workflows/validate-renovate.yml` for schema + config-validator + coverage validation on PRs that touch renovate.json), `precommit` (interactive semver/automerge wizard and best-practices adviser), and `all` (run all modes in sequence).
+- `references/renovate.md`: 11-section reference — manager catalog, preset reference, package rules patterns, dependency dashboard, GitOps integration (Renovate vs Flux Image Reflector ownership boundary), security hardening (pinDigests, osvVulnerabilityAlerts, minimumReleaseAge), regex manager templates, troubleshooting, private registries, custom regex managers, pre-commit hook.
+- `.github/workflows/validate-renovate.yml`: CI workflow triggering on PRs that touch `renovate.json` — three parallel jobs (JSON syntax via jq, config-validator via npx renovate-config-validator, coverage bash scan) with `GITHUB_STEP_SUMMARY` result table. No secrets required.
+- `renovate.json`: added `dependencyDashboard`, `osvVulnerabilityAlerts`, `minimumReleaseAge: "3 days"` on automerge rules, packageRules for `gomod`/`npm`/`pip`, `npmDedupe` postUpdateOption.
+- `SKILL.md`: `Renovate` row in tool table; `/platform-skills:renovate` slash command entry.
+- `COMMANDS.md`: TOC entry and full `/platform-skills:renovate` command section (31 commands total).
+
+### Contributors
+
+- [@geetika-sv](https://github.com/geetika-sv) — Renovate skill
+
 ## [1.26.0] - 2026-05-26
 
 ### Added

@@ -7,8 +7,8 @@
   "plugins": [
     {
       "name": "platform-skills",
-      "version": "1.26.0",
-      "description": "Production-grade platform engineering handbook for Claude. 30 slash commands covering: Kubernetes, Helm, Terraform (blast radius, SOC 2, IAM), Flux CD (Flux Operator, FluxInstance, gitless OCI delivery, 5-workflow cluster debug, 6-phase repo audit), Argo CD, GitHub Actions (composite actions, SHA pinning, OIDC), AWS (CloudFront, WAF, Lambda@Edge), Kyverno, OPA/Rego, KEDA autoscaling, supply chain security (Cosign, SBOM, SLSA), Falco runtime security, chaos engineering (Litmus/Chaos Mesh), DORA metrics, Datadog, Dynatrace, Linkerd, animated docs, and AWS MCP profile management (multi-account SSO, Granted, credential_process, profile discovery, VS Code and Claude Code config generation). Every answer includes blast radius, validation steps, and rollback plan.",
+      "version": "1.27.0",
+      "description": "Production-grade platform engineering handbook for Claude. 31 slash commands covering: Kubernetes, Helm, Terraform (blast radius, SOC 2, IAM), Flux CD (Flux Operator, FluxInstance, gitless OCI delivery, 5-workflow cluster debug, 6-phase repo audit), Argo CD, GitHub Actions (composite actions, SHA pinning, OIDC), AWS (CloudFront, WAF, Lambda@Edge), Kyverno, OPA/Rego, KEDA autoscaling, supply chain security (Cosign, SBOM, SLSA), Falco runtime security, chaos engineering (Litmus/Chaos Mesh), DORA metrics, Datadog, Dynatrace, Linkerd, animated docs, AWS MCP profile management (multi-account SSO, Granted, credential_process, profile discovery, VS Code and Claude Code config generation), Renovate dependency automation (generate renovate.json, GHA validation workflow). Every answer includes blast radius, validation steps, and rollback plan.",
       "author": {
         "name": "Nitin Jain"
       },
@@ -163,7 +163,8 @@
         "granted",
         "multi-account",
         "credential-process",
-        "aws-identity-center"
+        "aws-identity-center",
+        "renovate"
       ],
       "source": {
         "source": "url",

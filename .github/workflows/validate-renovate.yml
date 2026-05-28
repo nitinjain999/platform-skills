@@ -1,0 +1,122 @@
+name: Validate Renovate Config
+
+on:
+  pull_request:
+    paths:
+      - 'renovate.json'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-schema:
+    name: Schema Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Validate JSON syntax
+        run: |
+          if ! jq empty renovate.json; then
+            echo "❌ renovate.json is not valid JSON"
+            exit 1
+          fi
+          echo "✅ JSON syntax valid"
+
+  validate-config:
+    name: Config Validator
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
+        with:
+          node-version: '24'
+
+      - name: Run renovate-config-validator
+        run: |
+          npx --package=renovate --yes renovate-config-validator renovate.json
+          echo "✅ Config validation passed"
+
+  validate-coverage:
+    name: Coverage Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+
+      - name: Check manager coverage
+        run: |
+          UNCOVERED=0
+
+          check_coverage() {
+            local label="$1"
+            local pattern="$2"
+            local manager="$3"
+
+            if find . -path "./.git" -prune -o -name "$pattern" -print | grep -q .; then
+              if grep -q "\"$manager\"" renovate.json; then
+                echo "✅ COVERED: $label ($manager)"
+              else
+                echo "⚠️  UNCOVERED: $label ($manager) — files found but manager not referenced in renovate.json"
+                UNCOVERED=$((UNCOVERED + 1))
+              fi
+            else
+              echo "ℹ️  SKIPPED: $label — no matching files found"
+            fi
+          }
+
+          if find .github/workflows -name "*.yml" 2>/dev/null | grep -q .; then
+            if grep -q '"github-actions"' renovate.json; then
+              echo "✅ COVERED: GitHub Actions (github-actions)"
+            else
+              echo "⚠️  UNCOVERED: GitHub Actions (github-actions) — files found but manager not referenced in renovate.json"
+              UNCOVERED=$((UNCOVERED + 1))
+            fi
+          else
+            echo "ℹ️  SKIPPED: GitHub Actions — no matching files found"
+          fi
+
+          check_coverage "Terraform"      "*.tf"              "terraform"
+          check_coverage "Helm"           "Chart.yaml"        "helmv3"
+          check_coverage "Go modules"     "go.mod"            "gomod"
+          check_coverage "npm"            "package.json"      "npm"
+          check_coverage "Python"         "requirements*.txt" "pip_requirements"
+          check_coverage "Docker"         "Dockerfile"        "dockerfile"
+          check_coverage "Rust"           "Cargo.toml"        "cargo"
+
+          if [ $UNCOVERED -gt 0 ]; then
+            echo ""
+            echo "⚠️  $UNCOVERED ecosystem(s) detected but not covered by Renovate"
+            echo "Run /platform-skills:renovate generate to update your renovate.json"
+          else
+            echo "✅ All detected ecosystems are covered"
+          fi
+
+  summary:
+    name: Validation Summary
+    runs-on: ubuntu-latest
+    needs: [validate-schema, validate-config, validate-coverage]
+    if: always()
+    steps:
+      - name: Post summary
+        run: |
+          cat << 'EOF' >> $GITHUB_STEP_SUMMARY
+          ## Renovate Config Validation
+          EOF
+          printf "| Check | Status |\n|-------|--------|\n" >> $GITHUB_STEP_SUMMARY
+          printf "| JSON Schema | %s |\n" "${{ needs.validate-schema.result == 'success' && '✅ Passed' || '❌ Failed' }}" >> $GITHUB_STEP_SUMMARY
+          printf "| Config Validator | %s |\n" "${{ needs.validate-config.result == 'success' && '✅ Passed' || '❌ Failed' }}" >> $GITHUB_STEP_SUMMARY
+          printf "| Coverage Scan | %s |\n" "${{ needs.validate-coverage.result == 'success' && '✅ Passed' || '⚠️ Warnings' }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Enforce required checks
+        run: |
+          if [[ "${{ needs.validate-schema.result }}" != "success" ]] || \
+             [[ "${{ needs.validate-config.result }}" != "success" ]]; then
+            echo "❌ Required validation checks failed — see jobs above"
+            exit 1
+          fi
+          echo "✅ All required checks passed"
