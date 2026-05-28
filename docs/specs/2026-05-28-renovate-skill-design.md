@@ -8,23 +8,21 @@
 
 ## Overview
 
-Add `/platform-skills:renovate` as a new slash command for v1.27.0. The skill automates two high-friction Renovate tasks: generating a correct `renovate.json` from scratch and triggering dependency-update PRs. A dedicated GitHub Actions workflow validates `renovate.json` on every change.
+Add `/platform-skills:renovate` as a new slash command for v1.27.0. Two focused modes: `generate` produces a correct `renovate.json` by scanning what dependency file types the repo actually uses; `workflow` emits a GitHub Actions workflow that validates `renovate.json` on every PR that touches it. No auth secrets required.
 
 ---
 
 ## Architecture
 
-Follows the established pattern of this repo:
-
 | Artifact | Purpose |
 |---|---|
-| `commands/renovate.md` | Slash command — `generate` and `update` modes |
+| `commands/renovate.md` | Slash command — `generate` and `workflow` modes |
 | `references/renovate.md` | Deep-dive reference — managers, presets, security, GitOps integration |
-| `.github/workflows/validate-renovate.yml` | CI validation — schema, config-validator, dry-run, coverage |
+| `.github/workflows/validate-renovate.yml` | CI validation — schema, config-validator, coverage scan |
 | `renovate.json` | Updated to cover all dep file types detected in the repo |
-| `SKILL.md` | New row in tool table + slash command entry |
+| `SKILL.md` | New `Renovate` row in tool table + `/platform-skills:renovate` slash command entry |
 | `COMMANDS.md` | TOC entry + full command section (31 commands total) |
-| `marketplace.json` | Version bump 1.26.0 → 1.27.0 |
+| `marketplace.json` | Version bump 1.26.0 → 1.27.0; add `renovate` keyword |
 | `tile.json` | Version bump → 1.27.0 |
 | `CHANGELOG.md` | [1.27.0] entry |
 | `INSTALLATION.md` | Version reference bump |
@@ -37,33 +35,34 @@ Follows the established pattern of this repo:
 
 ```yaml
 name: renovate
-description: Generate renovate.json for any repo covering all dependency file types, or trigger Renovate dependency-update PRs.
-argument-hint: "[generate|update] [flags]"
+description: Generate renovate.json covering all dependency file types used in a repo, or emit a GitHub Actions workflow that validates renovate.json on PR.
+argument-hint: "[generate|workflow]"
 ```
 
 ### Interactive Wizard (no args)
 
-Asks two questions in sequence:
-
 **Q1 — Mode:**
 ```
 What do you need?
-  1. generate — create or regenerate renovate.json covering all file types in this repo
-  2. update   — trigger Renovate to create dependency-update PRs for tracked packages
+  1. generate  — scan this repo and create renovate.json covering all detected dep file types
+  2. workflow  — generate a GitHub Actions workflow that validates renovate.json on every PR
 
 Enter 1–2 or mode name:
 ```
 
-**Q2 — Mode-specific follow-up:**
-- `generate`: `Any customisations? (e.g. --timezone Europe/Berlin, --assignee username, --schedule "before 6am on monday") — or press enter for defaults:`
-- `update`: `Are you using the Renovate GitHub App or self-hosted? (app / self-hosted):`
+No further questions — both modes have sensible defaults and proceed immediately after mode selection.
+
+---
 
 ### Mode: `generate`
 
-Steps:
-1. Scan the repo working tree for dependency file types using known patterns:
+**Purpose:** Scan the repo working tree, detect which dependency ecosystems are present, and emit a `renovate.json` that covers exactly those managers — no more, no less.
 
-| Pattern | Manager |
+**Steps:**
+
+1. Scan for dependency file types using known patterns:
+
+| File pattern | Manager |
 |---|---|
 | `.github/workflows/*.yml` | `github-actions` |
 | `*.tf`, `*.tfvars` | `terraform` |
@@ -72,101 +71,106 @@ Steps:
 | `package.json`, `package-lock.json`, `yarn.lock` | `npm` |
 | `requirements*.txt`, `Pipfile`, `pyproject.toml` | `pip` |
 | `Dockerfile`, `docker-compose*.yml` | `docker` |
-| `*.rs`, `Cargo.toml` | `cargo` |
+| `Cargo.toml` | `cargo` |
 | Kubernetes manifests (`kind: Deployment` etc.) | `kubernetes` |
 
-2. Map detected file types → managers. Skip managers with no matching files.
-3. Emit `renovate.json` with:
-   - Base: `config:recommended`, `:dependencyDashboard`, `:semanticCommits`, `:separateMajorReleases`
-   - `dependencyDashboard: true`, `dependencyDashboardTitle: "Renovate Dependency Dashboard"`
+2. Print coverage table — detected managers and matched file paths. Skip managers with no matches.
+
+3. Emit `renovate.json` containing only detected managers, with:
+   - Base presets: `config:recommended`, `:dependencyDashboard`, `:semanticCommits`, `:separateMajorReleases`
+   - `dependencyDashboard: true` + `dependencyDashboardTitle: "Renovate Dependency Dashboard"`
    - `vulnerabilityAlerts: { enabled: true }` + `osvVulnerabilityAlerts: true`
-   - `minimumReleaseAge: "3 days"` on all automerge rules
-   - `pinDigests: true` on `github-actions` manager
-   - Per-detected-manager `packageRules` with sensible `groupName`, `automerge`, `schedule`
-   - `regexManagers` for Terraform version in workflows and tool versions in docs
-   - `postUpdateOptions` populated per detected ecosystem (`gomodTidy` for go, `npmDedupe` for npm)
-   - `ignorePaths` standard set
-4. Print coverage table showing which managers are active and which file paths they matched.
+   - `pinDigests: true` scoped to `github-actions` manager
+   - `minimumReleaseAge: "3 days"` on all automerge package rules (supply chain safety)
+   - Per-detected-manager `packageRules` with `groupName`, `automerge`, `schedule`
+   - `regexManagers` for Terraform version pins in workflow YAML and tool versions in docs
+   - `postUpdateOptions` per ecosystem: `gomodTidy` (go), `npmDedupe` (npm)
+   - Standard `ignorePaths`: `node_modules`, `vendor`, `.terraform`, `charts`
 
-### Mode: `update`
+4. If `renovate.json` already exists: print a diff (additions/changes only). Ask: `Write to renovate.json? [y/N]`
 
-**Path A — GitHub App:**
-1. Verify Renovate App is installed on the repo (`gh api /repos/{owner}/{repo}/installation` check).
-2. If installed: show the Dependency Dashboard issue URL; explain how to trigger selective updates by checking boxes in the issue body.
-3. Alternative: `gh api -X POST /repos/{owner}/{repo}/dispatches -f event_type=renovate` (only works if repo has a `renovate` workflow dispatch listener).
+5. If no existing file: write directly and confirm.
 
-**Path B — Self-hosted:**
-1. Check `RENOVATE_TOKEN` is set; if not, print setup instructions.
-2. Run: `renovate --dry-run=full --print-config 2>&1 | head -200` to preview PRs.
-3. Ask user to confirm before live run.
-4. Run: `npx renovate` (or `docker run renovate/renovate`) to create PRs.
+---
 
-In both paths, surface the list of packages that will be updated and their semver bump type before any action.
+### Mode: `workflow`
+
+**Purpose:** Emit a ready-to-use `.github/workflows/validate-renovate.yml` that automatically validates `renovate.json` whenever a PR changes it. No secrets or tokens required.
+
+**Steps:**
+
+1. Emit the workflow file (content defined in Section 3 below).
+2. Check if `.github/workflows/validate-renovate.yml` already exists — if so, show diff and ask to overwrite.
+3. Write file and print: `Add and commit .github/workflows/validate-renovate.yml to your repo. The workflow fires automatically on any PR that modifies renovate.json.`
 
 ---
 
 ## Section 2: Reference File (`references/renovate.md`)
 
-Seven sections:
+Eight sections:
 
-1. **Manager Catalog** — full table of managers, file patterns, and notes
-2. **Preset Reference** — what `config:recommended` includes; useful add-ons with descriptions
-3. **Package Rules Patterns** — automerge strategy table by ecosystem; grouping; schedule recipes; `minimumReleaseAge` for supply chain safety
-4. **Dependency Dashboard** — how to enable, how to trigger selective updates, how to manage the issue lifecycle
-5. **Self-hosted vs GitHub App** — decision table; self-hosted via GitHub Actions runner pattern; token requirements
-6. **GitOps Integration** — Renovate vs Flux Image Reflector Controller ownership boundary; how to avoid dual-management conflicts; recommended split (Renovate owns Helm + Terraform + language deps; Flux Image Reflector owns container image tags for running workloads)
-7. **Security Hardening** — `pinDigests`, `osvVulnerabilityAlerts`, `minimumReleaseAge`, `rangeStrategy: pin`, private registry auth patterns
-8. **Regex Managers** — templates for Terraform version in workflow YAML, tool versions in shell scripts and docs
-9. **Post-update Options** — table: `gomodTidy`, `gomodUpdateImportPaths`, `npmDedupe`, `yarnDedupeFlags`
-10. **Troubleshooting** — config-validator error messages, dry-run debug flags, preset conflicts, rate-limit handling
+1. **Manager Catalog** — full table: manager name, file patterns, notes, common `packageRules` options
+2. **Preset Reference** — what `config:recommended` includes; useful add-on presets with descriptions
+3. **Package Rules Patterns** — automerge strategy by ecosystem; grouping recipes; schedule examples; `minimumReleaseAge` for supply chain safety
+4. **Dependency Dashboard** — how to enable, how to trigger selective updates from the issue, lifecycle management
+5. **GitOps Integration** — Renovate vs Flux Image Reflector Controller ownership boundary; recommended split: Renovate owns Helm + Terraform + language deps; Flux Image Reflector owns running workload image tags
+6. **Security Hardening** — `pinDigests`, `osvVulnerabilityAlerts`, `minimumReleaseAge`, `rangeStrategy: pin`, private registry auth patterns
+7. **Regex Managers** — templates for Terraform version in workflow YAML, tool versions in shell scripts and docs
+8. **Troubleshooting** — `renovate-config-validator` error messages, common preset conflicts, coverage scan false positives
 
 ---
 
 ## Section 3: GitHub Actions Workflow (`.github/workflows/validate-renovate.yml`)
 
-### Triggers
+### Trigger
 
 ```yaml
 on:
   pull_request:
-    paths: ['renovate.json']
-  push:
-    branches: [main]
-    paths: ['renovate.json']
+    paths:
+      - 'renovate.json'
 ```
 
-### Jobs (parallel)
+Fires only on PRs that touch `renovate.json`. No push trigger — validation on PR is sufficient; main branch is protected by the PR gate.
 
-| Job | Tool | Blocks merge? | Fork-safe? |
-|---|---|---|---|
-| `validate-schema` | `ajv-cli` + Renovate schema URL | Yes | Yes |
-| `validate-config` | `npx renovate-config-validator` | Yes | Yes |
-| `validate-dryrun` | `npx renovate --dry-run=full` | Yes | No (skipped on forks) |
-| `validate-coverage` | bash coverage scan | Warning only | Yes |
-| `summary` | `needs` all four | Always runs | — |
+### Jobs (run in parallel)
+
+| Job | Tool | Fails PR? |
+|---|---|---|
+| `validate-schema` | `ajv-cli` against official Renovate schema URL | Yes |
+| `validate-config` | `npx renovate-config-validator renovate.json` | Yes |
+| `validate-coverage` | bash scan: detect dep file types, warn on uncovered | Warning only |
+| `summary` | `needs` all three, posts table to `GITHUB_STEP_SUMMARY` | Always runs |
+
+**No dry-run job.** Renovate App handles runtime; CI only validates config correctness.
+
+**No secrets required.** All three jobs use only `GITHUB_TOKEN` (auto-injected) for checkout. Fork PRs work identically.
 
 ### Coverage scan logic
 
-Find files matching known dependency patterns. For each detected type, assert that `renovate.json` contains a manager or `packageRule` that covers it. Emit `⚠️ UNCOVERED: <type>` for gaps — non-blocking warning, not a failure gate (avoids false positives on intentionally excluded paths).
+Find files matching known dependency patterns. For each detected type, check that `renovate.json` contains a matching manager or `packageRule`. Emit `⚠️ UNCOVERED: <type>` for gaps — non-blocking (avoids false positives on intentionally excluded paths). Blocking failures are left to schema and config-validator jobs.
 
 ### Security
 
-- `RENOVATE_TOKEN` stored as repo secret; dry-run job gated on `github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository`
-- All `uses:` pinned to commit SHA per existing repo policy
-- `permissions: contents: read` minimum; `pull-requests: write` only on summary job
+- All `uses:` actions pinned to commit SHA per existing repo policy
+- `permissions: contents: read` on all jobs; `pull-requests: write` only on `summary` job for `GITHUB_STEP_SUMMARY`
+- No `RENOVATE_TOKEN` or other secrets
 
 ---
 
 ## Section 4: `renovate.json` Updates
 
-Add to the existing file:
-- `dependencyDashboard: true` + `dependencyDashboardTitle`
-- `osvVulnerabilityAlerts: true`
-- `minimumReleaseAge: "3 days"` on automerge package rules
-- `packageRules` entries for `gomod`, `pip`, `npm` managers (with automerge minor/patch)
-- `npmDedupe` to `postUpdateOptions`
+Patch the existing file:
 
-Do not change the existing GitHub Actions, Terraform, or Helm rules — they are already correct.
+| Addition | Reason |
+|---|---|
+| `dependencyDashboard: true` + `dependencyDashboardTitle` | Makes dashboard explicit |
+| `osvVulnerabilityAlerts: true` | Newer OSV-based alerts alongside existing `vulnerabilityAlerts` |
+| `minimumReleaseAge: "3 days"` on automerge rules | Supply chain safety — prevents automerging freshly published packages |
+| `packageRules` for `gomod`, `pip`, `npm` | Cover ecosystems present but missing from current config |
+| `npmDedupe` in `postUpdateOptions` | Keeps lockfile clean after npm updates |
+
+Do not change existing GitHub Actions, Terraform, or Helm rules — they are already correct.
 
 ---
 
@@ -176,7 +180,7 @@ Do not change the existing GitHub Actions, Terraform, or Helm rules — they are
 |---|---|
 | `marketplace.json` | `version: 1.26.0 → 1.27.0`; add `"renovate"` keyword; update description |
 | `tile.json` | `version: 1.25.20 → 1.27.0` |
-| `CHANGELOG.md` | Add `[1.27.0]` entry listing all new artifacts |
+| `CHANGELOG.md` | Add `[1.27.0]` entry |
 | `INSTALLATION.md` | Bump version reference |
 | `SKILL.md` | Add `Renovate` row + `/platform-skills:renovate` slash command |
 | `COMMANDS.md` | Add TOC entry + full command section |
@@ -185,6 +189,8 @@ Do not change the existing GitHub Actions, Terraform, or Helm rules — they are
 
 ## Out of Scope
 
-- Monorepo / multi-path `baseBranches` patterns (single-path repo)
-- Custom datasource plugins (no private registries in this repo)
+- `update` mode / triggering dependency PRs (v1.27.0 scope is generate + workflow only)
+- Monorepo / multi-path `baseBranches` patterns
+- Custom datasource plugins / private registries
 - Renovate Enterprise / Mend features
+- Renovate self-hosted setup
