@@ -179,6 +179,7 @@ See [COMMANDS.md](COMMANDS.md) for every command with modes and example prompts:
 | `aws` | Generate or review CloudFront, WAF, Lambda@Edge, CloudFront Functions, and Firewall Manager patterns |
 | `composite-actions` | Scaffold, review, secure, debug, publish, and improve composite GitHub Actions |
 | `fluxcd` | FluxCD entry point — routes to `gitops debug`, `gitops audit`, `helmcheck`, or `review` based on input |
+| `renovate` | Generate renovate.json covering all dep file types in the repo, or emit a GHA validation workflow |
 
 ### How the agent and skill system work
 
