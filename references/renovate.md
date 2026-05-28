@@ -1,6 +1,6 @@
 # Renovate Reference
 
-Companion to `/platform-skills:renovate`. Deep-dive on managers, presets, security, GitOps integration, and troubleshooting.
+Companion to `/platform-skills:renovate`. Deep-dive on managers, presets, security, GitOps integration, private registries, custom regex managers, pre-commit hooks, and troubleshooting.
 
 ---
 
@@ -350,3 +350,314 @@ Set `prHourlyLimit: 0` to disable hourly cap entirely (use with caution on large
 1. Confirm `"dependencyDashboard": true` is in `renovate.json`
 2. Check that the Renovate App has Issues write permission on the repo
 3. Trigger a manual run via the App settings or by pushing a trivial change
+
+---
+
+## 9. Private Registries
+
+Renovate uses `hostRules` to authenticate with private registries. Credentials are injected at runtime via env-var templating — they never appear in `renovate.json` in plaintext.
+
+### AWS ECR
+
+```json
+{
+  "hostRules": [
+    {
+      "matchHost": "123456789012.dkr.ecr.us-east-1.amazonaws.com",
+      "hostType": "docker",
+      "username": "AWS",
+      "password": "{{ env.AWS_ECR_TOKEN }}"
+    }
+  ]
+}
+```
+
+Pre-authenticate on self-hosted Renovate:
+```bash
+export AWS_ECR_TOKEN=$(aws ecr get-login-password --region us-east-1)
+```
+
+**Recommended for Renovate App:** attach an IAM role to the Renovate App installation and use the built-in ECR credential helper — no static token needed.
+
+### Google GCR / Artifact Registry
+
+```json
+{
+  "hostRules": [
+    {
+      "matchHost": "gcr.io",
+      "hostType": "docker",
+      "username": "_json_key",
+      "password": "{{ env.GCR_SERVICE_ACCOUNT_KEY }}"
+    }
+  ]
+}
+```
+
+For Artifact Registry replace `gcr.io` with `<region>-docker.pkg.dev`.
+
+### Azure ACR
+
+```json
+{
+  "hostRules": [
+    {
+      "matchHost": "myregistry.azurecr.io",
+      "hostType": "docker",
+      "username": "{{ env.ACR_CLIENT_ID }}",
+      "password": "{{ env.ACR_CLIENT_SECRET }}"
+    }
+  ]
+}
+```
+
+Use a service principal with the `AcrPull` role. Set `ACR_CLIENT_ID` and `ACR_CLIENT_SECRET` in the Renovate App environment or self-hosted runner secrets.
+
+### Harbor / self-hosted
+
+```json
+{
+  "hostRules": [
+    {
+      "matchHost": "registry.example.com",
+      "hostType": "docker",
+      "username": "{{ env.REGISTRY_USERNAME }}",
+      "password": "{{ env.REGISTRY_PASSWORD }}"
+    }
+  ]
+}
+```
+
+### Private Helm — OCI registry
+
+```json
+{
+  "hostRules": [
+    {
+      "matchHost": "registry.example.com",
+      "hostType": "docker",
+      "username": "{{ env.HELM_REGISTRY_USERNAME }}",
+      "password": "{{ env.HELM_REGISTRY_PASSWORD }}"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchManagers": ["helmv3"],
+      "registryUrls": ["oci://registry.example.com"],
+      "groupName": "Private Helm charts (OCI)"
+    }
+  ]
+}
+```
+
+### Private Helm — HTTP registry
+
+```json
+{
+  "hostRules": [
+    {
+      "matchHost": "charts.example.com",
+      "username": "{{ env.HELM_REGISTRY_USERNAME }}",
+      "password": "{{ env.HELM_REGISTRY_PASSWORD }}"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchManagers": ["helmv3"],
+      "registryUrls": ["https://charts.example.com"],
+      "groupName": "Private Helm charts (HTTP)"
+    }
+  ]
+}
+```
+
+### Private Terraform registry
+
+```json
+{
+  "hostRules": [
+    {
+      "matchHost": "app.terraform.io",
+      "token": "{{ env.TF_REGISTRY_TOKEN }}"
+    }
+  ]
+}
+```
+
+Set `TF_REGISTRY_TOKEN` to a Terraform Cloud team token with read access.
+
+---
+
+## 10. Custom Regex Managers
+
+Use `regexManagers` when a dependency version appears in a file format that Renovate's built-in managers do not parse — internal GitHub module sources, pinned tool versions in scripts, or version strings in YAML/JSON config files.
+
+### Internal GitHub org Terraform modules
+
+Terraform module sources of the form `github.com/<org>/<repo>//<path>?ref=<tag>` are not picked up by the standard `terraform` manager. Add a regex manager:
+
+```json
+{
+  "regexManagers": [
+    {
+      "description": "Terraform modules from internal GitHub org myorg",
+      "fileMatch": ["\\.tf$"],
+      "matchStrings": [
+        "source\\s*=\\s*\"github\\.com/myorg/(?<depName>[^/]+)//[^\"]*\\?ref=(?<currentValue>[^\"]+)\""
+      ],
+      "datasourceTemplate": "github-tags",
+      "packageNameTemplate": "myorg/{{{depName}}}"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchManagers": ["regex"],
+      "matchPackagePatterns": ["^myorg/"],
+      "automerge": false,
+      "groupName": "Internal Terraform modules (myorg)"
+    }
+  ]
+}
+```
+
+Replace `myorg` with your GitHub org. Renovate will open PRs that update `?ref=v1.2.3` to the latest tag on the referenced repo.
+
+### Private Terraform registry modules
+
+For modules sourced from a private registry (`<hostname>/<namespace>/<module>/<provider>`):
+
+```json
+{
+  "regexManagers": [
+    {
+      "description": "Terraform modules from private registry app.terraform.io",
+      "fileMatch": ["\\.tf$"],
+      "matchStrings": [
+        "source\\s*=\\s*\"app\\.terraform\\.io/(?<namespace>[^/]+)/(?<depName>[^/]+)/(?<provider>[^\"]+)\""
+      ],
+      "datasourceTemplate": "terraform-module",
+      "registryUrlTemplate": "https://app.terraform.io"
+    }
+  ]
+}
+```
+
+### Terraform version pinned in GitHub Actions workflows
+
+```json
+{
+  "regexManagers": [
+    {
+      "description": "Update Terraform version pinned in GitHub Actions workflows",
+      "fileMatch": ["^\\.github/workflows/.*\\.ya?ml$"],
+      "matchStrings": [
+        "terraform_version:\\s*['\"]?(?<currentValue>[^'\"\\s]+)['\"]?"
+      ],
+      "depNameTemplate": "hashicorp/terraform",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    }
+  ]
+}
+```
+
+### Tool versions in `.tool-versions` (asdf)
+
+```json
+{
+  "regexManagers": [
+    {
+      "description": "Update tools pinned in .tool-versions (asdf)",
+      "fileMatch": ["^\\.tool-versions$"],
+      "matchStrings": [
+        "(?<depName>[a-z0-9_-]+)\\s+(?<currentValue>[\\d\\.]+)"
+      ],
+      "datasourceTemplate": "github-releases",
+      "packageNameTemplate": "asdf-vm/asdf-{{{depName}}}"
+    }
+  ]
+}
+```
+
+### kubectl version in CI scripts
+
+```json
+{
+  "regexManagers": [
+    {
+      "description": "Update kubectl version pinned in CI scripts",
+      "fileMatch": ["^\\.github/workflows/.*\\.ya?ml$", "^scripts/.*\\.sh$"],
+      "matchStrings": [
+        "kubectl_version[=:]\\s*['\"]?v?(?<currentValue>[\\d\\.]+)['\"]?"
+      ],
+      "depNameTemplate": "kubernetes/kubectl",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    }
+  ]
+}
+```
+
+### Debugging regex managers
+
+Test your `matchStrings` pattern against actual file content:
+
+```bash
+# Install renovate locally
+npm install -g renovate
+
+# Dry-run against a single file — prints what Renovate would extract
+LOG_LEVEL=debug renovate --dry-run --print-config 2>&1 | grep -A5 "regexManagers"
+```
+
+Common mistakes:
+- Forgetting to double-escape backslashes in JSON strings (`\\s` not `\s`)
+- Using `(?<version>)` instead of `(?<currentValue>)` — the named capture must be `currentValue`
+- Missing `datasourceTemplate` — required when there is no built-in datasource inference
+
+---
+
+## 11. Pre-commit Hook
+
+Run `renovate-config-validator` locally before every commit using the official pre-commit hook. This catches config errors before they reach CI.
+
+### Setup
+
+Add to `.pre-commit-config.yaml` (create the file if it does not exist):
+
+```yaml
+repos:
+  - repo: https://github.com/renovatebot/pre-commit-hooks
+    rev: 43.150.0
+    hooks:
+      - id: renovate-config-validator
+```
+
+Install and activate:
+
+```bash
+pip install pre-commit    # or: brew install pre-commit
+pre-commit install
+pre-commit run renovate-config-validator --all-files
+```
+
+### Keeping the rev up to date
+
+The `rev` pin tracks the Renovate release version. Once Renovate is running on the repo, it updates the `rev` automatically via a PR — the same way it updates any other dependency. No manual maintenance needed.
+
+To pin with the digest for maximum supply chain security:
+
+```bash
+pre-commit autoupdate --freeze
+```
+
+This replaces the semver tag with the commit SHA:
+```yaml
+rev: 43.150.0  # frozen: sha256:<digest>
+```
+
+### Skipping the hook for a single commit
+
+```bash
+SKIP=renovate-config-validator git commit -m "wip: draft config"
+```
