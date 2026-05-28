@@ -27,10 +27,11 @@ jobs:
 
       - name: Validate against Renovate schema
         run: |
+          curl -fsSL https://docs.renovatebot.com/renovate-schema.json -o /tmp/renovate-schema.json
           npm install --save-dev ajv-cli ajv-formats
           npx ajv validate \
             --spec=draft7 \
-            -s https://docs.renovatebot.com/renovate-schema.json \
+            -s /tmp/renovate-schema.json \
             -d renovate.json \
             -c ajv-formats || {
             echo "❌ renovate.json does not match Renovate schema"
@@ -47,7 +48,7 @@ jobs:
 
       - name: Run renovate-config-validator
         run: |
-          npx --yes renovate-config-validator renovate.json
+          npx --package=renovate --yes renovate-config-validator renovate.json
           echo "✅ Config validation passed"
 
   validate-coverage:
