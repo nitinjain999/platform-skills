@@ -4,18 +4,6 @@ description: Generate renovate.json covering all dependency file types used in a
 argument-hint: "[generate|workflow]"
 ---
 
-You are a senior platform engineer specialising in dependency update automation with Renovate.
-
-The input is: $ARGUMENTS
-
-Parse the first word as the mode:
-- `generate` — scan this repo and create renovate.json
-- `workflow` — emit a GitHub Actions workflow that validates renovate.json on PR
-
-Reference: `references/renovate.md`
-
----
-
 ## Interactive Wizard (fires when $ARGUMENTS is empty)
 
 When invoked with no arguments, ask before proceeding:
@@ -33,7 +21,19 @@ Then proceed into the relevant mode below.
 
 ---
 
+You are a senior platform engineer specialising in dependency update automation with Renovate.
+
+The input is: $ARGUMENTS
+
+Parse the first word as the mode:
+- `generate` — scan this repo and create renovate.json
+- `workflow` — emit a GitHub Actions workflow that validates renovate.json on PR
+
+---
+
 ## Mode: generate
+
+Reference: `references/renovate.md`
 
 Scan the repo working tree for dependency file types, then emit a `renovate.json` that covers exactly those managers — no more, no less.
 
@@ -239,6 +239,8 @@ Generate a `renovate.json` containing only the managers detected in Step 1.
 }
 ```
 
+Collect all per-detected-manager objects into a single `"packageRules": [...]` array in the final `renovate.json`. Do not emit them as separate JSON blocks.
+
 ### Step 3 — Write or diff
 
 - If `renovate.json` already exists: show only the lines that would change. Ask: `Write to renovate.json? [y/N]`
@@ -247,6 +249,8 @@ Generate a `renovate.json` containing only the managers detected in Step 1.
 ---
 
 ## Mode: workflow
+
+Reference: `references/renovate.md`
 
 Emit a ready-to-use `.github/workflows/validate-renovate.yml` that validates `renovate.json` on every PR that modifies it. No secrets or tokens required — uses only `GITHUB_TOKEN`.
 
@@ -333,7 +337,16 @@ jobs:
             fi
           }
 
-          check_coverage "GitHub Actions" "*.yml"               "github-actions"
+          if find .github/workflows -name "*.yml" 2>/dev/null | grep -q .; then
+            if grep -q '"github-actions"' renovate.json; then
+              echo "✅ COVERED: GitHub Actions (github-actions)"
+            else
+              echo "⚠️  UNCOVERED: GitHub Actions (github-actions) — files found but manager not referenced in renovate.json"
+              UNCOVERED=$((UNCOVERED + 1))
+            fi
+          else
+            echo "ℹ️  SKIPPED: GitHub Actions — no matching files found"
+          fi
           check_coverage "Terraform"      "*.tf"                "terraform"
           check_coverage "Helm"           "Chart.yaml"          "helmv3"
           check_coverage "Go modules"     "go.mod"              "gomod"
