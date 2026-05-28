@@ -196,7 +196,7 @@ Generate a `renovate.json` containing only the managers detected in Step 1.
   ],
   "dependencyDashboard": true,
   "dependencyDashboardTitle": "Renovate Dependency Dashboard",
-  "timezone": "<detect from `git config --global core.timezone`; ask if undetectable>",
+  "timezone": "<ask the user for their timezone, or detect from TZ env var / timedatectl>",
   "labels": ["dependencies", "renovate"],
   "prConcurrentLimit": 5,
   "prCreation": "not-pending",
@@ -620,7 +620,6 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
   validate-schema:

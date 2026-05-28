@@ -8,7 +8,7 @@
 
 ## Overview
 
-Add `/platform-skills:renovate` as a new slash command for v1.27.0. Two focused modes: `generate` produces a correct `renovate.json` by scanning what dependency file types the repo actually uses; `workflow` emits a GitHub Actions workflow that validates `renovate.json` on every PR that touches it. No auth secrets required.
+Add `/platform-skills:renovate` as a new slash command for v1.27.0. Four modes: `generate` produces a correct `renovate.json` by scanning what dependency file types the repo actually uses; `workflow` emits a GitHub Actions workflow that validates `renovate.json` on every PR that touches it; `precommit` runs an interactive semver/automerge wizard and best-practices adviser; `all` runs all modes in sequence. No auth secrets required.
 
 ---
 
@@ -153,7 +153,7 @@ Find files matching known dependency patterns. For each detected type, check tha
 ### Security
 
 - All `uses:` actions pinned to commit SHA per existing repo policy
-- `permissions: contents: read` on all jobs; `pull-requests: write` only on `summary` job for `GITHUB_STEP_SUMMARY`
+- `permissions: contents: read` on all jobs; no `pull-requests: write` needed — `GITHUB_STEP_SUMMARY` writes to the Actions log, not PR comments
 - No `RENOVATE_TOKEN` or other secrets
 
 ---
@@ -189,8 +189,7 @@ Do not change existing GitHub Actions, Terraform, or Helm rules — they are alr
 
 ## Out of Scope
 
-- `update` mode / triggering dependency PRs (v1.27.0 scope is generate + workflow only)
+- `update` mode / triggering dependency PRs
 - Monorepo / multi-path `baseBranches` patterns
-- Custom datasource plugins / private registries
 - Renovate Enterprise / Mend features
 - Renovate self-hosted setup

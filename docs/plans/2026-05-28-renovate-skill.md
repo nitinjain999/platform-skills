@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add `/platform-skills:renovate` with `generate` (emit renovate.json from repo scan) and `workflow` (emit GHA validation workflow) modes, plus all v1.27.0 release metadata.
+**Goal:** Add `/platform-skills:renovate` with `generate` (emit renovate.json from repo scan), `workflow` (emit GHA validation workflow), `precommit` (interactive semver/automerge wizard), and `all` (run all modes) modes, plus all v1.27.0 release metadata.
 
 **Architecture:** New command file at `commands/renovate.md`, deep-dive reference at `references/renovate.md`, GHA workflow at `.github/workflows/validate-renovate.yml`. Existing `renovate.json` gets patched with missing fields. Version bumped to 1.27.0 across `plugin.json`, `marketplace.json`, `tile.json`, `CHANGELOG.md`, `INSTALLATION.md`.
 
@@ -302,7 +302,6 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
   validate-schema:
@@ -445,9 +444,7 @@ Expected: file exists, first line is `---`
 
 ```bash
 git -C /Users/nitin.jain/platform-skills add commands/renovate.md
-git -C /Users/nitin.jain/platform-skills commit -m "feat: add /platform-skills:renovate command — generate and workflow modes
-
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+git -C /Users/nitin.jain/platform-skills commit -m "feat: add /platform-skills:renovate command — generate, workflow, precommit, and all modes"
 ```
 
 ---
@@ -820,9 +817,7 @@ Expected: file exists, >150 lines
 
 ```bash
 git -C /Users/nitin.jain/platform-skills add references/renovate.md
-git -C /Users/nitin.jain/platform-skills commit -m "feat: add references/renovate.md — manager catalog, presets, security, GitOps
-
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+git -C /Users/nitin.jain/platform-skills commit -m "feat: add references/renovate.md — manager catalog, presets, security, GitOps"
 ```
 
 ---
@@ -846,7 +841,6 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
   validate-schema:
@@ -973,9 +967,7 @@ Run from `/Users/nitin.jain/platform-skills`. Expected: `✅ YAML valid`
 
 ```bash
 git -C /Users/nitin.jain/platform-skills add .github/workflows/validate-renovate.yml
-git -C /Users/nitin.jain/platform-skills commit -m "ci: add validate-renovate workflow — schema, config-validator, coverage scan
-
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+git -C /Users/nitin.jain/platform-skills commit -m "ci: add validate-renovate workflow — schema, config-validator, coverage scan"
 ```
 
 ---
@@ -1064,9 +1056,7 @@ Expected: `✅ JSON valid`
 
 ```bash
 git -C /Users/nitin.jain/platform-skills add renovate.json
-git -C /Users/nitin.jain/platform-skills commit -m "chore: update renovate.json — add gomod/npm/pip rules, minimumReleaseAge, osvVulnerabilityAlerts
-
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+git -C /Users/nitin.jain/platform-skills commit -m "chore: update renovate.json — add gomod/npm/pip rules, minimumReleaseAge, osvVulnerabilityAlerts"
 ```
 
 ---
@@ -1147,9 +1137,7 @@ Expected: at least one match in each file
 
 ```bash
 git -C /Users/nitin.jain/platform-skills add SKILL.md COMMANDS.md
-git -C /Users/nitin.jain/platform-skills commit -m "feat: add Renovate to SKILL.md tool table and COMMANDS.md
-
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+git -C /Users/nitin.jain/platform-skills commit -m "feat: add Renovate to SKILL.md tool table and COMMANDS.md"
 ```
 
 ---
@@ -1233,9 +1221,7 @@ git -C /Users/nitin.jain/platform-skills add \
   tile.json \
   CHANGELOG.md \
   INSTALLATION.md
-git -C /Users/nitin.jain/platform-skills commit -m "chore: release v1.27.0 — renovate skill
-
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+git -C /Users/nitin.jain/platform-skills commit -m "chore: release v1.27.0 — renovate skill"
 ```
 
 ---
@@ -1303,9 +1289,7 @@ If the consistency tests required edits, commit them:
 
 ```bash
 git -C /Users/nitin.jain/platform-skills add -u
-git -C /Users/nitin.jain/platform-skills commit -m "fix: address handbook consistency check failures
-
-Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
+git -C /Users/nitin.jain/platform-skills commit -m "fix: address handbook consistency check failures"
 ```
 
 If no fixes were needed, skip this step.
