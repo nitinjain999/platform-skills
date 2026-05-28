@@ -54,7 +54,46 @@ When should Renovate open PRs?
 Enter 1–4:
 ```
 
-Store answers and proceed into the relevant mode(s) below using them.
+**Q5 — Internal Terraform module source?** (ask only for modes that emit renovate.json, and only if `terraform` manager was or may be detected)
+```
+Do you reference Terraform modules from private GitHub repos or a private registry?
+
+  1. github-org      — source = "github.com/<org>/<repo>//<path>?ref=<tag>"
+  2. private-registry — source = "<hostname>/<namespace>/<module>/<provider>"
+  3. no              — only public registry.terraform.io modules
+
+Enter 1–3 (or press Enter to skip):
+```
+If `github-org`: What is your GitHub org? (e.g., `myorg`)
+If `private-registry`: What is the registry hostname? (e.g., `app.terraform.io`)
+
+**Q6 — Private Helm registry?** (ask only for modes that emit renovate.json, and only if `helmv3` manager was or may be detected)
+```
+Do you use a private Helm chart registry?
+
+  1. oci   — oci://registry.example.com (OCI-based, e.g. ECR, GHCR, Harbor)
+  2. http  — https://charts.example.com (classic HTTP repository)
+  3. no    — only public charts (Artifact Hub, Bitnami, etc.)
+
+Enter 1–3 (or press Enter to skip):
+```
+If `oci` or `http`: Registry URL? (e.g., `registry.example.com`)
+
+**Q7 — Private container image registry?** (ask only for modes that emit renovate.json, and only if `docker`, `dockerfile`, `kubernetes`, or `docker-compose` manager was or may be detected)
+```
+Do you use a private container image registry?
+
+  1. ecr     — AWS ECR (123456789012.dkr.ecr.<region>.amazonaws.com)
+  2. gcr     — Google GCR or Artifact Registry (gcr.io / <region>-docker.pkg.dev)
+  3. acr     — Azure ACR (myregistry.azurecr.io)
+  4. harbor  — Harbor or other self-hosted registry (registry.example.com)
+  5. no      — Docker Hub and public registries only
+
+Enter 1–5 (comma-separate multiple, or press Enter to skip):
+```
+If private: Registry hostname for each selected type? (e.g., `123456789012.dkr.ecr.us-east-1.amazonaws.com`)
+
+Store all answers and proceed into the relevant mode(s) below using them.
 
 ---
 
@@ -68,7 +107,7 @@ Parse the first word as the mode:
 - `precommit` — emit a pre-commit hook config
 - `all`       — run generate, then precommit, then workflow in sequence
 
-If the mode was supplied via $ARGUMENTS (not the wizard), still ask Q2–Q4 for any mode that emits renovate.json before proceeding.
+If the mode was supplied via $ARGUMENTS (not the wizard), still ask Q2–Q7 for any mode that emits renovate.json before proceeding.
 
 ---
 
@@ -104,6 +143,30 @@ Detected dependency file types:
 ⚠️  npm            → package.json (1 file) — not covered in current renovate.json
 ℹ️  cargo          → no Cargo.toml found — skipped
 ```
+
+### Step 1.5 — Scan for internal source patterns
+
+If `terraform` files were detected, grep them for non-public module sources and report findings:
+
+```bash
+# Internal GitHub module sources
+grep -rh 'source\s*=' **/*.tf | grep 'github\.com/' | sort -u
+
+# Private registry sources (not registry.terraform.io)
+grep -rh 'source\s*=' **/*.tf | grep -v 'registry\.terraform\.io' | grep -v 'github\.com/' | grep -v '\.\/' | sort -u
+```
+
+Print:
+```
+Internal source patterns detected:
+✅ github.com/myorg/terraform-aws-vpc//modules/vpc?ref=v2.1.0  → will add regex manager
+ℹ️  registry.terraform.io/hashicorp/aws  → standard registry, no regex needed
+⚠️  ./modules/networking  → local path, skipped
+```
+
+If private sources are found but Q5 was not yet answered, ask it now.
+
+---
 
 ### Step 2 — Emit renovate.json
 
@@ -301,6 +364,195 @@ Apply `pinDigests` based on Q2:
   "extractVersionTemplate": "^v(?<version>.*)$"
 }
 ```
+
+### Step 2.5 — Private registries and custom regex managers
+
+Emit the following sections only for the options chosen in Q5–Q7. Omit any section for which the user answered "no" or skipped.
+
+---
+
+#### Q5 — Internal Terraform module sources
+
+**Option A — GitHub org (`github-org`, org = `<org>`):**
+
+Add to `regexManagers`:
+```json
+{
+  "description": "Terraform modules sourced from internal GitHub org <org>",
+  "fileMatch": ["\\.tf$"],
+  "matchStrings": [
+    "source\\s*=\\s*\"github\\.com/<org>/(?<depName>[^/]+)//[^\"]*\\?ref=(?<currentValue>[^\"]+)\""
+  ],
+  "datasourceTemplate": "github-tags",
+  "packageNameTemplate": "<org>/{{{depName}}}"
+}
+```
+
+Add to `packageRules`:
+```json
+{
+  "description": "Terraform modules from <org> GitHub org — require manual review",
+  "matchManagers": ["regex"],
+  "matchPackagePatterns": ["^<org>/"],
+  "automerge": false,
+  "groupName": "Internal Terraform modules (<org>)"
+}
+```
+
+**Option B — Private Terraform registry (`private-registry`, host = `<hostname>`):**
+
+Add to `regexManagers`:
+```json
+{
+  "description": "Terraform modules from private registry <hostname>",
+  "fileMatch": ["\\.tf$"],
+  "matchStrings": [
+    "source\\s*=\\s*\"<hostname>/(?<namespace>[^/]+)/(?<depName>[^/]+)/(?<provider>[^\"]+)\""
+  ],
+  "datasourceTemplate": "terraform-module",
+  "registryUrlTemplate": "https://<hostname>"
+}
+```
+
+Add to `hostRules`:
+```json
+{
+  "matchHost": "<hostname>",
+  "token": "{{ env.TF_REGISTRY_TOKEN }}"
+}
+```
+
+> Set `TF_REGISTRY_TOKEN` in your Renovate bot's environment (GitHub Actions secret or Renovate App config).
+
+---
+
+#### Q6 — Private Helm registry
+
+**OCI registry (`oci`, host = `<host>`):**
+
+Add to `hostRules`:
+```json
+{
+  "matchHost": "<host>",
+  "hostType": "docker",
+  "username": "{{ env.HELM_REGISTRY_USERNAME }}",
+  "password": "{{ env.HELM_REGISTRY_PASSWORD }}"
+}
+```
+
+Add to `packageRules`:
+```json
+{
+  "description": "Helm charts from private OCI registry oci://<host>",
+  "matchManagers": ["helmv3"],
+  "registryUrls": ["oci://<host>"],
+  "automerge": false,
+  "groupName": "Private Helm charts (<host>)"
+}
+```
+
+**HTTP registry (`http`, host = `<host>`):**
+
+Add to `hostRules`:
+```json
+{
+  "matchHost": "<host>",
+  "username": "{{ env.HELM_REGISTRY_USERNAME }}",
+  "password": "{{ env.HELM_REGISTRY_PASSWORD }}"
+}
+```
+
+Add to `packageRules`:
+```json
+{
+  "description": "Helm charts from private HTTP registry https://<host>",
+  "matchManagers": ["helmv3"],
+  "registryUrls": ["https://<host>"],
+  "automerge": false,
+  "groupName": "Private Helm charts (<host>)"
+}
+```
+
+> Set `HELM_REGISTRY_USERNAME` and `HELM_REGISTRY_PASSWORD` in your Renovate bot's environment.
+
+---
+
+#### Q7 — Private container image registry
+
+For each registry type selected, add the corresponding `hostRules` entry. Collect all entries into a single `"hostRules": [...]` array in the final `renovate.json`.
+
+**AWS ECR (`ecr`, host = `<account>.dkr.ecr.<region>.amazonaws.com`):**
+```json
+{
+  "matchHost": "<account>.dkr.ecr.<region>.amazonaws.com",
+  "hostType": "docker",
+  "username": "AWS",
+  "password": "{{ env.AWS_ECR_TOKEN }}"
+}
+```
+> Recommended: use the Renovate App with an IAM role instead of a static token. For self-hosted Renovate, pre-authenticate with `aws ecr get-login-password` and expose as `AWS_ECR_TOKEN`.
+
+**Google GCR / Artifact Registry (`gcr`, host = `gcr.io` or `<region>-docker.pkg.dev`):**
+```json
+{
+  "matchHost": "gcr.io",
+  "hostType": "docker",
+  "username": "_json_key",
+  "password": "{{ env.GCR_SERVICE_ACCOUNT_KEY }}"
+}
+```
+For Artifact Registry replace `gcr.io` with `<region>-docker.pkg.dev`.
+
+**Azure ACR (`acr`, host = `<registry>.azurecr.io`):**
+```json
+{
+  "matchHost": "<registry>.azurecr.io",
+  "hostType": "docker",
+  "username": "{{ env.ACR_CLIENT_ID }}",
+  "password": "{{ env.ACR_CLIENT_SECRET }}"
+}
+```
+> Recommended: use a service principal with `AcrPull` role. Set `ACR_CLIENT_ID` and `ACR_CLIENT_SECRET` in Renovate's environment.
+
+**Harbor / self-hosted (`harbor`, host = `<registry-host>`):**
+```json
+{
+  "matchHost": "<registry-host>",
+  "hostType": "docker",
+  "username": "{{ env.REGISTRY_USERNAME }}",
+  "password": "{{ env.REGISTRY_PASSWORD }}"
+}
+```
+
+After collecting all private registry `hostRules`, also add a `packageRules` entry to group image updates per registry:
+```json
+{
+  "description": "Container images from private registry <registry-host>",
+  "matchManagers": ["dockerfile", "docker-compose", "kubernetes"],
+  "matchPackagePatterns": ["^<registry-host>/"],
+  "automerge": false,
+  "groupName": "Private images (<registry-host>)"
+}
+```
+
+---
+
+#### Assembly
+
+Collect all objects from Steps 2 and 2.5 into the final `renovate.json` following this structure:
+
+```json
+{
+  "$schema": "...",
+  "extends": [...],
+  ... base config keys ...,
+  "hostRules": [ ... one entry per private registry ... ],
+  "regexManagers": [ ... one entry per custom source pattern ... ],
+  "packageRules": [ ... all per-manager + private registry rules ... ]
+}
+```
+
+Omit `hostRules` if no private registries were configured. Omit `regexManagers` if no custom source patterns apply.
 
 Collect all per-detected-manager objects into a single `"packageRules": [...]` array in the final `renovate.json`. Do not emit them as separate JSON blocks.
 
