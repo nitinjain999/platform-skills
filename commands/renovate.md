@@ -1,23 +1,60 @@
 ---
 name: renovate
-description: Generate renovate.json covering all dependency file types used in a repo, or emit a GitHub Actions workflow that validates renovate.json on every PR that touches it.
-argument-hint: "[generate|workflow]"
+description: Generate renovate.json covering all dependency file types used in a repo, emit a GitHub Actions workflow that validates renovate.json on every PR, or generate a pre-commit hook for local validation.
+argument-hint: "[generate|workflow|precommit|all]"
 ---
 
 ## Interactive Wizard (fires when $ARGUMENTS is empty)
 
-When invoked with no arguments, ask before proceeding:
+When invoked with no arguments, ask these questions before proceeding. Ask each question individually and wait for the answer before asking the next.
 
 **Q1 — Mode?**
 ```
 What do you need?
-  1. generate  — scan this repo and create renovate.json covering all detected dep file types
-  2. workflow  — generate a GitHub Actions workflow that validates renovate.json on every PR
+  1. generate   — scan this repo and create renovate.json covering all detected dep file types
+  2. workflow   — generate a GitHub Actions workflow that validates renovate.json on every PR
+  3. precommit  — generate a .pre-commit-config.yaml hook that validates renovate.json locally
+  4. all        — generate renovate.json + pre-commit hook + GitHub Actions workflow in one pass
 
-Enter 1–2 or mode name:
+Enter 1–4 or mode name:
 ```
 
-Then proceed into the relevant mode below.
+**Q2 — Pinning strategy?** (ask only for modes that emit renovate.json: `generate`, `all`)
+```
+How should Renovate pin dependency versions?
+
+  1. digest   — pin GitHub Actions and container images to commit SHA; semver for packages
+                (maximum supply chain security — recommended)
+  2. semver   — pin to semver tags/versions for all ecosystems; no SHA digests
+                (simpler PRs, easier to read at a glance)
+
+Enter 1–2:
+```
+
+**Q3 — Automerge scope?** (ask only for modes that emit renovate.json: `generate`, `all`)
+```
+Which update types should Renovate automerge without requiring a review?
+
+  1. patch-only   — automerge patch updates only (1.2.3 → 1.2.4) — safest
+  2. minor-patch  — automerge minor and patch (1.2.x → 1.3.x) — recommended for most teams
+  3. none         — require human review for every update
+
+Enter 1–3:
+```
+
+**Q4 — Update schedule?** (ask only for modes that emit renovate.json: `generate`, `all`)
+```
+When should Renovate open PRs?
+
+  1. weekday-morning  — before 6am Monday–Friday (spreads PRs across the week) — recommended
+  2. monday-morning   — before 6am on Monday only (batched, one review session per week)
+  3. weekend          — before 6am Saturday–Sunday (keeps weekdays clear)
+  4. always           — no schedule restriction (Renovate runs whenever it detects changes)
+
+Enter 1–4:
+```
+
+Store answers and proceed into the relevant mode(s) below using them.
 
 ---
 
@@ -26,8 +63,12 @@ You are a senior platform engineer specialising in dependency update automation 
 The input is: $ARGUMENTS
 
 Parse the first word as the mode:
-- `generate` — scan this repo and create renovate.json
-- `workflow` — emit a GitHub Actions workflow that validates renovate.json on PR
+- `generate`  — scan this repo and emit renovate.json
+- `workflow`  — emit a GitHub Actions validation workflow
+- `precommit` — emit a pre-commit hook config
+- `all`       — run generate, then precommit, then workflow in sequence
+
+If the mode was supplied via $ARGUMENTS (not the wizard), still ask Q2–Q4 for any mode that emits renovate.json before proceeding.
 
 ---
 
@@ -43,7 +84,7 @@ Scan for files matching these patterns. Exclude `.git/`, `node_modules/`, `vendo
 
 | File pattern | Manager | Key rule |
 |---|---|---|
-| `.github/workflows/*.yml` | `github-actions` | Pin action digests |
+| `.github/workflows/*.yml` | `github-actions` | SHA digest pinning |
 | `*.tf`, `*.tfvars` | `terraform` | Providers + modules |
 | `Chart.yaml`, `requirements.yaml` | `helmv3` | Helm chart deps |
 | `go.mod` | `gomod` | Go modules |
@@ -68,13 +109,24 @@ Detected dependency file types:
 
 Generate a `renovate.json` containing only the managers detected in Step 1.
 
+**`extends` — choose based on Q2 (pinning strategy):**
+
+- `digest` pinning chosen → use `config:best-practices` (includes GitHub Actions + Docker digest pinning, malware age window, abandoned package alerts)
+- `semver` pinning chosen → use `config:recommended` + `":separateMajorReleases"`
+
+**`schedule` — set based on Q4:**
+- `weekday-morning` → `["before 6am on weekdays"]`
+- `monday-morning`  → `["before 6am on monday"]`
+- `weekend`         → `["before 6am on saturday and sunday"]`
+- `always`          → omit the `schedule` key entirely
+
 **Always include this base:**
 
 ```json
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": [
-    "config:recommended",
+    "<see extends rule above>",
     ":dependencyDashboard",
     ":semanticCommits",
     ":separateMajorReleases"
@@ -82,17 +134,17 @@ Generate a `renovate.json` containing only the managers detected in Step 1.
   "dependencyDashboard": true,
   "dependencyDashboardTitle": "Renovate Dependency Dashboard",
   "timezone": "<detect from `git config --global core.timezone`; ask if undetectable>",
-  "schedule": ["before 6am on monday"],
   "labels": ["dependencies", "renovate"],
   "prConcurrentLimit": 5,
   "prCreation": "not-pending",
   "rebaseWhen": "conflicted",
   "semanticCommits": "enabled",
+  "minimumReleaseAge": "3 days",
+  "osvVulnerabilityAlerts": true,
   "vulnerabilityAlerts": {
     "enabled": true,
     "labels": ["security"]
   },
-  "osvVulnerabilityAlerts": true,
   "ignorePaths": [
     "**/node_modules/**",
     "**/vendor/**",
@@ -104,6 +156,15 @@ Generate a `renovate.json` containing only the managers detected in Step 1.
 
 **Per-detected-manager `packageRules` (include only detected managers):**
 
+Apply automerge settings based on Q3:
+- `patch-only`  → set `"matchUpdateTypes": ["patch"]` for automerge rules
+- `minor-patch` → set `"matchUpdateTypes": ["minor", "patch"]` for automerge rules
+- `none`        → set `"automerge": false` on all rules; omit `matchUpdateTypes` automerge entries
+
+Apply `pinDigests` based on Q2:
+- `digest` → add `"pinDigests": true` to `github-actions` and `docker`/`kubernetes` rules
+- `semver` → omit `pinDigests`
+
 `github-actions`:
 ```json
 {
@@ -111,10 +172,10 @@ Generate a `renovate.json` containing only the managers detected in Step 1.
   "matchManagers": ["github-actions"],
   "pinDigests": true,
   "automerge": false,
-  "groupName": "GitHub Actions",
-  "schedule": ["before 6am on monday"]
+  "groupName": "GitHub Actions"
 }
 ```
+(remove `pinDigests` line if semver strategy chosen)
 
 `terraform`:
 ```json
@@ -129,7 +190,7 @@ Generate a `renovate.json` containing only the managers detected in Step 1.
   "matchUpdateTypes": ["minor", "patch"]
 },
 {
-  "description": "Terraform modules — review major versions manually",
+  "description": "Terraform modules — require review for all updates",
   "matchManagers": ["terraform"],
   "matchDepTypes": ["module"],
   "automerge": false,
@@ -191,17 +252,19 @@ Generate a `renovate.json` containing only the managers detected in Step 1.
 `docker`:
 ```json
 {
-  "description": "Container images — review all updates",
+  "description": "Container images — pin digests, require review for all updates",
   "matchManagers": ["docker-compose", "dockerfile"],
+  "pinDigests": true,
   "automerge": false,
   "groupName": "Container images"
 }
 ```
+(remove `pinDigests` line if semver strategy chosen)
 
 `kubernetes`:
 ```json
 {
-  "description": "Kubernetes container images — review all updates",
+  "description": "Kubernetes container images — require review for all updates",
   "matchManagers": ["kubernetes"],
   "automerge": false,
   "groupName": "Kubernetes images"
@@ -228,7 +291,7 @@ Generate a `renovate.json` containing only the managers detected in Step 1.
 **`regexManagers`** — include if `.github/workflows/*.yml` contains `terraform_version:`:
 ```json
 {
-  "description": "Update Terraform version in GitHub Actions workflows",
+  "description": "Update Terraform version pinned in GitHub Actions workflows",
   "fileMatch": ["^\\.github/workflows/.*\\.ya?ml$"],
   "matchStrings": [
     "terraform_version:\\s*['\"]?(?<currentValue>[^'\"\\s]+)['\"]?"
@@ -246,13 +309,52 @@ Collect all per-detected-manager objects into a single `"packageRules": [...]` a
 - If `renovate.json` already exists: show only the lines that would change. Ask: `Write to renovate.json? [y/N]`
 - If no existing file: write directly and print `✅ renovate.json written.`
 
+After writing, print:
+```
+Next: run /platform-skills:renovate precommit to add a local pre-commit validation hook.
+```
+
+---
+
+## Mode: precommit
+
+Reference: `references/renovate.md`
+
+Emit a `.pre-commit-config.yaml` entry that validates `renovate.json` locally before every commit using the official `renovatebot/pre-commit-hooks`.
+
+### Output
+
+If `.pre-commit-config.yaml` already exists, append the renovate repo block if not already present. If the file does not exist, create it.
+
+```yaml
+repos:
+  - repo: https://github.com/renovatebot/pre-commit-hooks
+    rev: 43.150.0
+    hooks:
+      - id: renovate-config-validator
+```
+
+**Semver note:** `rev` tracks the Renovate release version (currently `43.150.0`). Renovate itself will keep this pinned version up to date automatically once Renovate is running on the repo — it treats pre-commit hook revs as a managed dependency.
+
+After writing, print:
+```
+✅ .pre-commit-config.yaml written (or updated).
+
+To activate the hook:
+  pip install pre-commit        # or: brew install pre-commit
+  pre-commit install
+  pre-commit run renovate-config-validator --all-files
+
+The hook runs renovate-config-validator before every commit that touches renovate.json.
+```
+
 ---
 
 ## Mode: workflow
 
 Reference: `references/renovate.md`
 
-Emit a ready-to-use `.github/workflows/validate-renovate.yml` that validates `renovate.json` on every PR that modifies it. No secrets or tokens required — uses only `GITHUB_TOKEN`.
+Emit a ready-to-use `.github/workflows/validate-renovate.yml` that validates `renovate.json` on every PR that modifies it. Uses only `GITHUB_TOKEN` — no secrets or tokens required.
 
 ### Output file: `.github/workflows/validate-renovate.yml`
 
@@ -284,19 +386,6 @@ jobs:
           fi
           echo "✅ JSON syntax valid"
 
-      - name: Validate against Renovate schema
-        run: |
-          npm install --save-dev ajv-cli ajv-formats
-          npx ajv validate \
-            --spec=draft7 \
-            -s https://docs.renovatebot.com/renovate-schema.json \
-            -d renovate.json \
-            -c ajv-formats || {
-            echo "❌ renovate.json does not match Renovate schema"
-            exit 1
-          }
-          echo "✅ Schema validation passed"
-
   validate-config:
     name: Config Validator
     runs-on: ubuntu-latest
@@ -304,9 +393,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
+      - name: Setup Node
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e  # v6.4.0
+        with:
+          node-version: '24'
+
       - name: Run renovate-config-validator
         run: |
-          npx --yes renovate-config-validator renovate.json
+          npx --package=renovate --yes renovate-config-validator renovate.json
           echo "✅ Config validation passed"
 
   validate-coverage:
@@ -347,13 +441,14 @@ jobs:
           else
             echo "ℹ️  SKIPPED: GitHub Actions — no matching files found"
           fi
-          check_coverage "Terraform"      "*.tf"                "terraform"
-          check_coverage "Helm"           "Chart.yaml"          "helmv3"
-          check_coverage "Go modules"     "go.mod"              "gomod"
-          check_coverage "npm"            "package.json"        "npm"
-          check_coverage "Python"         "requirements*.txt"   "pip_requirements"
-          check_coverage "Docker"         "Dockerfile"          "dockerfile"
-          check_coverage "Rust"           "Cargo.toml"          "cargo"
+
+          check_coverage "Terraform"  "*.tf"               "terraform"
+          check_coverage "Helm"       "Chart.yaml"         "helmv3"
+          check_coverage "Go modules" "go.mod"             "gomod"
+          check_coverage "npm"        "package.json"       "npm"
+          check_coverage "Python"     "requirements*.txt"  "pip_requirements"
+          check_coverage "Docker"     "Dockerfile"         "dockerfile"
+          check_coverage "Rust"       "Cargo.toml"         "cargo"
 
           if [ $UNCOVERED -gt 0 ]; then
             echo ""
@@ -375,7 +470,7 @@ jobs:
           ## Renovate Config Validation
           EOF
           printf "| Check | Status |\n|-------|--------|\n" >> $GITHUB_STEP_SUMMARY
-          printf "| JSON Schema | %s |\n" "${{ needs.validate-schema.result == 'success' && '✅ Passed' || '❌ Failed' }}" >> $GITHUB_STEP_SUMMARY
+          printf "| JSON Syntax | %s |\n" "${{ needs.validate-schema.result == 'success' && '✅ Passed' || '❌ Failed' }}" >> $GITHUB_STEP_SUMMARY
           printf "| Config Validator | %s |\n" "${{ needs.validate-config.result == 'success' && '✅ Passed' || '❌ Failed' }}" >> $GITHUB_STEP_SUMMARY
           printf "| Coverage Scan | %s |\n" "${{ needs.validate-coverage.result == 'success' && '✅ Passed' || '⚠️ Warnings' }}" >> $GITHUB_STEP_SUMMARY
 
@@ -400,4 +495,33 @@ Next steps:
   git push
 
 The workflow fires automatically on any PR that modifies renovate.json.
+```
+
+---
+
+## Mode: all
+
+Run the three modes in sequence using the answers from the wizard:
+
+1. **generate** — scan repo, ask Q2–Q4, emit `renovate.json`
+2. **precommit** — emit or update `.pre-commit-config.yaml`
+3. **workflow** — emit `.github/workflows/validate-renovate.yml`
+
+After all three complete, print a single consolidated next-steps block:
+
+```
+✅ Renovate setup complete
+
+Files written:
+  renovate.json
+  .pre-commit-config.yaml
+  .github/workflows/validate-renovate.yml
+
+Activate the pre-commit hook:
+  pip install pre-commit && pre-commit install
+
+Commit everything:
+  git add renovate.json .pre-commit-config.yaml .github/workflows/validate-renovate.yml
+  git commit -m "feat: add Renovate dependency automation"
+  git push
 ```
