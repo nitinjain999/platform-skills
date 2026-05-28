@@ -25,20 +25,6 @@ jobs:
           fi
           echo "✅ JSON syntax valid"
 
-      - name: Validate against Renovate schema
-        run: |
-          curl -fsSL https://docs.renovatebot.com/renovate-schema.json -o /tmp/renovate-schema.json
-          npm install --save-dev ajv-cli ajv-formats
-          npx ajv validate \
-            --spec=draft7 \
-            -s /tmp/renovate-schema.json \
-            -d renovate.json \
-            -c ajv-formats || {
-            echo "❌ renovate.json does not match Renovate schema"
-            exit 1
-          }
-          echo "✅ Schema validation passed"
-
   validate-config:
     name: Config Validator
     runs-on: ubuntu-latest
