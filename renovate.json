@@ -14,8 +14,11 @@
   "prCreation": "not-pending",
   "rebaseWhen": "conflicted",
   "semanticCommits": "enabled",
+  "dependencyDashboard": true,
+  "dependencyDashboardTitle": "Renovate Dependency Dashboard",
+  "osvVulnerabilityAlerts": true,
   "commitMessagePrefix": "chore(deps):",
-  "postUpdateOptions": ["gomodTidy"],
+  "postUpdateOptions": ["gomodTidy", "npmDedupe"],
   "vulnerabilityAlerts": {
     "enabled": true,
     "labels": ["security"],
@@ -37,6 +40,7 @@
       "groupName": "Terraform providers",
       "automerge": true,
       "automergeType": "pr",
+      "minimumReleaseAge": "3 days",
       "matchUpdateTypes": ["minor", "patch"]
     },
     {
@@ -51,6 +55,7 @@
       "matchManagers": ["helmv3"],
       "automerge": true,
       "automergeType": "pr",
+      "minimumReleaseAge": "3 days",
       "matchUpdateTypes": ["patch"]
     },
     {
@@ -66,7 +71,35 @@
       "matchCurrentVersion": "!/^0/",
       "labels": ["dependencies"],
       "automerge": true,
+      "minimumReleaseAge": "3 days",
       "automergeType": "pr"
+    },
+    {
+      "description": "Go modules — automerge minor/patch",
+      "matchManagers": ["gomod"],
+      "automerge": true,
+      "automergeType": "pr",
+      "minimumReleaseAge": "3 days",
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Go modules"
+    },
+    {
+      "description": "npm packages — automerge minor/patch",
+      "matchManagers": ["npm"],
+      "automerge": true,
+      "automergeType": "pr",
+      "minimumReleaseAge": "3 days",
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "npm packages"
+    },
+    {
+      "description": "Python packages — automerge minor/patch",
+      "matchManagers": ["pip_requirements", "pip-compile", "pipenv", "poetry"],
+      "automerge": true,
+      "automergeType": "pr",
+      "minimumReleaseAge": "3 days",
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "Python packages"
     }
   ],
   "regexManagers": [
