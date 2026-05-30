@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 # Validates that the skill structure is internally consistent.
-# Run from the repository root: bash tests/validate-skill.sh
+# Can be run from any directory: bash tests/validate-skill.sh
 
 set -euo pipefail
+
+# Always run from the repository root regardless of invocation directory
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$REPO_ROOT"
 
 ERRORS=0
 
