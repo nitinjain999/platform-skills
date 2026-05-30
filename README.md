@@ -362,6 +362,12 @@ This project follows the [all-contributors](https://github.com/all-contributors/
 
 ---
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=nitinjain999/platform-skills&type=Date)](https://star-history.com/#nitinjain999/platform-skills&Date)
+
+---
+
 ## License
 
 Apache-2.0. See [LICENSE](LICENSE) for the full text and [NOTICE](NOTICE) for attribution.
