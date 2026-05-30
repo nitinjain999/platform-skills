@@ -66,10 +66,6 @@ Design a production-ready NodePool and EC2NodeClass from requirements.
    - `instanceProfile` or `role` matching the Karpenter node IAM role
    - `blockDeviceMappings` with encrypted EBS and IMDSv2 enforced via `metadataOptions`
    - `tags` including at minimum `karpenter.sh/discovery`, `Environment`, and billing tags
-   - `subnetSelectorTerms` and `securityGroupSelectorTerms` using `karpenter.sh/discovery: <cluster-name>` tags
-   - `instanceProfile` or `role` matching the Karpenter node IAM role
-   - `blockDeviceMappings` with encrypted EBS and IMDSv2 enforced via `metadataOptions`
-   - `tags` including at minimum `karpenter.sh/discovery`, `Environment`, and billing tags
 
 3. Generate `NodePool` with:
    - `spec.template.spec.requirements` covering at least 3 instance families and both `On-Demand`/`Spot` capacity types (or explicit single type)

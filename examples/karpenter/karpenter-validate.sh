@@ -73,7 +73,7 @@ _check_yaml_fields() {
 
     # startupTaints are only valid when another component removes the taint after readiness.
     # karpenter.sh/not-ready has no built-in remover — flag it as an error if present.
-    if grep -q "startupTaints:" "$file"; then
+    if grep -qE '^[[:space:]]+startupTaints:' "$file"; then
       # Only fail if karpenter.sh/not-ready is an actual key: value line (not a comment)
       if grep -E "^\s+key:\s+karpenter\.sh/not-ready" "$file" >/dev/null 2>&1; then
         fail "$name — startupTaints uses karpenter.sh/not-ready which has no remover — pods will be permanently blocked; use a taint your CNI/device-plugin actually removes (e.g. node.cilium.io/agent-not-ready)"
@@ -83,7 +83,10 @@ _check_yaml_fields() {
     fi
     # No warning for missing startupTaints — it is optional and correct to omit it
 
-    if grep -q "minValues:" "$file"; then
+    # minValues is only meaningful for Spot NodePools — skip if On-Demand only
+    if grep -q "values: \[on-demand\]" "$file" && ! grep -q "values: \[spot" "$file"; then
+      pass "$name — NodePool is On-Demand only; minValues Spot diversity check skipped"
+    elif grep -q "minValues:" "$file"; then
       pass "$name — NodePool has minValues on instance requirements (Spot diversity enforced)"
     else
       warn "$name — NodePool missing minValues — Spot diversity not enforced"
@@ -136,8 +139,10 @@ _check_yaml_fields() {
 
   # NodePool content checks
   if grep -qE "^kind: NodePool$" "$file"; then
-    # minValues enforces Spot diversity — should be present on instance-family requirement
-    if grep -q "minValues:" "$file"; then
+    # minValues enforces Spot diversity — only relevant for Spot or mixed capacity NodePools
+    if grep -q "values: \[on-demand\]" "$file" && ! grep -q "values: \[spot" "$file"; then
+      pass "$name — NodePool is On-Demand only; minValues Spot diversity check skipped"
+    elif grep -q "minValues:" "$file"; then
       pass "$name — NodePool has minValues (Spot diversity enforced)"
     else
       warn "$name — NodePool missing minValues on instance requirements — Spot InsufficientCapacityError may stall provisioning"

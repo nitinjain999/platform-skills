@@ -33,7 +33,7 @@ Use this skill for hands-on help with Kubernetes, GitOps, cloud infrastructure, 
 | `PR Review` | Cost, drift, ownership, SOC 2, deprecated APIs, rollback feasibility |
 | `PR Triage` | Classify comments ACTIONABLE_FIX/INFORMATIONAL/NOT_APPLICABLE, fix, reply |
 | `KEDA` | ScaledObject/ScaledJob, all scalers, TriggerAuthentication, scale-to-zero |
-| `Karpenter` | NodePool/EC2NodeClass design, Spot diversity, disruption strategy, audit, CA migration, v0→v1 upgrade |
+| `Karpenter` | NodePool/EC2NodeClass design, Spot diversity, disruption strategy, capacity planning, audit, CA migration, v0→v1 upgrade |
 | `Agent Self-Improvement` | `.learnings/` workspace, LRN/ERR lifecycle, WAL, VFM, ADL |
 | `Supply Chain Security` | Cosign signing, Syft SBOM, Trivy/Grype CVE gates, SLSA Level 2 |
 | `Runtime Security` | Falco eBPF, custom rules, Falcosidekick routing, Kyverno enforcement |
