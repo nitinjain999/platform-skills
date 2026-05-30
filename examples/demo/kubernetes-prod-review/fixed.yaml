@@ -7,13 +7,12 @@ spec:
   replicas: 3
   selector:
     matchLabels:
-      app: api-server
-      version: v1.4.2
+      app: api-server  # selector is immutable — never include version here
   template:
     metadata:
       labels:
         app: api-server
-        version: v1.4.2
+        version: v1.4.2  # version label on pod template only — safe to change
     spec:
       serviceAccountName: api-server
       securityContext:

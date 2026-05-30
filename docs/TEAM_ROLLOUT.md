@@ -44,7 +44,7 @@ claude plugin install platform-skills
 
 ```bash
 # Claude Code
-claude skills list | grep platform-skills
+claude plugin list | grep platform-skills
 
 # Codex
 codex "list skills" | grep platform-skills
@@ -135,9 +135,11 @@ jobs:
             **Rollback:** Delete `.cursor/rules/platform-skills.mdc` (or equivalent) and close this PR.
 ```
 
-### Step 2: Create a PAT with repo access
+### Step 2: Create a fine-grained PAT
 
-Create a GitHub Personal Access Token with `repo` scope. Store it as secret `ROLLOUT_TOKEN` in your central tooling repo.
+Create a GitHub fine-grained Personal Access Token scoped to only the target repositories with **Contents** (read/write) and **Pull requests** (read/write) permissions. A classic PAT with `repo` scope is overly broad and grants unnecessary access across all your repositories.
+
+Store it as secret `ROLLOUT_TOKEN` in your central tooling repo.
 
 ### Step 3: Trigger the rollout
 

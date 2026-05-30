@@ -139,6 +139,10 @@ while [ "$#" -gt 0 ]; do
         echo "ERROR: --target requires a path" >&2
         exit 2
       fi
+      if [ ! -d "$2" ]; then
+        echo "ERROR: --target directory does not exist: $2" >&2
+        exit 2
+      fi
       TARGET_DIR="$(cd "$2" && pwd)"
       shift
       ;;

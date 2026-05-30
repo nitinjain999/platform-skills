@@ -27,8 +27,11 @@ A Terraform IAM policy that gives an application AdministratorAccess in disguise
 
 ## Validation
 
+`bad.tf` and `fixed.tf` intentionally define the same resources so they cannot be validated together as one module. Copy `fixed.tf` to a clean directory to validate it:
+
 ```bash
-cd examples/demo/terraform-iam-risk
+mkdir /tmp/tf-demo && cp examples/demo/terraform-iam-risk/fixed.tf examples/demo/terraform-iam-risk/versions.tf /tmp/tf-demo/
+cd /tmp/tf-demo
 terraform init && terraform validate
 terraform plan -var="app_name=myapp" -var="bucket_name=my-bucket" -var="aws_region=us-east-1"
 ```
