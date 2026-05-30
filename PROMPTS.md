@@ -153,3 +153,68 @@ Create a rollout plan for adopting platform-skills across 50 repositories using 
 ```text
 Create a one-page internal announcement for platform-skills. Explain who should use it, how to install it, first prompts to try, and how to report gaps.
 ```
+
+## Security Team
+
+```text
+Use $platform-skills to audit all IAM roles and policies in this Terraform module.
+Flag wildcard actions, wildcard resources, missing conditions, overly broad assume-role trust policies, and unused permissions.
+```
+
+```text
+Review this supply chain configuration for software composition risks: pinned action SHAs, SBOM generation, image signing, dependency provenance, and artifact attestation.
+```
+
+```text
+Generate an OPA/Rego policy that enforces these security controls on all Kubernetes Deployments:
+non-root containers, read-only root filesystem, dropped capabilities, no hostPID or hostNetwork, and resource limits required.
+```
+
+```text
+Review this Falco rule set for coverage gaps, false-positive risk, and missing detections for privilege escalation, lateral movement, and data exfiltration in a Kubernetes environment.
+```
+
+```text
+Use $platform-skills to produce a threat model for this architecture diagram. Identify trust boundaries, attack vectors, blast radius, and prioritized mitigations.
+```
+
+## SRE Team
+
+```text
+Use $platform-skills to walk me through this incident symptom: [paste error, alert, or log]. Start with evidence collection, then root cause hypothesis, safe fix options, validation steps, and rollback.
+```
+
+```text
+Generate a runbook for this failure mode: [describe the failure]. Include detection signals, triage steps, escalation path, remediation commands, validation, and post-incident actions.
+```
+
+```text
+Review these SLO definitions for correctness: error budget calculation, burn rate alert thresholds, window alignment, and whether the SLIs actually measure user experience.
+```
+
+```text
+Use $platform-skills to design a chaos experiment for this service. Include steady-state hypothesis, failure injection method, blast radius, abort conditions, and success criteria.
+```
+
+```text
+Generate capacity planning estimates for this workload at 2x and 5x current traffic. Include pod count, node count, RDS instance size, and NAT gateway throughput.
+```
+
+## App and Developer Team
+
+```text
+I'm onboarding to this platform. Walk me through what I need to know: cluster access, namespaces, secrets management, deploy process, observability, and how to get help.
+```
+
+```text
+Use $platform-skills to review my PR before I ask for human review. Check for: missing tests, unsafe Kubernetes defaults, hardcoded config, secrets in code, and missing rollback plan.
+```
+
+```text
+Generate a deploy checklist for this service going to production for the first time.
+Include: health check endpoints, runbook location, alerting coverage, rollback procedure, and feature flag state.
+```
+
+```text
+This deploy just went wrong. Walk me through a safe rollback: how to detect the blast radius, the rollback commands, how to validate it worked, and what to document in the incident channel.
+```
