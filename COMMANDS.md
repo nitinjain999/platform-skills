@@ -38,7 +38,7 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:pr-review](#platform-skillspr-review) | Comprehensive PR risk review |
 | [/platform-skills:triage](#platform-skillstriage) | Triage and resolve PR comments |
 | [/platform-skills:keda](#platform-skillskeda) | KEDA ScaledObject/ScaledJob — generate, debug, review, scale |
-| [/platform-skills:karpenter](#platform-skillskarpenter) | Karpenter NodePool/EC2NodeClass — generate, debug, review, audit scale history, migrate from CA, upgrade |
+| [/platform-skills:karpenter](#platform-skillskarpenter) | Karpenter NodePool/EC2NodeClass — generate, debug, review, audit scale history, plan capacity, migrate from CA, upgrade |
 | [/platform-skills:self-improve](#platform-skillsself-improve) | Bootstrap, log, review, or promote agent self-improvement entries |
 | [/platform-skills:chaos](#platform-skillschaos) | Install Litmus Chaos or Chaos Mesh, generate fault experiments, schedule chaos, run GameDay, debug, report |
 | [/platform-skills:dora](#platform-skillsdora) | Instrument DORA metrics, generate Grafana dashboards, benchmark against performance bands, debug metric gaps |
@@ -1790,16 +1790,16 @@ Reference: `commands/keda.md`, `references/keda.md`, and `examples/keda/`
 
 ## `/platform-skills:karpenter`
 
-**What it does:** Full Karpenter lifecycle for EKS admins — install, design NodePools, debug provisioning failures, audit why nodes scaled in or out, migrate from Cluster Autoscaler, and upgrade (including the breaking v0.x → v1.x CRD migration).
+**What it does:** Full Karpenter lifecycle for EKS admins — install, design NodePools, debug provisioning failures, audit why nodes scaled in or out, predict what would be provisioned before a rollout, migrate from Cluster Autoscaler, and upgrade (including the breaking v0.x → v1.x CRD migration).
 
 **Works on:** EKS clusters running Karpenter v1.x (`karpenter.sh/v1` API). NodePool, EC2NodeClass, NodeClaim manifests, Helm values, Terraform modules.
 
 ```
-/platform-skills:karpenter [generate|debug|review|audit|migrate|upgrade] [description or file path]
+/platform-skills:karpenter [generate|debug|review|audit|plan|migrate|upgrade] [description or file path]
 ```
 
 When invoked with no arguments, the command asks two questions before proceeding:
-1. Which mode (generate / debug / review / audit / migrate / upgrade)
+1. Which mode (generate / debug / review / audit / plan / migrate / upgrade)
 2. Environment context: EKS version, Karpenter version, identity method (Pod Identity vs IRSA), private cluster, Spot usage, CA migration
 
 | Mode | What it does |
@@ -1807,7 +1807,8 @@ When invoked with no arguments, the command asks two questions before proceeding
 | `generate` | Designs EC2NodeClass + NodePool from workload requirements — asks about instance families, AMI family, Spot tolerance, and GitOps method |
 | `debug` | Diagnoses pending pods / stuck NodeClaims — collects evidence first, maps symptom to cause via decision tree |
 | `review` | Reviews NodePool/EC2NodeClass for correctness, cost, reliability, security, GitOps safety — outputs Critical / Improvement / Note |
-| `audit` | Reconstructs scale-out/scale-in history with timestamps, disruption reasons, and trigger source |
+| `audit` | Reconstructs scale-out/scale-in history with timestamps, disruption reasons, and trigger source — with CloudTrail fallback when kubectl events have aged out |
+| `plan` | Predicts which NodePool would be selected, likely instance type, AZ, limits headroom, and cost estimate before deploying a workload |
 | `migrate` | Safe CA → Karpenter migration: pre-migration checklist, cordon/drain sequence, conflict risks, rollback |
 | `upgrade` | Patch/minor upgrades and the breaking v0.x → v1.x CRD migration with field-mapping table |
 
@@ -1820,6 +1821,8 @@ When invoked with no arguments, the command asks two questions before proceeding
 /platform-skills:karpenter debug
 /platform-skills:karpenter review [paste NodePool YAML]
 /platform-skills:karpenter audit why did ip-10-0-1-42 terminate at 14:32
+/platform-skills:karpenter plan deployment.yaml
+/platform-skills:karpenter plan orders-api requests 500m CPU 512Mi, 3 replicas, no nodeSelector
 /platform-skills:karpenter migrate from cluster-autoscaler
 /platform-skills:karpenter upgrade v0.37 to v1.0
 ```

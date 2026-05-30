@@ -71,11 +71,17 @@ _check_yaml_fields() {
       warn "$name — NodePool missing expireAfter — nodes will not be rotated for AMI updates"
     fi
 
+    # startupTaints are only valid when another component removes the taint after readiness.
+    # karpenter.sh/not-ready has no built-in remover — flag it as an error if present.
     if grep -q "startupTaints:" "$file"; then
-      pass "$name — NodePool has startupTaints (prevents premature pod scheduling)"
-    else
-      warn "$name — NodePool missing startupTaints — pods may schedule before DaemonSets are ready"
+      # Only fail if karpenter.sh/not-ready is an actual key: value line (not a comment)
+      if grep -E "^\s+key:\s+karpenter\.sh/not-ready" "$file" >/dev/null 2>&1; then
+        fail "$name — startupTaints uses karpenter.sh/not-ready which has no remover — pods will be permanently blocked; use a taint your CNI/device-plugin actually removes (e.g. node.cilium.io/agent-not-ready)"
+      else
+        pass "$name — NodePool has startupTaints (verify the taint key is removed by your CNI or device plugin)"
+      fi
     fi
+    # No warning for missing startupTaints — it is optional and correct to omit it
 
     if grep -q "minValues:" "$file"; then
       pass "$name — NodePool has minValues on instance requirements (Spot diversity enforced)"

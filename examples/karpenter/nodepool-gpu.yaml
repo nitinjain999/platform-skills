@@ -101,9 +101,13 @@ spec:
         - key: nvidia.com/gpu
           effect: NoSchedule
 
-      startupTaints:
-        - key: karpenter.sh/not-ready
-          effect: NoSchedule
+      # startupTaints: only add if your GPU device plugin (e.g. NVIDIA k8s-device-plugin)
+      # explicitly removes the taint after it initialises. karpenter.sh/not-ready has no
+      # remover and will permanently block pods. Example for NVIDIA device plugin:
+      # startupTaints:
+      #   - key: nvidia.com/gpu
+      #     effect: NoSchedule
+      # (The NVIDIA device plugin removes this taint once GPUs are advertised.)
 
       expireAfter: 720h
 

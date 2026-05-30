@@ -155,7 +155,7 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:pr-review` — comprehensive PR review: cost, drift, ownership, compliance, upgrade, rollback
 - `/platform-skills:triage` — triage a PR comment (bot or human): classify as ACTIONABLE_FIX / INFORMATIONAL / NOT_APPLICABLE, produce the exact fix if needed, and write the thread reply
 - `/platform-skills:keda` — design, generate, debug, or review KEDA ScaledObject/ScaledJob autoscaling
-- `/platform-skills:karpenter` — install, generate NodePool/EC2NodeClass, debug provisioning, audit scale history, migrate from Cluster Autoscaler, or upgrade (including v0→v1 CRD migration)
+- `/platform-skills:karpenter` — install, generate NodePool/EC2NodeClass, debug provisioning, plan capacity before rollout, audit scale history, migrate from Cluster Autoscaler, or upgrade (including v0→v1 CRD migration)
 - `/platform-skills:self-improve` — bootstrap global or project-local `.learnings/` workspace (`init global`/`init local`), log/review/promote learnings and errors, status overview, and migrate between scopes
 - `/platform-skills:supply-chain` — sign images, generate and attest SBOMs, run CVE severity gates, enforce image signatures in Kubernetes, and generate SLSA Level 2 provenance
 - `/platform-skills:runtime-security` — deploy Falco with eBPF, write custom rules, route alerts, debug why a rule is not firing, and bridge Falco signals to Kyverno admission enforcement
