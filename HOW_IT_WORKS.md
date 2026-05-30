@@ -113,6 +113,7 @@ Slash commands are predefined Claude workflows. In Codex or Cursor, ask for the 
 | `/platform-skills:pr-review` | Comprehensive PR review: cost, drift, ownership, compliance, upgrade, rollback |
 | `/platform-skills:triage` | Triage a PR comment, fix valid findings, reply, and resolve the thread |
 | `/platform-skills:keda` | KEDA ScaledObject/ScaledJob — generate, debug, review, or design a scaling strategy |
+| `/platform-skills:karpenter` | Karpenter NodePool/EC2NodeClass — generate, debug, review, audit scale history, migrate from CA, upgrade |
 | `/platform-skills:self-improve` | Bootstrap `.learnings/` workspace, log errors/learnings, resume after interruption, review patterns, promote to project memory |
 | `/platform-skills:supply-chain` | Sign images, generate SBOMs, run CVE gates, enforce image signatures, generate SLSA provenance |
 | `/platform-skills:runtime-security` | Deploy Falco with eBPF, write custom rules, route alerts, debug rule firing, bridge to Kyverno |

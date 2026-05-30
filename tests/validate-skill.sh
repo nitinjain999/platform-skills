@@ -108,6 +108,7 @@ REQUIRED_REFERENCES=(
   references/kyverno.md
   references/pr-review.md
   references/keda.md
+  references/karpenter.md
   references/agent-self-improve.md
   references/supply-chain.md
   references/runtime-security.md
@@ -150,6 +151,7 @@ EXAMPLE_DOMAINS=(
   examples/pr-review
   examples/triage
   examples/keda
+  examples/karpenter
   examples/agent-self-improve
   examples/supply-chain
   examples/runtime-security
@@ -304,6 +306,7 @@ echo "=== Domain validator scripts: run if present ==="
 # Commands that ship a validate script alongside their examples
 VALIDATE_SCRIPTS=(
   "examples/keda/keda-validate.sh"
+  "examples/karpenter/karpenter-validate.sh"
   "examples/kyverno/kyverno-validate.sh"
   "examples/opa/opa-validate.sh"
   "examples/terraform/terraform-validate.sh"

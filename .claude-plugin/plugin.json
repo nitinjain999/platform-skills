@@ -107,6 +107,7 @@
     "./commands/composite-actions.md",
     "./commands/fluxcd.md",
     "./commands/aws-profile.md",
-    "./commands/renovate.md"
+    "./commands/renovate.md",
+    "./commands/karpenter.md"
   ]
 }
