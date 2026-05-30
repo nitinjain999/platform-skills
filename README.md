@@ -226,6 +226,13 @@ cd platform-skills
 claude plugin install .
 ```
 
+**Upgrade to latest version:**
+```bash
+claude plugins marketplace update platform-skills
+claude plugins remove platform-skills
+claude plugins install platform-skills
+```
+
 ### Install as a Codex skill
 
 Codex discovers skills from the local skills directory. Clone this repository as the skill folder so `SKILL.md`, `agents/openai.yaml`, `references/`, and `examples/` stay together:
