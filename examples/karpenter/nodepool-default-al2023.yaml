@@ -49,8 +49,9 @@ spec:
 ---
 # NodePool: general-purpose, mixed Spot/On-Demand, multi-AZ
 #
-# - Spot preferred via NodePool weight — see nodepool-critical-ondemand.yaml for the
-#   On-Demand fallback pool that handles workloads requiring guaranteed capacity
+# - Spot preferred by cost; On-Demand used when Spot is unavailable for the selected families
+# - For workloads requiring guaranteed On-Demand, use nodepool-critical-ondemand.yaml
+#   (weight 5, opt-in via nodeSelector: karpenter.sh/capacity-type: on-demand)
 # - minValues: 3 on instance-family enforces Spot diversity
 # - limits prevent runaway provisioning
 
@@ -106,7 +107,7 @@ spec:
     cpu: "500"                      # 500 vCPU hard ceiling across this NodePool
     memory: 2000Gi
 
-  weight: 10                        # Lower weight than critical-ondemand pool
+  weight: 10                        # Higher weight than critical-ondemand (5) — general workloads land here
 
   disruption:
     consolidationPolicy: WhenEmptyOrUnderutilized
