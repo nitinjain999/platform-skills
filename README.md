@@ -12,6 +12,16 @@
 [![Tessl Registry](https://img.shields.io/badge/Tessl-nitinjain999%2Fplatform--skills-6366f1)](https://tessl.io/registry/nitinjain999/platform-skills)
 [![Skill Check](https://img.shields.io/badge/SkillCheck-Validated-brightgreen)](tests/validate-skill.sh)
 
+## Works With
+
+| Tool | What you get |
+|---|---|
+| **Claude Code** | Slash commands (`/platform-skills:review`, `/platform-skills:debug`, and 9 more), interactive guidance, automatic activation on relevant files |
+| **Codex** | Skill invocation with `$platform-skills`, loaded on demand in any Codex session |
+| **Cursor** | Project rules for Chat and Agent — platform review and generation in every file context |
+| **GitHub Copilot** | Chat instructions committed to your repo — available to your whole team without individual installs |
+| **GitHub (no AI tool)** | Browse `references/` and `examples/` directly — a standalone field handbook |
+
 ---
 
 If this handbook saves you time, [give it a star](https://github.com/nitinjain999/platform-skills/stargazers) — it helps others find it.
@@ -51,7 +61,7 @@ Need manual setup, global editor rules, or troubleshooting? See [INSTALLATION.md
 
 ## Try It On Your Repo
 
-More copy-paste workflows live in [PROMPTS.md](PROMPTS.md).
+See [BEFORE_AFTER.md](BEFORE_AFTER.md) for side-by-side before/after examples across Kubernetes, Terraform, Flux, and GitHub Actions. More copy-paste workflows in [PROMPTS.md](PROMPTS.md).
 
 ```text
 Use $platform-skills to review this Terraform change for IAM scope, replacement risk, validation, and rollback.
