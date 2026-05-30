@@ -1,0 +1,134 @@
+---
+# EC2NodeClass: On-Demand, critical workloads, pinned AMI for production stability
+#
+# Uses a pinned AMI ID instead of the SSM alias so AMI updates are explicit
+# and tested before rolling to the production fleet.
+# Replace ami-PLACEHOLDER with a scanned, tested AMI ID from your account.
+
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: critical-ondemand
+spec:
+  amiSelectorTerms:
+    # Pin to a known-good AMI — prevents surprise node replacement from SSM alias updates.
+    # To update: change the ID, merge to main, Karpenter will drift-replace nodes rolling.
+    - id: ami-PLACEHOLDER           # Replace with actual tested AMI ID
+
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: my-cluster
+
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: my-cluster
+
+  instanceProfile: karpenter-node-profile
+
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 50Gi
+        volumeType: gp3
+        encrypted: true
+        iops: 3000
+        throughput: 125
+
+  metadataOptions:
+    httpEndpoint: enabled
+    httpProtocolIPv6: disabled
+    httpTokens: required
+    httpPutResponseHopLimit: 1
+
+  tags:
+    Environment: production
+    ManagedBy: karpenter
+    WorkloadProfile: critical-ondemand
+    karpenter.sh/discovery: my-cluster
+
+---
+# NodePool: On-Demand fallback for critical / SLA-bound workloads
+#
+# Weight 50 — Karpenter tries spot-flex (weight 100) first.
+# This pool catches:
+#   - Workloads with: nodeSelector: { karpenter.sh/capacity-type: on-demand }
+#   - Spot-flex InsufficientCapacityError overflow
+#
+# PodDisruptionBudget is defined below for the example orders-api workload.
+
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: critical-ondemand
+spec:
+  template:
+    metadata:
+      labels:
+        nodepool: critical-ondemand
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: critical-ondemand
+
+      requirements:
+        - key: karpenter.k8s.aws/instance-family
+          operator: In
+          values: [m6i, m7i, m6a, m7a, c6i, c7i]
+          minValues: 3
+
+        - key: karpenter.k8s.aws/instance-size
+          operator: In
+          values: [large, xlarge, 2xlarge]
+
+        - key: kubernetes.io/arch
+          operator: In
+          values: [amd64]           # amd64 only for critical workloads — avoid multi-arch surprises
+
+        # On-Demand only — no Spot for SLA-bound workloads
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: [on-demand]
+
+        - key: topology.kubernetes.io/zone
+          operator: In
+          values: [eu-north-1a, eu-north-1b, eu-north-1c]
+
+      startupTaints:
+        - key: karpenter.sh/not-ready
+          effect: NoSchedule
+
+      expireAfter: 720h
+      terminationGracePeriod: 72h   # Longer grace for critical workloads
+
+  limits:
+    cpu: "200"                      # Conservative ceiling — prevent runaway On-Demand spend
+    memory: 800Gi
+
+  weight: 50
+
+  disruption:
+    # WhenEmpty only — never consolidate nodes running critical workloads
+    consolidationPolicy: WhenEmpty
+    budgets:
+      - nodes: "5%"                 # Very conservative — max 1 node at a time for small fleets
+      - schedule: "0 8 * * 1-5"    # No disruption during business hours
+        duration: 10h
+        nodes: "0"
+
+---
+# PodDisruptionBudget: protect orders-api during node disruption
+#
+# Without a PDB, Karpenter (and kubectl drain) can evict all pods simultaneously.
+# This PDB ensures at least 1 replica is always available.
+
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: orders-api
+  namespace: orders
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: orders-api

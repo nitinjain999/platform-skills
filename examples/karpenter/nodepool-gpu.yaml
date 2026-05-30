@@ -1,0 +1,134 @@
+---
+# EC2NodeClass: GPU workloads — Bottlerocket AMI, NVIDIA driver pre-installed
+#
+# Bottlerocket is preferred for GPU nodes:
+# - Read-only root filesystem reduces attack surface
+# - NVIDIA drivers pre-installed via bootstrap container (no userdata scripting)
+# - Faster node bootstrap than AL2023 for GPU workloads
+
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: gpu
+spec:
+  amiSelectorTerms:
+    - alias: bottlerocket@latest    # Bottlerocket with NVIDIA GPU support
+
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: my-cluster
+
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: my-cluster
+
+  instanceProfile: karpenter-node-profile
+
+  blockDeviceMappings:
+    # Root volume (OS)
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 20Gi
+        volumeType: gp3
+        encrypted: true
+    # Data volume (container storage, larger for model weights)
+    - deviceName: /dev/xvdb
+      ebs:
+        volumeSize: 200Gi
+        volumeType: gp3
+        encrypted: true
+        iops: 6000
+        throughput: 500
+
+  metadataOptions:
+    httpEndpoint: enabled
+    httpProtocolIPv6: disabled
+    httpTokens: required
+    httpPutResponseHopLimit: 1
+
+  tags:
+    Environment: production
+    ManagedBy: karpenter
+    WorkloadProfile: gpu
+    karpenter.sh/discovery: my-cluster
+
+---
+# NodePool: GPU — g4dn, g5, p3 families, On-Demand only
+#
+# GPU nodes are expensive and sensitive — On-Demand only.
+# Taint ensures only GPU workloads land here (prevents general pods consuming GPUs).
+# NVIDIA device plugin must be installed for the GPU resource to be schedulable.
+
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: gpu
+spec:
+  template:
+    metadata:
+      labels:
+        nodepool: gpu
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: gpu
+
+      requirements:
+        # GPU instance families
+        - key: karpenter.k8s.aws/instance-family
+          operator: In
+          values: [g4dn, g5, p3]
+
+        - key: karpenter.k8s.aws/instance-size
+          operator: In
+          values: [xlarge, 2xlarge, 4xlarge, 8xlarge, 12xlarge, 16xlarge]
+
+        - key: kubernetes.io/arch
+          operator: In
+          values: [amd64]           # GPU instances are x86 only
+
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: [on-demand]       # No Spot for GPU — interruptions during training are costly
+
+        - key: topology.kubernetes.io/zone
+          operator: In
+          values: [eu-north-1a, eu-north-1b, eu-north-1c]
+
+      # GPU taint — workloads must explicitly tolerate this to land on GPU nodes
+      taints:
+        - key: nvidia.com/gpu
+          effect: NoSchedule
+
+      startupTaints:
+        - key: karpenter.sh/not-ready
+          effect: NoSchedule
+
+      expireAfter: 720h
+
+  limits:
+    cpu: "100"                      # Tight ceiling — GPU nodes are expensive
+    memory: 1000Gi
+
+  weight: 5                         # Lowest weight — only used when GPU taint is tolerated
+
+  disruption:
+    # Never consolidate GPU nodes — training jobs cannot be safely interrupted
+    consolidationPolicy: WhenEmpty
+    budgets:
+      - nodes: "0"                  # No disruption allowed on GPU nodes by default
+
+---
+# Example: GPU workload toleration
+#
+# Add this to your Pod/Deployment spec to schedule on GPU nodes:
+#
+# spec:
+#   tolerations:
+#     - key: nvidia.com/gpu
+#       operator: Exists
+#       effect: NoSchedule
+#   resources:
+#     limits:
+#       nvidia.com/gpu: "1"

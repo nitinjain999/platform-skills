@@ -1,0 +1,120 @@
+---
+# EC2NodeClass: Spot-optimised, broad instance family support
+#
+# This EC2NodeClass is shared with the spot-flex NodePool.
+# Uses the same subnet/SG discovery pattern but sets a larger root volume
+# for workloads that need local scratch space.
+
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: spot-flex
+spec:
+  amiSelectorTerms:
+    - alias: al2023@latest
+
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: my-cluster
+
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: my-cluster
+
+  instanceProfile: karpenter-node-profile
+
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 100Gi           # Larger root for batch workloads with local temp files
+        volumeType: gp3
+        encrypted: true
+        iops: 3000
+        throughput: 125
+
+  metadataOptions:
+    httpEndpoint: enabled
+    httpProtocolIPv6: disabled
+    httpTokens: required
+    httpPutResponseHopLimit: 1
+
+  tags:
+    Environment: production
+    ManagedBy: karpenter
+    WorkloadProfile: spot-flex
+    karpenter.sh/discovery: my-cluster
+
+---
+# NodePool: Spot-flex — broad instance selection, Spot-only, batch workloads
+#
+# High weight (100) so Karpenter prefers this pool for Spot-tolerant workloads.
+# Workloads land here if they have no nodeSelector or have:
+#   nodeSelector: { karpenter.sh/capacity-type: spot }
+#
+# On-Demand fallback is handled by nodepool-critical-ondemand.yaml (weight: 50)
+# which Karpenter tries if this pool returns InsufficientCapacityError.
+
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: spot-flex
+spec:
+  template:
+    metadata:
+      labels:
+        nodepool: spot-flex
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: spot-flex
+
+      requirements:
+        # Wide instance family list — more Spot pools = fewer interruptions
+        - key: karpenter.k8s.aws/instance-family
+          operator: In
+          values: [m6i, m6a, m7i, m7a, m7g, c6i, c6a, c7i, c7a, c7g, r6i, r6a, r7i, r7g]
+          minValues: 5              # Enforce at least 5 families for strong Spot diversity
+
+        - key: karpenter.k8s.aws/instance-size
+          operator: In
+          values: [large, xlarge, 2xlarge, 4xlarge]
+
+        - key: kubernetes.io/arch
+          operator: In
+          values: [amd64, arm64]
+
+        # Spot only — On-Demand workloads use the critical-ondemand NodePool
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: [spot]
+
+        - key: topology.kubernetes.io/zone
+          operator: In
+          values: [eu-north-1a, eu-north-1b, eu-north-1c]
+
+      # Taint: only workloads that explicitly tolerate spot-flex land here
+      # Remove this taint if you want Spot-tolerant workloads to land here without
+      # requiring an explicit toleration — then use weight alone for selection.
+      taints:
+        - key: spot-flex
+          effect: NoSchedule
+
+      startupTaints:
+        - key: karpenter.sh/not-ready
+          effect: NoSchedule
+
+      expireAfter: 168h             # 7-day rotation — faster for Spot fleet freshness
+
+  limits:
+    cpu: "1000"
+    memory: 4000Gi
+
+  weight: 100                       # Highest weight — Karpenter tries this first
+
+  disruption:
+    # WhenEmpty only — Spot nodes are short-lived enough that active consolidation
+    # is rarely needed and risks disrupting batch jobs in progress
+    consolidationPolicy: WhenEmpty
+    budgets:
+      - nodes: "20%"                # Allow 20% concurrent disruption for this batch pool

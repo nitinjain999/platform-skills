@@ -1,0 +1,115 @@
+---
+# EC2NodeClass: AL2023 with encrypted EBS, IMDSv2, and subnet/SG discovery by tag
+#
+# Prerequisites:
+# - Subnets tagged: karpenter.sh/discovery=my-cluster
+# - Security groups tagged: karpenter.sh/discovery=my-cluster
+# - EC2 instance profile exists: karpenter-node-profile
+# - EKS access entry for the node role (or aws-auth ConfigMap entry)
+
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: default
+spec:
+  amiSelectorTerms:
+    - alias: al2023@latest        # Resolves to EKS-optimised AL2023 for this cluster's k8s version
+
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: my-cluster
+
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: my-cluster
+
+  instanceProfile: karpenter-node-profile
+
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 50Gi
+        volumeType: gp3
+        encrypted: true
+        iops: 3000
+        throughput: 125
+
+  # IMDSv2 required — blocks pod-level IMDS access (hop limit 1 = instance only)
+  metadataOptions:
+    httpEndpoint: enabled
+    httpProtocolIPv6: disabled
+    httpTokens: required
+    httpPutResponseHopLimit: 1
+
+  tags:
+    Environment: production
+    ManagedBy: karpenter
+    karpenter.sh/discovery: my-cluster
+
+---
+# NodePool: general-purpose, mixed Spot/On-Demand, multi-AZ
+#
+# - Spot preferred via NodePool weight — see nodepool-critical-ondemand.yaml for the
+#   On-Demand fallback pool that handles workloads requiring guaranteed capacity
+# - minValues: 3 on instance-family enforces Spot diversity
+# - limits prevent runaway provisioning
+
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: default
+spec:
+  template:
+    metadata:
+      labels:
+        nodepool: default
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: default
+
+      requirements:
+        - key: karpenter.k8s.aws/instance-family
+          operator: In
+          values: [m6i, m6a, m7i, m7a, c6i, c6a, c7i, r6i, r7i]
+          minValues: 3               # Refuse to provision if fewer than 3 families available
+
+        - key: karpenter.k8s.aws/instance-size
+          operator: In
+          values: [medium, large, xlarge, 2xlarge]
+
+        - key: kubernetes.io/arch
+          operator: In
+          values: [amd64, arm64]    # Graviton included for ~20% cost reduction
+
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: [spot, on-demand]
+
+        - key: topology.kubernetes.io/zone
+          operator: In
+          values: [eu-north-1a, eu-north-1b, eu-north-1c]
+
+      # Prevents pod scheduling until DaemonSets (CNI, log agent) are ready on the node
+      startupTaints:
+        - key: karpenter.sh/not-ready
+          effect: NoSchedule
+
+      expireAfter: 720h             # Force node rotation every 30 days (AMI patching)
+      terminationGracePeriod: 48h
+
+  limits:
+    cpu: "500"                      # 500 vCPU hard ceiling across this NodePool
+    memory: 2000Gi
+
+  weight: 10                        # Lower weight than critical-ondemand pool
+
+  disruption:
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 5m            # Wait 5 min of underutilisation before consolidating
+    budgets:
+      - nodes: "10%"                # Max 10% of nodes disrupted at once
+      - schedule: "0 8 * * 1-5"    # No disruption during business hours (08:00–16:00 UTC)
+        duration: 8h
+        nodes: "0"

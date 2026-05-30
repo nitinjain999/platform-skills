@@ -1,6 +1,6 @@
 ---
 name: platform-skills
-description: "Use when troubleshooting, implementing, reviewing, or auditing platform infrastructure as a system — where Kubernetes, GitOps, CI/CD, and security concerns intersect. Provides structured diagnosis with blast radius, validation steps, and rollback plan for: Kubernetes, Flux CD, Argo CD, Terraform, GitHub Actions (composite actions, OIDC, SHA pinning), AWS, Azure, GKE, Linkerd, KEDA, supply chain security (Cosign, SBOM, SLSA), Falco, Chaos Engineering, DORA metrics, Datadog/Dynatrace/LLM observability, SOC 2, and PR review."
+description: "Use when troubleshooting, implementing, reviewing, or auditing platform infrastructure as a system — where Kubernetes, GitOps, CI/CD, and security concerns intersect. Provides structured diagnosis with blast radius, validation steps, and rollback plan for: Kubernetes, Flux CD, Argo CD, Terraform, GitHub Actions (composite actions, OIDC, SHA pinning), AWS, Azure, GKE, Linkerd, KEDA, Karpenter, supply chain security (Cosign, SBOM, SLSA), Falco, Chaos Engineering, DORA metrics, Datadog/Dynatrace/LLM observability, SOC 2, and PR review."
 ---
 
 # Platform Skills
@@ -33,6 +33,7 @@ Use this skill for hands-on help with Kubernetes, GitOps, cloud infrastructure, 
 | `PR Review` | Cost, drift, ownership, SOC 2, deprecated APIs, rollback feasibility |
 | `PR Triage` | Classify comments ACTIONABLE_FIX/INFORMATIONAL/NOT_APPLICABLE, fix, reply |
 | `KEDA` | ScaledObject/ScaledJob, all scalers, TriggerAuthentication, scale-to-zero |
+| `Karpenter` | NodePool/EC2NodeClass design, Spot diversity, disruption strategy, audit, CA migration, v0→v1 upgrade |
 | `Agent Self-Improvement` | `.learnings/` workspace, LRN/ERR lifecycle, WAL, VFM, ADL |
 | `Supply Chain Security` | Cosign signing, Syft SBOM, Trivy/Grype CVE gates, SLSA Level 2 |
 | `Runtime Security` | Falco eBPF, custom rules, Falcosidekick routing, Kyverno enforcement |
@@ -119,6 +120,7 @@ Load only the files needed for the current request.
 | references/kyverno.md | ValidatingPolicy, MutatingPolicy, ImageValidatingPolicy, CEL, kyverno-cli |
 | references/pr-review.md | Cost, drift, ownership, compliance, deprecated APIs, rollback scoring |
 | references/keda.md | ScaledObject, ScaledJob, scalers, TriggerAuthentication, scale-to-zero |
+| references/karpenter.md | NodePool, EC2NodeClass, NodeClaim, IAM, Spot, disruption, private cluster, CA migration |
 | references/agent-self-improve.md | `.learnings/` workspace, WAL, VFM, ADL, status/migrate |
 | references/supply-chain.md | Cosign, Syft SBOM, Trivy/Grype, SLSA Level 2, ImageValidatingPolicy |
 | references/runtime-security.md | Falco eBPF, custom rules, Falcosidekick, Kyverno enforcement |
@@ -153,6 +155,7 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:pr-review` — comprehensive PR review: cost, drift, ownership, compliance, upgrade, rollback
 - `/platform-skills:triage` — triage a PR comment (bot or human): classify as ACTIONABLE_FIX / INFORMATIONAL / NOT_APPLICABLE, produce the exact fix if needed, and write the thread reply
 - `/platform-skills:keda` — design, generate, debug, or review KEDA ScaledObject/ScaledJob autoscaling
+- `/platform-skills:karpenter` — install, generate NodePool/EC2NodeClass, debug provisioning, audit scale history, migrate from Cluster Autoscaler, or upgrade (including v0→v1 CRD migration)
 - `/platform-skills:self-improve` — bootstrap global or project-local `.learnings/` workspace (`init global`/`init local`), log/review/promote learnings and errors, status overview, and migrate between scopes
 - `/platform-skills:supply-chain` — sign images, generate and attest SBOMs, run CVE severity gates, enforce image signatures in Kubernetes, and generate SLSA Level 2 provenance
 - `/platform-skills:runtime-security` — deploy Falco with eBPF, write custom rules, route alerts, debug why a rule is not firing, and bridge Falco signals to Kyverno admission enforcement
