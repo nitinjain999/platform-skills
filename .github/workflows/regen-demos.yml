@@ -24,21 +24,14 @@ jobs:
           repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
-      - name: Install VHS
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y ffmpeg
-          curl -sL https://github.com/charmbracelet/vhs/releases/download/v0.7.2/vhs_0.7.2_Linux_x86_64.tar.gz \
-            | tar xz -C /usr/local/bin vhs
+      - uses: charmbracelet/vhs-action@v2.1.0
 
       - name: Generate GIFs
         run: |
           for tape in examples/demo/**/demo.tape; do
             echo "Rendering $tape"
             dir=$(dirname "$tape")
-            cd "$dir"
-            vhs demo.tape
-            cd - > /dev/null
+            (cd "$dir" && vhs demo.tape)
           done
 
       - name: Commit updated GIFs
