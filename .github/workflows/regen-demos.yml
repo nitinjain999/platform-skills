@@ -17,7 +17,7 @@ jobs:
   regen:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@v6
         with:
           ref: ${{ github.head_ref || github.ref_name }}  # check out PR branch, not detached HEAD
 
@@ -40,7 +40,7 @@ jobs:
 
       - name: Commit updated GIFs
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-        uses: stefanzweifel/git-auto-commit-action@04702edda442b2e678b25b537cec683a1493fcb9  # v7.1.0
+        uses: stefanzweifel/git-auto-commit-action@v7.1.0
         with:
           commit_message: "chore: regenerate demo GIFs [skip ci]"
           file_pattern: "examples/demo/**/*.gif"
