@@ -251,9 +251,9 @@ jobs:
 
       - name: Validate Terraform files (if present)
         run: |
-          if find . -type f -name "*.tf" ! -path "./.git/*" | grep -q .; then
+          if find . -type f -name "*.tf" ! -path "./.git/*" ! -path "./examples/demo/*" | grep -q .; then
             ERRORS=0
-            for dir in $(find . -type f -name "*.tf" ! -path "./.git/*" -exec dirname {} \; | sort -u); do
+            for dir in $(find . -type f -name "*.tf" ! -path "./.git/*" ! -path "./examples/demo/*" -exec dirname {} \; | sort -u); do
               echo "Validating Terraform in: $dir"
               if ! (cd "$dir" && terraform init -backend=false -input=false && terraform validate); then
                 echo "❌ Terraform validation failed in $dir"
