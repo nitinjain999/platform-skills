@@ -102,6 +102,11 @@ jobs:
         run: |
           REQUIRED_FILES=(
             "SKILL.md"
+            "install.sh"
+            "agents/openai.yaml"
+            ".cursorrules"
+            ".cursor/rules/platform-skills.mdc"
+            "PROMPTS.md"
             "README.md"
             "LICENSE"
             "CHANGELOG.md"
@@ -331,13 +336,28 @@ jobs:
           echo "\`\`\`bash" >> release-notes.md
           echo "git clone https://github.com/${{ github.repository }}.git" >> release-notes.md
           echo "cd platform-skills" >> release-notes.md
-          echo "claude plugin install ." >> release-notes.md
+          echo "./install.sh --all --target ../your-project" >> release-notes.md
           echo "\`\`\`" >> release-notes.md
           echo "" >> release-notes.md
           echo "**Marketplace install:**" >> release-notes.md
           echo "\`\`\`bash" >> release-notes.md
           echo "claude plugin marketplace add https://github.com/${{ github.repository }}" >> release-notes.md
           echo "claude plugin install ${{ env.SKILL_NAME }}" >> release-notes.md
+          echo "\`\`\`" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "**Codex skill install:**" >> release-notes.md
+          echo "\`\`\`bash" >> release-notes.md
+          echo "mkdir -p \"\${CODEX_HOME:-\$HOME/.codex}/skills\"" >> release-notes.md
+          echo "git clone https://github.com/${{ github.repository }}.git \"\${CODEX_HOME:-\$HOME/.codex}/skills/platform-skills\"" >> release-notes.md
+          echo "cd \"\${CODEX_HOME:-\$HOME/.codex}/skills/platform-skills\" && git checkout v${{ needs.validate.outputs.version }}" >> release-notes.md
+          echo "\`\`\`" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "**Cursor rules install:**" >> release-notes.md
+          echo "\`\`\`bash" >> release-notes.md
+          echo "git clone https://github.com/${{ github.repository }}.git" >> release-notes.md
+          echo "cp platform-skills/.cursorrules your-project/.cursorrules" >> release-notes.md
+          echo "mkdir -p your-project/.cursor/rules" >> release-notes.md
+          echo "cp platform-skills/.cursor/rules/*.mdc your-project/.cursor/rules/" >> release-notes.md
           echo "\`\`\`" >> release-notes.md
 
       - name: Create GitHub Release (idempotent)
@@ -378,11 +398,28 @@ jobs:
           claude plugin install ${{ env.SKILL_NAME }}
           \`\`\`
 
+          **For Codex:**
+          \`\`\`bash
+          mkdir -p "\${CODEX_HOME:-\$HOME/.codex}/skills"
+          git clone https://github.com/${{ github.repository }}.git "\${CODEX_HOME:-\$HOME/.codex}/skills/platform-skills"
+          cd "\${CODEX_HOME:-\$HOME/.codex}/skills/platform-skills" && git checkout v${{ needs.validate.outputs.version }}
+          \`\`\`
+
+          **For Cursor:**
+          \`\`\`bash
+          git clone https://github.com/${{ github.repository }}.git
+          cp platform-skills/.cursorrules your-project/.cursorrules
+          mkdir -p your-project/.cursor/rules
+          cp platform-skills/.cursor/rules/*.mdc your-project/.cursor/rules/
+          \`\`\`
+
           ### ✅ Validation Passed
 
           - Version format valid
           - marketplace.json version matches tag
           - All required files present
+          - Codex skill metadata present
+          - Cursor rules present
           - Quality checks passed
           - GitHub Release created
 
@@ -466,6 +503,21 @@ jobs:
              - Submit repository: https://github.com/${{ github.repository }}
              - Version will be detected from tag: v${{ needs.validate.outputs.version }}
 
+          4. **Codex skill install:**
+             \`\`\`bash
+             mkdir -p "\${CODEX_HOME:-\$HOME/.codex}/skills"
+             git clone https://github.com/${{ github.repository }}.git "\${CODEX_HOME:-\$HOME/.codex}/skills/platform-skills"
+             cd "\${CODEX_HOME:-\$HOME/.codex}/skills/platform-skills" && git checkout v${{ needs.validate.outputs.version }}
+             \`\`\`
+
+          5. **Cursor rules install:**
+             \`\`\`bash
+             git clone https://github.com/${{ github.repository }}.git
+             cp platform-skills/.cursorrules your-project/.cursorrules
+             mkdir -p your-project/.cursor/rules
+             cp platform-skills/.cursor/rules/*.mdc your-project/.cursor/rules/
+             \`\`\`
+
           ### Marketplace Checklist
 
           - [x] Version tagged (v${{ needs.validate.outputs.version }})
@@ -508,6 +560,23 @@ jobs:
           \`\`\`bash
           claude plugin marketplace add https://github.com/${{ github.repository }}
           claude plugin install ${{ env.SKILL_NAME }}
+          \`\`\`
+
+          Codex users can install the released skill with:
+
+          \`\`\`bash
+          mkdir -p "\${CODEX_HOME:-\$HOME/.codex}/skills"
+          git clone https://github.com/${{ github.repository }}.git "\${CODEX_HOME:-\$HOME/.codex}/skills/platform-skills"
+          cd "\${CODEX_HOME:-\$HOME/.codex}/skills/platform-skills" && git checkout v${{ needs.validate.outputs.version }}
+          \`\`\`
+
+          Cursor users can install project rules with:
+
+          \`\`\`bash
+          git clone https://github.com/${{ github.repository }}.git
+          cp platform-skills/.cursorrules your-project/.cursorrules
+          mkdir -p your-project/.cursor/rules
+          cp platform-skills/.cursor/rules/*.mdc your-project/.cursor/rules/
           \`\`\`
 
           ### Documentation

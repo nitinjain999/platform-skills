@@ -1,0 +1,7 @@
+interface:
+  display_name: "Platform Skills"
+  short_description: "Platform engineering workflows with rollback plans"
+  default_prompt: "Use $platform-skills to review this platform change for ownership, blast radius, validation, and rollback."
+
+policy:
+  allow_implicit_invocation: true

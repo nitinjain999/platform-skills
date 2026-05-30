@@ -1,9 +1,9 @@
 # Platform Skills
 
-> A production-grade handbook for platform engineers — 35 domain guides covering Kubernetes, Flux CD, Terraform, GitHub Actions, AWS, OPA/Rego, KEDA, supply chain security, Falco, observability, and more. Use it on GitHub, as a local reference, or install as a Claude skill for interactive guidance with blast radius, validation steps, and rollback plans built in.
+> A production-grade field handbook for platform, DevOps, SRE, and cloud engineers covering Kubernetes, Flux CD, Terraform, GitHub Actions, AWS, OPA/Rego, KEDA, supply chain security, Falco, observability, and more. Use it on GitHub, as a local reference, or with Claude, Codex, Cursor, and Copilot for interactive guidance with blast radius, validation steps, and rollback plans built in.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-v1.27.0-0e1117)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-v1.28.0-0e1117)](CHANGELOG.md)
 [![Domains](https://img.shields.io/badge/Domains-37-4c8eda)](references/)
 [![Commands](https://img.shields.io/badge/Commands-31-e87c2b)](commands/)
 [![Examples](https://img.shields.io/badge/Examples-27-6f42c1)](examples/)
@@ -12,6 +12,16 @@
 [![Tessl Registry](https://img.shields.io/badge/Tessl-nitinjain999%2Fplatform--skills-6366f1)](https://tessl.io/registry/nitinjain999/platform-skills)
 [![Skill Check](https://img.shields.io/badge/SkillCheck-Validated-brightgreen)](tests/validate-skill.sh)
 
+## Works With
+
+| Tool | What you get |
+|---|---|
+| **Claude Code** | Slash commands (`/platform-skills:review`, `/platform-skills:debug`, and 9 more), interactive guidance, automatic activation on relevant files |
+| **Codex** | Skill invocation with `$platform-skills`, loaded on demand in any Codex session |
+| **Cursor** | Project rules for Chat and Agent — platform review and generation in every file context |
+| **GitHub Copilot** | Chat instructions committed to your repo — available to your whole team without individual installs |
+| **GitHub (no AI tool)** | Browse `references/` and `examples/` directly — a standalone field handbook |
+
 ---
 
 If this handbook saves you time, [give it a star](https://github.com/nitinjain999/platform-skills/stargazers) — it helps others find it.
@@ -19,14 +29,67 @@ Found a gap or a better pattern? [Contributions are welcome](CONTRIBUTING.md) �
 
 ---
 
+## Why Platform Skills
+
+Platform teams keep rediscovering the same hard lessons: unclear ownership, unsafe IAM, weak Kubernetes defaults, drifting GitOps overlays, CI checks that run too late, and rollback plans that only appear after an incident. Platform Skills turns those lessons into reusable guidance for the tools engineers already use.
+
+Use it when you need a second brain for production platform work:
+
+- Review a Terraform, Helm, Kubernetes, Flux, GitHub Actions, or AWS change before it merges
+- Generate platform assets with security, observability, validation, and rollback already considered
+- Debug incidents with evidence-first troubleshooting instead of guesswork
+- Give every developer the same platform engineering baseline in Claude, Codex, Cursor, and Copilot
+
+## Install In 60 Seconds
+
+Clone once, then install the integration your team uses:
+
+```bash
+git clone https://github.com/nitinjain999/platform-skills.git
+cd platform-skills
+```
+
+| Tool | Best for | Quick install |
+|---|---|---|
+| Claude Code | Interactive plugin workflows and slash commands | `claude plugin marketplace add https://github.com/nitinjain999/platform-skills && claude plugin install platform-skills` |
+| Codex | Local skill invocation with `$platform-skills` | `./install.sh --codex` |
+| Cursor | Project rules for Chat and Agent | `./install.sh --cursor --target ../your-project` |
+| GitHub Copilot | Team-wide chat instructions committed to the repo | `./install.sh --copilot --target ../your-project` |
+| Everything | Local all-agent setup | `./install.sh --all --target ../your-project` |
+
+Need manual setup, global editor rules, or troubleshooting? See [INSTALLATION.md](INSTALLATION.md).
+
+## Try It On Your Repo
+
+See [BEFORE_AFTER.md](BEFORE_AFTER.md) for side-by-side before/after examples across Kubernetes, Terraform, Flux CD, GitHub Actions, OPA/Rego, and PR triage. More copy-paste workflows in [PROMPTS.md](PROMPTS.md).
+
+```text
+Use $platform-skills to review this Terraform change for IAM scope, replacement risk, validation, and rollback.
+```
+
+```text
+Review this Kubernetes Deployment for production readiness: securityContext, resources, probes, HPA, PDB, and NetworkPolicy.
+```
+
+```text
+My Flux Kustomization is stuck NotReady. Walk me from evidence to fix to rollback.
+```
+
+```text
+Generate a production-ready GitHub Actions workflow with OIDC, pinned actions, cache safety, and least privilege.
+```
+
 ## What is this?
 
-This repository is a reference handbook for developers, DevOps engineers, SREs, and platform teams. It is structured in two independent layers:
+This repository is a reference handbook for developers, DevOps engineers, SREs, cloud engineers, and platform teams. It is structured in independent layers:
 
 - **Handbook** — `references/` and `examples/` are the main product. Every domain has a deep-dive guide and working example assets you can copy directly into your project. Use it on GitHub, from a local clone, or as a team knowledge base.
 - **Claude plugin** — `SKILL.md` and `.claude-plugin/marketplace.json` add an optional routing layer so Claude surfaces the right section of the handbook when you ask platform engineering questions interactively.
+- **Codex skill** — the repo root is a self-contained skill folder: `SKILL.md` provides routing, `agents/openai.yaml` provides Codex UI metadata, and `references/` plus `examples/` are loaded on demand.
+- **Cursor rules** — `.cursorrules` and `.cursor/rules/*.mdc` give Cursor project-level and scoped file rules for platform engineering reviews and generation.
+- **Copilot instructions** — `.github/copilot-instructions.md` lets teams commit the baseline into application and platform repositories.
 
-Both layers work independently. The plugin is optional.
+All layers work independently. Agent integrations are optional.
 
 ## Navigate
 
@@ -37,7 +100,10 @@ Both layers work independently. The plugin is optional.
 | Full installation guide and troubleshooting | [INSTALLATION.md](INSTALLATION.md) |
 | Read a domain guide | [references/](references/) |
 | Copy a working example | [examples/](examples/) |
+| Copy prompts for Claude, Codex, Cursor, or Copilot | [PROMPTS.md](PROMPTS.md) |
 | Install as a Claude plugin | [Installation](#installation) |
+| Install as a Codex skill | [Installation](#installation) |
+| Add Cursor rules | [Editor integrations](EDITOR_INTEGRATIONS.md#cursor) |
 | Learn how to use each slash command | [COMMANDS.md](COMMANDS.md) |
 | Set up VSCode, Copilot, or Cursor | [EDITOR_INTEGRATIONS.md](EDITOR_INTEGRATIONS.md) |
 | Contribute a pattern | [CONTRIBUTING.md](CONTRIBUTING.md) |
@@ -160,6 +226,31 @@ cd platform-skills
 claude plugin install .
 ```
 
+### Install as a Codex skill
+
+Codex discovers skills from the local skills directory. Clone this repository as the skill folder so `SKILL.md`, `agents/openai.yaml`, `references/`, and `examples/` stay together:
+
+```bash
+mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
+git clone https://github.com/nitinjain999/platform-skills.git "${CODEX_HOME:-$HOME/.codex}/skills/platform-skills"
+```
+
+Then ask Codex naturally:
+
+```text
+Use $platform-skills to review this Terraform change for ownership, blast radius, validation, and rollback.
+```
+
+### Install Cursor rules
+
+Copy the Cursor-native rules into your project so every developer gets the same platform guidance in Cursor Chat and Agent:
+
+```bash
+cp platform-skills/.cursorrules your-project/.cursorrules
+mkdir -p your-project/.cursor/rules
+cp platform-skills/.cursor/rules/*.mdc your-project/.cursor/rules/
+```
+
 For VSCode, Copilot, Cursor, and JetBrains setup — project level and global level — see [EDITOR_INTEGRATIONS.md](EDITOR_INTEGRATIONS.md).
 
 ## Repository structure
@@ -213,7 +304,10 @@ platform-skills/
 │       ├── incident-response/          # CC7.3: SNS, EventBridge, PagerDuty
 │       └── backup/                     # A1.2/A1.3: Backup Plan, vault lock, cross-region DR
 │
-├── SKILL.md                            # Claude plugin routing and patterns
+├── SKILL.md                            # Agent skill routing and patterns
+├── agents/openai.yaml                  # Codex skill UI metadata
+├── .cursorrules                        # Cursor project-level rules
+├── .cursor/rules/                      # Cursor scoped file rules
 ├── .claude-plugin/marketplace.json     # Marketplace metadata
 ├── .github/workflows/                  # Validation and release automation
 ├── tests/validate-skill.sh             # Skill structure consistency checks
@@ -222,7 +316,7 @@ platform-skills/
 
 ## Roadmap
 
-**Current release: v1.27.0** — 31 commands, 37 domain reference guides, 50+ wiki pages.
+**Current release: v1.28.0** — 31 commands, 37 domain reference guides, 50+ wiki pages.
 
 Full version history is in [CHANGELOG.md](CHANGELOG.md).
 
@@ -275,6 +369,12 @@ Thanks goes to these wonderful people ([emoji key](https://allcontributors.org/d
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
 This project follows the [all-contributors](https://github.com/all-contributors/all-contributors) specification. Contributions of any kind welcome!
+
+---
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=nitinjain999/platform-skills&type=Date)](https://star-history.com/#nitinjain999/platform-skills&Date)
 
 ---
 

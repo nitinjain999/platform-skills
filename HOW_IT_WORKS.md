@@ -1,6 +1,6 @@
 # How AI Coding Agents Work — and How to Use Platform Skills
 
-This document explains what is happening under the hood when you use Claude with a skill like `platform-skills`, and how to get the most out of it.
+This document explains what is happening under the hood when you use Claude, Codex, or Cursor with guidance like `platform-skills`, and how to get the most out of it.
 
 ---
 
@@ -8,7 +8,7 @@ This document explains what is happening under the hood when you use Claude with
 
 An AI coding agent is a large language model with access to tools and context — not a script, not a search engine, not an autocomplete.
 
-When you open Claude Code in your project and ask a question, the agent:
+When you open Claude Code, Codex, or Cursor in your project and ask a question, the agent:
 
 1. **Reads context** — your conversation, open files, error output, and any installed skills
 2. **Reasons** — identifies the problem type, relevant domain, and best approach
@@ -21,25 +21,27 @@ The key difference from a chatbot: a coding agent takes actions in your environm
 
 ## How Skills Work
 
-A skill is a set of instructions and reference material that shapes how Claude behaves for a specific domain. Installing `platform-skills` does not change Claude's model — it gives Claude a richer context about platform engineering that it applies automatically.
+A skill is a set of instructions and reference material that shapes how an agent behaves for a specific domain. Installing `platform-skills` does not change the model — it gives the agent richer context about platform engineering that it applies automatically.
 
 ### What Gets Loaded
 
-When you install `platform-skills`, Claude gets access to:
+When you install `platform-skills`, the agent gets access to:
 
 | File | Purpose |
 |------|---------|
-| `skills/platform-skills/SKILL.md` | Core routing logic — which tool owns which concern, platform rules, how to structure answers |
+| `SKILL.md` | Core routing logic — which tool owns which concern, platform rules, how to structure answers |
+| `agents/openai.yaml` | Codex UI metadata and default prompt |
 | `references/*.md` | Deep-dive guides loaded on demand when relevant to the question |
 | `examples/` | Working code the agent can point to or adapt |
-| `commands/*.md` | Slash command definitions — predefined prompt templates for repeatable workflows |
+| `commands/*.md` | Claude slash command definitions — predefined prompt templates for repeatable workflows |
+| `.cursorrules` and `.cursor/rules/*.mdc` | Cursor project and scoped file rules |
 
 ### When a Skill Activates
 
 Skills activate in two ways:
 
-1. **Automatic** — Claude recognises platform engineering patterns in your question (Kubernetes manifest, Terraform code, Flux error, Helm chart, GitHub Actions workflow, etc.) and routes to the relevant section of the skill
-2. **Explicit** — you use a slash command like `/platform-skills:review` to directly invoke a workflow
+1. **Automatic** — the agent recognises platform engineering patterns in your question (Kubernetes manifest, Terraform code, Flux error, Helm chart, GitHub Actions workflow, etc.) and routes to the relevant section of the skill
+2. **Explicit** — you name the skill or workflow, such as `Use $platform-skills ...`; in Claude, you can also use slash commands like `/platform-skills:review`
 
 ### What the Agent Actually Does
 
@@ -48,7 +50,7 @@ When you ask a platform question with `platform-skills` installed:
 ```
 You: My Flux Kustomization is stuck in a NotReady state after a merge.
 
-Claude:
+Agent:
   1. Reads SKILL.md → identifies this as a Flux reconciliation problem
   2. Reads references/fluxcd.md → loads reconciliation troubleshooting section
   3. Asks for or reads your Kustomization manifest and Flux events
@@ -84,7 +86,7 @@ Good context to include:
 
 ### Use Slash Commands for Repeatable Work
 
-Slash commands are predefined workflows. Use them instead of writing a long prompt from scratch.
+Slash commands are predefined Claude workflows. In Codex or Cursor, ask for the same workflow by name, for example `Use $platform-skills review ...` or `Review this with the platform-skills review workflow`.
 
 | Command | When to use |
 |---------|------------|

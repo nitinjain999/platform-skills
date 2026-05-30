@@ -1,4 +1,4 @@
-# Platform Engineering Rules — platform-skills v1.12.0
+# Platform Engineering Rules — platform-skills v1.28.0
 # Source: https://github.com/nitinjain999/platform-skills
 # Scope: project-level — applies to all Cursor AI in this workspace
 # Upgrade: git pull in the platform-skills clone → re-copy this file → commit
@@ -142,7 +142,7 @@ Symptom → Evidence commands → Root cause → Fix → Validation → Rollback
 ## Reference docs (in this repo)
 
 Use `@docs platform-skills` in chat to scope answers to these files:
-- `references/kubernetes.md`, `references/terraform.md`, `references/flux.md`
+- `references/kubernetes.md`, `references/terraform.md`, `references/fluxcd.md`
 - `references/argocd.md`, `references/aws.md`, `references/azure.md`
 - `references/github-actions.md`, `references/helm.md`, `references/kyverno.md`
 - `references/opa.md`, `references/compliance.md`, `references/pr-review.md`

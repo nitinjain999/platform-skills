@@ -2,6 +2,18 @@
 
 Get platform-skills running in 2 minutes.
 
+## Fastest path
+
+```bash
+git clone https://github.com/nitinjain999/platform-skills.git
+cd platform-skills
+./install.sh --all --target ../your-project
+```
+
+Use `--codex`, `--cursor`, `--copilot`, or `--claude` when you only want one integration.
+
+---
+
 ## If you use GitHub Copilot (no Claude needed)
 
 Copy one file into your project and commit it:
@@ -38,7 +50,50 @@ cd your-project && claude
 
 ---
 
+## If you use Codex
+
+Install the repo as a local Codex skill:
+
+```bash
+mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
+git clone https://github.com/nitinjain999/platform-skills.git "${CODEX_HOME:-$HOME/.codex}/skills/platform-skills"
+```
+
+Open Codex in your project and ask:
+
+```text
+Use $platform-skills to review this Terraform change for ownership, blast radius, validation, and rollback.
+```
+
+→ Full install options, verification, and troubleshooting: [INSTALLATION.md](INSTALLATION.md)
+
+---
+
+## If you use Cursor
+
+Copy the Cursor-native rules into your project and commit them:
+
+```bash
+git clone https://github.com/nitinjain999/platform-skills.git
+cp platform-skills/.cursorrules your-project/.cursorrules
+mkdir -p your-project/.cursor/rules
+cp platform-skills/.cursor/rules/*.mdc your-project/.cursor/rules/
+cd your-project && git add .cursorrules .cursor/rules && git commit -m "chore: add platform-skills cursor rules" && git push
+```
+
+Open Cursor Chat or Agent in that project and ask:
+
+```text
+Review this Kubernetes Deployment for production readiness.
+```
+
+→ Full Cursor setup, global rules, and troubleshooting: [EDITOR_INTEGRATIONS.md#cursor](EDITOR_INTEGRATIONS.md#cursor)
+
+---
+
 ## First prompts to try
+
+For a larger copy-paste library, see [PROMPTS.md](PROMPTS.md).
 
 ```
 Review this Deployment for production readiness — flag security context, resource limits, and probe issues.
@@ -66,7 +121,7 @@ Generate a production-ready Helm chart for a Node.js service with HPA and Networ
 | Full install + troubleshooting | [INSTALLATION.md](INSTALLATION.md) |
 | Understand how the skill works | [HOW_IT_WORKS.md](HOW_IT_WORKS.md) |
 | Learn the ownership model | [GETTING_STARTED.md](GETTING_STARTED.md) |
-| See all 30 commands with examples | [COMMANDS.md](COMMANDS.md) |
+| See all 31 commands with examples | [COMMANDS.md](COMMANDS.md) |
 | Triage PR review comments | `/platform-skills:triage` |
 | Scale workloads with KEDA | `/platform-skills:keda` |
 | Browse reference guides | [references/](references/) |

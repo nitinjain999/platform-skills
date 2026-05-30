@@ -3,7 +3,30 @@
 This is the canonical install reference for platform-skills.
 
 **No installation needed to use the handbook.** Browse [references/](references/) and [examples/](examples/) directly on GitHub.
-Install only if you want the Claude plugin for interactive guidance.
+Install only if you want agent-assisted guidance in Claude, Codex, or an editor.
+
+---
+
+## Fast path — local installer
+
+Clone once and install the integrations you want:
+
+```bash
+git clone https://github.com/nitinjain999/platform-skills.git
+cd platform-skills
+./install.sh --all --target /path/to/your-project
+```
+
+Common variants:
+
+```bash
+./install.sh --codex
+./install.sh --cursor --target /path/to/your-project
+./install.sh --copilot --target /path/to/your-project
+./install.sh --claude
+```
+
+The installer links the local clone for Codex, copies Cursor and Copilot files into the target project, and installs the Claude plugin when the `claude` CLI is available. Existing target files are backed up with a `.bak` suffix before they are replaced.
 
 ---
 
@@ -47,7 +70,92 @@ cd your-project && git add .github/copilot-instructions.md && git commit -m "cho
 
 ---
 
-## Option B — Claude plugin from marketplace
+## Option B — Codex skill from GitHub
+
+Codex discovers local skills from `${CODEX_HOME:-$HOME/.codex}/skills`. Clone this repository as the skill folder so the root `SKILL.md`, `agents/openai.yaml`, `references/`, and `examples/` remain together:
+
+```bash
+mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
+git clone https://github.com/nitinjain999/platform-skills.git "${CODEX_HOME:-$HOME/.codex}/skills/platform-skills"
+```
+
+**Verify:**
+
+```bash
+test -f "${CODEX_HOME:-$HOME/.codex}/skills/platform-skills/SKILL.md"
+test -f "${CODEX_HOME:-$HOME/.codex}/skills/platform-skills/agents/openai.yaml"
+```
+
+Open Codex in your project and ask:
+
+```text
+Use $platform-skills to review this Kubernetes manifest for production readiness.
+```
+
+**Upgrade:**
+
+```bash
+cd "${CODEX_HOME:-$HOME/.codex}/skills/platform-skills"
+git pull --ff-only
+```
+
+**Local development symlink:**
+
+Use this when you are editing this repository and want Codex to use your working tree:
+
+```bash
+mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills"
+ln -sfn "$PWD" "${CODEX_HOME:-$HOME/.codex}/skills/platform-skills"
+```
+
+---
+
+## Option C — Cursor rules
+
+Cursor reads `.cursorrules` from the project root and `.cursor/rules/*.mdc` for scoped file rules.
+
+**Project install:**
+
+```bash
+git clone https://github.com/nitinjain999/platform-skills.git
+cp platform-skills/.cursorrules your-project/.cursorrules
+mkdir -p your-project/.cursor/rules
+cp platform-skills/.cursor/rules/*.mdc your-project/.cursor/rules/
+```
+
+Commit those files so every developer gets the rules:
+
+```bash
+cd your-project
+git add .cursorrules .cursor/rules
+git commit -m "chore: add platform-skills cursor rules"
+git push
+```
+
+**Global install:**
+
+```bash
+mkdir -p ~/.cursor/rules
+cp platform-skills/.cursor/rules/platform-skills.mdc ~/.cursor/rules/platform-skills.mdc
+```
+
+Open Cursor settings and confirm Rules for AI is enabled. Then use Cursor Chat or Agent normally:
+
+```text
+Review this Helm chart for securityContext, probes, resources, HPA, PDB, and NetworkPolicy.
+```
+
+**Upgrade:**
+
+```bash
+cd platform-skills && git pull --ff-only
+cp .cursorrules your-project/.cursorrules
+cp .cursor/rules/*.mdc your-project/.cursor/rules/
+```
+
+---
+
+## Option D — Claude plugin from marketplace
 
 Requires [Claude Code](https://claude.ai/code).
 
@@ -60,7 +168,7 @@ claude plugin install platform-skills
 
 ```bash
 claude plugin list
-# platform-skills  v1.27.0  enabled
+# platform-skills  v1.28.0  enabled
 ```
 
 **Upgrade:**
@@ -78,7 +186,7 @@ claude plugin uninstall platform-skills
 
 ---
 
-## Option C — Claude plugin from local clone
+## Option E — Claude plugin from local clone
 
 Use this when you want to customise the patterns or test unreleased changes.
 
@@ -99,7 +207,7 @@ claude plugin install .
 
 ---
 
-## Verify Claude plugin is working
+## Verify agent integration is working
 
 ```bash
 cd your-project
@@ -115,6 +223,14 @@ Review this Terraform layout and tell me what should stay in Terraform versus Gi
 ```
 My Argo CD application is out of sync after a merge. What evidence should I collect first?
 ```
+
+For Codex, use the same prompts and optionally name the skill explicitly:
+
+```text
+Use $platform-skills to review this Terraform layout and tell me what should stay in Terraform versus GitOps.
+```
+
+For Cursor, use the same prompts in Cursor Chat or Agent after copying `.cursorrules` and `.cursor/rules/*.mdc`.
 
 ---
 
@@ -137,6 +253,27 @@ Confirm you are at the repo root:
 ls SKILL.md .claude-plugin/marketplace.json
 claude plugin install .
 ```
+
+**Codex skill does not activate**
+
+Confirm the repo was installed as one skill folder, not just the nested `skills/platform-skills/SKILL.md` file:
+
+```bash
+ls "${CODEX_HOME:-$HOME/.codex}/skills/platform-skills/SKILL.md"
+ls "${CODEX_HOME:-$HOME/.codex}/skills/platform-skills/references"
+ls "${CODEX_HOME:-$HOME/.codex}/skills/platform-skills/agents/openai.yaml"
+```
+
+**Cursor rules do not activate**
+
+Confirm the files are in the root of the workspace opened in Cursor:
+
+```bash
+ls .cursorrules
+ls .cursor/rules/platform-skills.mdc
+```
+
+For scoped `.mdc` rules, use Cursor 0.44+ and confirm Rules for AI is enabled in Cursor settings.
 
 **Plugin feels too generic**
 

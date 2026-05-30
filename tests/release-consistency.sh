@@ -75,6 +75,144 @@ fi
 
 # ---------------------------------------------------------------------------
 echo ""
+echo "=== Codex skill metadata ==="
+
+if [ -f agents/openai.yaml ]; then
+  pass "agents/openai.yaml exists"
+else
+  fail "agents/openai.yaml missing"
+fi
+
+if grep -q 'default_prompt: "Use \$platform-skills' agents/openai.yaml 2>/dev/null; then
+  pass 'agents/openai.yaml default_prompt references $platform-skills'
+else
+  fail 'agents/openai.yaml default_prompt must reference $platform-skills'
+fi
+
+if grep -q "allow_implicit_invocation: true" agents/openai.yaml 2>/dev/null; then
+  pass "agents/openai.yaml allows implicit invocation"
+else
+  fail "agents/openai.yaml should allow implicit invocation"
+fi
+
+# ---------------------------------------------------------------------------
+echo ""
+echo "=== Cursor rules ==="
+
+CURSOR_RULES=(
+  ".cursorrules"
+  ".cursor/rules/platform-skills.mdc"
+  ".cursor/rules/kubernetes.mdc"
+  ".cursor/rules/terraform.mdc"
+  ".cursor/rules/keda.mdc"
+)
+
+for cursor_rule in "${CURSOR_RULES[@]}"; do
+  if [ -f "$cursor_rule" ]; then
+    pass "$cursor_rule exists"
+  else
+    fail "$cursor_rule missing"
+  fi
+done
+
+if grep -q "platform-skills v${PLUGIN_VERSION}" .cursorrules 2>/dev/null; then
+  pass ".cursorrules version matches v${PLUGIN_VERSION}"
+else
+  fail ".cursorrules version does not match v${PLUGIN_VERSION}"
+fi
+
+if grep -q "Platform Skills — v${PLUGIN_VERSION}" .cursor/rules/platform-skills.mdc 2>/dev/null; then
+  pass ".cursor/rules/platform-skills.mdc version matches v${PLUGIN_VERSION}"
+else
+  fail ".cursor/rules/platform-skills.mdc version does not match v${PLUGIN_VERSION}"
+fi
+
+# ---------------------------------------------------------------------------
+echo ""
+echo "=== Copilot instructions ==="
+
+if [ -f .github/copilot-instructions.md ]; then
+  pass ".github/copilot-instructions.md exists"
+else
+  fail ".github/copilot-instructions.md missing"
+fi
+
+if grep -q "Version: ${PLUGIN_VERSION}" .github/copilot-instructions.md 2>/dev/null; then
+  pass ".github/copilot-instructions.md version matches v${PLUGIN_VERSION}"
+else
+  fail ".github/copilot-instructions.md version does not match v${PLUGIN_VERSION}"
+fi
+
+if grep -q "install.sh --copilot" .github/copilot-instructions.md 2>/dev/null; then
+  pass ".github/copilot-instructions.md documents installer path"
+else
+  fail ".github/copilot-instructions.md should document install.sh --copilot"
+fi
+
+while IFS= read -r copilot_ref; do
+  if [ -f "$copilot_ref" ]; then
+    pass ".github/copilot-instructions.md reference exists: $copilot_ref"
+  else
+    fail ".github/copilot-instructions.md references missing file: $copilot_ref"
+  fi
+done < <(grep -oE 'references/[a-z0-9-]+\.md' .github/copilot-instructions.md | sort -u)
+
+# ---------------------------------------------------------------------------
+echo ""
+echo "=== Installer ==="
+
+if [ -x install.sh ]; then
+  pass "install.sh exists and is executable"
+else
+  fail "install.sh missing or not executable"
+fi
+
+if bash install.sh --help >/dev/null 2>&1; then
+  pass "install.sh --help works"
+else
+  fail "install.sh --help failed"
+fi
+
+for flag in --claude --codex --cursor --copilot --all; do
+  if grep -q -- "$flag" install.sh; then
+    pass "install.sh supports $flag"
+  else
+    fail "install.sh missing $flag"
+  fi
+done
+
+# ---------------------------------------------------------------------------
+echo ""
+echo "=== Adoption assets ==="
+
+if [ -f PROMPTS.md ]; then
+  pass "PROMPTS.md exists"
+else
+  fail "PROMPTS.md missing"
+fi
+
+if grep -q "PROMPTS.md" README.md && grep -q "PROMPTS.md" QUICKSTART.md; then
+  pass "README.md and QUICKSTART.md link to PROMPTS.md"
+else
+  fail "README.md and QUICKSTART.md should link to PROMPTS.md"
+fi
+
+ADOPTION_TEMPLATES=(
+  ".github/ISSUE_TEMPLATE/agent_editor_support.md"
+  ".github/ISSUE_TEMPLATE/domain_guide_request.md"
+  ".github/ISSUE_TEMPLATE/example_contribution.md"
+)
+
+for template in "${ADOPTION_TEMPLATES[@]}"; do
+  if [ -f "$template" ]; then
+    pass "$template exists"
+  else
+    fail "$template missing"
+  fi
+done
+
+# ---------------------------------------------------------------------------
+echo ""
 echo "=== Command count consistency ==="
 
 ACTUAL_CMD_COUNT=$(find commands/ -name "*.md" | wc -l | tr -d ' ')

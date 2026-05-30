@@ -104,6 +104,35 @@ else
   fail ".github/copilot-instructions.md says Version: $COPILOT_VERSION but plugin.json is $PLUGIN_VERSION"
 fi
 
+if grep -q "install.sh --copilot" .github/copilot-instructions.md; then
+  pass ".github/copilot-instructions.md documents installer path"
+else
+  fail ".github/copilot-instructions.md should document install.sh --copilot"
+fi
+
+while IFS= read -r copilot_ref; do
+  if [ -f "$copilot_ref" ]; then
+    pass ".github/copilot-instructions.md reference exists: $copilot_ref"
+  else
+    fail ".github/copilot-instructions.md references missing file: $copilot_ref"
+  fi
+done < <(grep -oE 'references/[a-z0-9-]+\.md' .github/copilot-instructions.md | sort -u)
+
+# Cursor rules must match plugin.json version
+CURSORRULES_VERSION="$(grep '^# Platform Engineering Rules — platform-skills v' .cursorrules | sed -E 's/.* v([0-9]+\.[0-9]+\.[0-9]+)$/\1/' || true)"
+if [ "$CURSORRULES_VERSION" = "$PLUGIN_VERSION" ]; then
+  pass ".cursorrules version matches plugin.json ($PLUGIN_VERSION)"
+else
+  fail ".cursorrules says Version: $CURSORRULES_VERSION but plugin.json is $PLUGIN_VERSION"
+fi
+
+CURSOR_MDC_VERSION="$(grep '^# Platform Skills — v' .cursor/rules/platform-skills.mdc | sed -E 's/.* v([0-9]+\.[0-9]+\.[0-9]+)$/\1/' || true)"
+if [ "$CURSOR_MDC_VERSION" = "$PLUGIN_VERSION" ]; then
+  pass ".cursor/rules/platform-skills.mdc version matches plugin.json ($PLUGIN_VERSION)"
+else
+  fail ".cursor/rules/platform-skills.mdc says Version: $CURSOR_MDC_VERSION but plugin.json is $PLUGIN_VERSION"
+fi
+
 # INSTALLATION.md verify output must match plugin.json version
 if grep -q "platform-skills  v${PLUGIN_VERSION}  enabled" INSTALLATION.md; then
   pass "INSTALLATION.md verify output matches v${PLUGIN_VERSION}"
@@ -118,6 +147,49 @@ if [ "$MARKETPLACE_VERSION" = "$PLUGIN_VERSION" ]; then
 else
   fail "marketplace.json version $MARKETPLACE_VERSION does not match plugin.json $PLUGIN_VERSION"
 fi
+
+# ---------------------------------------------------------------------------
+echo ""
+echo "=== Installer smoke test ==="
+
+if [ -x install.sh ]; then
+  pass "install.sh is executable"
+else
+  fail "install.sh is missing or not executable"
+fi
+
+if bash install.sh --help >/dev/null 2>&1; then
+  pass "install.sh --help exits successfully"
+else
+  fail "install.sh --help failed"
+fi
+
+# ---------------------------------------------------------------------------
+echo ""
+echo "=== Adoption assets ==="
+
+if [ -f PROMPTS.md ]; then
+  pass "PROMPTS.md exists"
+else
+  fail "PROMPTS.md missing"
+fi
+
+if grep -q "PROMPTS.md" README.md && grep -q "PROMPTS.md" QUICKSTART.md; then
+  pass "README.md and QUICKSTART.md link to PROMPTS.md"
+else
+  fail "README.md and QUICKSTART.md should link to PROMPTS.md"
+fi
+
+for template in \
+  .github/ISSUE_TEMPLATE/agent_editor_support.md \
+  .github/ISSUE_TEMPLATE/domain_guide_request.md \
+  .github/ISSUE_TEMPLATE/example_contribution.md; do
+  if [ -f "$template" ]; then
+    pass "$template exists"
+  else
+    fail "$template missing"
+  fi
+done
 
 # ---------------------------------------------------------------------------
 echo ""

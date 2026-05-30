@@ -101,25 +101,25 @@ Review this GitHub Actions workflow for OIDC, least privilege, and unsafe trigge
 
 ---
 
-## Part 2 — For new Claude users
+## Part 2 — For new agent users
 
-### How Claude uses this skill
+### How Claude and Codex use this skill
 
-When you install platform-skills as a Claude plugin, Claude automatically loads the right reference guide based on what you are working on. You do not need to tell Claude which file to read — it activates from context (the file types you paste, the tools you mention, the error text).
+When you install platform-skills as a Claude plugin, Codex skill, or Cursor ruleset, the agent loads the right platform guidance based on what you are working on. You do not need to tell the agent which file to read — it activates from context (the file types you paste, the tools you mention, the error text).
 
 You can also invoke any workflow explicitly:
 
 ```
-Using the kyverno workflow, generate a ValidatingPolicy that requires team labels
+Use $platform-skills with the kyverno workflow to generate a ValidatingPolicy that requires team labels
 ```
 
 ```
-Using the pr-review rollback workflow, score the feasibility of this change
+Use $platform-skills with the pr-review rollback workflow to score the feasibility of this change
 ```
 
 ### How to get concrete answers
 
-Claude works best with concrete input. Always include:
+Agents work best with concrete input. Always include:
 
 - the actual file or manifest (not a description of it)
 - the exact error message

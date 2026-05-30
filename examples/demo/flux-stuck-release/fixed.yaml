@@ -1,0 +1,46 @@
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: ingress-nginx
+  namespace: flux-system
+spec:
+  interval: 10m  # poll for chart updates every 10 min, not 1h
+  url: https://kubernetes.github.io/ingress-nginx
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: nginx-ingress
+  namespace: ingress-system
+spec:
+  interval: 10m
+  timeout: 5m           # fail fast — don't block other reconciliations
+  dependsOn:
+    - name: cert-manager # ingress needs cert-manager CRDs to exist first
+      namespace: cert-manager
+  chart:
+    spec:
+      chart: ingress-nginx
+      version: "4.10.1"  # pinned — upgrade is an explicit PR, not automatic
+      sourceRef:
+        kind: HelmRepository
+        name: ingress-nginx
+        namespace: flux-system
+  install:
+    remediation:
+      retries: 3          # retry install on failure before giving up
+  upgrade:
+    remediation:
+      retries: 3
+      remediateLastFailure: true  # roll back if the last upgrade failed
+    cleanupOnFail: true
+  values:
+    controller:
+      replicaCount: 2     # HA: survive a node drain during upgrades
+      resources:
+        requests:
+          cpu: 100m
+          memory: 90Mi
+        limits:
+          cpu: 500m
+          memory: 300Mi

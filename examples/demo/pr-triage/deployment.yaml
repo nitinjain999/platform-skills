@@ -1,0 +1,30 @@
+# This file has a PR review comment flagging the missing securityContext.
+# The /platform-skills:triage command classifies it ACTIONABLE_FIX,
+# applies the fix below, and resolves the thread automatically.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-api
+  namespace: production
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payment-api
+  template:
+    metadata:
+      labels:
+        app: payment-api
+    spec:
+      containers:
+        - name: payment-api
+          image: mycompany/payment-api:v2.1.0
+          ports:
+            - containerPort: 8443
+          resources:
+            requests:
+              cpu: 200m
+              memory: 256Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi

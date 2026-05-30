@@ -1,10 +1,21 @@
 # Platform Engineering Instructions for GitHub Copilot
-# Version: 1.26.0
+# Version: 1.28.0
 # Source: https://github.com/nitinjain999/platform-skills
-# Scope: project-level — applies to every Copilot Chat in this workspace
-# Upgrade: git pull in the platform-skills clone → copy updated file → commit
+# Scope: project-level — applies to every Copilot Chat session in this workspace
+# Install: ./install.sh --copilot --target /path/to/your-project
+# Upgrade: git pull in the platform-skills clone → rerun install.sh or copy this file → commit
 
 Use when troubleshooting, implementing, reviewing, or auditing platform infrastructure as a system — where Kubernetes, GitOps, CI/CD, and security concerns intersect. Apply these patterns when generating or reviewing code across Kubernetes, Flux CD, Argo CD, Terraform, GitHub Actions (composite actions, OIDC, SHA pinning), AWS, Azure, GKE, Linkerd, KEDA, supply chain security (Cosign, SBOM, SLSA), Falco, Chaos Engineering, DORA metrics, Datadog/Dynatrace/LLM observability, SOC 2, and PR review. Every answer includes blast radius, validation steps, and rollback plan.
+
+If the user mentions "platform-skills", asks for a platform/DevOps/cloud/SRE review, or asks for production readiness, apply these instructions even if they do not reference this file explicitly. In Copilot Chat, slash commands such as `/platform-skills:review` are not required; translate them into the equivalent natural-language workflow.
+
+## Response Contract
+
+- For reviews: lead with findings ordered by severity, then give validation and rollback notes
+- For generation: include runnable code, assumptions, validation commands, and rollback path
+- For troubleshooting: use evidence-first diagnosis before proposing changes
+- For risky production changes: state blast radius before the change plan
+- For uncertain or environment-specific advice: ask for the missing fact or mark the assumption clearly
 
 ## Core Principles
 
@@ -81,6 +92,11 @@ spec:
 
 Troubleshooting order: source → artifact → reconciliation → chart rendering → runtime
 
+Prefer the current Flux CD API shape:
+- Use `chartRef` for OCIRepository-backed charts when available
+- Keep source auth, image automation, and workload reconciliation ownership separate
+- For stuck reconciliations, inspect `GitRepository`/`OCIRepository`, artifact status, `Kustomization`, `HelmRelease`, and controller logs in that order
+
 ## Argo CD
 
 ```yaml
@@ -148,6 +164,21 @@ Never use `pull_request_target` with code checkout from forks.
 Validation pipeline order: `helm lint --strict` → `helm template --debug` → `kubeconform -strict -summary` → `checkov` → `helm test`.
 
 Never use `helm upgrade --set` to pass secrets. `selectorLabels` must NOT include `app.kubernetes.io/version` — it is immutable after creation.
+
+## KEDA
+
+For event-driven autoscaling, require explicit `minReplicaCount`, `maxReplicaCount`, cooldown, fallback behavior where supported, and trigger authentication ownership. For AWS triggers on EKS, prefer IRSA over static keys. For Prometheus triggers, validate query cardinality and failure behavior before recommending scale-to-zero.
+
+## Supply Chain and Runtime Security
+
+For container and deployment pipelines, prefer:
+- Cosign keyless signing and verification
+- Syft SBOM generation and attestation
+- Trivy or Grype severity gates
+- SLSA provenance for build artifacts
+- Kyverno image verification at admission
+
+For runtime security, treat Falco findings as signals that need triage, ownership, severity, and follow-up policy where appropriate. Do not convert every runtime signal directly into a blocking admission policy without checking noise, scope, and rollout plan.
 
 ## Kyverno (policies.kyverno.io/v1)
 
@@ -261,14 +292,23 @@ When reviewing any PR that touches infrastructure, check all six dimensions:
 
 - `references/kubernetes.md` — cluster baselines, RBAC, network policy
 - `references/openshift.md` — routes, SCCs, operators
-- `references/flux.md` — GitOps reconciliation, troubleshooting
+- `references/fluxcd.md` — GitOps reconciliation, troubleshooting
+- `references/fluxcd-helmrelease.md` — HelmRelease chartRef, drift detection, remediation
+- `references/fluxcd-kustomization.md` — CEL readyExpr, postBuild, SOPS, SSA annotations
+- `references/fluxcd-security.md` — source auth, OCI supply chain, RBAC, image automation
+- `references/fluxcd-troubleshooting.md` — controller-specific incident diagnosis
 - `references/argocd.md` — app design, ApplicationSets
 - `references/aws.md` — IAM, EKS, account model
+- `references/aws-cloudfront.md` — CloudFront distributions, OAC, cache/security policies
+- `references/aws-waf.md` — Web ACLs, managed rules, rate limiting, Shield/FMS
+- `references/aws-mcp-profiles.md` — AWS MCP profile management and multi-account auth
 - `references/azure.md` — AKS, workload identity, RBAC
 - `references/terraform.md` — module design, state, testing
 - `references/github-actions.md` — workflow security, OIDC
 - `references/composite-actions.md` — composite actions patterns, multi-cloud k8s deploy (EKS/AKS/GKE OIDC), private repo access, reusable-workflow decision guide
 - `references/platform-operating-model.md` — cross-cutting architecture
+- `references/platform-mindset.md` — DevEx, RFC/ADR, incident communication
+- `references/secrets.md` — External Secrets Operator, Sealed Secrets, provider setup
 - `references/compliance.md` — SOC 2 controls in Terraform
 - `references/helm.md` — chart scaffolding, lint pipeline
 - `references/mcp.md` — MCP protocol, TypeScript/Python SDKs
@@ -287,6 +327,6 @@ When reviewing any PR that touches infrastructure, check all six dimensions:
 - `references/chaos.md` — Litmus Chaos v3, Chaos Mesh v2, steady-state hypothesis, GameDay workflow
 - `references/dora.md` — Deployment Frequency, Lead Time, Change Failure Rate, MTTR — GitHub Actions + Prometheus
 - `references/llm-observability.md` — Datadog LLMObs instrumentation, eval bootstrap, trace RCA
-- `references/dynatrace.md` — OneAgent Kubernetes Operator, custom metrics, SLOs, Terraform provider
 - `references/awesome-docs.md` — animated GitHub-safe SVG doc generation, 4 patterns, timing math, GitHub constraints
+- `references/renovate.md` — dependency update automation, regex managers, private registries
 - `examples/` — working, production-ready code examples

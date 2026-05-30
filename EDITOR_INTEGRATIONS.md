@@ -1,8 +1,8 @@
 # Using Platform Skills in Your Editor
 
-Platform skills works with any editor and any AI assistant. Pick your setup below.
+Platform skills works with any editor and AI assistant that supports project instructions or rules. Pick your setup below.
 
-**No Claude required** — all options below work with GitHub Copilot alone.
+**No Claude required** — use Copilot instructions, Cursor rules, Codex skills, or Claude plugins depending on your tool.
 
 ---
 
@@ -173,6 +173,19 @@ New-Item -ItemType Directory -Force your-project\.cursor\rules
 Copy-Item platform-skills\.cursor\rules\*.mdc your-project\.cursor\rules\
 ```
 
+Recommended project layout:
+
+```text
+your-project/
+├── .cursorrules
+└── .cursor/
+    └── rules/
+        ├── platform-skills.mdc
+        ├── kubernetes.mdc
+        ├── terraform.mdc
+        └── keda.mdc
+```
+
 ### Global level — every Cursor workspace
 
 ```bash
@@ -201,6 +214,16 @@ Review this Terraform module for blast radius and IAM least privilege
 Generate a Kyverno ValidatingPolicy that requires team labels on all Deployments
 ```
 
+For agent mode, point Cursor at the real files and ask for the platform workflow by name:
+
+```
+Review terraform/eks for platform-skills ownership boundaries, blast radius, validation, and rollback.
+```
+
+```
+Fix the Helm chart warnings in charts/payments-api, then show the validation commands I should run.
+```
+
 ---
 
 ## Neovim, Emacs, or any other editor
@@ -224,9 +247,9 @@ gh copilot suggest "$(cat your-deployment.yaml) — review this for production r
 
 ---
 
-## Skill commands in Copilot Chat
+## Skill workflows in Copilot and Cursor
 
-Platform skills ships 26 command workflows. In Claude Code they are slash commands (`/platform-skills:review`). In Copilot Chat you phrase them as natural language — the instructions file makes Copilot apply the same structured output.
+Platform skills ships 31 command workflows. In Claude Code they are slash commands (`/platform-skills:review`). In Copilot Chat and Cursor Chat you phrase them as natural language — the instructions or rules files make the assistant apply the same structured output.
 
 ### review — production-readiness check on any file
 
@@ -251,7 +274,7 @@ Review this GitHub Actions workflow — flag actions not pinned to a SHA, unsafe
 
 ### debug — structured troubleshooting
 
-Describe the symptom and paste any relevant output. Copilot returns: layer classification → evidence to collect → root cause → fix → validation → rollback.
+Describe the symptom and paste any relevant output. The assistant returns: layer classification → evidence to collect → root cause → fix → validation → rollback.
 
 ```
 Debug this symptom using the troubleshooting framework: [describe error or paste output]
@@ -273,7 +296,7 @@ GitHub Actions OIDC error: "not authorized to perform sts:AssumeRoleWithWebIdent
 
 ### terraform — blast radius + security review
 
-Paste the Terraform code or plan output. Copilot returns: validation pipeline status, blast radius, IAM/security findings, state impact, recommended fixes.
+Paste the Terraform code or plan output. The assistant returns: validation pipeline status, blast radius, IAM/security findings, state impact, recommended fixes.
 
 ```
 Review this Terraform for blast radius, IAM least privilege, and SOC 2 compliance.
