@@ -5,6 +5,18 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.28.0] - 2026-05-30
+
+### Added
+
+- Codex skill support: added `agents/openai.yaml` so Codex can display and invoke `platform-skills` with a default `$platform-skills` prompt.
+- Cursor support refresh: updated `.cursorrules` and `.cursor/rules/*.mdc` to the current release and documented project/global Cursor installation.
+- Adoption polish: added `install.sh`, a README install matrix, and copy-ready prompts for platform, DevOps, cloud, and SRE teams evaluating the skill.
+- Copilot instructions refresh: documented the installer path, added Copilot-specific response behavior, and validated referenced handbook files.
+- Community growth assets: added `PROMPTS.md` plus issue templates for agent/editor support, domain guide requests, and example contributions.
+- Codex and Cursor installation paths in README, Quick Start, Installation, Getting Started, How It Works, and Editor Integrations docs. The supported Codex install model is to clone the repository as `${CODEX_HOME:-$HOME/.codex}/skills/platform-skills` so `SKILL.md`, `references/`, `examples/`, and `agents/openai.yaml` stay together.
+- Release validation now checks Codex skill metadata and Cursor rule files in addition to Claude plugin structure.
+
 ## [1.27.0] - 2026-05-28
 
 ### Added

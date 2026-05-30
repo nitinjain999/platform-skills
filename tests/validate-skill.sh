@@ -12,6 +12,40 @@ fail() { echo "  FAIL: $1"; ERRORS=$((ERRORS + 1)); }
 echo ""
 echo "=== SKILL.md ==="
 
+if [ -f agents/openai.yaml ]; then
+  pass "agents/openai.yaml exists for Codex skill metadata"
+else
+  fail "agents/openai.yaml missing — Codex skill UI metadata should be present"
+fi
+
+if grep -q 'default_prompt: "Use \$platform-skills' agents/openai.yaml 2>/dev/null; then
+  pass 'agents/openai.yaml default prompt references $platform-skills'
+else
+  fail 'agents/openai.yaml default_prompt must reference $platform-skills'
+fi
+
+if grep -q "allow_implicit_invocation: true" agents/openai.yaml 2>/dev/null; then
+  pass "agents/openai.yaml allows implicit invocation"
+else
+  fail "agents/openai.yaml should allow implicit invocation"
+fi
+
+CURSOR_RULES=(
+  ".cursorrules"
+  ".cursor/rules/platform-skills.mdc"
+  ".cursor/rules/kubernetes.mdc"
+  ".cursor/rules/terraform.mdc"
+  ".cursor/rules/keda.mdc"
+)
+
+for cursor_rule in "${CURSOR_RULES[@]}"; do
+  if [ -f "$cursor_rule" ]; then
+    pass "$cursor_rule exists for Cursor support"
+  else
+    fail "$cursor_rule missing — Cursor rules should be present"
+  fi
+done
+
 if diff -q SKILL.md skills/platform-skills/SKILL.md >/dev/null; then
   pass "root SKILL.md matches packaged skill"
 else

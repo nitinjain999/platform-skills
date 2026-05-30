@@ -13,6 +13,7 @@ on:
       - '**.yaml'
       - '**.tf'
       - '**.json'
+      - '**.sh'
       - '.github/workflows/**'
 
 permissions:
@@ -31,10 +32,18 @@ jobs:
         run: |
           REQUIRED_FILES=(
             "SKILL.md"
+            "install.sh"
+            "agents/openai.yaml"
+            ".cursorrules"
+            ".cursor/rules/platform-skills.mdc"
+            "PROMPTS.md"
             "README.md"
             "LICENSE"
             "CHANGELOG.md"
             "CONTRIBUTING.md"
+            ".github/ISSUE_TEMPLATE/agent_editor_support.md"
+            ".github/ISSUE_TEMPLATE/domain_guide_request.md"
+            ".github/ISSUE_TEMPLATE/example_contribution.md"
             "CLAUDE.md"
             ".claude-plugin/marketplace.json"
             ".gitignore"
