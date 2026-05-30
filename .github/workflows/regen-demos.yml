@@ -1,0 +1,42 @@
+name: Regen demo GIFs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'examples/demo/**/demo.tape'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  regen:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Install VHS
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ffmpeg
+          curl -sL https://github.com/charmbracelet/vhs/releases/download/v0.7.2/vhs_0.7.2_Linux_x86_64.tar.gz \
+            | tar xz -C /usr/local/bin vhs
+
+      - name: Generate GIFs
+        run: |
+          for tape in examples/demo/**/demo.tape; do
+            echo "Rendering $tape"
+            dir=$(dirname "$tape")
+            cd "$dir"
+            vhs demo.tape
+            cd - > /dev/null
+          done
+
+      - name: Commit updated GIFs
+        uses: stefanzweifel/git-auto-commit-action@8621497c8c39c72f3e2a999a26b4ca1b5590a870  # v5.0.1
+        with:
+          commit_message: "chore: regenerate demo GIFs [skip ci]"
+          file_pattern: "examples/demo/**/*.gif"
+          commit_user_name: "github-actions[bot]"
+          commit_user_email: "github-actions[bot]@users.noreply.github.com"
