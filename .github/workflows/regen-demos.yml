@@ -19,7 +19,10 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
-          ref: ${{ github.head_ref || github.ref_name }}  # check out PR branch, not detached HEAD
+          # For fork PRs: check out from the fork repo at the PR head SHA
+          # For push to main: use default checkout (github.sha)
+          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Install VHS
         run: |
