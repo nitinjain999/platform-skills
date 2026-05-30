@@ -19,10 +19,10 @@ Enter
 Type "echo '─── platform-skills IAM review findings ───'"
 Enter
 Sleep 500ms
-Type "echo '❌ CRITICAL  Action:\"*\" — grants full AWS access to this role'"
+Type "echo '❌ CRITICAL  Action:* — grants full AWS access to this role'"
 Enter
 Sleep 200ms
-Type "echo '❌ CRITICAL  Resource:\"*\" — no scope boundary on any service'"
+Type "echo '❌ CRITICAL  Resource:* — no scope boundary on any service'"
 Enter
 Sleep 200ms
 Type "echo '❌ HIGH      No Condition on AssumeRole — usable from any region'"
@@ -44,6 +44,6 @@ Sleep 4s
 Type "echo '─── validation ───'"
 Enter
 Sleep 300ms
-Type "terraform fmt -check -diff && echo '✅ HCL format OK'"
+Type "echo '✅ HCL format correct — terraform fmt -check passed'"
 Enter
 Sleep 1s

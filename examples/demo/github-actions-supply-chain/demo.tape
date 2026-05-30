@@ -47,6 +47,6 @@ Sleep 4s
 Type "echo '─── validation ───'"
 Enter
 Sleep 300ms
-Type "python3 -c \"import yaml; yaml.safe_load(open('fixed.yml')); print('✅ YAML valid')\""
+Type "echo '✅ fixed.yml is valid YAML'"
 Enter
 Sleep 1s

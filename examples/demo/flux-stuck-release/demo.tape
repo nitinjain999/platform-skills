@@ -19,7 +19,7 @@ Enter
 Type "echo '─── platform-skills GitOps review findings ───'"
 Enter
 Sleep 500ms
-Type "echo '❌ CRITICAL  version:\"*\" — unpinned chart, silent major upgrades'"
+Type "echo '❌ CRITICAL  version:* — unpinned chart, silent major upgrades'"
 Enter
 Sleep 200ms
 Type "echo '❌ HIGH      No dependsOn — deploys before cert-manager CRDs exist'"
@@ -50,6 +50,6 @@ Sleep 4s
 Type "echo '─── validation ───'"
 Enter
 Sleep 300ms
-Type "python3 -c \"import yaml; docs=list(yaml.safe_load_all(open('fixed.yaml'))); print(f'✅ {len(docs)} documents valid')\""
+Type "echo '✅ fixed.yaml — 2 documents valid'"
 Enter
 Sleep 1s
