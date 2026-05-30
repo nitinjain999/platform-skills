@@ -63,9 +63,9 @@ resource "aws_iam_role_policy" "app_s3" {
         Resource = "arn:aws:s3:::${var.bucket_name}/*"
       },
       {
-        Sid    = "SecretsRead"
-        Effect = "Allow"
-        Action = ["secretsmanager:GetSecretValue"]
+        Sid      = "SecretsRead"
+        Effect   = "Allow"
+        Action   = ["secretsmanager:GetSecretValue"]
         Resource = "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:${var.app_name}/*"
       }
     ]
