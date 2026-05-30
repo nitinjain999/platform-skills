@@ -19,19 +19,22 @@ Enter
 Type "echo '─── platform-skills review findings ───'"
 Enter
 Sleep 500ms
-Type "echo '❌ CRITICAL  image:latest is unpinned — silent rollouts, non-reproducible'"
+Type "echo '❌ CRITICAL  Plaintext DATABASE_URL in env — visible in kubectl get pod -o yaml'"
 Enter
 Sleep 200ms
-Type "echo '❌ CRITICAL  No securityContext — container runs as root, writable filesystem'"
+Type "echo '❌ CRITICAL  image:latest — non-deterministic, no rollback path'"
 Enter
 Sleep 200ms
-Type "echo '❌ HIGH      No resources limits — OOMKill risk, noisy neighbour in production'"
+Type "echo '❌ CRITICAL  No resources requests/limits — node starvation, OOMKill risk'"
 Enter
 Sleep 200ms
-Type "echo '❌ HIGH      No readinessProbe — traffic hits the pod before app is ready'"
+Type "echo '❌ CRITICAL  No readinessProbe — traffic routed to unready pods on startup'"
 Enter
 Sleep 200ms
-Type "echo '❌ HIGH      DATABASE_URL hardcoded — credentials visible in kubectl describe pod'"
+Type "echo '⚠️  IMPROVE  No securityContext — container runs as root, writable filesystem'"
+Enter
+Sleep 200ms
+Type "echo '⚠️  IMPROVE  No NetworkPolicy — pod accepts traffic from any source'"
 Enter
 Sleep 2s
 

@@ -19,22 +19,22 @@ Enter
 Type "echo '─── platform-skills GitOps review findings ───'"
 Enter
 Sleep 500ms
-Type "echo '❌ CRITICAL  version:* — unpinned chart, silent major upgrades'"
+Type "echo '❌ CRITICAL  version:* — unpinned chart, any major bump can break the release'"
 Enter
 Sleep 200ms
-Type "echo '❌ HIGH      No dependsOn — deploys before cert-manager CRDs exist'"
+Type "echo '❌ CRITICAL  sourceRef missing namespace — cross-namespace lookup fails silently'"
 Enter
 Sleep 200ms
-Type "echo '❌ MEDIUM    interval:1h — changes wait up to 1 hour to reconcile'"
+Type "echo '⚠️  IMPROVE  No timeout — stuck Helm op blocks reconciliation indefinitely'"
 Enter
 Sleep 200ms
-Type "echo '❌ MEDIUM    No timeout — stuck install blocks all other reconciliations'"
+Type "echo '⚠️  IMPROVE  No remediation policy — failed upgrade stays broken, no rollback'"
 Enter
 Sleep 200ms
-Type "echo '❌ MEDIUM    No remediation — failed upgrade never rolls back'"
+Type "echo '⚠️  IMPROVE  interval:1h — pushed fix waits up to 1h without manual trigger'"
 Enter
 Sleep 200ms
-Type "echo '❌ MEDIUM    replicaCount:1 — SPOF during node drain'"
+Type "echo '⚠️  IMPROVE  replicaCount:1 — pod restart causes ingress downtime'"
 Enter
 Sleep 2s
 

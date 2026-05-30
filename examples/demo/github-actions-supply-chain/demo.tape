@@ -19,19 +19,22 @@ Enter
 Type "echo '─── platform-skills supply chain review findings ───'"
 Enter
 Sleep 500ms
-Type "echo '❌ CRITICAL  actions/checkout@main — tag can be moved to malicious commit'"
+Type "echo '❌ CRITICAL  Long-lived AWS keys — leaked secret gives persistent account access'"
 Enter
 Sleep 200ms
-Type "echo '❌ CRITICAL  permissions:write-all — any step gets full repo write access'"
+Type "echo '❌ HIGH      permissions:write-all — grants every token scope, violates least-privilege'"
 Enter
 Sleep 200ms
-Type "echo '❌ HIGH      AWS long-lived keys in secrets — leaked key = permanent access'"
+Type "echo '❌ MEDIUM    actions/checkout@main — mutable tag, supply chain injection risk'"
 Enter
 Sleep 200ms
-Type "echo '❌ HIGH      actions/setup-node@main — same supply chain risk'"
+Type "echo '❌ MEDIUM    actions/setup-node@main — same mutable tag risk'"
 Enter
 Sleep 200ms
-Type "echo '❌ HIGH      configure-aws-credentials@main — same supply chain risk'"
+Type "echo '❌ MEDIUM    configure-aws-credentials@main — mutable tag on credential action'"
+Enter
+Sleep 200ms
+Type "echo '❌ MEDIUM    No CVE scan — artifact deployed without vulnerability check'"
 Enter
 Sleep 2s
 

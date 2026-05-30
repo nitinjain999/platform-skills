@@ -19,16 +19,16 @@ Enter
 Type "echo '─── platform-skills IAM review findings ───'"
 Enter
 Sleep 500ms
-Type "echo '❌ CRITICAL  Action:* — grants full AWS access to this role'"
+Type "echo '❌ CRITICAL  Action:* — every AWS API call including iam:* and ec2:Terminate'"
 Enter
 Sleep 200ms
-Type "echo '❌ CRITICAL  Resource:* — no scope boundary on any service'"
+Type "echo '❌ CRITICAL  Resource:* — applies to every resource in the account'"
 Enter
 Sleep 200ms
-Type "echo '❌ HIGH      No Condition on AssumeRole — usable from any region'"
+Type "echo '❌ HIGH      Inline policy — cannot be reused, audited centrally, or versioned'"
 Enter
 Sleep 200ms
-Type "echo '❌ MEDIUM    Single catch-all statement — impossible to audit in CloudTrail'"
+Type "echo '❌ MEDIUM    var.app_name has no type or validation — empty string = broken role name'"
 Enter
 Sleep 2s
 
