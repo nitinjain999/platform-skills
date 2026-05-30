@@ -121,7 +121,11 @@ spec:
     # Never consolidate GPU nodes — training jobs cannot be safely interrupted
     consolidationPolicy: WhenEmpty
     budgets:
-      - nodes: "0"                  # No disruption allowed on GPU nodes by default
+      - nodes: "0"                  # Block disruption during business hours
+        schedule: "0 8 * * 1-5"
+        duration: 10h
+      - nodes: "1"                  # Allow max 1 node replaced at a time outside business hours
+        # expireAfter rotations use this budget — "0" would prevent expiry from ever executing
 
 ---
 # Example: GPU workload toleration

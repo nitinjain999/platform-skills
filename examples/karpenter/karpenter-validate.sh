@@ -141,9 +141,9 @@ _check_yaml_fields() {
   if grep -qE "^kind: NodePool$" "$file"; then
     # consolidateAfter safety check — 1m with WhenEmptyOrUnderutilized causes churn
     if grep -q "WhenEmptyOrUnderutilized" "$file"; then
-      consolidate_val=$(grep "consolidateAfter:" "$file" | grep -oE "[0-9]+(m|h|s)" | head -1)
-      consolidate_num=$(echo "$consolidate_val" | grep -oE "[0-9]+")
-      consolidate_unit=$(echo "$consolidate_val" | grep -oE "[a-z]+")
+      consolidate_val=$(grep "consolidateAfter:" "$file" | grep -oE "[0-9]+(m|h|s)" | head -1 || true)
+      consolidate_num=$(echo "$consolidate_val" | grep -oE "[0-9]+" || true)
+      consolidate_unit=$(echo "$consolidate_val" | grep -oE "[a-z]+" || true)
       if [ -n "$consolidate_num" ] && [ "$consolidate_unit" = "m" ] && [ "$consolidate_num" -lt 5 ]; then
         fail "$name — consolidateAfter: ${consolidate_val} with WhenEmptyOrUnderutilized is too aggressive (resets on pod activity) — use 5m minimum"
       elif [ -n "$consolidate_val" ]; then

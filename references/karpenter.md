@@ -474,10 +474,12 @@ spec:
           operator: In
           values: [eu-north-1a, eu-north-1b, eu-north-1c]
 
-      # Prevent pods from scheduling until DaemonSets (e.g. CNI, log agent) are ready
-      startupTaints:
-        - key: karpenter.sh/not-ready
-          effect: NoSchedule
+      # startupTaints: only set when your CNI/device-plugin removes the taint on readiness.
+      # karpenter.sh/not-ready has no built-in remover — omit it here.
+      # Example (Cilium removes this after CNI is ready):
+      # startupTaints:
+      #   - key: node.cilium.io/agent-not-ready
+      #     effect: NoExecute
 
       # Taints for workload isolation (optional)
       # taints:
@@ -504,7 +506,7 @@ spec:
     #   WhenEmpty               — only remove fully empty nodes
     #   WhenEmptyOrUnderutilized — also consolidate underutilised nodes (default recommendation)
     consolidationPolicy: WhenEmptyOrUnderutilized
-    consolidateAfter: 1m          # How long a node must be underutilised before consolidation
+    consolidateAfter: 5m          # Minimum safe value — 1m resets on every pod event and causes churn
 
     # Disruption budgets — protect critical workloads from simultaneous eviction
     budgets:

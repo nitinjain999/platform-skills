@@ -47,12 +47,12 @@ spec:
     karpenter.sh/discovery: my-cluster
 
 ---
-# NodePool: On-Demand fallback for critical / SLA-bound workloads
+# NodePool: On-Demand for critical / SLA-bound workloads
 #
-# Weight 50 — Karpenter tries spot-flex (weight 100) first.
-# This pool catches:
-#   - Workloads with: nodeSelector: { karpenter.sh/capacity-type: on-demand }
-#   - Spot-flex InsufficientCapacityError overflow
+# Weight 5 (below default at weight 10) — this pool is opt-in, not a fallback.
+# Pods land here only when they explicitly require On-Demand capacity:
+#   nodeSelector: { karpenter.sh/capacity-type: on-demand }
+# Without that constraint, most pods prefer default (weight 10) or spot-flex (weight 100).
 #
 # PodDisruptionBudget is defined below for the example orders-api workload.
 
@@ -104,7 +104,7 @@ spec:
     cpu: "200"                      # Conservative ceiling — prevent runaway On-Demand spend
     memory: 800Gi
 
-  weight: 50
+  weight: 5     # Below default (10) — only selected when pod explicitly requires on-demand
 
   disruption:
     # WhenEmpty only — never consolidate nodes running critical workloads

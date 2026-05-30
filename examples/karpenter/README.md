@@ -42,16 +42,20 @@ bash karpenter-validate.sh
 
 ## NodePool selection strategy
 
-When multiple NodePools exist, Karpenter selects by `weight` (highest first) then cost:
+NodePool selection combines weight and taint/toleration matching:
 
 ```
-spot-flex          weight: 100   Spot, broad families, batch workloads
-critical-ondemand  weight: 50    On-Demand, SLA-bound workloads
-default            weight: 10    General fallback
-gpu                weight: 5     GPU only — requires nvidia.com/gpu toleration
+spot-flex          weight: 100   Spot, batch — requires spot-flex toleration (NoSchedule taint)
+default            weight: 10    On-Demand, general — matches most pods with no special constraints
+critical-ondemand  weight: 5     On-Demand, SLA — opt-in via nodeSelector: karpenter.sh/capacity-type: on-demand
+gpu                weight: 5     GPU only — requires nvidia.com/gpu toleration (NoSchedule taint)
 ```
 
-Pods land on the highest-weight matching NodePool unless a `nodeSelector` or `toleration` constrains them.
+Karpenter selects the highest-weight NodePool whose requirements and taints the pod satisfies:
+- `spot-flex` — only reachable by pods with a `spot-flex` toleration
+- `default` — untainted On-Demand pool; matches most general pods with no special constraints
+- `critical-ondemand` — weight 5 (below default); only selected when a pod explicitly sets `nodeSelector: { karpenter.sh/capacity-type: on-demand }`
+- `gpu` — only reachable by pods with a `nvidia.com/gpu` toleration
 
 ## Auth patterns
 

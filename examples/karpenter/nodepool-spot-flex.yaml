@@ -47,12 +47,19 @@ spec:
 ---
 # NodePool: Spot-flex — broad instance selection, Spot-only, batch workloads
 #
-# High weight (100) so Karpenter prefers this pool for Spot-tolerant workloads.
-# Workloads land here if they have no nodeSelector or have:
-#   nodeSelector: { karpenter.sh/capacity-type: spot }
+# Has a NoSchedule taint (spot-flex) — ONLY pods with a matching toleration land here.
+# Pods without the toleration skip this pool entirely regardless of weight.
 #
-# On-Demand fallback is handled by nodepool-critical-ondemand.yaml (weight: 50)
-# which Karpenter tries if this pool returns InsufficientCapacityError.
+# To schedule on this pool, add to the pod spec:
+#   tolerations:
+#     - key: spot-flex
+#       operator: Exists
+#       effect: NoSchedule
+#
+# On-Demand fallback: pods that tolerate spot-flex but hit Spot InsufficientCapacityError
+# will NOT fall back to nodepool-critical-ondemand because that pool only accepts on-demand
+# capacity-type and the pod requires spot. Remove the capacity-type requirement from the
+# pod if you want automatic On-Demand fallback.
 
 apiVersion: karpenter.sh/v1
 kind: NodePool
@@ -93,13 +100,8 @@ spec:
           operator: In
           values: [eu-north-1a, eu-north-1b, eu-north-1c]
 
-      # Taint: only workloads with BOTH a matching toleration AND a nodeSelector/affinity
-      # land here. nodeSelector alone does not bypass a NoSchedule taint.
-      # Workloads must add:
-      #   tolerations:
-      #     - key: spot-flex
-      #       operator: Exists
-      #       effect: NoSchedule
+      # Taint: a toleration alone is sufficient to schedule here — nodeSelector is NOT required.
+      # Karpenter considers this NodePool when the pending pod tolerates the spot-flex taint.
       # Remove this taint block to rely on weight-based selection instead (no toleration needed).
       taints:
         - key: spot-flex
