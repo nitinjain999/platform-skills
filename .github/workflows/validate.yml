@@ -278,7 +278,8 @@ jobs:
       - name: Find and validate Terraform directories
         run: |
           # Find all directories containing .tf files
-          TF_DIRS=$(find . -type f -name "*.tf" ! -path "./.git/*" -exec dirname {} \; | sort -u)
+          # Exclude examples/demo — demo dirs intentionally pair bad+fixed files that conflict as one module
+          TF_DIRS=$(find . -type f -name "*.tf" ! -path "./.git/*" ! -path "./examples/demo/*" -exec dirname {} \; | sort -u)
 
           if [ -z "$TF_DIRS" ]; then
             echo "ℹ️  No Terraform files found"
