@@ -40,7 +40,7 @@ jobs:
 
       - name: Commit updated GIFs
         if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-        uses: stefanzweifel/git-auto-commit-action@8621497c8c39c72f3e2a999a26b4ca1b5590a870  # v5.0.1
+        uses: stefanzweifel/git-auto-commit-action@04702edda442b2e678b25b537cec683a1493fcb9  # v7.1.0
         with:
           commit_message: "chore: regenerate demo GIFs [skip ci]"
           file_pattern: "examples/demo/**/*.gif"
