@@ -61,7 +61,7 @@ Need manual setup, global editor rules, or troubleshooting? See [INSTALLATION.md
 
 ## Try It On Your Repo
 
-See [BEFORE_AFTER.md](BEFORE_AFTER.md) for side-by-side before/after examples across Kubernetes, Terraform, Flux, and GitHub Actions. More copy-paste workflows in [PROMPTS.md](PROMPTS.md).
+See [BEFORE_AFTER.md](BEFORE_AFTER.md) for side-by-side before/after examples across Kubernetes, Terraform, Flux CD, GitHub Actions, OPA/Rego, and PR triage. More copy-paste workflows in [PROMPTS.md](PROMPTS.md).
 
 ```text
 Use $platform-skills to review this Terraform change for IAM scope, replacement risk, validation, and rollback.

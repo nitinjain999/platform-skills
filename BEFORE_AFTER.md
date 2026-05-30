@@ -221,4 +221,111 @@ pinned actions, OIDC, least-privilege permissions, and secret handling.
 
 ---
 
+## OPA / Rego: Admission Policy
+
+### Before
+
+```rego
+package kubernetes.admission
+
+# Default allow — anything not explicitly denied passes
+default allow = true
+
+allow = false {
+    input.request.kind.kind == "Pod"
+    container := input.request.object.spec.containers[_]
+    container.securityContext.privileged == true
+}
+```
+
+### platform-skills findings
+
+| Severity | Finding |
+|---|---|
+| Critical | `default allow = true` — opt-out policy; any pod not explicitly denied passes |
+| High | `allow = false` reassignment — Rego v0 style with undefined conflict behaviour |
+| High | Only checks `privileged` — root containers, hostNetwork, missing limits all bypass |
+| Medium | No `deny` set — cannot return error messages to the kubectl caller |
+| Medium | Missing `import rego.v1` — deprecated syntax, breaks in OPA ≥ 1.0 |
+
+### After
+
+```rego
+package kubernetes.admission
+
+import rego.v1
+
+default allow := false  # deny-by-default
+
+allow if { not any_violation }
+any_violation if { count(deny) > 0 }
+
+deny contains msg if {
+    input.request.kind.kind == "Pod"
+    container := input.request.object.spec.containers[_]
+    container.securityContext.privileged == true
+    msg := sprintf("container '%v' must not run as privileged", [container.name])
+}
+
+deny contains msg if {
+    input.request.kind.kind == "Pod"
+    container := input.request.object.spec.containers[_]
+    not container.securityContext.runAsNonRoot == true
+    msg := sprintf("container '%v' must set runAsNonRoot: true", [container.name])
+}
+```
+
+> Full fixture: [`examples/demo/opa-policy-review/`](examples/demo/opa-policy-review/)
+
+**Try it:**
+```text
+Use $platform-skills to review this OPA/Rego admission policy for correctness.
+Check: default deny, rule conflicts, coverage gaps, Rego v1 syntax, and unit test coverage.
+```
+
+---
+
+## PR Triage: Automated Review Thread Resolution
+
+### The scenario
+
+A PR with three open threads — one real fix needed, two that just need a response.
+
+```
+Thread 1: "Missing securityContext — container runs as root"   → ACTIONABLE_FIX
+Thread 2: "Consider adding a PodDisruptionBudget for HA"       → INFORMATIONAL
+Thread 3: "Why not use Knative here?"                          → NOT_APPLICABLE
+```
+
+### What /platform-skills:triage --all does
+
+1. Fetches all unresolved threads via `gh` CLI
+2. Classifies each: `ACTIONABLE_FIX` | `INFORMATIONAL` | `NOT_APPLICABLE`
+3. For `ACTIONABLE_FIX` — reads the file, applies the minimal fix, commits
+4. Posts a reply on every thread explaining the decision
+5. Resolves all threads via GitHub GraphQL
+
+```
+── Thread 1 → ACTIONABLE_FIX
+   Applying fix: adding securityContext at pod and container level
+   Committed ✅   Reply posted ✅   Thread resolved ✅
+
+── Thread 2 → INFORMATIONAL
+   Reply: PDB is tracked in issue #87 — out of scope for this PR
+   Reply posted ✅   Thread resolved ✅
+
+── Thread 3 → NOT_APPLICABLE
+   Reply: Knative is not in our platform stack — closing as not applicable
+   Reply posted ✅   Thread resolved ✅
+```
+
+> Full fixture: [`examples/demo/pr-triage/`](examples/demo/pr-triage/)
+
+**Try it:**
+```text
+/platform-skills:triage --all <PR number>
+```
+
+---
+
 More prompts for every platform team in [PROMPTS.md](PROMPTS.md).
