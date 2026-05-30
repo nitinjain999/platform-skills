@@ -5,7 +5,7 @@
 # Online mode: kubectl apply --dry-run=server + live NodePool/NodeClaim status.
 #
 # Usage: bash examples/karpenter/karpenter-validate.sh
-# Requires: kubectl (for cluster validation, with Karpenter CRDs installed)
+# Requires: kubectl (for cluster validation, with Karpenter CRDs installed), jq (for live JSON parsing)
 
 set -euo pipefail
 
@@ -137,20 +137,10 @@ _check_yaml_fields() {
     fi
   fi
 
-  # NodePool content checks
+  # NodePool content checks (consolidateAfter safety — not covered in structural checks above)
   if grep -qE "^kind: NodePool$" "$file"; then
-    # minValues enforces Spot diversity — only relevant for Spot or mixed capacity NodePools
-    if grep -q "values: \[on-demand\]" "$file" && ! grep -q "values: \[spot" "$file"; then
-      pass "$name — NodePool is On-Demand only; minValues Spot diversity check skipped"
-    elif grep -q "minValues:" "$file"; then
-      pass "$name — NodePool has minValues (Spot diversity enforced)"
-    else
-      warn "$name — NodePool missing minValues on instance requirements — Spot InsufficientCapacityError may stall provisioning"
-    fi
-
     # consolidateAfter safety check — 1m with WhenEmptyOrUnderutilized causes churn
     if grep -q "WhenEmptyOrUnderutilized" "$file"; then
-      # Extract consolidateAfter value and check it's >= 5m
       consolidate_val=$(grep "consolidateAfter:" "$file" | grep -oE "[0-9]+(m|h|s)" | head -1)
       consolidate_num=$(echo "$consolidate_val" | grep -oE "[0-9]+")
       consolidate_unit=$(echo "$consolidate_val" | grep -oE "[a-z]+")
@@ -159,13 +149,6 @@ _check_yaml_fields() {
       elif [ -n "$consolidate_val" ]; then
         pass "$name — consolidateAfter: ${consolidate_val} (safe for WhenEmptyOrUnderutilized)"
       fi
-    fi
-
-    # expireAfter should be set for AMI rotation
-    if grep -q "expireAfter:" "$file"; then
-      pass "$name — NodePool has expireAfter (periodic node rotation configured)"
-    else
-      warn "$name — NodePool missing expireAfter — nodes will not be rotated for AMI updates"
     fi
   fi
 }
@@ -176,6 +159,11 @@ _check_live_cluster() {
   echo ""
   echo "=== Live cluster checks ==="
   echo ""
+
+  if ! command -v jq >/dev/null 2>&1; then
+    warn "jq not found — skipping live cluster JSON checks (install jq to enable)"
+    return
+  fi
 
   # NodePool health
   if kubectl get nodepool -A &>/dev/null 2>&1; then

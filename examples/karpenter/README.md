@@ -51,7 +51,7 @@ default            weight: 10    General fallback
 gpu                weight: 5     GPU only — requires nvidia.com/gpu toleration
 ```
 
-Pods land on the lowest-weight matching NodePool unless a `nodeSelector` or `toleration` constrains them.
+Pods land on the highest-weight matching NodePool unless a `nodeSelector` or `toleration` constrains them.
 
 ## Auth patterns
 

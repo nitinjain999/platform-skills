@@ -4,7 +4,7 @@ description: Design, install, debug, review, plan capacity, audit scaling histor
 argument-hint: "[generate|debug|review|audit|plan|migrate|upgrade] [description or file path]"
 ---
 
-Design, install, debug, review, audit, migrate, and upgrade Karpenter on EKS.
+Design, install, debug, review, plan capacity, audit, migrate, and upgrade Karpenter on EKS.
 
 All guidance targets **Karpenter v1.12.1** (latest stable, May 2026), `karpenter.sh/v1` API. The v0.x `Provisioner`/`AWSNodeTemplate` API was removed in v1.0 — if you are on v0.x, use `migrate` mode first.
 
@@ -439,7 +439,7 @@ Upgrade Karpenter, including the v0.x → v1.x CRD migration.
    | `spec.requirements` | `spec.template.spec.requirements` |
    | `spec.limits.resources` | `spec.limits` |
    | `spec.ttlSecondsAfterEmpty` | `spec.disruption.consolidateAfter` |
-   | `spec.ttlSecondsUntilExpired` | `spec.disruption.expireAfter` |
+   | `spec.ttlSecondsUntilExpired` | `spec.template.spec.expireAfter` |
    | `spec.providerRef` | `spec.template.spec.nodeClassRef` |
 
    | v0.x (`AWSNodeTemplate`) | v1.x (`EC2NodeClass`) |
