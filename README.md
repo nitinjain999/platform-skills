@@ -1,12 +1,12 @@
 # Platform Skills
 
-> A production-grade field handbook for platform, DevOps, SRE, and cloud engineers covering Kubernetes, Flux CD, Terraform, GitHub Actions, AWS, OPA/Rego, KEDA, supply chain security, Falco, observability, and more. Use it on GitHub, as a local reference, or with Claude, Codex, Cursor, and Copilot for interactive guidance with blast radius, validation steps, and rollback plans built in.
+> A production-grade field handbook for platform, DevOps, SRE, and cloud engineers covering Kubernetes, Flux CD, Terraform, GitHub Actions, AWS, OPA/Rego, KEDA, Karpenter, supply chain security, Falco, observability, and more. Use it on GitHub, as a local reference, or with Claude, Codex, Cursor, and Copilot for interactive guidance with blast radius, validation steps, and rollback plans built in.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-v1.28.0-0e1117)](CHANGELOG.md)
-[![Domains](https://img.shields.io/badge/Domains-37-4c8eda)](references/)
-[![Commands](https://img.shields.io/badge/Commands-31-e87c2b)](commands/)
-[![Examples](https://img.shields.io/badge/Examples-27-6f42c1)](examples/)
+[![Version](https://img.shields.io/badge/Version-v1.29.0-0e1117)](CHANGELOG.md)
+[![Domains](https://img.shields.io/badge/Domains-38-4c8eda)](references/)
+[![Commands](https://img.shields.io/badge/Commands-32-e87c2b)](commands/)
+[![Examples](https://img.shields.io/badge/Examples-28-6f42c1)](examples/)
 [![Editors](https://img.shields.io/badge/Editors-VSCode%20%7C%20Cursor%20%7C%20Copilot-2ea44f)](EDITOR_INTEGRATIONS.md)
 [![GitHub Stars](https://img.shields.io/github/stars/nitinjain999/platform-skills?style=flat&label=Stars&color=0e1117)](https://github.com/nitinjain999/platform-skills/stargazers)
 [![Tessl Registry](https://img.shields.io/badge/Tessl-nitinjain999%2Fplatform--skills-6366f1)](https://tessl.io/registry/nitinjain999/platform-skills)
@@ -154,6 +154,7 @@ All layers work independently. Agent integrations are optional.
 | 🔍 PR Review | [references/pr-review.md](references/pr-review.md) | Cost impact, environment drift, ownership gaps, SOC 2 compliance, deprecated API / version hygiene, rollback feasibility |
 | 🧵 PR Comment Triage | [commands/triage.md](commands/triage.md) | `/platform-skills:triage` classifies PR comments, applies valid fixes, replies, and resolves review threads |
 | ⚡ KEDA | [references/keda.md](references/keda.md) | ScaledObject, ScaledJob, TriggerAuthentication, Prometheus/SQS/Kafka/Redis/Cron/HTTP/Azure scalers, scale-to-zero, IRSA, GitOps integration, troubleshooting — `/platform-skills:keda` |
+| ⚙️ Karpenter | [references/karpenter.md](references/karpenter.md) | EKS node autoscaling — NodePool, EC2NodeClass, NodeClaim, Spot diversity, disruption budgets, ODCR, private clusters, Fargate coexistence, FinOps, CA migration, v0→v1 upgrades — `/platform-skills:karpenter` |
 | 🤖 Agent Self-Improvement | [references/agent-self-improve.md](references/agent-self-improve.md) | `.learnings/` directory setup, LRN/ERR/FEAT entry lifecycle, WAL protocol, working buffer, VFM scoring, ADL decision logic, Six Operating Pillars, heartbeat, reverse prompting, proactive agent behavior — `/platform-skills:self-improve` |
 | 🔗 Supply Chain Security | [references/supply-chain.md](references/supply-chain.md) | Cosign keyless signing, Syft SBOM generation and attestation, Trivy/Grype CVE scanning with severity gates, SLSA Level 2 provenance, Kyverno ImageValidatingPolicy enforcement — `/platform-skills:supply-chain` |
 | 🦅 Runtime Security | [references/runtime-security.md](references/runtime-security.md) | Falco eBPF deployment on EKS/GKE, custom rule authoring, Falcosidekick alert routing, rule debugging, bridging Falco signals to Kyverno admission enforcement — `/platform-skills:runtime-security` |
@@ -283,6 +284,7 @@ platform-skills/
 │   ├── helm.md                         # Helm chart patterns, lint pipeline, values design
 │   ├── pr-review.md                    # PR review: cost, drift, ownership, compliance, upgrade, rollback (v1.12.0)
 │   ├── keda.md                         # KEDA event-driven autoscaling (v1.14.0)
+│   ├── karpenter.md                    # Karpenter EKS node autoscaling (v1.29.0)
 │   ├── llm-observability.md                # Datadog LLMObs: instrumentation, evals, trace RCA (v1.20.0)
 │   └── awesome-docs.md                     # Animated SVG doc generation — 4 patterns, GitHub-safe CSS (v1.21.0)
 │
@@ -323,7 +325,7 @@ platform-skills/
 
 ## Roadmap
 
-**Current release: v1.28.0** — 31 commands, 37 domain reference guides, 50+ wiki pages.
+**Current release: v1.29.0** — 32 commands, 38 domain reference guides, 50+ wiki pages.
 
 Full version history is in [CHANGELOG.md](CHANGELOG.md).
 

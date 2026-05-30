@@ -5,6 +5,20 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.29.0] - 2026-05-30
+
+### Added
+
+- `commands/karpenter.md`: new `/platform-skills:karpenter` command with seven modes — `generate` (EC2NodeClass + NodePool from workload requirements, with environment wizard asking EKS version, identity method, Spot tolerance, private cluster, and GitOps method), `debug` (evidence-first diagnosis of pending pods and stuck NodeClaims via decision tree), `review` (correctness / cost / reliability / security / GitOps safety priority-ordered review), `audit` (reconstruct scale-out/scale-in timeline from NodeClaim events, disruption-reason annotations, and controller logs — with CloudTrail fallback when kubectl events have aged out), `plan` (predict which NodePool would be selected, likely instance type and AZ, limits headroom, and cost estimate before deploying a workload), `migrate` (CA → Karpenter pre-migration checklist + cordon/drain sequence with blast radius), and `upgrade` (patch/minor + breaking v0.x → v1.x CRD migration with field-mapping table).
+- `references/karpenter.md`: comprehensive EKS admin reference — architecture, OCI Helm install, interruption queue setup, minimum controller IAM policy, Pod Identity vs IRSA comparison, EC2NodeClass (AMI families, AMI rotation, IMDSv2, EBS encryption), NodePool design (requirements, `minValues`, `limits`, `weight`, `expireAfter`, `startupTaints`), cost strategy (Spot diversity, Graviton, consolidation, node expiry), disruption strategy (disruption types, budgets, PDBs, `do-not-disrupt`, Spot interruption handling), security (tag protection, IMDSv2, EBS, node IAM role scope), private cluster VPC endpoints, Karpenter + KEDA interaction, CA migration risks, troubleshooting decision tree, GitOps Flux ordering, Prometheus metrics, alerting, version compatibility, and upgrade checklist.
+- `examples/karpenter/nodepool-default-al2023.yaml`: general-purpose NodePool with AL2023, mixed Spot/On-Demand, Graviton, multi-AZ, `minValues: 3`, business-hours disruption budget, and encrypted EBS with IMDSv2.
+- `examples/karpenter/nodepool-spot-flex.yaml`: Spot-optimised NodePool with 14 instance families, `minValues: 5`, `WhenEmpty` consolidation, and a workload-isolation taint for batch workloads.
+- `examples/karpenter/nodepool-critical-ondemand.yaml`: On-Demand NodePool with pinned AMI, conservative disruption budget, zero business-hours disruption, and companion PodDisruptionBudget example.
+- `examples/karpenter/nodepool-gpu.yaml`: GPU NodePool using Bottlerocket AMI, g4dn/g5/p3 instance families, `nvidia.com/gpu` taint, no disruption, and larger EBS data volume for model weights.
+- `examples/karpenter/karpenter-validate.sh`: validation script with offline field checks (v1.x API version, `limits`, `disruption`, IMDSv2, EBS encryption, `minValues`) and online `kubectl dry-run=server` + live NodePool/NodeClaim health checks. Also prints IAM and SQS reachability test commands.
+- `SKILL.md`: `Karpenter` row in tool table; `references/karpenter.md` row in reference file table; `/platform-skills:karpenter` slash command entry; Karpenter added to skill description.
+- `COMMANDS.md`: TOC entry and full `/platform-skills:karpenter` command section with mode table, example invocations, output format per mode, and enforced principles.
+
 ## [1.28.0] - 2026-05-30
 
 ### Added

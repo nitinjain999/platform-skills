@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 # Validates that the skill structure is internally consistent.
-# Run from the repository root: bash tests/validate-skill.sh
+# Can be run from any directory: bash tests/validate-skill.sh
 
 set -euo pipefail
+
+# Always run from the repository root regardless of invocation directory
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$REPO_ROOT"
 
 ERRORS=0
 
@@ -108,6 +112,7 @@ REQUIRED_REFERENCES=(
   references/kyverno.md
   references/pr-review.md
   references/keda.md
+  references/karpenter.md
   references/agent-self-improve.md
   references/supply-chain.md
   references/runtime-security.md
@@ -150,6 +155,7 @@ EXAMPLE_DOMAINS=(
   examples/pr-review
   examples/triage
   examples/keda
+  examples/karpenter
   examples/agent-self-improve
   examples/supply-chain
   examples/runtime-security
@@ -304,6 +310,7 @@ echo "=== Domain validator scripts: run if present ==="
 # Commands that ship a validate script alongside their examples
 VALIDATE_SCRIPTS=(
   "examples/keda/keda-validate.sh"
+  "examples/karpenter/karpenter-validate.sh"
   "examples/kyverno/kyverno-validate.sh"
   "examples/opa/opa-validate.sh"
   "examples/terraform/terraform-validate.sh"

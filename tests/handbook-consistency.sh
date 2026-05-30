@@ -33,6 +33,8 @@ if ! grep -q "platform-skills  v${PLUGIN_VERSION}  enabled" INSTALLATION.md; the
   exit 1
 fi
 
+bash tests/editor-version-consistency.sh
+
 declare -a REQUIRED_PATHS=(
   "references/platform-operating-model.md"
   "references/terraform.md"

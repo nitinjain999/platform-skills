@@ -9,9 +9,9 @@ Status: Stable
 | Example | Pattern | Status |
 |---|---|---|
 | [basic-monorepo/](basic-monorepo/) | Single team, Kustomize overlays per environment | Stable |
-| [multi-tenant/](multi-tenant/) | Multiple teams sharing a cluster, RBAC isolation per tenant | Beta |
-| [helm-releases/](helm-releases/) | Helm chart management via OCIRepository, environment value overlays | Beta |
-| [image-automation/](image-automation/) | Automated image tag updates — Git-based and gitless (OCIArtifactTag) side-by-side | Beta |
+| [multi-tenant/](./multi-tenant/) | Multiple teams sharing a cluster, RBAC isolation per tenant | Beta |
+| [helm-releases/](./helm-releases/) | Helm chart management via OCIRepository, environment value overlays | Beta |
+| [image-automation/](./image-automation/) | Automated image tag updates — Git-based and gitless (OCIArtifactTag) side-by-side | Beta |
 | [flux-operator/](flux-operator/) | Flux Operator + FluxInstance + gitless OCI sync + Cosign verification | Beta |
 
 ## Choosing the right pattern
