@@ -594,7 +594,34 @@ Graviton instances (m7g, c7g, r7g families) are typically 20% cheaper than equiv
   values: [amd64, arm64]
 ```
 
-Verify images are multi-arch before enabling: `docker manifest inspect <image> | grep -i arch`.
+Verify images are multi-arch before enabling:
+
+```bash
+# DockerHub / public registry
+docker manifest inspect <image>:<tag> | grep -i '"architecture"'
+# Expected output: "architecture": "amd64" and "architecture": "arm64"
+
+# ECR (private registry) — requires AWS credentials
+aws ecr describe-image-scan-findings --repository-name <repo> --image-id imageTag=<tag> \
+  --region eu-north-1 --query 'imageScanFindings' 2>/dev/null || \
+aws ecr batch-get-image \
+  --repository-name <repo> \
+  --image-ids imageTag=<tag> \
+  --query 'images[*].imageManifest' --output text | \
+  python3 -c "import sys,json; m=json.load(sys.stdin); [print(e.get('platform',{}).get('architecture','?')) for e in m.get('manifests',[])]"
+
+# Fastest check — pull the manifest and look for multi-arch index
+crane manifest <image>:<tag> | jq '[.manifests[]?.platform.architecture]'
+# crane: go install github.com/google/go-containerregistry/cmd/crane@latest
+```
+
+**The failure mode:** if `arm64` is in the NodePool requirements but an image is `amd64`-only, the pod is scheduled onto a Graviton node and immediately fails with:
+
+```
+exec /app/server: exec format error
+```
+
+This is not a Karpenter error — it is a container runtime error from the node. To diagnose: `kubectl describe pod <name>` → look for `exec format error` in the Events or `kubectl logs` output. Fix by either building a multi-arch image or removing `arm64` from the NodePool requirements.
 
 ### Reserved Instances and Savings Plans
 
@@ -603,6 +630,86 @@ Karpenter does not have explicit knowledge of your Reserved Instances or Savings
 **Implication:** your On-Demand NodePool *is* your RI/SP utilization strategy. If you have `m6i` RIs, include `m6i` in your On-Demand NodePool requirements. Karpenter will provision `m6i` On-Demand instances when cost-optimal, and AWS billing applies the RI discount automatically.
 
 There is no need to manage RI utilization separately — just ensure your NodePool requirements include the families and sizes covered by your commitment. Use AWS Cost Explorer to verify RI utilization is >80% after migration.
+
+### On-Demand Capacity Reservations (ODCR) and Capacity Blocks
+
+Use ODCR or Capacity Blocks when you need **guaranteed** EC2 capacity — ML training runs, regulatory requirements, or DR scenarios where Spot availability cannot be relied on.
+
+Karpenter v1.x supports `capacity-type: on-demand` with ODCR via `EC2NodeClass.spec.capacityReservationSelectorTerms`:
+
+```yaml
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: reserved-capacity
+spec:
+  amiSelectorTerms:
+    - alias: al2023@latest
+
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: my-cluster
+
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: my-cluster
+
+  instanceProfile: karpenter-node-profile
+
+  # Target a specific Capacity Reservation or Capacity Block by ID or tag
+  capacityReservationSelectorTerms:
+    - id: cr-0abc1234def567890        # Specific ODCR ID
+    # Or select by tag:
+    # - tags:
+    #     karpenter.sh/reservation-type: ml-training
+
+  metadataOptions:
+    httpTokens: required
+    httpPutResponseHopLimit: 1
+
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 100Gi
+        volumeType: gp3
+        encrypted: true
+
+---
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: reserved-gpu
+spec:
+  template:
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: reserved-capacity
+      requirements:
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: [on-demand]       # ODCR uses on-demand capacity type
+        - key: karpenter.k8s.aws/instance-family
+          operator: In
+          values: [p4d, p4de, p5]   # Match your reservation instance type exactly
+        - key: topology.kubernetes.io/zone
+          operator: In
+          values: [eu-north-1a]     # ODCR is AZ-specific — must match reservation AZ
+  limits:
+    cpu: "768"                      # p4d.24xlarge = 96 vCPU; 8 nodes worth
+  disruption:
+    consolidationPolicy: WhenEmpty  # Never consolidate reserved capacity nodes
+```
+
+**Capacity Reservation priority:** Karpenter tries capacity in order: `reservation` → `spot` → `on-demand`. If a Capacity Reservation exists and is not full, Karpenter will use it before going to the open market.
+
+**Check reservation utilization:**
+```bash
+aws ec2 describe-capacity-reservations \
+  --capacity-reservation-ids cr-0abc1234def567890 \
+  --query 'CapacityReservations[*].{Total:TotalInstanceCount,Available:AvailableInstanceCount,State:State}'
+```
 
 ### Blue/green NodePool rotation
 
@@ -921,6 +1028,43 @@ aws eks create-fargate-profile \
 
 ---
 
+## Karpenter + Fargate Coexistence
+
+Some workloads must run on Fargate (network isolation, compliance, or specific IAM requirements) while others run on Karpenter-managed nodes. The risk: if no Fargate profile selector is exclusive, Karpenter may attempt to provision a node for a pod that should land on Fargate, and both fight over scheduling.
+
+**Pattern: use dedicated namespaces or labels to separate Fargate and Karpenter workloads**
+
+```yaml
+# Fargate profile — selects by namespace label (created via eksctl or Terraform)
+# All pods in namespace 'secure-workloads' go to Fargate
+aws eks create-fargate-profile \
+  --cluster-name my-cluster \
+  --fargate-profile-name secure \
+  --pod-execution-role-arn arn:aws:iam::<account>:role/eks-fargate-role \
+  --selectors '[{"namespace":"secure-workloads"}]'
+
+# NodePool — exclude Fargate-targeted namespaces using nodeSelector
+# Pods in 'secure-workloads' namespace will never match this NodePool because
+# Karpenter only acts on pods that are not already matched by a Fargate profile.
+# Karpenter and the Fargate scheduler do not interfere — the EKS scheduler
+# assigns Fargate pods before Karpenter sees them as unschedulable.
+```
+
+**How the scheduler arbitrates:** when a pod is created in a namespace matched by a Fargate profile, the EKS Fargate scheduler binds it to a Fargate node. Karpenter only sees pods that remain `Pending` with no node binding — so Fargate-bound pods never reach Karpenter's scheduling queue.
+
+**Common trap: Karpenter controller itself**
+
+The Karpenter controller pod must run on a Fargate profile or a pre-existing MNG — never on a Karpenter-managed node. If the controller is on a Karpenter node and that node is disrupted, Karpenter cannot provision a replacement for itself.
+
+```bash
+# Verify Karpenter controller is on Fargate or a non-Karpenter node
+kubectl get pod -n karpenter -l app.kubernetes.io/name=karpenter -o wide
+kubectl get node <node-name> -o jsonpath='{.metadata.labels.karpenter\.sh/nodepool}'
+# Should be empty (not a Karpenter-managed node) or show "fargate"
+```
+
+---
+
 ## Using Karpenter with KEDA
 
 When KEDA scales up a Deployment and no node has capacity, pods go Pending. Karpenter detects these and provisions nodes — the combined flow is:
@@ -1146,11 +1290,153 @@ spec:
       NODE_ROLE_ARN: arn:aws:iam::123456789012:role/karpenter-node
 ```
 
+### Argo CD ordering
+
+Karpenter CRDs must exist before NodePool/EC2NodeClass are applied. Use `syncWave` annotations to enforce ordering:
+
+```yaml
+# Application: karpenter Helm chart (wave -1 — installs CRDs first)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: karpenter
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  source:
+    repoURL: public.ecr.aws/karpenter
+    chart: karpenter
+    targetRevision: "1.12.1"
+    helm:
+      values: |
+        settings:
+          clusterName: my-cluster
+          interruptionQueue: karpenter-my-cluster
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: karpenter
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true   # Required for Karpenter CRD installation
+
+---
+# Application: karpenter-config (NodePool + EC2NodeClass, wave 0 — after CRDs)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: karpenter-config
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  source:
+    repoURL: https://github.com/my-org/gitops
+    path: infrastructure/karpenter-config
+    targetRevision: main
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: karpenter
+```
+
+**`ignoreDifferences` — prevent OutOfSync noise:**
+
+Argo CD diffs Karpenter-managed status fields and marks NodePool/EC2NodeClass as OutOfSync after every reconciliation. Suppress this with `ignoreDifferences`:
+
+```yaml
+# In the karpenter-config Application spec:
+spec:
+  ignoreDifferences:
+    - group: karpenter.sh
+      kind: NodePool
+      jsonPointers:
+        - /status
+        - /metadata/annotations/kubectl.kubernetes.io~1last-applied-configuration
+    - group: karpenter.k8s.aws
+      kind: EC2NodeClass
+      jsonPointers:
+        - /status
+        - /spec/amiSelectorTerms    # Karpenter resolves alias → ID; Argo CD sees drift
+```
+
+The `amiSelectorTerms` `ignoreDifferences` entry is particularly important: when you use `alias: al2023@latest`, Karpenter resolves this to an actual AMI ID in the status. Argo CD then sees a diff between the alias in Git and the resolved ID in-cluster and marks the resource OutOfSync on every sync cycle.
+
 ### Drift via GitOps
 
-When a NodePool or EC2NodeClass is updated via a Git push and Flux reconciles it, Karpenter detects the change and marks affected nodes as **drifted**. Drift replacement is automatic and rolling — it respects PDBs and `disruption.budgets`.
+When a NodePool or EC2NodeClass is updated via a Git push and Flux/Argo CD reconciles it, Karpenter detects the change and marks affected nodes as **drifted**. Drift replacement is automatic and rolling — it respects PDBs and `disruption.budgets`.
 
 This means a GitOps push to change an AMI pin or instance family list triggers a node fleet rolling replacement. Treat NodePool/EC2NodeClass changes as you would a Deployment image update — use PRs and review blast radius before merging.
+
+---
+
+## FinOps and Cost Attribution
+
+### Tag-based cost allocation
+
+Karpenter nodes inherit tags from `EC2NodeClass.spec.tags`. Use these to attribute node costs to teams, environments, and services:
+
+```yaml
+# EC2NodeClass tags — applied to all EC2 instances and EBS volumes
+tags:
+  Environment: production
+  Team: platform
+  CostCenter: eng-platform-001
+  karpenter.sh/discovery: my-cluster
+```
+
+Enable these tags as **AWS Cost Allocation Tags** in the Billing console so they appear in Cost Explorer and Cost and Usage Report.
+
+```bash
+# Check which tags are active as cost allocation tags
+aws ce list-cost-allocation-tags \
+  --status Active \
+  --query 'CostAllocationTags[*].TagKey'
+
+# Activate a new tag (takes up to 24h to appear in reports)
+aws ce update-cost-allocation-tags-status \
+  --cost-allocation-tags-status TagKey=Team,Status=Active
+```
+
+### Per-NodePool cost visibility
+
+Add a `nodepool` label to each NodePool's node template so you can filter costs by pool:
+
+```yaml
+spec:
+  template:
+    metadata:
+      labels:
+        nodepool: spot-flex   # visible in kubectl, Datadog, Kubecost
+    spec:
+      nodeClassRef:
+        name: spot-flex
+```
+
+```bash
+# See current node cost breakdown by NodePool (requires Kubecost or OpenCost)
+kubectl port-forward -n kubecost svc/kubecost-cost-analyzer 9090:9090
+# Or query the Kubecost API:
+curl "http://localhost:9090/model/allocation?window=1d&aggregate=label:nodepool"
+```
+
+### Savings tracking after CA → Karpenter migration
+
+Key metrics to report to stakeholders after migration:
+
+```bash
+# Average node utilization (higher = better bin-packing)
+kubectl top nodes | awk 'NR>1 {print $3}' | sort -n
+
+# Node count trend (should decrease with consolidation)
+kubectl get nodes --no-headers | wc -l
+
+# Spot vs On-Demand ratio (Spot ~70-80% cheaper)
+kubectl get nodes -o json | jq '[.items[] | .metadata.labels."karpenter.sh/capacity-type"] | group_by(.) | map({type: .[0], count: length})'
+```
 
 ---
 
@@ -1226,3 +1512,42 @@ Always check the [Karpenter compatibility matrix](https://karpenter.sh/docs/upgr
 3. `helm upgrade --atomic --timeout 5m` — rolls back automatically on failure
 4. Verify: `kubectl describe nodepool` shows `Ready=True`, no stuck NodeClaims
 5. Rollback: `helm rollback karpenter -n karpenter` — NodePools/EC2NodeClasses preserved in etcd
+
+### Webhook timeout tuning for large clusters
+
+On clusters with 500+ nodes or high pod churn, the Karpenter admission webhook can time out during rolling updates or large deployments. Symptoms: pod admission hangs for 10–30 seconds, `context deadline exceeded` in kube-apiserver logs, or NodeClaim creation slows to a crawl.
+
+**Diagnosis:**
+```bash
+# Check for webhook timeout errors in API server audit logs or kube-apiserver pods
+kubectl logs -n kube-system -l component=kube-apiserver --tail=200 | \
+  grep -i "karpenter\|webhook\|timeout\|deadline"
+
+# Check Karpenter webhook pod responsiveness
+kubectl get validatingwebhookconfigurations | grep karpenter
+kubectl describe validatingwebhookconfiguration \
+  validation.webhook.karpenter.sh | grep -A 5 "Timeout"
+```
+
+**Fix:** increase the webhook timeout and controller resource limits:
+
+```bash
+helm upgrade karpenter oci://public.ecr.aws/karpenter/karpenter \
+  --version "1.12.1" \
+  --namespace karpenter \
+  --reuse-values \
+  --set "webhook.timeoutSeconds=30" \
+  --set "controller.resources.requests.cpu=2" \
+  --set "controller.resources.requests.memory=2Gi" \
+  --set "controller.resources.limits.cpu=4" \
+  --set "controller.resources.limits.memory=4Gi"
+```
+
+Default webhook timeout is 10 seconds — increase to 30s for clusters with >300 nodes. Controller resource defaults (1 CPU / 1Gi) are tuned for small clusters; increase proportionally with fleet size.
+
+**Batch scheduling:** if a large Deployment (500+ pods) is created simultaneously, Karpenter may queue NodeClaim creation. This is normal — Karpenter batches scheduling decisions every `--batch-max-duration` (default 10s). Increase if you need faster bulk provisioning:
+
+```bash
+helm upgrade karpenter ... --set "controller.env[0].name=BATCH_MAX_DURATION" \
+  --set "controller.env[0].value=30s"
+```

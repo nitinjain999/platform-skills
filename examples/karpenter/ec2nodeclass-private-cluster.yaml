@@ -1,0 +1,155 @@
+---
+# EC2NodeClass: Private cluster configuration
+#
+# For EKS clusters with no public API endpoint. Key differences from public clusters:
+#
+# 1. apiServerEndpoint must be set explicitly — Karpenter cannot discover it via DNS
+# 2. AL2023 userData references the private endpoint for node bootstrap
+# 3. VPC endpoints required: ec2, ecr.api, ecr.dkr, s3 (gateway), sqs, ssm, sts
+#    (see references/karpenter.md → Private Cluster for the full endpoint list)
+#
+# Prerequisites:
+# - EKS cluster with privateCluster.enabled in cluster config
+# - All required VPC endpoints created and attached to the node subnet route table
+# - Subnets and security groups tagged: karpenter.sh/discovery=<cluster-name>
+# - Karpenter controller running on Fargate (recommended) or a pre-existing MNG
+
+apiVersion: karpenter.k8s.aws/v1
+kind: EC2NodeClass
+metadata:
+  name: private-cluster
+spec:
+  amiSelectorTerms:
+    # Pin to a specific AMI in private clusters — SSM parameter resolution requires
+    # the SSM VPC endpoint. If using alias, verify the SSM endpoint exists first.
+    # To find the current EKS-optimised AL2023 AMI for your region and k8s version:
+    # aws ssm get-parameter \
+    #   --name /aws/service/eks/optimized-ami/1.31/amazon-linux-2023/x86_64/standard/recommended/image_id \
+    #   --region eu-north-1 --query Parameter.Value --output text
+    - id: ami-PLACEHOLDER    # Replace with output of the ssm get-parameter command above
+
+  subnetSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: my-cluster
+
+  securityGroupSelectorTerms:
+    - tags:
+        karpenter.sh/discovery: my-cluster
+
+  instanceProfile: karpenter-node-profile
+
+  # AL2023 nodeadm user-data for private cluster bootstrap.
+  # The apiServerEndpoint and clusterCertificateAuthority must be set explicitly
+  # because nodes cannot reach the public EKS endpoint to discover them.
+  userData: |
+    apiVersion: node.eks.aws/v1alpha1
+    kind: NodeConfig
+    spec:
+      cluster:
+        name: my-cluster
+        apiServerEndpoint: https://XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.gr7.eu-north-1.eks.amazonaws.com
+        # Get the endpoint: aws eks describe-cluster --name my-cluster --query cluster.endpoint
+        certificateAuthority: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0t...
+        # Get the CA: aws eks describe-cluster --name my-cluster --query cluster.certificateAuthority.data
+        cidr: 10.100.0.0/16
+        # Get the service CIDR: aws eks describe-cluster --name my-cluster --query cluster.kubernetesNetworkConfig.serviceIpv4Cidr
+
+  blockDeviceMappings:
+    - deviceName: /dev/xvda
+      ebs:
+        volumeSize: 50Gi
+        volumeType: gp3
+        encrypted: true
+        iops: 3000
+        throughput: 125
+
+  metadataOptions:
+    httpEndpoint: enabled
+    httpProtocolIPv6: disabled
+    httpTokens: required
+    httpPutResponseHopLimit: 1
+
+  tags:
+    Environment: production
+    ManagedBy: karpenter
+    ClusterType: private
+    karpenter.sh/discovery: my-cluster
+
+---
+# NodePool: private cluster default
+# Same as the public cluster default but references the private-cluster EC2NodeClass.
+
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: private-default
+spec:
+  template:
+    metadata:
+      labels:
+        nodepool: private-default
+    spec:
+      nodeClassRef:
+        group: karpenter.k8s.aws
+        kind: EC2NodeClass
+        name: private-cluster
+
+      requirements:
+        - key: karpenter.k8s.aws/instance-family
+          operator: In
+          values: [m6i, m7i, m6a, m7a, c6i, c7i, r6i]
+          minValues: 3
+
+        - key: karpenter.k8s.aws/instance-size
+          operator: In
+          values: [medium, large, xlarge, 2xlarge]
+
+        - key: kubernetes.io/arch
+          operator: In
+          values: [amd64]    # Stick to amd64 for private clusters until arm64 image builds verified
+
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values: [spot, on-demand]
+
+        - key: topology.kubernetes.io/zone
+          operator: In
+          values: [eu-north-1a, eu-north-1b, eu-north-1c]
+
+      expireAfter: 720h
+      terminationGracePeriod: 48h
+
+  limits:
+    cpu: "500"
+    memory: 2000Gi
+
+  weight: 10
+
+  disruption:
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 10m    # More conservative in private clusters — slower to diagnose issues
+    budgets:
+      - nodes: "10%"
+      - schedule: "0 8 * * 1-5"
+        duration: 8h
+        nodes: "0"
+
+---
+# Quick reference: get values needed for the userData block above
+#
+# API server endpoint:
+#   aws eks describe-cluster --name my-cluster --region eu-north-1 \
+#     --query 'cluster.endpoint' --output text
+#
+# Certificate authority (base64):
+#   aws eks describe-cluster --name my-cluster --region eu-north-1 \
+#     --query 'cluster.certificateAuthority.data' --output text
+#
+# Service CIDR:
+#   aws eks describe-cluster --name my-cluster --region eu-north-1 \
+#     --query 'cluster.kubernetesNetworkConfig.serviceIpv4Cidr' --output text
+#
+# Latest AL2023 AMI for 1.31 (run from a host with SSM VPC endpoint access):
+#   aws ssm get-parameter \
+#     --name /aws/service/eks/optimized-ami/1.31/amazon-linux-2023/x86_64/standard/recommended/image_id \
+#     --region eu-north-1 --query 'Parameter.Value' --output text

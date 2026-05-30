@@ -21,6 +21,7 @@ YAML_FILES=(
   nodepool-spot-flex.yaml
   nodepool-critical-ondemand.yaml
   nodepool-gpu.yaml
+  ec2nodeclass-private-cluster.yaml
 )
 
 # ─── Offline field checks ─────────────────────────────────────────────────────
@@ -124,6 +125,36 @@ _check_yaml_fields() {
     # Flag the placeholder AMI
     if grep -q "ami-PLACEHOLDER" "$file"; then
       warn "$name — contains ami-PLACEHOLDER — replace with a real tested AMI ID before deploying"
+    fi
+  fi
+
+  # NodePool content checks
+  if grep -qE "^kind: NodePool$" "$file"; then
+    # minValues enforces Spot diversity — should be present on instance-family requirement
+    if grep -q "minValues:" "$file"; then
+      pass "$name — NodePool has minValues (Spot diversity enforced)"
+    else
+      warn "$name — NodePool missing minValues on instance requirements — Spot InsufficientCapacityError may stall provisioning"
+    fi
+
+    # consolidateAfter safety check — 1m with WhenEmptyOrUnderutilized causes churn
+    if grep -q "WhenEmptyOrUnderutilized" "$file"; then
+      # Extract consolidateAfter value and check it's >= 5m
+      consolidate_val=$(grep "consolidateAfter:" "$file" | grep -oE "[0-9]+(m|h|s)" | head -1)
+      consolidate_num=$(echo "$consolidate_val" | grep -oE "[0-9]+")
+      consolidate_unit=$(echo "$consolidate_val" | grep -oE "[a-z]+")
+      if [ -n "$consolidate_num" ] && [ "$consolidate_unit" = "m" ] && [ "$consolidate_num" -lt 5 ]; then
+        fail "$name — consolidateAfter: ${consolidate_val} with WhenEmptyOrUnderutilized is too aggressive (resets on pod activity) — use 5m minimum"
+      elif [ -n "$consolidate_val" ]; then
+        pass "$name — consolidateAfter: ${consolidate_val} (safe for WhenEmptyOrUnderutilized)"
+      fi
+    fi
+
+    # expireAfter should be set for AMI rotation
+    if grep -q "expireAfter:" "$file"; then
+      pass "$name — NodePool has expireAfter (periodic node rotation configured)"
+    else
+      warn "$name — NodePool missing expireAfter — nodes will not be rotated for AMI updates"
     fi
   fi
 }

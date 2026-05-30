@@ -12,6 +12,7 @@ Working NodePool, EC2NodeClass, and validation examples for Karpenter v1.x on Am
 | [nodepool-spot-flex.yaml](nodepool-spot-flex.yaml) | Spot-optimised NodePool — broad instance families, batch workloads, high weight |
 | [nodepool-critical-ondemand.yaml](nodepool-critical-ondemand.yaml) | On-Demand NodePool for SLA-bound workloads — pinned AMI, conservative disruption, PDB included |
 | [nodepool-gpu.yaml](nodepool-gpu.yaml) | GPU NodePool — Bottlerocket AMI, g4dn/g5/p3 families, no disruption |
+| [ec2nodeclass-private-cluster.yaml](ec2nodeclass-private-cluster.yaml) | Private cluster EC2NodeClass — explicit API endpoint, CA, and service CIDR in AL2023 userData |
 | [karpenter-validate.sh](karpenter-validate.sh) | Validation script — offline field checks + kubectl dry-run + live cluster health |
 
 ## Quick start
