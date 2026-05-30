@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - 'examples/demo/**/demo.tape'
+  pull_request:
+    paths:
+      - 'examples/demo/**/demo.tape'
   workflow_dispatch:
 
 permissions:
@@ -15,6 +18,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          ref: ${{ github.head_ref || github.ref_name }}  # check out PR branch, not detached HEAD
 
       - name: Install VHS
         run: |
@@ -34,6 +39,7 @@ jobs:
           done
 
       - name: Commit updated GIFs
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         uses: stefanzweifel/git-auto-commit-action@8621497c8c39c72f3e2a999a26b4ca1b5590a870  # v5.0.1
         with:
           commit_message: "chore: regenerate demo GIFs [skip ci]"
