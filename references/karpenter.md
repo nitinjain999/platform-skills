@@ -72,14 +72,40 @@ aws eks describe-cluster --name <cluster> --region eu-north-1 \
 # 3. Controller IAM policy — allows Karpenter to call EC2, SQS, SSM, IAM
 #    See minimum policy in the IAM section below
 
-# 4. Tag subnets and security groups for discovery
+# 4. Tag subnets, node security groups, AND the EKS cluster security group for discovery.
+#    Missing the cluster SG causes NodeClaim to fail with InvalidParameterValue: securityGroupIds.
+
+# Tag all worker/node subnets
 aws ec2 create-tags \
   --resources <subnet-id> <subnet-id-2> \
   --tags Key=karpenter.sh/discovery,Value=<cluster-name>
 
+# Tag the node security group (the one attached to worker nodes)
 aws ec2 create-tags \
-  --resources <security-group-id> \
+  --resources <node-security-group-id> \
   --tags Key=karpenter.sh/discovery,Value=<cluster-name>
+
+# Also tag the EKS cluster security group (the one EKS creates automatically)
+CLUSTER_SG=$(aws eks describe-cluster --name <cluster-name> --region eu-north-1 \
+  --query 'cluster.resourcesVpcConfig.clusterSecurityGroupId' --output text)
+aws ec2 create-tags \
+  --resources "$CLUSTER_SG" \
+  --tags Key=karpenter.sh/discovery,Value=<cluster-name>
+
+# 5. Register the node IAM role so the EKS API server trusts Karpenter-provisioned nodes.
+#    Without this, nodes launch and immediately go NotReady with no Karpenter log error.
+
+# EKS 1.29+ — access entry (replaces aws-auth)
+aws eks create-access-entry \
+  --cluster-name <cluster-name> \
+  --principal-arn arn:aws:iam::<account-id>:role/<node-role-name> \
+  --type EC2_LINUX \
+  --region eu-north-1
+
+# EKS < 1.29 — add to aws-auth ConfigMap instead:
+# - groups: [system:bootstrappers, system:nodes]
+#   rolearn: arn:aws:iam::<account-id>:role/<node-role-name>
+#   username: system:node:{{EC2PrivateDNSName}}
 ```
 
 ### Interruption queue
@@ -527,6 +553,30 @@ requirements:
     values: [spot, on-demand]   # spot preferred; on-demand fallback
 ```
 
+### Instance exclusions
+
+Use `NotIn` to block instance families that cause operational problems:
+
+```yaml
+requirements:
+  # Block burstable instances — CPU credit behaviour causes latency spikes under sustained load
+  - key: karpenter.k8s.aws/instance-family
+    operator: NotIn
+    values: [t2, t3, t3a, t4g]
+
+  # Block previous-generation instances — worse price/performance than gen 6+
+  - key: karpenter.k8s.aws/instance-generation
+    operator: Gt
+    values: ["5"]   # Only gen 6 and above (m6i, c6i, r6i, m7i, ...)
+
+  # Combine with an In requirement to allow only specific families
+  - key: karpenter.k8s.aws/instance-family
+    operator: In
+    values: [m6i, m6a, m7i, m7a, c6i, c6a, c7i, r6i, r7i]
+```
+
+> `NotIn` and `In` on the same key intersect — the final set is families that are In the allow-list AND not in the deny-list. You don't need both if your `In` list is already curated.
+
 Use `weight` to bias toward Spot NodePools while keeping an On-Demand NodePool as fallback:
 
 ```yaml
@@ -546,6 +596,63 @@ Graviton instances (m7g, c7g, r7g families) are typically 20% cheaper than equiv
 
 Verify images are multi-arch before enabling: `docker manifest inspect <image> | grep -i arch`.
 
+### Reserved Instances and Savings Plans
+
+Karpenter does not have explicit knowledge of your Reserved Instances or Savings Plans — it selects On-Demand instances based on cost and fit. AWS billing then automatically applies RIs and SPs post-hoc to matching On-Demand usage in the account and region.
+
+**Implication:** your On-Demand NodePool *is* your RI/SP utilization strategy. If you have `m6i` RIs, include `m6i` in your On-Demand NodePool requirements. Karpenter will provision `m6i` On-Demand instances when cost-optimal, and AWS billing applies the RI discount automatically.
+
+There is no need to manage RI utilization separately — just ensure your NodePool requirements include the families and sizes covered by your commitment. Use AWS Cost Explorer to verify RI utilization is >80% after migration.
+
+### Blue/green NodePool rotation
+
+When you need to change instance families, AMI, or EC2NodeClass for an entire fleet without triggering mass drift, use blue/green NodePool rotation instead of editing the live NodePool:
+
+```
+1. Create new NodePool (e.g. default-v2) with updated config and weight: 200
+   — higher weight than the existing pool (weight: 10)
+
+2. New pods scheduled on default-v2; existing pods continue running on default
+
+3. Cordon default NodePool nodes to prevent new scheduling:
+   kubectl get nodes -l karpenter.sh/nodepool=default -o name | \
+     xargs kubectl cordon
+
+4. Drain default NodePool nodes (PDBs respected):
+   kubectl get nodes -l karpenter.sh/nodepool=default -o name | \
+     xargs -I{} kubectl drain {} \
+       --ignore-daemonsets \
+       --delete-emptydir-data \
+       --grace-period=120 \
+       --timeout=300s
+
+5. Verify all workloads running on default-v2 nodes:
+   kubectl get pods -A -o wide | grep -v default-v2
+
+6. Delete the old NodePool (Karpenter terminates its now-empty nodes):
+   kubectl delete nodepool default
+```
+
+**Why not just edit the NodePool in-place?** Updating instance families, AMI selector, or `EC2NodeClass` reference triggers drift on all nodes simultaneously. With a conservative `disruption.budgets: nodes: "10%"`, a 50-node fleet takes 50 drain cycles. Blue/green gives you explicit control over timing and rollback: if `default-v2` has issues, lower its weight and raise `default` back.
+
+Rollback: lower `default-v2` weight below `default`, uncordon `default` nodes.
+
+### DaemonSet overhead and instance sizing
+
+Karpenter simulates pod placement — including all DaemonSets — before selecting an instance type. Heavy DaemonSets (Datadog agent ~250m CPU + 256Mi, Cilium ~100m + 200Mi, Falco ~200m + 512Mi) consume a significant fraction of smaller instances. This is expected and correct: Karpenter is choosing the cheapest instance that actually fits the workload *plus* its DaemonSets.
+
+If you see pods landing on `xlarge` when you expect `large`, check actual allocatable capacity:
+
+```bash
+# See allocatable after DaemonSet overhead on a Karpenter node
+kubectl describe node <karpenter-node> | grep -A 6 "Allocatable:"
+
+# See what's consuming resources before your workload pod lands
+kubectl describe node <karpenter-node> | grep -A 40 "Non-terminated Pods:"
+```
+
+To reduce overhead: review DaemonSet resource requests, remove DaemonSets that are not needed on all nodes (use `nodeSelector` to exclude Karpenter nodes for non-essential agents), or increase `karpenter.k8s.aws/instance-size` minimum.
+
 ### Consolidation
 
 Consolidation bin-packs pods onto fewer nodes and terminates the rest. It respects PDBs, `do-not-disrupt` annotations, and `disruption.budgets`.
@@ -555,6 +662,10 @@ disruption:
   consolidationPolicy: WhenEmptyOrUnderutilized
   consolidateAfter: 5m   # Wait 5 min after underutilisation detected
 ```
+
+**`consolidateAfter` semantics differ by policy:**
+- `WhenEmpty`: timer starts when the node becomes fully empty
+- `WhenEmptyOrUnderutilized`: timer resets on every pod scheduling event — a value of `1m` on a busy cluster causes aggressive churn as new pods constantly reset the clock. Use `5m`–`10m` minimum for `WhenEmptyOrUnderutilized`.
 
 If workloads cannot tolerate consolidation (stateful, slow restart), either:
 - Set `WhenEmpty` policy (only empty nodes consolidated)
@@ -574,6 +685,90 @@ expireAfter: 720h   # 30 days — rotate monthly
 ```
 
 For compliance environments requiring shorter rotation: `168h` (7 days).
+
+### EKS cluster upgrade → node rotation workflow
+
+When you upgrade the EKS control plane, worker nodes must be rotated to the new Kubernetes version. With Karpenter this is automatic if you use AMI aliases — but the sequence matters:
+
+```
+1. Upgrade EKS control plane
+   aws eks update-cluster-version --name <cluster> --kubernetes-version 1.31
+
+2. Wait for control plane upgrade to complete
+   aws eks wait cluster-active --name <cluster>
+
+3a. If using alias (al2023@latest):
+    SSM parameter auto-updates → Karpenter detects AMI drift → nodes replaced rolling
+    (no manual action needed, but watch disruption budgets)
+
+3b. If using pinned AMI ID:
+    Find the new EKS-optimised AMI for the new version:
+    aws ssm get-parameter \
+      --name /aws/service/eks/optimized-ami/1.31/amazon-linux-2023/x86_64/standard/recommended/image_id \
+      --query Parameter.Value --output text
+    Update EC2NodeClass amiSelectorTerms[].id → commit/merge → Karpenter drifts nodes
+
+4. Monitor replacement progress
+   kubectl get nodeclaim -A -w
+   kubectl get nodes -o wide | grep -v v1.31   # Should go to zero
+
+5. Verify workloads healthy after rotation
+   kubectl get pods -A | grep -v Running | grep -v Completed
+```
+
+**Potential blockers during upgrade rotation:**
+
+| Blocker | Symptom | Fix |
+|---|---|---|
+| PDB blocks drain | Node stays `SchedulingDisabled` for > 10m | Check `kubectl get pdb -A`, ensure `minAvailable` allows one replica down |
+| `do-not-disrupt` annotation | Node never drained | Remove annotation, or wait for KEDA/HPA to scale the pod down first |
+| `disruption.budgets: nodes: "0"` | No nodes replaced | Check budget schedule — may have a "no disruption during business hours" rule |
+| Old nodes accumulating | NodePool `terminationGracePeriod` too long | Expected — nodes drain slowly; check `kubectl describe nodeclaim` for eviction status |
+
+### Stateful workload protection recipe
+
+For Kafka, Redis, Postgres, or any workload that cannot tolerate abrupt termination, use all three layers together:
+
+```yaml
+# 1. PDB — prevents simultaneous eviction during drain (Karpenter and kubectl drain both respect this)
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: redis
+  namespace: cache
+spec:
+  minAvailable: 2     # For a 3-replica StatefulSet: always keep 2 running
+  selector:
+    matchLabels:
+      app: redis
+
+---
+# 2. Pod annotation — blocks consolidation and expiration on the node hosting this pod.
+#    Add to the StatefulSet pod template, not just one pod.
+metadata:
+  annotations:
+    karpenter.sh/do-not-disrupt: "true"
+
+---
+# 3. Match terminationGracePeriodSeconds to your actual shutdown time
+spec:
+  terminationGracePeriodSeconds: 300   # Must be >= your shutdown + checkpoint time
+```
+
+**When to remove `do-not-disrupt`:**
+Do not leave it permanent — it prevents AMI rotation and consolidation indefinitely. Tie it to a maintenance window:
+
+```bash
+# Remove do-not-disrupt during a maintenance window to allow expiration/drift replacement
+kubectl patch statefulset redis -n cache \
+  --type=json \
+  -p='[{"op":"remove","path":"/spec/template/metadata/annotations/karpenter.sh~1do-not-disrupt"}]'
+
+# Re-add after replacement completes
+kubectl patch statefulset redis -n cache \
+  --type=merge \
+  -p='{"spec":{"template":{"metadata":{"annotations":{"karpenter.sh/do-not-disrupt":"true"}}}}}'
+```
 
 ---
 
@@ -886,6 +1081,26 @@ aws events describe-rule --name KarpenterSpotInterruption --region eu-north-1
 ```
 
 Check Karpenter has SQS permissions and the `settings.interruptionQueue` Helm value is set to the correct queue name.
+
+#### Pods stuck Pending: topology spread constraints unsatisfiable
+
+When pods have `topologySpreadConstraints` (common for HA across AZs), Karpenter respects these — but if the constraint cannot be satisfied given the available subnets or existing nodes, pods stay Pending with a misleading scheduling message.
+
+```bash
+# Look for this in pod events
+kubectl describe pod <name> -n <ns> | grep -A 5 "didn't match pod's topology spread"
+# or
+kubectl describe pod <name> -n <ns> | grep -A 5 "ErrTopologySpreadConstraintNotSatisfiable"
+```
+
+Common causes:
+
+| Symptom | Root cause | Fix |
+|---|---|---|
+| `maxSkew: 1` with 3 AZs but only 2 subnets tagged | Karpenter can only provision in 2 AZs | Tag subnets in all 3 AZs with `karpenter.sh/discovery` |
+| Spread `whenUnsatisfiable: DoNotSchedule` blocks new pods | Existing pods already skewed | Temporarily set `whenUnsatisfiable: ScheduleAnyway` to unblock, then rebalance |
+| `minDomains: 3` but only 2 nodes exist | Not enough existing topology domains | Scale up first or lower `minDomains` |
+| Spread by `node` but consolidation collapses nodes to 1 | Consolidation violates spread | Add `do-not-disrupt` to spread-sensitive pods or use `WhenEmpty` consolidation |
 
 ---
 

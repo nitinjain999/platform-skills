@@ -1,7 +1,7 @@
 ---
 name: karpenter
-description: Design, install, debug, review, audit scaling history, migrate from Cluster Autoscaler, and upgrade Karpenter v1.x on EKS. Covers NodePool, EC2NodeClass, NodeClaim, Spot diversity, disruption strategy, Pod Identity/IRSA, interruption queue, private clusters, AMI rotation, and GitOps integration. Use when asked to "set up Karpenter", "debug why nodes aren't provisioning", "review my NodePool", "why did this node terminate", "migrate from CA", or "upgrade Karpenter".
-argument-hint: "[generate|debug|review|audit|migrate|upgrade] [description or file path]"
+description: Design, install, debug, review, plan capacity, audit scaling history, migrate from Cluster Autoscaler, and upgrade Karpenter v1.x on EKS. Covers NodePool, EC2NodeClass, NodeClaim, Spot diversity, disruption strategy, Pod Identity/IRSA, interruption queue, private clusters, AMI rotation, and GitOps integration. Use when asked to "set up Karpenter", "debug why nodes aren't provisioning", "review my NodePool", "what would Karpenter provision for this workload", "why did this node terminate", "migrate from CA", or "upgrade Karpenter".
+argument-hint: "[generate|debug|review|audit|plan|migrate|upgrade] [description or file path]"
 ---
 
 Design, install, debug, review, audit, migrate, and upgrade Karpenter on EKS.
@@ -21,10 +21,11 @@ What do you need?
   2. debug    — diagnose why nodes are not provisioning or pods are stuck Pending
   3. review   — production-readiness review of existing NodePool/EC2NodeClass
   4. audit    — reconstruct scale-out/scale-in history and explain why it happened
-  5. migrate  — move from Cluster Autoscaler to Karpenter
-  6. upgrade  — upgrade Karpenter version (including v0.x → v1.x CRD migration)
+  5. plan     — predict what Karpenter would provision for a given workload before deploying
+  6. migrate  — move from Cluster Autoscaler to Karpenter
+  7. upgrade  — upgrade Karpenter version (including v0.x → v1.x CRD migration)
 
-Enter 1–6 or mode name:
+Enter 1–7 or mode name:
 ```
 
 **Q2 — Environment context** (ask after mode, one question at a time):
@@ -54,12 +55,17 @@ Design a production-ready NodePool and EC2NodeClass from requirements.
    - Workload profile: general-purpose / compute-optimised / memory-optimised / GPU / Spot-flex
    - Instance family preferences (e.g. `m`, `c`, `r`, `g4dn`) and architecture (`amd64`, `arm64`/Graviton, or both)
    - AMI family: `AL2023` (default, recommended) | `Bottlerocket` | `Windows2022`
+   - Environment: **dev/staging** or **production** — this drives the AMI strategy
    - Whether scale-to-zero is needed (requires `limits` planning)
    - Disruption tolerance: can workloads survive consolidation? Are there PDBs?
    - GitOps method: Flux / Argo CD / direct kubectl
 
 2. Generate `EC2NodeClass` with:
-   - `amiSelectorTerms` using `alias: al2023@latest` (or pinned AMI ID for production stability)
+   - `amiSelectorTerms`: use `alias: al2023@latest` for dev/staging; use a **pinned AMI ID** (`id: ami-xxxx`) for production. Floating `@latest` in production means an untested AMI can land on fleet nodes during any scheduled SSM parameter update. Ask the user which environment this is for before choosing.
+   - `subnetSelectorTerms` and `securityGroupSelectorTerms` using `karpenter.sh/discovery: <cluster-name>` tags
+   - `instanceProfile` or `role` matching the Karpenter node IAM role
+   - `blockDeviceMappings` with encrypted EBS and IMDSv2 enforced via `metadataOptions`
+   - `tags` including at minimum `karpenter.sh/discovery`, `Environment`, and billing tags
    - `subnetSelectorTerms` and `securityGroupSelectorTerms` using `karpenter.sh/discovery: <cluster-name>` tags
    - `instanceProfile` or `role` matching the Karpenter node IAM role
    - `blockDeviceMappings` with encrypted EBS and IMDSv2 enforced via `metadataOptions`
@@ -249,9 +255,82 @@ Reconstruct what scaled out or in, when, and why — for post-incident analysis 
    15:45:10   scale-in       ip-10-0-1-42         consolidation  node underutilised after queue drain
    ```
 
-5. Finish with a one-line verdict: what caused the scale event, whether it was expected, and whether any tuning is needed (e.g. disruption budget too loose, `consolidateAfter` too aggressive).
+5. **When Kubernetes events have aged out** (default TTL: 1h), fall back to CloudTrail for instance-level history:
+   ```bash
+   # Find RunInstances calls tagged with Karpenter nodepool — covers up to 90 days
+   aws cloudtrail lookup-events \
+     --lookup-attributes AttributeKey=EventName,AttributeValue=RunInstances \
+     --start-time <iso-timestamp> \
+     --end-time <iso-timestamp> \
+     --region eu-north-1 \
+     --query 'Events[*].CloudTrailEvent' --output text | \
+     jq -r '. | fromjson | select(
+       .requestParameters.tagSpecificationSet.items[]?.tags[]?
+       | select(.key=="karpenter.sh/nodepool")
+     ) | {time: .eventTime, instance: .responseElements.instancesSet.items[0].instanceId,
+          type: .requestParameters.instanceType, az: .requestParameters.availabilityZone}'
+
+   # Find TerminateInstances calls for Karpenter nodes
+   aws cloudtrail lookup-events \
+     --lookup-attributes AttributeKey=EventName,AttributeValue=TerminateInstances \
+     --start-time <iso-timestamp> \
+     --region eu-north-1 \
+     --query 'Events[*].CloudTrailEvent' --output text | \
+     jq -r '. | fromjson | {time: .eventTime,
+       instance: .requestParameters.instancesSet.items[0].instanceId,
+       user: .userIdentity.sessionContext.sessionIssuer.userName}'
+   ```
+   CloudTrail is the authoritative source when kubectl events are gone — use it as Layer 4 in the timeline.
+
+6. Finish with a one-line verdict: what caused the scale event, whether it was expected, and whether any tuning is needed (e.g. disruption budget too loose, `consolidateAfter` too aggressive).
 
 Reference: `references/karpenter.md` → Disruption strategy, Troubleshooting
+
+---
+
+## Mode: plan
+
+Predict what Karpenter would provision before you deploy a workload — useful for cost estimates, pre-rollout capacity checks, and catching NodePool mismatches before they page you.
+
+**Steps:**
+
+1. Extract the scheduling requirements from the workload:
+   ```bash
+   # Get resource requests, nodeSelector, tolerations, affinity, and spread constraints
+   kubectl get deployment <name> -n <ns> -o json | jq '{
+     requests: .spec.template.spec.containers[].resources.requests,
+     nodeSelector: .spec.template.spec.nodeSelector,
+     tolerations: .spec.template.spec.tolerations,
+     affinity: .spec.template.spec.affinity,
+     topologySpread: .spec.template.spec.topologySpreadConstraints
+   }'
+   ```
+   Or ask the user to paste the pod spec / Deployment YAML.
+
+2. Walk through NodePool matching manually:
+   - For each NodePool (highest `weight` first), check: do the pod's `nodeSelector` labels satisfy the NodePool `requirements`? Do the pod's `tolerations` cover all NodePool `taints`? Does the pod's `affinity` conflict with any NodePool zone requirements?
+   - The first NodePool that satisfies all constraints is the target.
+   - If no NodePool matches, state exactly which requirement is the blocker.
+
+3. Predict instance selection within the matched NodePool:
+   - Karpenter picks the cheapest instance type that fits: pod requests + DaemonSet overhead (typically 300–600m CPU + 512Mi–1Gi RAM depending on your DaemonSet stack)
+   - For Spot: Karpenter uses current Spot pricing — check `aws ec2 describe-spot-price-history` for the region
+   - State the likely instance family and size (e.g. "likely `m7i.large` in `eu-north-1b`, ~$0.03/hr Spot")
+
+4. Check NodePool limits headroom:
+   ```bash
+   kubectl describe nodepool <name> | grep -A 8 "Status:"
+   # Resources shows current usage vs limits — will the new workload fit?
+   ```
+
+5. Output:
+   - Which NodePool would be selected and why
+   - Likely instance type and AZ
+   - Whether limits have headroom for the replica count
+   - Any topology spread constraints that could block provisioning
+   - Estimated cost per replica per hour (Spot or On-Demand)
+
+Reference: `references/karpenter.md` → NodePool design, Cost strategy
 
 ---
 

@@ -94,9 +94,8 @@ spec:
           operator: In
           values: [eu-north-1a, eu-north-1b, eu-north-1c]
 
-      startupTaints:
-        - key: karpenter.sh/not-ready
-          effect: NoSchedule
+      # startupTaints: only add when your CNI/DaemonSet removes the taint on readiness.
+      # See nodepool-default-al2023.yaml for the correct pattern.
 
       expireAfter: 720h
       terminationGracePeriod: 72h   # Longer grace for critical workloads

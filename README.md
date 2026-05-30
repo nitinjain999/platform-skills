@@ -1,12 +1,12 @@
 # Platform Skills
 
-> A production-grade field handbook for platform, DevOps, SRE, and cloud engineers covering Kubernetes, Flux CD, Terraform, GitHub Actions, AWS, OPA/Rego, KEDA, supply chain security, Falco, observability, and more. Use it on GitHub, as a local reference, or with Claude, Codex, Cursor, and Copilot for interactive guidance with blast radius, validation steps, and rollback plans built in.
+> A production-grade field handbook for platform, DevOps, SRE, and cloud engineers covering Kubernetes, Flux CD, Terraform, GitHub Actions, AWS, OPA/Rego, KEDA, Karpenter, supply chain security, Falco, observability, and more. Use it on GitHub, as a local reference, or with Claude, Codex, Cursor, and Copilot for interactive guidance with blast radius, validation steps, and rollback plans built in.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-v1.28.0-0e1117)](CHANGELOG.md)
-[![Domains](https://img.shields.io/badge/Domains-37-4c8eda)](references/)
-[![Commands](https://img.shields.io/badge/Commands-31-e87c2b)](commands/)
-[![Examples](https://img.shields.io/badge/Examples-27-6f42c1)](examples/)
+[![Version](https://img.shields.io/badge/Version-v1.29.0-0e1117)](CHANGELOG.md)
+[![Domains](https://img.shields.io/badge/Domains-38-4c8eda)](references/)
+[![Commands](https://img.shields.io/badge/Commands-32-e87c2b)](commands/)
+[![Examples](https://img.shields.io/badge/Examples-28-6f42c1)](examples/)
 [![Editors](https://img.shields.io/badge/Editors-VSCode%20%7C%20Cursor%20%7C%20Copilot-2ea44f)](EDITOR_INTEGRATIONS.md)
 [![GitHub Stars](https://img.shields.io/github/stars/nitinjain999/platform-skills?style=flat&label=Stars&color=0e1117)](https://github.com/nitinjain999/platform-skills/stargazers)
 [![Tessl Registry](https://img.shields.io/badge/Tessl-nitinjain999%2Fplatform--skills-6366f1)](https://tessl.io/registry/nitinjain999/platform-skills)
@@ -323,7 +323,7 @@ platform-skills/
 
 ## Roadmap
 
-**Current release: v1.28.0** — 31 commands, 37 domain reference guides, 50+ wiki pages.
+**Current release: v1.29.0** — 32 commands, 38 domain reference guides, 50+ wiki pages.
 
 Full version history is in [CHANGELOG.md](CHANGELOG.md).
 

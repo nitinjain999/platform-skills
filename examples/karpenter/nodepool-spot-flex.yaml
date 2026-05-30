@@ -93,15 +93,16 @@ spec:
           operator: In
           values: [eu-north-1a, eu-north-1b, eu-north-1c]
 
-      # Taint: only workloads that explicitly tolerate spot-flex land here
-      # Remove this taint if you want Spot-tolerant workloads to land here without
-      # requiring an explicit toleration — then use weight alone for selection.
+      # Taint: only workloads with BOTH a matching toleration AND a nodeSelector/affinity
+      # land here. nodeSelector alone does not bypass a NoSchedule taint.
+      # Workloads must add:
+      #   tolerations:
+      #     - key: spot-flex
+      #       operator: Exists
+      #       effect: NoSchedule
+      # Remove this taint block to rely on weight-based selection instead (no toleration needed).
       taints:
         - key: spot-flex
-          effect: NoSchedule
-
-      startupTaints:
-        - key: karpenter.sh/not-ready
           effect: NoSchedule
 
       expireAfter: 168h             # 7-day rotation — faster for Spot fleet freshness

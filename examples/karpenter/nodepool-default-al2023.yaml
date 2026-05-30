@@ -91,10 +91,13 @@ spec:
           operator: In
           values: [eu-north-1a, eu-north-1b, eu-north-1c]
 
-      # Prevents pod scheduling until DaemonSets (CNI, log agent) are ready on the node
-      startupTaints:
-        - key: karpenter.sh/not-ready
-          effect: NoSchedule
+      # startupTaints: only add when a specific DaemonSet removes the taint after it is ready.
+      # The taint key must match what your DaemonSet (e.g. Cilium, Calico) actually removes.
+      # karpenter.sh/not-ready has no built-in remover — pods would be permanently unschedulable.
+      # Example (Cilium removes this taint after CNI is ready):
+      # startupTaints:
+      #   - key: node.cilium.io/agent-not-ready
+      #     effect: NoExecute
 
       expireAfter: 720h             # Force node rotation every 30 days (AMI patching)
       terminationGracePeriod: 48h
