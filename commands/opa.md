@@ -79,10 +79,12 @@ Run the full policy validation pipeline against a directory.
 Steps:
 1. **Format check**: `conftest fmt <dir>/*.rego --check` — fails if any file is not canonically formatted
 2. **Auto-format** (if check fails): `conftest fmt <dir>/*.rego` — rewrites in place
-3. **Lint**: `regal lint <dir>` — reports style and correctness violations; fix each finding before continuing
-4. **Unit tests**: `conftest verify --policy <dir>` — all `*_test.rego` files must pass
-5. **Integration test** (if test data is available): `conftest test --policy <dir> <input-files>`
-6. Report: PASS or list each failing step with the exact error and the fix
+3. **Strict check**: `opa check --strict <dir>` — validates syntax, unused variables, and deprecated built-ins
+4. **Lint auto-fix**: `regal fix <dir>` — applies safe automatic fixes before linting
+5. **Lint**: `regal lint <dir>` — reports style and correctness violations; fix each remaining finding before continuing
+6. **Unit tests**: `conftest verify --policy <dir>` — all `*_test.rego` files must pass
+7. **Integration test** (if test data is available): `conftest test --policy <dir> <input-files>`
+8. Report: PASS or list each failing step with the exact error and the fix
 
 Reference: `references/opa.md` → Validation Pipeline, Regal
 
@@ -115,7 +117,15 @@ Steps:
    - **Partial vs complete rule**: is the rule a set comprehension (`deny[msg]`) or a boolean? Conftest expects set comprehensions for message output
    - **`import rego.v1` missing**: without it, `if`, `in`, `contains` may not work as expected
    - **`some` missing**: iterating without `some` can cause unexpected behaviour in Rego v0 compatibility mode
-3. State the most likely root cause with the exact line to fix
-4. Show the corrected rule and how to verify it fires: `conftest test --policy <dir> <input>`
+3. If the cause is still unclear, trace evaluation with `opa eval`:
+   ```bash
+   # Evaluate the deny set against a real input file
+   opa eval -i <input.json> -d <policy.rego> 'data.<pkg>.deny'
+
+   # Print every intermediate binding (verbose)
+   opa eval -i <input.json> -d <policy.rego> --explain full 'data.<pkg>.deny'
+   ```
+4. State the most likely root cause with the exact line to fix
+5. Show the corrected rule and how to verify it fires: `conftest test --policy <dir> <input>`
 
 Reference: `references/opa.md` → Troubleshooting
