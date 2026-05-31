@@ -390,6 +390,15 @@ conftest fmt ./policies/*.rego --check
 conftest fmt ./policies/*.rego
 ```
 
+### 1.5. OPA strict check
+
+```bash
+# Validates syntax, unused variables, and deprecated constructs with strict mode
+opa check --strict ./policies
+```
+
+Run this **after format check and before Regal lint**. Catches issues Regal does not cover (e.g. deprecated built-in usage, undefined variables in package scope).
+
 ### 2. Regal lint
 
 ```bash
@@ -398,6 +407,9 @@ brew install styrainc/packages/regal   # macOS
 # or
 curl -L -o regal "https://github.com/StyraInc/regal/releases/latest/download/regal_$(uname -s)_$(uname -m)"
 chmod +x regal && sudo mv regal /usr/local/bin/
+
+# Auto-fix safe violations before linting (idempotent)
+regal fix ./policies
 
 # Lint all .rego files
 regal lint ./policies
@@ -518,6 +530,114 @@ jobs:
 
 ---
 
+## Pre-commit Integration
+
+Shift OPA validation left by running format, strict check, lint, and unit tests on every `git commit` using [`pre-commit-opa`](https://github.com/anderseknert/pre-commit-opa).
+
+### Setup
+
+```bash
+# Install pre-commit
+pip install pre-commit
+# or
+brew install pre-commit
+
+# Install the hooks into the repository
+pre-commit install
+```
+
+### `.pre-commit-config.yaml`
+
+```yaml
+repos:
+  - repo: https://github.com/anderseknert/pre-commit-opa
+    rev: v1.5.1
+    hooks:
+      # 1. Canonical formatting check — fails if any file is unformatted
+      - id: opa-fmt
+        args: [--check]
+
+      # 2. Strict syntax and built-in validation
+      - id: opa-check
+        args: [--strict]
+
+      # 3. Unit tests — all *_test.rego files must pass
+      - id: opa-test
+
+      # 4. Conftest canonical formatting
+      - id: conftest-fmt
+        args: [--check]
+
+      # 5. Conftest integration tests against checked-in fixtures
+      - id: conftest-test
+        args: [--policy, ./policies, --all-namespaces]
+
+      # 6. Verify test coverage (all policy rules have at least one test)
+      - id: conftest-verify
+        args: [--policy, ./policies]
+```
+
+### Monorepo scoping
+
+In a monorepo, scope each hook to only run against the relevant subdirectory:
+
+```yaml
+repos:
+  - repo: https://github.com/anderseknert/pre-commit-opa
+    rev: v1.5.1
+    hooks:
+      - id: opa-fmt
+        args: [--check]
+        files: ^policies/  # only run for files under policies/
+
+      - id: opa-test
+        args: [--v]
+        files: ^policies/
+
+      - id: conftest-test
+        args: [--policy, policies/terraform, --namespace, terraform.iam]
+        files: ^terraform/
+```
+
+### Hook execution order
+
+Pre-commit runs hooks in declaration order. The recommended order mirrors the CI pipeline:
+
+1. `opa-fmt` — format before checking correctness
+2. `opa-check` — strict syntax check
+3. `opa-test` — unit tests (fastest feedback)
+4. `conftest-fmt` — Conftest canonical format
+5. `conftest-test` — integration tests against fixtures
+6. `conftest-verify` — coverage gate
+
+> **Tip:** Run `pre-commit run --all-files` after first install to validate the full codebase, not just staged files.
+
+---
+
+## Bundle Packaging
+
+Package policies as an OPA bundle for distribution to Gatekeeper, OPA sidecars, or Conftest pull:
+
+```bash
+# Build a bundle from a policies directory
+opa build ./policies -o bundle.tar.gz
+
+# Build with metadata and entrypoint for OPA server
+opa build ./policies \
+  --entrypoint terraform.iam/deny \
+  -o bundle.tar.gz
+
+# Push to an OCI registry
+oras push ghcr.io/your-org/opa-policies:latest bundle.tar.gz
+
+# Verify the bundle contents
+opa inspect bundle.tar.gz
+```
+
+Version bundles with image tags matching your release tag (e.g. `ghcr.io/your-org/opa-policies:v1.2.3`). Never push `:latest` as the only tag in production.
+
+---
+
 ## Shared Data (allow-lists)
 
 Use `data.*` for allow-lists shared across policies — store in a JSON or YAML file alongside the policies.
@@ -540,6 +660,26 @@ deny contains msg if {
 }
 ```
 
+### Pulling shared policy bundles
+
+Use `conftest pull` to fetch shared policies from OCI registries or Git without embedding them in every repo:
+
+```bash
+# Pull from an OCI registry (stores to .cache/conftest/)
+conftest pull oci://ghcr.io/your-org/opa-policies:latest
+
+# Pull from a Git repository (specific subdirectory)
+conftest pull "git::https://github.com/your-org/opa-policies.git//terraform"
+
+# Pull and run in one step
+conftest test \
+  --update "git::https://github.com/your-org/opa-policies.git//terraform" \
+  --all-namespaces \
+  ./terraform/*.tf
+```
+
+Cache is stored in `.cache/conftest/` — add it to `.gitignore` and treat it as a build artefact.
+
 ---
 
 ## Troubleshooting
@@ -555,3 +695,4 @@ deny contains msg if {
 | Regal: `no-defined-entrypoint` | Missing `# entrypoint: true` in METADATA | Add METADATA block with `entrypoint: true` |
 | Boolean rule always true/false | Using boolean instead of set comprehension | Change `deny if { ... }` to `deny contains msg if { ... msg := "..." }` |
 | `conftest fmt --check` fails | File not canonically formatted | Run `conftest fmt ./policies/*.rego` to auto-fix |
+| Need to trace evaluation step-by-step | Rule fires unexpectedly or misses a case | Run `opa eval -i <input.json> -d <policy.rego> 'data.<pkg>.deny'` to see every binding |
