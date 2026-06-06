@@ -379,7 +379,7 @@ grep -rn "type: oci" . --include="*.yaml"
 - [ ] `spec.chartRef` (OCI) not `spec.chart.spec`
 - [ ] `spec.install.strategy.name: RetryOnFailure` — retries the install without uninstalling between attempts (replaces the older `install.remediation` uninstall-between-retries pattern)
 - [ ] Drift detection: `spec.driftDetection.mode: enabled`
-- [ ] Chart version is a semver range — not `:latest`
+- [ ] Chart version is a pinned exact version (e.g. `1.2.3`) — not `:latest`, not a semver range
 
 **Reactivity:**
 - [ ] Every ConfigMap/Secret in `valuesFrom` or `substituteFrom` has `reconcile.fluxcd.io/watch: Enabled`
