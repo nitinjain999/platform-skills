@@ -143,7 +143,7 @@ resources:
     cpu: 100m
     memory: 128Mi
   limits:
-    memory: 256Mi  # Omit CPU limit — CPU throttling is preferable to OOMKill
+    memory: 256Mi  # Set memory limit to prevent OOMKill; omit CPU limit to avoid throttling
 ```
 
 Run validation and report:

@@ -111,4 +111,8 @@ Steps:
 6. If multiple triggers are needed (e.g., queue depth + cron business hours), explain the OR-max semantics
 7. Output the complete ScaledObject, TriggerAuthentication, and IAM policy skeleton
 
-**Rollback:** `kubectl delete scaledobject <name> -n <namespace>` removes KEDA control and returns the Deployment to its last manual replica count (not zero — KEDA restores `spec.replicas` on deletion). Verify: `kubectl get deployment <name> -n <namespace> -o jsonpath='{.spec.replicas}'` should show the pre-KEDA replica count.
+**Rollback:** `kubectl delete scaledobject <name> -n <namespace>` removes KEDA control. Replica behavior on deletion depends on configuration:
+- `advanced.restoreToOriginalReplicaCount: true` (explicit) → restores the pre-KEDA replica count
+- Default (not set) → leaves replicas at the last scaled value, which may be 0 if scale-to-zero was active
+
+Verify: `kubectl get deployment <name> -n <namespace> -o jsonpath='{.spec.replicas}'` — if replicas are 0, manually scale up: `kubectl scale deployment <name> -n <namespace> --replicas=<desired>`.

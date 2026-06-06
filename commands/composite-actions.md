@@ -316,11 +316,11 @@ Evaluate and report findings in three tiers:
 - name: Fetch data
   run: curl https://example.com?token=${{ inputs.token }}
 
-# ✅ SAFE — input passed via env var, shell reads $TOKEN not the expression
+# ✅ SAFE — input passed via env var; always quote the variable to prevent word-splitting
 - name: Fetch data
   env:
     TOKEN: ${{ inputs.token }}
-  run: curl https://example.com?token=$TOKEN
+  run: curl "https://example.com?token=${TOKEN}"
 ```
 
 This applies to ALL `run:` steps. Never interpolate `${{ inputs.* }}`, `${{ github.event.* }}`, or `${{ steps.*.outputs.* }}` directly into shell commands.

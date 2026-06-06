@@ -26,9 +26,11 @@ gh api repos/{owner}/{repo}/pulls/comments/<comment_id>
 gh api repos/{owner}/{repo}/issues/comments/<comment_id>
 
 # Get only the patch for the file the comment references (from .path field)
-# If the comment has no .path (issue comment), fall back to the full diff
-gh api repos/{owner}/{repo}/pulls/<pr_number>/files \
-  --jq '.[] | select(.filename == "<comment.path>") | .patch'
+# --paginate handles PRs with >30 changed files
+# If the comment has no .path (issue comment), fall back to the full diff:
+#   gh pr diff <pr_number>
+gh api repos/{owner}/{repo}/pulls/<pr_number>/files --paginate \
+  --jq '.[] | select(.filename == "<comment.path>") | .patch // "binary or large diff — no patch available"'
 ```
 
 For `--all`:

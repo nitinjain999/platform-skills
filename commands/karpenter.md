@@ -6,9 +6,10 @@ argument-hint: "[generate|debug|review|audit|plan|migrate|upgrade] [description 
 
 Design, install, debug, review, plan capacity, audit, migrate, and upgrade Karpenter on EKS.
 
-# Verify current stable version before installing:
-helm search repo karpenter/karpenter --versions | head -5
-# Pin to the version from that output — do not use @latest in production
+# Verify current stable version before installing (Karpenter uses OCI, not a Helm repo):
+crane ls public.ecr.aws/karpenter/karpenter | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -5
+# Pin to the version from that output, e.g.:
+# helm upgrade --install karpenter oci://public.ecr.aws/karpenter/karpenter --version x.y.z
 
 All guidance targets the `karpenter.sh/v1` API. The v0.x `Provisioner`/`AWSNodeTemplate` API was removed in v1.0 — if you are on v0.x, use `migrate` mode first.
 
