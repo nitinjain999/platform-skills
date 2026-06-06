@@ -72,8 +72,6 @@ EKS-specific note: if using Bottlerocket nodes, set `driver.kind: modern_ebpf` i
 
 GKE-specific note: COS nodes require `driver.kind: modern_ebpf`. GKE Autopilot does not support Falco (no DaemonSet scheduling).
 
-Reference: `references/runtime-security.md` → eBPF driver, Node OS compatibility
-
 ## Mode: rules
 
 Write and test custom Falco rules.
@@ -118,8 +116,6 @@ Steps:
          ...
    ```
 
-Reference: `references/runtime-security.md` → Rule syntax, Condition fields, Lists and macros
-
 ## Mode: alerts
 
 Configure Falcosidekick to route Falco alerts to Slack, webhooks, or other outputs.
@@ -153,9 +149,9 @@ Steps:
    ```
 4. Deduplication: set `slack.minimumpriority: warning` to suppress DEBUG/INFO noise
 
-Reference: `references/runtime-security.md` → Falcosidekick, Output types
-
 ## Mode: debug
+
+If you need deeper context on any Falco component, load `references/runtime-security.md`.
 
 Diagnose why a Falco rule is not firing.
 
@@ -185,8 +181,6 @@ Checklist (work through in order):
    kubectl exec -n falco daemonset/falco -- cat /etc/falco/falco_rules.yaml | grep -A3 "macro: <macro name>"
    kubectl exec -n falco daemonset/falco -- ls /etc/falco/rules.d/
    ```
-
-Reference: `references/runtime-security.md` → Troubleshooting
 
 ## Mode: harden
 
@@ -220,17 +214,22 @@ Steps:
          object.metadata.labels['security.platform/falco-alert'] != 'critical'
        message: "Deployment is flagged by a Falco critical alert and cannot be re-admitted. Remove the flag after remediation."
    ```
-4. Remediation workflow: fix the workload → remove the label → re-admit
+4. > **Important:** Kyverno blocks new pod admissions only — it does not terminate existing running pods that violate the policy. After applying the policy, manually identify and terminate flagged pods:
+> ```bash
+> # Find pods matching the label that triggered the alert
+> kubectl get pods -n <namespace> -l <label-key>=<label-value>
+> # Terminate with grace period to allow in-flight requests to drain
+> kubectl delete pod <name> -n <namespace> --grace-period=30
+> ```
 
-Reference: `references/runtime-security.md` → Kyverno bridge, `references/kyverno.md` → ValidatingPolicy
+5. Remediation workflow: fix the workload → remove the label → re-admit
+
+**Recovery:** If a Kyverno policy blocks a legitimate workload, remove the triggering label immediately:
+```bash
+kubectl label deployment <name> -n <namespace> security.platform/falco-alert-
+```
+The workload will be re-admitted on next rollout. Fix the underlying security issue, then re-apply the label to re-admit under policy enforcement.
 
 ---
 
-## Closing — Log learnings
-
-After completing any runtime-security mode, log findings while context is fresh:
-
-- Incorrect Falco field, wrong driver, or broken rule condition discovered → log as `ERR` in `.learnings/ERRORS.md`
-- A rule pattern, operator, or configuration approach that worked → log as `LRN` in `.learnings/LEARNINGS.md`
-
-Use `/platform-skills:self-improve log` for each entry. Do not defer to end of session.
+After completing this task, log errors and learnings via `/platform-skills:self-improve log`.

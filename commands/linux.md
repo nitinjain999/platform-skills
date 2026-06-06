@@ -50,6 +50,8 @@ Identify the topic from the input and apply the matching framework:
 4. For Kubernetes DNS: check CoreDNS pod health, test from inside a pod, review `ndots` and search domain behaviour
 5. Propose the fix with TTL and rollback considerations
 
+**Validation:** `dig @<resolver-ip> <domain> +short` — must return an IP. `dig @8.8.8.8 <domain> +short` confirms external resolution. Compare both; difference means split-horizon DNS or upstream issue.
+
 ### lb — Load Balancer (ALB / NLB / Ingress / Gateway API)
 1. Identify the layer (L4 vs L7) and whether the choice is correct for the protocol
 2. For health check failures: test the endpoint directly, check security group source rules, verify target registration
@@ -69,17 +71,23 @@ Identify the topic from the input and apply the matching framework:
 3. Check memory (`free -h`, `/proc/meminfo`) and CPU (`vmstat`, `mpstat`) if resource pressure is suspected
 4. Propose the fix and how to make it survive a reboot
 
+**Validation:** `ps aux --sort=-%cpu | head -10` — top CPU consumers. `cat /proc/<pid>/limits` verifies applied ulimits. `systemctl status <service>` confirms service is running after changes.
+
 ### disk — Disk and Filesystem
 1. Check both space (`df -hT`) and inodes (`df -i`) — inode exhaustion is often overlooked
 2. Find large files or directories with `du -sh` and `find`
 3. Identify the owning process if a file is deleted but space not freed (`lsof | grep deleted`)
 4. Propose cleanup or resize steps with blast radius noted
 
+**Validation:** `df -hT` — verify available space on the target filesystem. `lsblk -f` confirms mount points and filesystem types.
+
 ### network — Network Connectivity and Kernel Tuning
 1. Use the connectivity ladder: L3 (`ping`) → L4 (`nc -zv`) → L7 (`curl -v`)
 2. Check interface state (`ip addr`, `ip route`, `ss -tulnp`)
 3. For high-traffic services: review `net.core.somaxconn`, `tcp_max_syn_backlog`, and `ip_local_port_range`
 4. Provide `sysctl` commands and the `/etc/sysctl.d/` persist pattern
+
+**Validation:** `ss -tulnp | grep LISTEN` — confirms ports are listening as expected. `ip route show` verifies routing table. `ping -c3 <gateway-ip>` confirms L3 reachability.
 
 ### security-groups — Security Group / NSG Rules
 1. Map the traffic flow: source IP → SG on LB → SG on target → NACL (if any)

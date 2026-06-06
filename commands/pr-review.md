@@ -12,6 +12,28 @@ If no PR number or diff is provided, ask the user to paste the diff or provide `
 
 ---
 
+## Interactive Wizard (fires when no mode is specified)
+
+When invoked without a mode argument, ask:
+
+**Q1 — Review type?**
+```
+What type of review do you need?
+  1. cost       — estimate resource cost delta from infrastructure changes
+  2. drift      — compare values across dev / staging / prod environments
+  3. ownership  — identify ownerless or high-blast-radius resources
+  4. compliance — check against security and compliance frameworks
+  5. upgrade    — assess breaking changes and migration effort
+  6. rollback   — score reversibility and blast radius before merging
+  7. full       — run all six modes in sequence
+
+Enter 1–7 or mode name:
+```
+
+Then proceed into the selected mode.
+
+---
+
 ## Mode: cost
 
 Identify changes in the diff that will increase or decrease cloud spend.

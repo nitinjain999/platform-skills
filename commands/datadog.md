@@ -17,8 +17,6 @@ Steps:
 4. Provide verification commands: `kubectl exec -n datadog ds/datadog -- agent status`
 5. Add Unified Service Tagging labels (`DD_ENV`, `DD_SERVICE`, `DD_VERSION`) to app Deployment
 
-Reference: `references/datadog.md` → Agent Setup
-
 ## Mode: instrument
 
 Add APM tracing to a service.
@@ -29,8 +27,6 @@ Steps:
 3. Add Unified Service Tagging env vars to the Deployment manifest
 4. Add custom spans for business-critical paths (payment processing, order creation, etc.)
 5. Show expected APM UI outcome: service map entry, latency/error rate populated
-
-Reference: `references/datadog.md` → APM Instrumentation, Unified Service Tagging
 
 ## Mode: monitor
 
@@ -45,8 +41,6 @@ Steps:
 
 Output monitor query, thresholds, notification message with `@pagerduty-*` and `@slack-*` handles.
 
-Reference: `references/datadog.md` → Monitors, Terraform Monitor
-
 ## Mode: dashboard
 
 Create a Datadog dashboard for a service.
@@ -57,8 +51,6 @@ Steps:
 3. Use APM metrics: `trace.web.request.hits`, `trace.web.request.errors`, `trace.web.request` percentiles
 4. Add template variables for `env` and `service` for reuse across environments
 
-Reference: `references/datadog.md` → Dashboards
-
 ## Mode: slo
 
 Define a Datadog SLO.
@@ -68,8 +60,6 @@ Steps:
 2. Generate Terraform `datadog_service_level_objective` resource
 3. Set both target and warning thresholds
 4. Link SLO to relevant monitors for error budget burn alerts
-
-Reference: `references/datadog.md` → SLOs
 
 ## Mode: investigate
 
@@ -128,9 +118,9 @@ Post to #incidents: "orders-service error rate returning to baseline, fix deploy
 Create a Datadog notebook summarising the orders-service incident timeline.
 ```
 
-Reference: `references/datadog.md` → MCP Server Setup, Incident Investigation Workflow
-
 ## Mode: debug
+
+If you need deeper context on any Datadog component, load `references/datadog.md`.
 
 Diagnose Datadog data gaps or agent issues without the MCP server.
 
@@ -172,8 +162,6 @@ Steps:
 2. Generate the exact `pup` command with flags
 3. For scripting/gate use cases, generate a bash script using the scripting pattern from `references/datadog.md` → pup CLI
 4. Include jq expression to extract the value of interest from `--format json` output
-
-Reference: `references/datadog.md` → pup CLI
 
 ## Mode: llmo
 

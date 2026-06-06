@@ -344,6 +344,8 @@ Reference: `references/agent-self-improve.md` → Global vs project scope
 
 ---
 
+> Load this section only when the user has run `init` or explicitly enables proactive mode.
+
 ## Proactive Agent Protocols
 
 These protocols run automatically when the proactive agent pattern is active. No explicit mode is required.

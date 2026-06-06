@@ -58,6 +58,16 @@ Steps:
 
 5. Warn: Change Failure Rate requires incident source integration — a rate of 0% without incident data is a configuration gap, not a real metric. Never report 0% CFR without confirmed incident source connectivity.
 
+**Validation:**
+```bash
+# Confirm Pushgateway received the metric
+curl -s http://pushgateway:9091/metrics | grep dora_deployment_timestamp
+
+# Confirm Prometheus scraped it (allow up to 1 scrape interval, default 15s)
+curl -s 'http://prometheus:9090/api/v1/query?query=dora_deployment_timestamp' \
+  | jq '.data.result[0].value[1] // "not yet scraped — wait 15s and retry"'
+```
+
 Reference: `references/dora.md` → Open-source instrumentation pattern
 
 ## Mode: dashboard
@@ -73,7 +83,7 @@ Steps:
 
    Verify with:
    ```bash
-   curl -s 'http://prometheus:9090/api/v1/query?query=dora:deployment_frequency:rate30d' | jq .
+   curl -s 'http://prometheus:9090/api/v1/query?query=dora:deployment_frequency:rate30d' | jq '.data.result[0].value[1] // "no data"'
    ```
    If any query returns no data, check the recording rule deployment — see `references/dora.md` for the full rule set.
 
@@ -105,10 +115,10 @@ Steps:
 1. Accept current metric values — either provided directly or queried from Prometheus:
    ```bash
    # Query current values
-   curl -s 'http://prometheus:9090/api/v1/query?query=dora:deployment_frequency:rate30d'
-   curl -s 'http://prometheus:9090/api/v1/query?query=dora:lead_time_seconds:p50'
-   curl -s 'http://prometheus:9090/api/v1/query?query=dora:change_failure_rate:ratio30d'
-   curl -s 'http://prometheus:9090/api/v1/query?query=dora:mttr_seconds:p50'
+   curl -s 'http://prometheus:9090/api/v1/query?query=dora:deployment_frequency:rate30d' | jq '.data.result[0].value[1] // "no data"'
+   curl -s 'http://prometheus:9090/api/v1/query?query=dora:lead_time_seconds:p50' | jq '.data.result[0].value[1] // "no data"'
+   curl -s 'http://prometheus:9090/api/v1/query?query=dora:change_failure_rate:ratio30d' | jq '.data.result[0].value[1] // "no data"'
+   curl -s 'http://prometheus:9090/api/v1/query?query=dora:mttr_seconds:p50' | jq '.data.result[0].value[1] // "no data"'
    ```
 
 2. Map each metric to Elite / High / Medium / Low using the 2023 DORA performance bands:
@@ -176,11 +186,4 @@ Reference: `references/dora.md` → Anti-pattern detection
 
 ---
 
-## Closing — Log learnings
-
-After completing any DORA mode, log findings while context is fresh:
-
-- Missing Pushgateway, broken webhook payload, or a CFR stuck at 0% → log as `ERR` in `.learnings/ERRORS.md`
-- A working instrumentation pattern, benchmark finding, or incident source integration approach → log as `LRN` in `.learnings/LEARNINGS.md`
-
-Use `/platform-skills:self-improve log` for each entry. Do not defer to end of session.
+After completing this task, log errors and learnings via `/platform-skills:self-improve log`.
