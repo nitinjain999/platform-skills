@@ -7,7 +7,7 @@
   "plugins": [
     {
       "name": "platform-skills",
-      "version": "1.29.0",
+      "version": "1.30.0",
       "description": "Production-grade platform engineering handbook for Claude, Codex, and Cursor. 32 slash-command workflows and natural-language skill prompts covering: Kubernetes, Helm, Terraform (blast radius, SOC 2, IAM), Flux CD (Flux Operator, FluxInstance, gitless OCI delivery, 5-workflow cluster debug, 6-phase repo audit), Argo CD, GitHub Actions (composite actions, SHA pinning, OIDC), AWS (CloudFront, WAF, Lambda@Edge), Kyverno, OPA/Rego, KEDA autoscaling, Karpenter node autoscaling, supply chain security (Cosign, SBOM, SLSA), Falco runtime security, chaos engineering (Litmus/Chaos Mesh), DORA metrics, Datadog, Dynatrace, Linkerd, animated docs, AWS MCP profile management (multi-account SSO, Granted, credential_process, profile discovery, VS Code and Claude Code config generation), Renovate dependency automation (generate renovate.json, GHA validation workflow). Every answer includes blast radius, validation steps, and rollback plan.",
       "author": {
         "name": "Nitin Jain"
@@ -169,7 +169,7 @@
       "source": {
         "source": "url",
         "url": "https://github.com/nitinjain999/platform-skills.git",
-        "sha": "7c6a8dcd2d97857c161ff50bf9ad2be739a712eb"
+        "sha": "95bd74d42c4a7eecdb6ccc35af05fcc5301e7909"
       },
       "homepage": "https://github.com/nitinjain999/platform-skills"
     }

@@ -3,7 +3,7 @@
 > A production-grade field handbook for platform, DevOps, SRE, and cloud engineers covering Kubernetes, Flux CD, Terraform, GitHub Actions, AWS, OPA/Rego, KEDA, Karpenter, supply chain security, Falco, observability, and more. Use it on GitHub, as a local reference, or with Claude, Codex, Cursor, and Copilot for interactive guidance with blast radius, validation steps, and rollback plans built in.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-v1.29.0-0e1117)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-v1.30.0-0e1117)](CHANGELOG.md)
 [![Domains](https://img.shields.io/badge/Domains-38-4c8eda)](references/)
 [![Commands](https://img.shields.io/badge/Commands-32-e87c2b)](commands/)
 [![Examples](https://img.shields.io/badge/Examples-28-6f42c1)](examples/)
@@ -19,7 +19,8 @@
 | **Claude Code** | Slash commands (`/platform-skills:review`, `/platform-skills:debug`, and 9 more), interactive guidance, automatic activation on relevant files |
 | **Codex** | Skill invocation with `$platform-skills`, loaded on demand in any Codex session |
 | **Cursor** | Project rules for Chat and Agent — platform review and generation in every file context |
-| **GitHub Copilot** | Chat instructions committed to your repo — available to your whole team without individual installs |
+| **GitHub Copilot plugin** | Interactive slash commands in Copilot Chat — install once per user via `copilot plugin install` |
+| **GitHub Copilot (team)** | Chat instructions committed to your repo — available to your whole team without individual installs |
 | **GitHub (no AI tool)** | Browse `references/` and `examples/` directly — a standalone field handbook |
 
 ---
@@ -52,9 +53,10 @@ cd platform-skills
 | Tool | Best for | Quick install |
 |---|---|---|
 | Claude Code | Interactive plugin workflows and slash commands | `claude plugin marketplace add https://github.com/nitinjain999/platform-skills && claude plugin install platform-skills` |
+| GitHub Copilot plugin | Copilot Chat — interactive slash commands | `copilot plugin marketplace add nitinjain999/platform-skills && copilot plugin install platform-skills@platform-skills` |
 | Codex | Local skill invocation with `$platform-skills` | `./install.sh --codex` |
 | Cursor | Project rules for Chat and Agent | `./install.sh --cursor --target ../your-project` |
-| GitHub Copilot | Team-wide chat instructions committed to the repo | `./install.sh --copilot --target ../your-project` |
+| GitHub Copilot (team) | Team-wide chat instructions committed to the repo | `./install.sh --copilot --target ../your-project` |
 | Everything | Local all-agent setup | `./install.sh --all --target ../your-project` |
 
 Need manual setup, global editor rules, or troubleshooting? See [INSTALLATION.md](INSTALLATION.md).
@@ -249,6 +251,27 @@ Then ask Codex naturally:
 Use $platform-skills to review this Terraform change for ownership, blast radius, validation, and rollback.
 ```
 
+### Install as a GitHub Copilot plugin
+
+Install from the Copilot plugin marketplace to get platform-skills guidance in GitHub Copilot Chat:
+
+```bash
+copilot plugin marketplace add nitinjain999/platform-skills
+copilot plugin install platform-skills@platform-skills
+```
+
+**Verify:**
+```bash
+copilot plugin list
+# platform-skills  enabled
+```
+
+**Upgrade:**
+```bash
+copilot plugin uninstall platform-skills
+copilot plugin install platform-skills@platform-skills
+```
+
 ### Install Cursor rules
 
 Copy the Cursor-native rules into your project so every developer gets the same platform guidance in Cursor Chat and Agent:
@@ -325,7 +348,7 @@ platform-skills/
 
 ## Roadmap
 
-**Current release: v1.29.0** — 32 commands, 38 domain reference guides, 50+ wiki pages.
+**Current release: v1.30.0** — 32 commands, 38 domain reference guides, 50+ wiki pages.
 
 Full version history is in [CHANGELOG.md](CHANGELOG.md).
 

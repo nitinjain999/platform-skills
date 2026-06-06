@@ -5,6 +5,24 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.30.0] - 2026-06-06
+
+### Changed
+
+- **Token efficiency across 21 commands** — removed 30+ redundant per-mode `Reference:` citations (datadog 8×, awesome-docs 6×, chaos 5×, runtime-security 5×, keda 4×); consolidated to one lazy citation in `debug`/`explain` mode per file. Collapsed identical 8-line "Log learnings" closing blocks in `chaos`, `dora`, `runtime-security`, `supply-chain` to a single delegation line. Scoped `conftest parse` output in `opa debug` to policy-referenced paths only via a `grep` + `jq` pipeline. Added conditional gate on `self-improve` Proactive Agent Protocols section (loads only after `init`).
+
+- **Safety gaps filled** — added `**Rollback:**` blocks to `karpenter` (generate/debug/migrate modes), `keda` (scale mode), and `runtime-security` (harden mode). Added warning that Kyverno blocks new admissions only — existing flagged pods must be manually drained. Added hard block in `renovate` preventing Terraform module automerge with a copy-paste override rule. Added safe-vs-unsafe input injection example in `composite-actions` covering `inputs.*`, `github.event.*`, and `steps.*.outputs.*`.
+
+- **Missing validation steps added** — `linkerd` (check, viz edges tls assertion, multicluster gateways); `linux` (dns: dig, disk: df/lsblk, network: ss/ip route/ping, process: ps/limits/systemctl); `dora` (Pushgateway receipt + Prometheus scrape confirmation); `mcp` (MCP Inspector smoke-test); `opa` (pass/fail conftest for generate, zero-skipped assertion for test); `helmcheck` (helm dry-run + kubeconform gate); `terraform` (plan on test workspace, stateful replacement gate).
+
+- **Correctness and version guards** — `karpenter`: replaced static chart version pin with `helm search repo` version check command. `fluxcd`: added bootstrap vs Flux Operator version guard with CRD detection. `terraform`: added tfsec v1.0+ flag change guard with `trivy config` fallback. `observability`: added k6 ≥ 1.0.0 version guard. `karpenter`: cluster-name wizard prompt before discovery tag.
+
+- **UX improvements** — `pr-review`: added interactive mode wizard (1–7 selector). `helmcheck`: added wizard Q3 (container image) and Q4 (namespace). `triage`: file-scoped diff via `gh api .../files | jq select(.filename)`, HEAD verification before classification, consistent thread resolution across all classification types.
+
+### Contributors
+
+- [@geetika-sv](https://github.com/geetika-sv) — token efficiency audit and triage/OPA improvements (issues #91, #92)
+
 ## [1.29.0] - 2026-05-30
 
 ### Added

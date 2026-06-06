@@ -1,6 +1,6 @@
 ---
 name: gitops
-description: Flux CD and Argo CD — two modes. debug: five structured debug workflows for live clusters (installation, source, HelmRelease, Kustomization, ResourceSet) producing a five-section report. audit: six-phase read-only repo analysis (discovery, validation, API compliance, best practices, security) producing a prioritised Critical/Warning/Info report.
+description: "Flux CD and Argo CD — two modes. debug: five structured debug workflows for live clusters (installation, source, HelmRelease, Kustomization, ResourceSet) producing a five-section report. audit: six-phase read-only repo analysis (discovery, validation, API compliance, best practices, security) producing a prioritised Critical/Warning/Info report."
 argument-hint: "debug [describe symptom or paste flux/argocd output] | audit [repo path or paste directory listing]"
 ---
 
@@ -292,11 +292,17 @@ Use before merging, before a release, or when onboarding an unfamiliar repo. Rea
 ### Tooling setup (one-time)
 
 ```bash
-git clone --depth=1 https://github.com/fluxcd/agent-skills.git /tmp/flux-agent-skills
+# Check the latest tag at https://github.com/fluxcd/agent-skills/releases before cloning
+git clone --depth=1 --branch v0.2.0 https://github.com/fluxcd/agent-skills.git /tmp/flux-agent-skills
 SCRIPTS=/tmp/flux-agent-skills/skills/gitops-repo-audit/scripts
 ```
 
 **Prerequisites:** `awk` (discover), `yq >= 4.50` + `kustomize >= 5.8` + `kubeconform >= 0.7` (validate), `flux` CLI (check-deprecated).
+
+Verify versions before proceeding:
+```bash
+yq --version && kustomize version && kubeconform -v && flux --version
+```
 
 > Scripts copyright The Flux authors, Apache-2.0. Source: https://github.com/fluxcd/agent-skills
 
@@ -371,9 +377,9 @@ grep -rn "type: oci" . --include="*.yaml"
 
 **HelmRelease:**
 - [ ] `spec.chartRef` (OCI) not `spec.chart.spec`
-- [ ] `spec.install.strategy.name: RetryOnFailure` — not legacy `install.remediation.retries`
+- [ ] `spec.install.strategy.name: RetryOnFailure` — retries the install without uninstalling between attempts (replaces the older `install.remediation` uninstall-between-retries pattern)
 - [ ] Drift detection: `spec.driftDetection.mode: enabled`
-- [ ] Chart version is a semver range — not `:latest`
+- [ ] Chart version is a pinned exact version (e.g. `1.2.3`) — not `:latest`, not a semver range
 
 **Reactivity:**
 - [ ] Every ConfigMap/Secret in `valuesFrom` or `substituteFrom` has `reconcile.fluxcd.io/watch: Enabled`
