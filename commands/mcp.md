@@ -21,6 +21,14 @@ Steps:
 8. Provide MCP Inspector test commands and expected responses
 9. Add deployment checklist (env vars, secrets, logging)
 
+**Validation:**
+```bash
+# Smoke-test the MCP server before connecting a host
+npx @modelcontextprotocol/inspector <your-server-command>
+# This opens an interactive inspector — verify: tools list, resources list, no startup errors
+# If the server is not discovered by the host, run /platform-skills:mcp debug
+```
+
 Reference: `references/mcp.md` → Protocol Fundamentals, TypeScript SDK, Python SDK
 
 ## Mode: review

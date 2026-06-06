@@ -25,6 +25,10 @@ Enter 1–3 or mode name:
 - **review**: `Paste the chart directory listing or file content to review (or provide the chart path):`
 - **security**: `Paste the chart directory listing or file content to audit (or provide the chart path):`
 
+**Q3 — Container image?** (e.g., `myimage:1.0.0` — used to populate `image:` in the deployment template)
+
+**Q4 — Default namespace?** (default: `default` — change if this chart targets a specific namespace)
+
 Then proceed into the relevant mode below.
 
 ---
@@ -100,6 +104,17 @@ helm template myrelease <chart>/ --debug
 helm template myrelease <chart>/ | kubeconform -strict -summary
 ```
 
+**Validation:**
+```bash
+# Dry-run install to catch rendering errors
+helm install --dry-run myrelease <chart-dir>/
+
+# Validate rendered manifests against Kubernetes schemas
+helm template myrelease <chart-dir>/ | kubeconform -strict -summary
+
+# Both must pass with zero errors before committing the chart
+```
+
 ---
 
 ## Mode: review
@@ -109,7 +124,7 @@ Check the chart against this table and report findings grouped by severity:
 | Check | Severity |
 |-------|----------|
 | Missing `_helpers.tpl` | Critical |
-| No resource requests/limits | Critical |
+| No resource requests/limits | Critical | See fix below |
 | No liveness/readiness probes | High |
 | Hardcoded image tag in template | High |
 | Missing `app.kubernetes.io/*` labels | High |
@@ -120,6 +135,16 @@ Check the chart against this table and report findings grouped by severity:
 | `automountServiceAccountToken: true` | Medium |
 | Undocumented values.yaml keys | Low |
 | Deeply nested values (>3 levels) | Low |
+
+**Fix for missing resource requests/limits:** For each container missing resources, add:
+```yaml
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    memory: 256Mi  # Omit CPU limit — CPU throttling is preferable to OOMKill
+```
 
 Run validation and report:
 

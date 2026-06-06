@@ -241,6 +241,22 @@ Apply `pinDigests` based on Q2:
 (remove `pinDigests` line if semver strategy chosen)
 
 `terraform`:
+
+> **WARNING — Terraform modules must never be automerged.** Module source updates change infrastructure blueprints and require human review. Add this rule to always override other automerge settings:
+> ```json
+> {
+>   "packageRules": [
+>     {
+>       "matchManagers": ["terraform"],
+>       "matchDepTypes": ["module"],
+>       "automerge": false,
+>       "labels": ["terraform-module", "requires-review"]
+>     }
+>   ]
+> }
+> ```
+> Place this rule **last** in your `packageRules` array — later rules take precedence in Renovate.
+
 ```json
 {
   "description": "Terraform providers — automerge minor/patch",

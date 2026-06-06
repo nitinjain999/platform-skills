@@ -56,7 +56,7 @@ Steps:
 
 **Theme parameter:** append `--theme github-dark` (default), `--theme docs-light`, or `--theme custom:#bg,#primary,#accent` to override colors. See `references/awesome-docs.md` → Theme System.
 
-Reference: `references/awesome-docs.md` → SVG Patterns, Theme System
+If you need deeper context on SVG patterns, theme configuration, or the quality checklist, load `references/awesome-docs.md`.
 
 ---
 
@@ -86,8 +86,6 @@ Steps:
 5. Commit: `git add <doc-path> assets/ && git commit -m "feat(awesome-docs): animate <doc-filename>"`
    - In batch mode: single commit after all files: `git commit -m "feat(awesome-docs): animate docs in <dir>"`
 
-Reference: `references/awesome-docs.md` → SVG Patterns
-
 ---
 
 ## Mode: update
@@ -102,8 +100,6 @@ Steps:
 5. Show the new SVG — confirm before writing
 6. Overwrite `assets/<filename>.svg`
 7. Commit: `git add assets/<filename>.svg && git commit -m "fix(awesome-docs): update <diagram-name> — <what changed>"`
-
-Reference: `references/awesome-docs.md` → SVG Patterns
 
 ---
 
@@ -132,8 +128,6 @@ Steps:
 6. Include the base ref used: `(diffed against <ref>)` at the top of the report
 7. Suggest: "Run `/platform-skills:awesome-docs update` for each flagged diagram."
 
-Reference: `references/awesome-docs.md` → Quality Checklist
-
 ---
 
 ## Mode: audit
@@ -149,8 +143,6 @@ Steps:
    - All SVG files under 50KB (larger files may not render inline on GitHub)
 3. Report findings as a numbered list: `[PASS]` or `[FAIL] — <what to fix>`
 4. Print total: `X passed, Y failed`
-
-Reference: `references/awesome-docs.md` → Quality Checklist, GitHub SVG Animation Constraints
 
 ---
 
@@ -170,8 +162,6 @@ Steps:
    - Windows: `start http://localhost:8080/<doc-path>`
    - Or paste `http://localhost:8080/<doc-path>` directly into your browser
 4. Tell the user: "Preview running at http://localhost:8080/<doc-path>. Press Ctrl+C to stop the server."
-
-Reference: `references/awesome-docs.md`
 
 ---
 
@@ -194,5 +184,3 @@ Steps:
      for f in assets/*.svg; do svgexport "$f" "${f%.svg}.png" 2x; done
      ```
    - Explain: "PNG export requires `svgexport` or Puppeteer. Install with `npm install -g svgexport` then run the command above."
-
-Reference: `references/awesome-docs.md` → Multi-Platform Export

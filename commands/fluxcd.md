@@ -27,6 +27,11 @@ Determine which workflow applies from the input. If it is ambiguous, ask exactly
 
 ## Debug mode — live cluster issue
 
+> **Version check:** `flux --version` before proceeding.
+> - Flux v2.3+: use `flux bootstrap` (GitOps Toolkit) — this is the standard path.
+> - Flux Operator (v2.7+): use a `FluxInstance` CR instead. `flux bootstrap` is not used in Operator mode.
+> - If unsure: `kubectl get crd fluxinstances.fluxcd.io` — if this CRD exists, you are running Flux Operator.
+
 Use when something is broken or not reconciling on a live cluster. Invoke as `/platform-skills:gitops debug`.
 
 **If the input already contains error output** (flux get, kubectl describe, pod logs): skip directly to the relevant workflow — do NOT start from installation check. Match the error to the layer first:

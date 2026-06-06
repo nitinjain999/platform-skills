@@ -245,11 +245,4 @@ Reference: `references/supply-chain.md` → SLSA levels, slsa-github-generator
 
 ---
 
-## Closing — Log learnings
-
-After completing any supply-chain mode, log findings while context is fresh:
-
-- Incorrect action version, wrong flag, or broken reference discovered → log as `ERR` in `.learnings/ERRORS.md`
-- A pattern or approach that worked well → log as `LRN` in `.learnings/LEARNINGS.md`
-
-Use `/platform-skills:self-improve log` for each entry. Do not defer to end of session.
+After completing this task, log errors and learnings via `/platform-skills:self-improve log`.

@@ -96,6 +96,10 @@ Steps:
 2. Write ramp-up → steady-state → ramp-down stages
 3. Set `thresholds` matching the SLO
 4. Add `check()` assertions on status code and response time
+
+> **Version check:** `k6 --version` — must be ≥ 1.0.0. k6 v0.x and v1.x have incompatible JavaScript API syntax.
+> Upgrade: `brew install k6` (macOS) or see https://grafana.com/docs/k6/latest/set-up/install-k6/ for other platforms.
+
 5. Run: `k6 run --out json=results.json load-test.js`
 6. Interpret results: p95/p99 latency, error rate, throughput achieved vs. thresholds
 

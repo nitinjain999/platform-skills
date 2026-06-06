@@ -19,14 +19,14 @@ Steps:
    - `apiVersion: keda.sh/v1alpha1`
    - `scaleTargetRef.name` matching the exact Deployment/StatefulSet/Job name
    - `minReplicaCount: 0` only if the service can tolerate cold-start latency; otherwise `minReplicaCount: 1`
+
+> **Scale-to-zero warning:** Setting `minReplicaCount: 0` means the Deployment will have 0 replicas when the queue/metric is empty. Cold-start latency applies — confirm this is acceptable before enabling.
    - `pollingInterval` and `cooldownPeriod` sized to the workload pattern (see table in `references/keda.md`)
    - Trigger-specific `metadata` with `activationThreshold`/`activationQueueLength` set to avoid flapping on sparse events
    - `authenticationRef` pointing to a `TriggerAuthentication` — never inline credentials in the ScaledObject
    - For AWS: prefer IRSA (`podIdentity.provider: aws`) over static key/secret pairs
 4. Generate the companion `TriggerAuthentication` or `ClusterTriggerAuthentication`
 5. Show validation command: `kubectl describe scaledobject <name> -n <ns>` and the expected `Active: true` condition
-
-Reference: `references/keda.md` → ScaledObject, ScaledJob, TriggerAuthentication
 
 ## Mode: debug
 
@@ -57,7 +57,7 @@ Steps:
 5. State the most likely root cause with the exact field or resource to fix
 6. Show the corrected spec section and the command to verify it
 
-Reference: `references/keda.md` → Troubleshooting
+If you need deeper context on KEDA troubleshooting, scaling lifecycle, or scaler-specific behaviour, load `references/keda.md`.
 
 ## Mode: review
 
@@ -93,8 +93,6 @@ Separate findings into:
 - **Improvement** — should fix (tune cooldownPeriod, add activationThreshold)
 - **Note** — informational (consider IRSA, document cold-start expectations)
 
-Reference: `references/keda.md` → Security Patterns, Scaling Lifecycle
-
 ## Mode: scale
 
 Design the scaling strategy for a workload from requirements.
@@ -113,4 +111,4 @@ Steps:
 6. If multiple triggers are needed (e.g., queue depth + cron business hours), explain the OR-max semantics
 7. Output the complete ScaledObject, TriggerAuthentication, and IAM policy skeleton
 
-Reference: `references/keda.md` → KEDA vs HPA decision matrix, Scalers
+**Rollback:** `kubectl delete scaledobject <name> -n <namespace>` removes KEDA control and returns the Deployment to its last manual replica count (not zero — KEDA restores `spec.replicas` on deletion). Verify: `kubectl get deployment <name> -n <namespace> -o jsonpath='{.spec.replicas}'` should show the pre-KEDA replica count.

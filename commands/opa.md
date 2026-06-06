@@ -52,7 +52,15 @@ Steps:
 4. Show the Conftest command to test the policy against sample input
 5. State CI placement: conftest runs **after `terraform validate`** and **before `terraform plan`** as a blocking gate — failing conftest must prevent plan from running
 
-Reference: `references/opa.md` → Rule Types, Input Shape, Rego v1 Syntax
+**Validation:** Test the policy against both a passing and a failing resource before deploying to CI:
+```bash
+# Should produce no output (policy passes)
+conftest test --policy <dir> <passing-resource.yaml>
+
+# Should produce a deny/warn message (policy fires)
+conftest test --policy <dir> <failing-resource.yaml>
+```
+Both must behave as expected. A policy that never fires on a failing resource is not enforcing anything.
 
 ## Mode: test
 
@@ -70,7 +78,12 @@ Steps:
 4. Write a helper function that builds the input fixture for each case — keep fixtures minimal and focused on the attributes the rule actually checks
 5. Run tests: `conftest verify --policy <dir>`
 
-Reference: `references/opa.md` → Unit Tests
+**Validation:** All tests must pass with zero skipped:
+```bash
+conftest verify --policy <dir>
+# Expected: PASS - X tests, 0 failures, 0 skipped
+# Skipped tests mean test fixtures are incomplete — fix before merging
+```
 
 ## Mode: validate
 
@@ -83,8 +96,6 @@ Steps:
 4. **Unit tests**: `conftest verify --policy <dir>` — all `*_test.rego` files must pass
 5. **Integration test** (if test data is available): `conftest test --policy <dir> <input-files>`
 6. Report: PASS or list each failing step with the exact error and the fix
-
-Reference: `references/opa.md` → Validation Pipeline, Regal
 
 ## Mode: explain
 
@@ -100,22 +111,26 @@ Steps:
 3. Show the input shape the rule expects — map each `input.<field>` to the resource attribute it reads
 4. Note any dependencies on `data.*` (external allow-lists or config)
 
-Reference: `references/opa.md` → Input Shape, Rego v1 Syntax
-
 ## Mode: debug
 
 Diagnose why a policy is not firing as expected.
 
 Steps:
-1. Collect: policy file, input file or `conftest parse <file>` output, and the `conftest test` or `conftest verify` output
-2. Check in order:
+1. Collect: policy file, input file, and the `conftest test` or `conftest verify` output
+2. Check input shape — extract only the paths the policy reads:
+   ```bash
+   # Extract every input.<path> reference from the policy
+   grep -oE 'input\.[a-zA-Z0-9_.[\]]+' <policy-file> | sort -u
+   # Build a targeted jq filter from those paths and run it
+   conftest parse <input-file> | jq '{field1: .<path1>, field2: .<path2>, ...}'
+   ```
+   Compare each extracted path against the parsed output. A missing or mismatched key is the most common cause of silent policy failures.
+3. Check in order:
    - **Namespace mismatch**: is the package name matching `--namespace` or `--all-namespaces`?
    - **Rule name**: does the rule start with `deny`, `warn`, or `violation`? Other names are silently ignored by Conftest
-   - **Input shape mismatch**: run `conftest parse <input-file>` and compare each `input.<path>` in the rule against the actual parsed structure
+   - **Input shape mismatch**: identified above in step 2
    - **Partial vs complete rule**: is the rule a set comprehension (`deny[msg]`) or a boolean? Conftest expects set comprehensions for message output
    - **`import rego.v1` missing**: without it, `if`, `in`, `contains` may not work as expected
    - **`some` missing**: iterating without `some` can cause unexpected behaviour in Rego v0 compatibility mode
-3. State the most likely root cause with the exact line to fix
-4. Show the corrected rule and how to verify it fires: `conftest test --policy <dir> <input>`
-
-Reference: `references/opa.md` → Troubleshooting
+4. State the most likely root cause with the exact line to fix
+5. Show the corrected rule and how to verify it fires: `conftest test --policy <dir> <input>`

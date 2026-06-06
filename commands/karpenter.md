@@ -6,7 +6,11 @@ argument-hint: "[generate|debug|review|audit|plan|migrate|upgrade] [description 
 
 Design, install, debug, review, plan capacity, audit, migrate, and upgrade Karpenter on EKS.
 
-All guidance targets **Karpenter v1.12.1** (latest stable, May 2026), `karpenter.sh/v1` API. The v0.x `Provisioner`/`AWSNodeTemplate` API was removed in v1.0 — if you are on v0.x, use `migrate` mode first.
+# Verify current stable version before installing:
+helm search repo karpenter/karpenter --versions | head -5
+# Pin to the version from that output — do not use @latest in production
+
+All guidance targets the `karpenter.sh/v1` API. The v0.x `Provisioner`/`AWSNodeTemplate` API was removed in v1.0 — if you are on v0.x, use `migrate` mode first.
 
 ---
 
@@ -62,6 +66,7 @@ Design a production-ready NodePool and EC2NodeClass from requirements.
 
 2. Generate `EC2NodeClass` with:
    - `amiSelectorTerms`: use `alias: al2023@latest` for dev/staging; use a **pinned AMI ID** (`id: ami-xxxx`) for production. Floating `@latest` in production means an untested AMI can land on fleet nodes during any scheduled SSM parameter update. Ask the user which environment this is for before choosing.
+   > Ask user: "What is your EKS cluster name?" — substitute into `karpenter.sh/discovery: <cluster-name>` before applying.
    - `subnetSelectorTerms` and `securityGroupSelectorTerms` using `karpenter.sh/discovery: <cluster-name>` tags
    - `instanceProfile` or `role` matching the Karpenter node IAM role
    - `blockDeviceMappings` with encrypted EBS and IMDSv2 enforced via `metadataOptions`
@@ -88,6 +93,8 @@ Design a production-ready NodePool and EC2NodeClass from requirements.
    ```
 
 Reference: `references/karpenter.md` → NodePool design, EC2NodeClass, IAM
+
+**Rollback:** `kubectl delete nodepool <name> && kubectl delete ec2nodeclass <name>` — Karpenter immediately stops provisioning nodes from these templates. Existing nodes remain until drained by the scheduler or TTL.
 
 ---
 
@@ -144,6 +151,8 @@ Diagnose why pods are stuck Pending or nodes are not provisioning.
 4. State the most likely root cause with the exact field or annotation to fix. Show the corrected spec section. Show the command to verify the fix worked.
 
 Reference: `references/karpenter.md` → Troubleshooting
+
+**Rollback:** If you edited NodePool/EC2NodeClass during debug: `kubectl apply -f <original-backup>.yaml` to restore. Always take a backup before editing: `kubectl get nodepool <name> -o yaml > nodepool-backup.yaml`.
 
 ---
 
@@ -404,6 +413,8 @@ Move a cluster from Cluster Autoscaler to Karpenter safely.
    - **Two scalers competing** — the window between CA scale-down and Karpenter taking over is the riskiest moment; keep CA at 0 replicas, not deleted, until Karpenter is confirmed healthy
 
 Reference: `references/karpenter.md` → Migration from Cluster Autoscaler
+
+**Rollback:** If drain was initiated: `kubectl uncordon <node>` re-admits workloads immediately. Delete the new NodePool/EC2NodeClass with `kubectl delete nodepool <name>`. Restore the original node group config in Terraform before running `terraform apply`.
 
 ---
 

@@ -308,6 +308,23 @@ Evaluate and report findings in three tiers:
 - External `uses:` with mutable tag (`@v4`, `@main`, `@latest`) — supply chain risk
 - `run:` step missing `shell:` — error on many runners
 - `${{ inputs.* }}` interpolated directly in `run:` commands — injection risk
+
+**Input injection — safe vs unsafe:**
+
+```yaml
+# ❌ UNSAFE — input interpolated directly into shell, enables injection
+- name: Fetch data
+  run: curl https://example.com?token=${{ inputs.token }}
+
+# ✅ SAFE — input passed via env var, shell reads $TOKEN not the expression
+- name: Fetch data
+  env:
+    TOKEN: ${{ inputs.token }}
+  run: curl https://example.com?token=$TOKEN
+```
+
+This applies to ALL `run:` steps. Never interpolate `${{ inputs.* }}`, `${{ github.event.* }}`, or `${{ steps.*.outputs.* }}` directly into shell commands.
+
 - Secrets accessed via `${{ secrets.* }}` inside the action — always empty, silent failure
 
 **WARNING** (should fix)
