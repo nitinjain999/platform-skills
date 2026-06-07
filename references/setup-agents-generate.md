@@ -10,7 +10,7 @@ Read in order. Stop as soon as runtime + framework + deploy target are clear.
 head -30 README.md 2>/dev/null
 ls -1
 cat package.json 2>/dev/null || cat pyproject.toml 2>/dev/null || cat go.mod 2>/dev/null
-ls -t .github/workflows/*.yml 2>/dev/null | head -1 | xargs head -40 2>/dev/null
+{ f=$(ls -t .github/workflows/*.yml 2>/dev/null | head -1); [ -n "$f" ] && head -40 "$f"; }
 grep -s 'ENTRYPOINT\|CMD' Dockerfile 2>/dev/null | tail -3
 test -f .vscode/extensions.json && cat .vscode/extensions.json
 test -f CLAUDE.md && echo "CLAUDE.md present"
@@ -254,22 +254,24 @@ echo "--- Checking agent file references (staleness) ---"
 # Process substitution keeps FAIL++ in the same shell — piped while loses subshell increments
 for agent in .github/agents/*.agent.md .cursor/rules/*.mdc; do
   [ -f "$agent" ] || continue
-  # Check file paths (extension-bearing references)
+  # Pre-filter: remove lines containing URLs before extracting tokens.
+  # grep -o strips the scheme first, so post-extraction filtering misses github.com/foo.md.
+  # Also use -E for portable extended-regex on both GNU and BSD grep.
+  AGENT_LINES=$(grep -vE 'https?://' "$agent")
+  # Check file paths (extension-bearing references); also allow leading dot for dotfiles
   while read -r p; do
     test -f "$p" || { echo "⚠️  $agent references missing file: $p"; ((FAIL++)); }
-  done < <(grep -oE '[a-zA-Z][a-zA-Z0-9_/-]+\.(py|ts|go|tf|yaml|yml|json|md)' "$agent" \
-    | grep -v 'https\?://' \
-    | grep -v '^example\.' \
-    | grep -v '\.example\.')
+  done < <(echo "$AGENT_LINES" \
+    | grep -oE '\.?[a-zA-Z][a-zA-Z0-9_/-]+\.(py|ts|go|tf|yaml|yml|json|md)' \
+    | grep -vE '^example\.' \
+    | grep -vE '\.example\.')
   # Check directory references (trailing slash or bare paths like src/, tests/, .github/workflows/)
-  # Regex allows an optional leading dot so .github/ is captured as .github/, not github/
   while read -r d; do
-    # Strip trailing slash for test -d
     test -d "${d%/}" || { echo "⚠️  $agent references missing directory: $d"; ((FAIL++)); }
-  done < <(grep -oE '\.?[a-zA-Z][a-zA-Z0-9_./-]+/' "$agent" \
-    | grep -v 'https\?://' \
-    | grep -v '^example\.' \
-    | grep -v '\.example\.' \
+  done < <(echo "$AGENT_LINES" \
+    | grep -oE '\.?[a-zA-Z][a-zA-Z0-9_./-]+/' \
+    | grep -vE '^example\.' \
+    | grep -vE '\.example\.' \
     | sort -u)
 done
 

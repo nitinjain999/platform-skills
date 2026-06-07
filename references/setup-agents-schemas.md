@@ -38,7 +38,11 @@ mcp-servers:
     type: 'local'
     command: 'npx'
     args: ['-y', '@modelcontextprotocol/server-github']
-    tools: ["*"]
+    tools:
+      - github/create_pull_request
+      - github/get_file_contents
+      - github/list_commits
+      # Scope to only the tools this agent actually needs — avoid tools: ["*"]
     env:
       GITHUB_PERSONAL_ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ---
