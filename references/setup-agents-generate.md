@@ -99,16 +99,31 @@ Does this look right? Add navigator?
 
 ### Step 6b — Model selection
 
-After the roster is confirmed, ask the developer to choose a model. Present a suggestion per agent based on role — don't ask them to choose blindly.
+After the roster is confirmed, show the model menu and suggest a model per agent role. The developer should see costs before deciding — not after.
+
+**Model menu (show this verbatim):**
 
 ```
+Available models (prices per 1M tokens, input → output):
+
+  Anthropic
+    claude-opus-4-8       $5  → $25    Most capable — complex reasoning, agentic coding, 1M ctx
+    claude-opus-4-6       $5  → $25    Opus tier, extended thinking, 1M ctx
+    claude-sonnet-4-6     $3  → $15    Best speed/intelligence balance, 1M ctx  ✦ recommended default
+    claude-sonnet-4-5     $3  → $15    Sonnet tier, 200K ctx
+    claude-haiku-4-5      $1  →  $5    Fastest, lowest cost, 200K ctx
+
+  OpenAI
+    gpt-5.4               $2.50 → $10   Flagship, 128K ctx
+    gpt-5.4-mini          $0.75 →  $3   Fast, lower cost, 128K ctx
+
 Which model should each agent use?
 
-  coordinator   → claude-sonnet-4-5  (routing + planning, needs broad judgment)
-  app           → claude-sonnet-4-5  (code + review, balanced capability/cost)
-  infra         → claude-opus-4      (suggested — infra changes are high-risk; stronger reasoning reduces mistakes)
-  test-writer   → claude-haiku-4     (repetitive generation; fast and cheap is fine)
-  navigator     → claude-haiku-4     (read-only Q&A; no reasoning depth needed)
+  coordinator   → claude-sonnet-4-6   (routing + planning, needs broad judgment)
+  app           → claude-sonnet-4-6   (code tasks, balanced capability/cost)
+  infra         → claude-opus-4-8     (⚠ high blast radius — stronger reasoning pays off here)
+  test-writer   → claude-haiku-4-5    (repetitive generation; speed and cost matter more)
+  navigator     → claude-haiku-4-5    (read-only Q&A; no depth needed)
 
 Accept suggestions? (y / change one / change all)
 ```
@@ -117,17 +132,15 @@ Accept suggestions? (y / change one / change all)
 
 | Role | Suggested model | Reason |
 |------|----------------|--------|
-| `infra`, `deploy` | Most capable (e.g. `claude-opus-4`, `o3`) | High blast radius — stronger reasoning reduces costly mistakes |
-| `coordinator` | Balanced (e.g. `claude-sonnet-4-5`, `gpt-4o`) | Routing + multi-agent planning; needs broad judgment |
-| `app`, `platform`, `data-pipeline`, `ml` | Balanced | Code quality and context-aware decisions |
-| `test-writer`, `reviewer` | Fast (e.g. `claude-haiku-4`, `gpt-4o-mini`) | Repetitive or read-only; speed and cost matter more |
-| `navigator` | Fast | Read-only Q&A; no autonomous action |
+| `infra`, `deploy` | `claude-opus-4-8` | High blast radius — a wrong infra decision costs far more than the token difference |
+| `coordinator` | `claude-sonnet-4-6` | Multi-agent routing + planning; needs broad judgment at reasonable cost |
+| `app`, `platform`, `data-pipeline`, `ml` | `claude-sonnet-4-6` | Code quality and context-aware decisions |
+| `test-writer`, `reviewer` | `claude-haiku-4-5` | Repetitive or read-only; fast and cheap is the right trade-off |
+| `navigator` | `claude-haiku-4-5` | Read-only Q&A; no autonomous action |
 
-If the developer uses a non-Anthropic model provider: map to equivalent tiers — e.g. `gpt-4o` as balanced, `gpt-4o-mini` as fast, `o3` as most capable. Match on capability tier, not exact name.
+On "change one": ask which agent, then ask for the model name. Accept free text — the developer may use a model not in this list (Bedrock cross-region inference, Azure, Vertex, etc.).
 
-On "change one": ask which agent, then ask for the model name. Accept free text — don't enumerate every possible model.
-
-Write the chosen model into each agent file's `model:` frontmatter field. Record the per-agent choices in the `<!-- setup-agents metadata -->` block so upgrade mode can re-surface them.
+Write the chosen model into each agent file's `model:` frontmatter field. Record per-agent choices in the `<!-- setup-agents metadata -->` block so upgrade mode can re-surface them without asking again.
 
 ### Step 7 — Generate files
 
