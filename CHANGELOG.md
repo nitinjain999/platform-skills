@@ -5,6 +5,34 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.31.0] - 2026-06-07
+
+### Added
+
+- Command workflow count increases to 33 commands.
+- `/platform-skills:setup-agents` — scaffold a multi-agent AI setup for any repo:
+  - Interview-driven: ranked scan (stop-early) + "last change shipped" opening question; one answer replaces a 5-question form
+  - Generates agents for GitHub Copilot (`.github/agents/`), Claude Code (`CLAUDE.md`), Cursor (`.cursor/rules/`), Codex (`agents/openai.yaml`), and Windsurf (`.windsurfrules`) — any combination
+  - Navigator agent offered for every repo — the agent used every day, not just for tasks
+  - AGENTS.md as tool-neutral source of truth, including `## How to invoke agents` (@mentions, Copilot App, Claude Code, Cursor)
+  - Model selection step: fetches live pricing from provider docs at generate time; suggests a model tier per role (opus for infra/high-blast-radius, sonnet for coordinator/app, haiku for test-writer/navigator); `model:` written only to tools that support it in frontmatter (Copilot `.agent.md`, Codex YAML)
+  - Metadata block in AGENTS.md encodes interview answers and model choices; upgrade reads it — no cold start
+  - Minimum viability check: won't generate shallow agents if insufficient signal
+  - Monorepo support: asks about team ownership boundaries when multi-service detected
+  - Active staleness guard: verifies file paths (`test -f`) and directory references (`test -d`) before writing; CI-safe `scripts/verify-agents.sh` exits non-zero on missing references
+  - Tool migration detection in upgrade mode (abandoned agent files when AI tool no longer present)
+  - Per-item approval in upgrade mode: `y / n / apply-all / skip-all`
+  - Review mode: 6-dimension rubric (ownership, knowledge specificity, boundaries, autonomy, handoff, staleness); output options — commit to repo, GitHub PR comment, or chat only
+  - `commands/setup-agents.md` is ≤60 lines; all mode steps in lazy-loaded reference files
+
+### Fixed
+
+- Copilot agent files now generated at `.github/agents/` (not `.github/copilot/`) — the correct discovery path for VS Code and Copilot App
+- Copilot `.agent.md` frontmatter: removed invalid `target: all`; valid values are `vscode`, `github-copilot`, or omitted (both); `mcp-servers` block now only emitted for `target: github-copilot` profiles — VS Code agents use `.vscode/settings.json` for MCP
+- Copilot tool aliases corrected: `read`, `execute`, `edit`, `search`, `web` (not `read_file`, `run_terminal_command`, `create_file`, `edit_file`)
+- `mcp-servers` schema corrected to YAML object keyed by server name (not an array)
+- Staleness checker in `verify-agents.sh` and review mode now checks directory references with `test -d` in addition to file references with `test -f`
+
 ## [1.30.0] - 2026-06-06
 
 ### Changed

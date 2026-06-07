@@ -287,7 +287,7 @@ echo ""
 echo "=== Domain coverage: README.md mentions, SKILL.md reference, examples/ directory ==="
 
 # Cross-cutting docs with no per-domain example directory or command — skip coverage checks
-SKIP_DOMAINS="platform-operating-model|platform-mindset|secrets|pr-review"
+SKIP_DOMAINS="platform-operating-model|platform-mindset|secrets|pr-review|setup-agents-generate|setup-agents-add|setup-agents-prompts|setup-agents-schemas|setup-agents-template|setup-agents-review"
 
 for ref in references/*.md; do
   domain="$(basename "$ref" .md)"

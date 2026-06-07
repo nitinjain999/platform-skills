@@ -1,6 +1,6 @@
 {
   "name": "platform-skills",
-  "version": "1.30.0",
+  "version": "1.31.0",
   "description": "Practical guidance for platform engineers across Claude, Codex, Cursor, and Copilot: Kubernetes, Kyverno, Helm, Terraform, Flux CD (Flux Operator, FluxInstance, gitless OCI delivery, cluster debug, repo audit), Argo CD, GitHub Actions (composite actions, SHA pinning, OIDC, 11 production examples), AWS (CloudFront, WAF, Lambda@Edge, IAM, IRSA), Azure (AKS workload identity), GKE (Workload Identity Federation), Linkerd, Linux, networking, MCP development, observability, SOC 2 compliance, PR review, PR triage, KEDA autoscaling, Karpenter node autoscaling, supply chain security (Cosign, SBOM, SLSA), Falco runtime security, Chaos Engineering, DORA Metrics, LLM Observability (Datadog LLMObs), and animated docs. Every answer includes blast radius, validation steps, and rollback plan.",
   "author": {
     "name": "Nitin Jain",
@@ -71,7 +71,14 @@
     "demo-doc",
     "github-profile",
     "documentation-generator",
-    "awesome-docs"
+    "awesome-docs",
+    "setup-agents",
+    "multi-agent",
+    "copilot-agents",
+    "agent-scaffold",
+    "agents-md",
+    "ai-agents",
+    "navigator-agent"
   ],
   "skills": [
     "./skills/platform-skills"
@@ -108,6 +115,7 @@
     "./commands/fluxcd.md",
     "./commands/aws-profile.md",
     "./commands/renovate.md",
-    "./commands/karpenter.md"
+    "./commands/karpenter.md",
+    "./commands/setup-agents.md"
   ]
 }

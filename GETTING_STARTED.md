@@ -143,7 +143,7 @@ My Flux Kustomization `apps` is stuck in NotReady with: "context deadline exceed
 - It cannot see your cluster or cloud account — paste the relevant output
 - It works best on one concrete problem at a time, not "review everything"
 
-### All 32 command workflows
+### All 33 command workflows
 
 See [COMMANDS.md](COMMANDS.md) for every command with modes and example prompts:
 
@@ -181,6 +181,7 @@ See [COMMANDS.md](COMMANDS.md) for every command with modes and example prompts:
 | `composite-actions` | Scaffold, review, secure, debug, publish, and improve composite GitHub Actions |
 | `fluxcd` | FluxCD entry point — routes to `gitops debug`, `gitops audit`, `helmcheck`, or `review` based on input |
 | `renovate` | Generate renovate.json covering all dep file types in the repo, or emit a GHA validation workflow |
+| `setup-agents` | Scaffold multi-agent AI configs for any repo — generate, upgrade, add, or review existing agents |
 
 ### How the agent and skill system work
 
