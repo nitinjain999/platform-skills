@@ -249,7 +249,7 @@ gh copilot suggest "$(cat your-deployment.yaml) — review this for production r
 
 ## Skill workflows in Copilot and Cursor
 
-Platform skills ships 32 command workflows. In Claude Code they are slash commands (`/platform-skills:review`). In Copilot Chat and Cursor Chat you phrase them as natural language — the instructions or rules files make the assistant apply the same structured output.
+Platform skills ships 33 command workflows. In Claude Code they are slash commands (`/platform-skills:review`). In Copilot Chat and Cursor Chat you phrase them as natural language — the instructions or rules files make the assistant apply the same structured output.
 
 ### review — production-readiness check on any file
 

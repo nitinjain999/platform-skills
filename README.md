@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-v1.30.0-0e1117)](CHANGELOG.md)
 [![Domains](https://img.shields.io/badge/Domains-38-4c8eda)](references/)
-[![Commands](https://img.shields.io/badge/Commands-32-e87c2b)](commands/)
+[![Commands](https://img.shields.io/badge/Commands-33-e87c2b)](commands/)
 [![Examples](https://img.shields.io/badge/Examples-28-6f42c1)](examples/)
 [![Editors](https://img.shields.io/badge/Editors-VSCode%20%7C%20Cursor%20%7C%20Copilot-2ea44f)](EDITOR_INTEGRATIONS.md)
 [![GitHub Stars](https://img.shields.io/github/stars/nitinjain999/platform-skills?style=flat&label=Stars&color=0e1117)](https://github.com/nitinjain999/platform-skills/stargazers)
@@ -164,6 +164,7 @@ All layers work independently. Agent integrations are optional.
 | 📊 DORA Metrics | [references/dora.md](references/dora.md) | Deployment Frequency, Lead Time, Change Failure Rate, MTTR — GitHub Actions + Prometheus Pushgateway instrumentation, recording rules, Grafana dashboards, SaaS decision matrix, anti-pattern detection — `/platform-skills:dora` |
 | ✨ Awesome Docs | [references/awesome-docs.md](references/awesome-docs.md) | Animated GitHub-safe Markdown document generation — any doc type (README, architecture guide, runbook, tutorial, API reference, RFC, post-mortem, or custom), 4 SVG patterns, convert existing docs, diff for staleness, audit quality, local preview, multi-platform export — `/platform-skills:awesome-docs` |
 | 🔄 Renovate | [references/renovate.md](references/renovate.md) | Dependency update automation — scan repo and generate renovate.json per ecosystem, private registry auth (ECR/GCR/ACR/Harbor/Helm OCI), custom regex managers for internal GitHub modules and private Terraform registries, pre-commit hook, GitHub Actions validation workflow — `/platform-skills:renovate` |
+| 🤖 Setup Agents | [references/setup-agents.md](references/setup-agents.md) | Multi-agent AI scaffold for any repo — ranked scan, interview-driven generate/upgrade/add/review modes, GitHub Copilot, Claude Code, Cursor, and Codex configs — `/platform-skills:setup-agents` |
 
 ## Core principles
 
@@ -348,7 +349,7 @@ platform-skills/
 
 ## Roadmap
 
-**Current release: v1.30.0** — 32 commands, 38 domain reference guides, 50+ wiki pages.
+**Current release: v1.30.0** — 33 commands, 38 domain reference guides, 50+ wiki pages.
 
 Full version history is in [CHANGELOG.md](CHANGELOG.md).
 

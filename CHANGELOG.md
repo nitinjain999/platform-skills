@@ -5,6 +5,25 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Command workflow count increases to 33 commands.
+- `/platform-skills:setup-agents`:
+  - Interview-driven multi-agent scaffold for any repo, any stack
+  - Ranked scan (stop-early); interview starts with "last change shipped" — one answer replaces a 5-question form
+  - Navigator agent offered for every repo — the agent used every day, not just for tasks
+  - AGENTS.md includes `## How to invoke agents` (VS Code @mentions, Copilot App, Claude Code, Cursor)
+  - Metadata block in AGENTS.md encodes interview answers; upgrade reads it — no cold start
+  - Minimum viability check: won't generate shallow agents if insufficient signal
+  - Monorepo ownership: asks about team boundaries when multi-service detected
+  - Active staleness guard: verifies paths before writing, staleness check in CI via verify.sh
+  - Tool migration detection in upgrade mode (abandoned agent files when tool is gone)
+  - Review output options: commit to repo, GitHub PR comment, or chat only
+  - 6-dimension review rubric including staleness
+  - commands/setup-agents.md is ≤60 lines; mode steps in lazy-loaded reference files
+
 ## [1.30.0] - 2026-06-06
 
 ### Changed
