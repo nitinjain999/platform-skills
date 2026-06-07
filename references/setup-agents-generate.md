@@ -101,21 +101,28 @@ Does this look right? Add navigator?
 
 After the roster is confirmed, show the model menu and suggest a model per agent role. The developer should see costs before deciding — not after.
 
-**Model menu (show this verbatim):**
+**Fetch current pricing before showing this menu — never display stale numbers.**
+
+Fetch from the provider's official pricing page at generate time:
+- Anthropic: https://docs.anthropic.com/en/docs/about-claude/models (models table includes pricing)
+- OpenAI: https://openai.com/api/pricing/
+
+If fetch fails, show model names and tiers only — omit the price column and note that the developer should check current pricing themselves.
+
+**Model menu template (populate prices from fetch, or omit price column on failure):**
 
 ```
-Available models (prices per 1M tokens, input → output):
+Available models (prices per 1M tokens, input → output — fetched now):
 
   Anthropic
-    claude-opus-4-8       $5  → $25    Most capable — complex reasoning, agentic coding, 1M ctx
-    claude-opus-4-6       $5  → $25    Opus tier, extended thinking, 1M ctx
-    claude-sonnet-4-6     $3  → $15    Best speed/intelligence balance, 1M ctx  ✦ recommended default
-    claude-sonnet-4-5     $3  → $15    Sonnet tier, 200K ctx
-    claude-haiku-4-5      $1  →  $5    Fastest, lowest cost, 200K ctx
+    claude-opus-4-8     $<in> → $<out>   Most capable — complex reasoning, agentic coding, 1M ctx
+    claude-opus-4-6     $<in> → $<out>   Opus tier, extended thinking, 1M ctx
+    claude-sonnet-4-6   $<in> → $<out>   Best speed/intelligence balance, 1M ctx  ✦ recommended default
+    claude-sonnet-4-5   $<in> → $<out>   Sonnet tier, 200K ctx
+    claude-haiku-4-5    $<in> → $<out>   Fastest, lowest cost, 200K ctx
 
   OpenAI
-    gpt-5.4               $2.50 → $10   Flagship, 128K ctx
-    gpt-5.4-mini          $0.75 →  $3   Fast, lower cost, 128K ctx
+    <model>             $<in> → $<out>   <description, context window>
 
 Which model should each agent use?
 
@@ -140,7 +147,12 @@ Accept suggestions? (y / change one / change all)
 
 On "change one": ask which agent, then ask for the model name. Accept free text — the developer may use a model not in this list (Bedrock cross-region inference, Azure, Vertex, etc.).
 
-Write the chosen model into each agent file's `model:` frontmatter field. Record per-agent choices in the `<!-- setup-agents metadata -->` block so upgrade mode can re-surface them without asking again.
+**Write `model:` only where the tool supports it in frontmatter:**
+- **Copilot `.agent.md`**: write `model:` in YAML frontmatter ✓
+- **Codex `agents/openai.yaml`**: write `model:` under the agent key ✓
+- **Cursor `.mdc`**: no `model:` field — omit it entirely
+- **Claude Code `CLAUDE.md`**: no frontmatter — omit it entirely
+- **All tools**: record per-agent choices in the `<!-- setup-agents metadata -->` block so upgrade mode can re-surface them
 
 ### Step 7 — Generate files
 
@@ -242,12 +254,22 @@ echo "--- Checking agent file references (staleness) ---"
 # Process substitution keeps FAIL++ in the same shell — piped while loses subshell increments
 for agent in .github/agents/*.agent.md .cursor/rules/*.mdc; do
   [ -f "$agent" ] || continue
+  # Check file paths (extension-bearing references)
   while read -r p; do
-    test -f "$p" || { echo "⚠️  $agent references missing: $p"; ((FAIL++)); }
+    test -f "$p" || { echo "⚠️  $agent references missing file: $p"; ((FAIL++)); }
   done < <(grep -oE '[a-zA-Z][a-zA-Z0-9_/-]+\.(py|ts|go|tf|yaml|yml|json|md)' "$agent" \
     | grep -v 'https\?://' \
     | grep -v '^example\.' \
     | grep -v '\.example\.')
+  # Check directory references (trailing slash or bare paths like src/, tests/, .github/workflows)
+  while read -r d; do
+    # Strip trailing slash for test -d
+    test -d "${d%/}" || { echo "⚠️  $agent references missing directory: $d"; ((FAIL++)); }
+  done < <(grep -oE '[a-zA-Z][a-zA-Z0-9_/-]+/' "$agent" \
+    | grep -v 'https\?://' \
+    | grep -v '^example\.' \
+    | grep -v '\.example\.' \
+    | sort -u)
 done
 
 echo "--- $PASS passed, $FAIL issues ---"

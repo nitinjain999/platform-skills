@@ -19,7 +19,11 @@ Specific facts about THIS codebase. Must pass this checklist:
 - States ≥1 non-obvious convention (e.g. "DB sessions use async with in src/db/session.py")
 - States ≥1 non-obvious decision already made (e.g. "SQLAlchemy 2.0 async — no sync sessions")
 
-Verify every path you write actually exists before writing it.
+Verify every path you write actually exists before writing it:
+- For files: `test -f <path>`
+- For directories: `test -d <path>`
+
+The staleness checker in `scripts/verify-agents.sh` catches both (`test -f` for extension-bearing paths, `test -d` for trailing-slash paths). If you write a dead directory reference it will fail CI.
 
 ### Boundaries
 

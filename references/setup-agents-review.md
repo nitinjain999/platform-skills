@@ -30,10 +30,18 @@ For each agent file, extract paths and check them:
 for agent in .github/agents/*.agent.md .cursor/rules/*.mdc; do
   [ -f "$agent" ] || continue
   echo "=== $agent ==="
+  # File references
   grep -oE '[a-zA-Z][a-zA-Z0-9_/-]+\.(py|ts|go|tf|yaml|yml|json|md)' "$agent" \
     | grep -v 'https\?://' | grep -v '^example\.' | grep -v '\.example\.' \
     | while read -r p; do
         test -f "$p" && echo "  ✓ $p" || echo "  ✗ $p MISSING"
+      done
+  # Directory references (trailing-slash paths like src/, tests/, .github/workflows/)
+  grep -oE '[a-zA-Z][a-zA-Z0-9_/-]+/' "$agent" \
+    | grep -v 'https\?://' | grep -v '^example\.' | grep -v '\.example\.' \
+    | sort -u \
+    | while read -r d; do
+        test -d "${d%/}" && echo "  ✓ $d" || echo "  ✗ $d MISSING"
       done
 done
 ```

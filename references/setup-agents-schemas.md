@@ -4,10 +4,28 @@
 
 Agent files go in `.github/agents/<role>.agent.md`.
 
+### VS Code custom agent (`target: vscode`)
+
 ```yaml
 ---
 model: <chosen in Step 6b — see generate mode>
 target: vscode
+tools:
+  - read
+  - execute
+  - edit
+  - search
+---
+```
+
+MCP servers for VS Code are configured in `.vscode/settings.json` (see MCP wiring section below), **not** in `.agent.md` frontmatter — `mcp-servers` is ignored by the VS Code Copilot Chat runtime for custom agents.
+
+### Copilot cloud agent (`target: github-copilot`)
+
+```yaml
+---
+model: <chosen in Step 6b — see generate mode>
+target: github-copilot
 tools:
   - read
   - execute
@@ -24,7 +42,8 @@ mcp-servers:
 ---
 ```
 
-`target: vscode` = VS Code Copilot Chat. Use `target: github-copilot` for Copilot App (worktree). Omit `target` to apply to both.
+`mcp-servers` is only used in cloud (worktree) agent profiles. Omit `target` entirely to generate a single file that applies to both VS Code and Copilot App — in that case, omit `mcp-servers` (VS Code ignores it, but it is dead config and confusing).
+
 Built-in tool aliases: `read` (file reading), `execute` (shell), `edit` (file modification), `search` (codebase/text), `web` (URL/fetch). MCP server tools are referenced as `<server-name>/<tool>` or `<server-name>/*`.
 Read-only agents (reviewer, navigator): omit `execute`, `edit` from tools.
 
