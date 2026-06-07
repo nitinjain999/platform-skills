@@ -6,7 +6,7 @@ Agent files go in `.github/agents/<role>.agent.md`.
 
 ```yaml
 ---
-model: claude-sonnet-4-5
+model: <chosen in Step 6b — see generate mode>
 target: vscode
 tools:
   - read

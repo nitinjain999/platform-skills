@@ -62,5 +62,7 @@ off-limits: |
   <verbatim answer to never-want-agent-to-do question>
 pain-points:
   - "<from interview>"
+models:
+  <role>: <chosen model>
 -->
 ```
