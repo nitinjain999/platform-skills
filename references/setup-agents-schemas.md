@@ -8,6 +8,7 @@ Agent files go in `.github/agents/<role>.agent.md`.
 
 ```yaml
 ---
+description: <one sentence — shown in agent picker and @mention tooltip>
 model: <chosen in Step 6b — see generate mode>
 target: vscode
 tools:
@@ -24,6 +25,7 @@ MCP servers for VS Code are configured in `.vscode/settings.json` (see MCP wirin
 
 ```yaml
 ---
+description: <one sentence — shown in agent picker and @mention tooltip>
 model: <chosen in Step 6b — see generate mode>
 target: github-copilot
 tools:

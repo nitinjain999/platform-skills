@@ -109,41 +109,41 @@ Fetch from the provider's official pricing page at generate time:
 
 If fetch fails, show model names and tiers only — omit the price column and note that the developer should check current pricing themselves.
 
-**Model menu template (populate prices from fetch, or omit price column on failure):**
+**Model menu template (populate from fetch, or omit price column on failure):**
 
 ```
 Available models (prices per 1M tokens, input → output — fetched now):
 
-  Anthropic
-    claude-opus-4-8     $<in> → $<out>   Most capable — complex reasoning, agentic coding, 1M ctx
-    claude-opus-4-6     $<in> → $<out>   Opus tier, extended thinking, 1M ctx
-    claude-sonnet-4-6   $<in> → $<out>   Best speed/intelligence balance, 1M ctx  ✦ recommended default
-    claude-sonnet-4-5   $<in> → $<out>   Sonnet tier, 200K ctx
-    claude-haiku-4-5    $<in> → $<out>   Fastest, lowest cost, 200K ctx
+  Anthropic  (fetch from https://docs.anthropic.com/en/docs/about-claude/models)
+    <opus-latest>     $<in> → $<out>   Most capable — complex reasoning, agentic coding
+    <sonnet-latest>   $<in> → $<out>   Best speed/intelligence balance  ✦ recommended default
+    <haiku-latest>    $<in> → $<out>   Fastest, lowest cost
 
-  OpenAI
-    <model>             $<in> → $<out>   <description, context window>
+  OpenAI  (fetch from https://openai.com/api/pricing/)
+    <model>           $<in> → $<out>   <description, context window>
 
 Which model should each agent use?
 
-  coordinator   → claude-sonnet-4-6   (routing + planning, needs broad judgment)
-  app           → claude-sonnet-4-6   (code tasks, balanced capability/cost)
-  infra         → claude-opus-4-8     (⚠ high blast radius — stronger reasoning pays off here)
-  test-writer   → claude-haiku-4-5    (repetitive generation; speed and cost matter more)
-  navigator     → claude-haiku-4-5    (read-only Q&A; no depth needed)
+  coordinator   → <sonnet-latest>   (routing + planning, needs broad judgment)
+  app           → <sonnet-latest>   (code tasks, balanced capability/cost)
+  infra         → <opus-latest>     (⚠ high blast radius — stronger reasoning pays off here)
+  test-writer   → <haiku-latest>    (repetitive generation; speed and cost matter more)
+  navigator     → <haiku-latest>    (read-only Q&A; no depth needed)
 
 Accept suggestions? (y / change one / change all)
 ```
 
+Populate `<opus-latest>`, `<sonnet-latest>`, `<haiku-latest>` with the current model IDs and prices from the fetch. If Anthropic adds a new tier since this was written, include it — the fetch is authoritative, not this template.
+
 **Suggestion rules by role:**
 
-| Role | Suggested model | Reason |
-|------|----------------|--------|
-| `infra`, `deploy` | `claude-opus-4-8` | High blast radius — a wrong infra decision costs far more than the token difference |
-| `coordinator` | `claude-sonnet-4-6` | Multi-agent routing + planning; needs broad judgment at reasonable cost |
-| `app`, `platform`, `data-pipeline`, `ml` | `claude-sonnet-4-6` | Code quality and context-aware decisions |
-| `test-writer`, `reviewer` | `claude-haiku-4-5` | Repetitive or read-only; fast and cheap is the right trade-off |
-| `navigator` | `claude-haiku-4-5` | Read-only Q&A; no autonomous action |
+| Role | Suggested tier | Reason |
+|------|---------------|--------|
+| `infra`, `deploy` | Opus (most capable) | High blast radius — a wrong infra decision costs far more than the token difference |
+| `coordinator` | Sonnet (balanced) | Multi-agent routing + planning; needs broad judgment at reasonable cost |
+| `app`, `platform`, `data-pipeline`, `ml` | Sonnet (balanced) | Code quality and context-aware decisions |
+| `test-writer`, `reviewer` | Haiku (fast) | Repetitive or read-only; fast and cheap is the right trade-off |
+| `navigator` | Haiku (fast) | Read-only Q&A; no autonomous action |
 
 On "change one": ask which agent, then ask for the model name. Accept free text — the developer may use a model not in this list (Bedrock cross-region inference, Azure, Vertex, etc.).
 
@@ -180,9 +180,9 @@ off-limits: |
 pain-points:
   - "<from interview>"
 models:
-  coordinator: claude-sonnet-4-5
-  app: claude-sonnet-4-5
-  infra: claude-opus-4
+  coordinator: <model-id chosen by developer>
+  app: <model-id chosen by developer>
+  infra: <model-id chosen by developer>
 -->
 ```
 
@@ -261,11 +261,12 @@ for agent in .github/agents/*.agent.md .cursor/rules/*.mdc; do
     | grep -v 'https\?://' \
     | grep -v '^example\.' \
     | grep -v '\.example\.')
-  # Check directory references (trailing slash or bare paths like src/, tests/, .github/workflows)
+  # Check directory references (trailing slash or bare paths like src/, tests/, .github/workflows/)
+  # Regex allows an optional leading dot so .github/ is captured as .github/, not github/
   while read -r d; do
     # Strip trailing slash for test -d
     test -d "${d%/}" || { echo "⚠️  $agent references missing directory: $d"; ((FAIL++)); }
-  done < <(grep -oE '[a-zA-Z][a-zA-Z0-9_/-]+/' "$agent" \
+  done < <(grep -oE '\.?[a-zA-Z][a-zA-Z0-9_./-]+/' "$agent" \
     | grep -v 'https\?://' \
     | grep -v '^example\.' \
     | grep -v '\.example\.' \

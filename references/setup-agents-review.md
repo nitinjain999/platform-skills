@@ -37,7 +37,8 @@ for agent in .github/agents/*.agent.md .cursor/rules/*.mdc; do
         test -f "$p" && echo "  ✓ $p" || echo "  ✗ $p MISSING"
       done
   # Directory references (trailing-slash paths like src/, tests/, .github/workflows/)
-  grep -oE '[a-zA-Z][a-zA-Z0-9_/-]+/' "$agent" \
+  # Allow optional leading dot so .github/ is captured as .github/, not github/
+  grep -oE '\.?[a-zA-Z][a-zA-Z0-9_./-]+/' "$agent" \
     | grep -v 'https\?://' | grep -v '^example\.' | grep -v '\.example\.' \
     | sort -u \
     | while read -r d; do

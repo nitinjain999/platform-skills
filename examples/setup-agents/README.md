@@ -140,6 +140,11 @@ off-limits: |
 pain-points:
   - "Prod deploy windows make hotfixes painful"
   - "Coverage gate is manual — no CI enforcement yet"
+models:
+  coordinator: claude-sonnet-4-6
+  app: claude-sonnet-4-6
+  test-writer: claude-haiku-4-5
+  navigator: claude-haiku-4-5
 -->
 ```
 

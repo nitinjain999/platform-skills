@@ -19,7 +19,7 @@ Start a new session, select worktree mode, pick the agent role.
 Each session runs in its own isolated git worktree.
 
 ### Claude Code
-Agents are context — start any session and Claude reads AGENTS.md automatically.
+Claude Code reads `CLAUDE.md` automatically at session start. Import or reference `AGENTS.md` from `CLAUDE.md` so agents load — e.g. add `@AGENTS.md` or a summary table to your `CLAUDE.md` Agent Context section.
 
 ### Cursor
 Agents apply via globs — open a file matching the agent's glob pattern and it activates.
