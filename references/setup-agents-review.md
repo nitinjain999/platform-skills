@@ -3,7 +3,7 @@
 ## Discover agent files
 
 ```bash
-ls .github/copilot/*.agent.md 2>/dev/null
+ls .github/agents/*.agent.md 2>/dev/null
 ls .cursor/rules/*.mdc 2>/dev/null
 grep -l "## Agent Context" CLAUDE.md 2>/dev/null && echo "Claude Code agent sections in CLAUDE.md"
 cat AGENTS.md 2>/dev/null
@@ -27,7 +27,7 @@ cat AGENTS.md 2>/dev/null
 For each agent file, extract paths and check them:
 
 ```bash
-for agent in .github/copilot/*.agent.md .cursor/rules/*.mdc; do
+for agent in .github/agents/*.agent.md .cursor/rules/*.mdc; do
   [ -f "$agent" ] || continue
   echo "=== $agent ==="
   grep -oE '[a-zA-Z][a-zA-Z0-9_/-]+\.(py|ts|go|tf|yaml|yml|json|md)' "$agent" \
@@ -62,7 +62,7 @@ Run /platform-skills:setup-agents upgrade to apply.
 
 ```
 Save this report?
-  1. .github/copilot/agent-review.md — commit to repo, shareable with team
+  1. .github/agents/agent-review.md — commit to repo, shareable with team
   2. GitHub PR comment markdown — formatted for gh pr comment
   3. No — chat output is enough
 ```

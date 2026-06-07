@@ -16,7 +16,7 @@ test -f .vscode/extensions.json && cat .vscode/extensions.json
 test -f CLAUDE.md && echo "CLAUDE.md present"
 test -d .cursor && echo ".cursor/ present"
 test -f agents/openai.yaml && echo "agents/openai.yaml present"
-ls .github/copilot/*.agent.md 2>/dev/null && echo "Copilot agents already set up"
+ls .github/agents/*.agent.md 2>/dev/null && echo "Copilot agents already set up"
 grep -l "## Agent Context" CLAUDE.md 2>/dev/null && echo "Claude Code agent sections in CLAUDE.md"
 head -1 AGENTS.md 2>/dev/null
 ```
@@ -160,7 +160,7 @@ GENERATED_CURSOR=false
 GENERATED_CODEX=false
 
 if [ "$GENERATED_COPILOT" = true ]; then
-  check "Copilot agent files" "ls .github/copilot/*.agent.md"
+  check "Copilot agent files" "ls .github/agents/*.agent.md"
 else
   info "Copilot agents"
 fi
@@ -191,7 +191,7 @@ fi
 
 echo "--- Checking agent file references (staleness) ---"
 # Process substitution keeps FAIL++ in the same shell — piped while loses subshell increments
-for agent in .github/copilot/*.agent.md .cursor/rules/*.mdc; do
+for agent in .github/agents/*.agent.md .cursor/rules/*.mdc; do
   [ -f "$agent" ] || continue
   while read -r p; do
     test -f "$p" || { echo "⚠️  $agent references missing: $p"; ((FAIL++)); }
@@ -233,7 +233,7 @@ Use interview answers to warm the session:
 ### Step 3 — Find coordinator and get date
 
 ```bash
-COORD=$(ls .github/copilot/coordinator.agent.md \
+COORD=$(ls .github/agents/coordinator.agent.md \
            .cursor/rules/coordinator.mdc 2>/dev/null | head -1)
 
 # git log is primary — more reliable than stat (survives timestamp resets on clone)
@@ -281,7 +281,7 @@ if ls .cursor/rules/*.mdc 2>/dev/null | grep -q .; then
   test -d .cursor || echo "⚠️  .cursor/rules/*.mdc files exist but .cursor/ is gone — team moved away from Cursor?"
 fi
 # Copilot agent files exist but no VS Code or Copilot config?
-if ls .github/copilot/*.agent.md 2>/dev/null | grep -q .; then
+if ls .github/agents/*.agent.md 2>/dev/null | grep -q .; then
   test -f .vscode/extensions.json || echo "ℹ️  Copilot agent files exist but no .vscode/extensions.json detected"
 fi
 ```

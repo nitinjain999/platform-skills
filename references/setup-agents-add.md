@@ -19,7 +19,7 @@ What triggers a handoff to it from the coordinator?
 ## Step 2 — Find coordinator and read context
 
 ```bash
-COORD=$(ls .github/copilot/coordinator.agent.md \
+COORD=$(ls .github/agents/coordinator.agent.md \
            .cursor/rules/coordinator.mdc 2>/dev/null | head -1)
 [ -n "$COORD" ] && cat "$COORD" || grep -A50 "## coordinator" CLAUDE.md 2>/dev/null
 cat AGENTS.md 2>/dev/null

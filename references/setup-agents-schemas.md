@@ -2,24 +2,31 @@
 
 ## GitHub Copilot `.agent.md`
 
+Agent files go in `.github/agents/<role>.agent.md`.
+
 ```yaml
 ---
 model: claude-sonnet-4-5
-target: all
-mcp-servers:
-  - github
-  - filesystem
+target: vscode
 tools:
-  - read_file
-  - run_terminal_command
-  - create_pull_request
-  - create_file
-  - edit_file
+  - read
+  - execute
+  - edit
+  - search
+mcp-servers:
+  github:
+    type: 'local'
+    command: 'npx'
+    args: ['-y', '@modelcontextprotocol/server-github']
+    tools: ["*"]
+    env:
+      GITHUB_PERSONAL_ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ---
 ```
 
-`target: all` = VS Code + Copilot App (worktree). Use `target: vscode` to restrict.
-Read-only agents (reviewer, navigator): omit `create_file`, `edit_file`, `delete_file`.
+`target: vscode` = VS Code Copilot Chat. Use `target: github-copilot` for Copilot App (worktree). Omit `target` to apply to both.
+Built-in tool aliases: `read` (file reading), `execute` (shell), `edit` (file modification), `search` (codebase/text), `web` (URL/fetch). MCP server tools are referenced as `<server-name>/<tool>` or `<server-name>/*`.
+Read-only agents (reviewer, navigator): omit `execute`, `edit` from tools.
 
 ## Cursor `.mdc`
 
@@ -79,15 +86,12 @@ agents:
   coordinator:
     description: Lead orchestrator. Source of truth is AGENTS.md.
     model: o3-mini
-    tools: [read_file, run_terminal_command]
   app:
     description: App agent — src/, tests/, Dockerfile
     model: o3-mini
-    tools: [read_file, create_file, edit_file, run_terminal_command]
   navigator:
     description: Read-only guide — helps understand the codebase
     model: o3-mini
-    tools: [read_file]
 ```
 
 ## `copilot-setup-steps.yml` skeleton
