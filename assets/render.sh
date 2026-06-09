@@ -8,8 +8,8 @@ set -euo pipefail
 template="$1"; shift
 content="$(cat "$template")"
 for pair in "$@"; do
-  key="${pair%%=*}"
+  name="${pair%%=*}"
   value="${pair#*=}"
-  content="${content//__"${key}"__/${value}}"
+  content="${content//__"${name}"__/${value}}"
 done
 printf '%s\n' "$content"
