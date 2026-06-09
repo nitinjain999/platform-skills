@@ -7,13 +7,10 @@ tools:
 __TOOLS__
 mcp-servers:
   github:
-    type: 'local'
-    command: 'npx'
-    args: ['-y', '@modelcontextprotocol/server-github']
+    type: 'http'
+    url: 'https://api.githubcopilot.com/mcp/'
     tools:
       - github/create_pull_request
       - github/get_file_contents
       - github/list_commits
-    env:
-      GITHUB_PERSONAL_ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ---

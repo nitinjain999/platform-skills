@@ -62,16 +62,13 @@ tools:
   - search
 mcp-servers:
   github:
-    type: 'local'
-    command: 'npx'
-    args: ['-y', '@modelcontextprotocol/server-github']
+    type: 'http'
+    url: 'https://api.githubcopilot.com/mcp/'
     tools:
       - github/create_pull_request
       - github/get_file_contents
       - github/list_commits
       # Scope to only the tools this agent actually needs — avoid tools: ["*"]
-    env:
-      GITHUB_PERSONAL_ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ---
 ```
 
@@ -184,14 +181,14 @@ Remove blocks for runtimes not present in the repo (Node, Python, Java/Kotlin). 
 
 ### VS Code — merge, do not overwrite
 
-> **Staleness warning:** VS Code's MCP config key has moved across versions. At time of writing, `.vscode/mcp.json` (a dedicated file) is the current VS Code-native format, while `github.copilot.chat.mcpServers` in `.vscode/settings.json` is the older Copilot-specific key. Verify against current VS Code Copilot docs before generating — this is the fastest-rotting line in this file. When in doubt, generate both and let the developer delete the stale one.
+Use `https://api.githubcopilot.com/mcp/` for the GitHub MCP server in VS Code. This endpoint authenticates via the developer's existing Copilot OAuth session — no PAT to create, rotate, or store. The old `npx @modelcontextprotocol/server-github` + `GITHUB_PERSONAL_ACCESS_TOKEN` approach is deprecated in favour of this.
 
 **`.vscode/mcp.json`** (current VS Code-native format):
 ```json
 {
   "servers": {
     "filesystem": { "type": "stdio", "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "."] },
-    "github": { "type": "sse", "url": "https://mcp.github.com/sse" }
+    "github": { "type": "http", "url": "https://api.githubcopilot.com/mcp/" }
   }
 }
 ```
@@ -201,12 +198,14 @@ Remove blocks for runtimes not present in the repo (Node, Python, Java/Kotlin). 
 {
   "github.copilot.chat.mcpServers": {
     "filesystem": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "."] },
-    "github": { "type": "url", "url": "https://mcp.github.com/sse" }
+    "github": { "type": "http", "url": "https://api.githubcopilot.com/mcp/" }
   }
 }
 ```
 
 ### Claude Code (`.claude/settings.json`)
+
+Claude Code has no Copilot OAuth session, so `api.githubcopilot.com/mcp/` does not work here. Use `gh auth token` piped into the env var — avoids a stored PAT:
 
 ```json
 {
@@ -219,3 +218,5 @@ Remove blocks for runtimes not present in the repo (Node, Python, Java/Kotlin). 
   }
 }
 ```
+
+`${GITHUB_TOKEN}` resolves from the shell environment. Populate it with `export GITHUB_TOKEN=$(gh auth token)` in the developer's shell profile — no long-lived secret required.
