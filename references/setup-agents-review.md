@@ -36,14 +36,14 @@ for agent in .github/agents/*.agent.md .cursor/rules/*.mdc; do
     | grep -oE '`[^`]+`' | tr -d '`')
   # File paths: must contain a / to exclude bare filenames from prose
   echo "$BACKTICK_REFS" \
-    | grep -oE '[a-zA-Z0-9_./-]*(/[a-zA-Z0-9_.@-]+)+\.(py|ts|go|tf|yaml|yml|json|md|sh)' \
+    | grep -oE '[a-zA-Z0-9_./-]*(/[a-zA-Z0-9_.@-]+)+\.(py|ts|go|tf|yaml|yml|json|md|sh|kt|kts|rs|cs|rb|php)' \
     | grep -vE '<[a-zA-Z]' \
     | while read -r p; do
         test -f "$p" && echo "  ✓ $p" || echo "  ✗ $p MISSING"
       done
-  # Directory paths: trailing slash, must contain a /
+  # Directory paths: trailing slash; single segment like src/ is valid
   echo "$BACKTICK_REFS" \
-    | grep -oE '[a-zA-Z][a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+/' \
+    | grep -oE '[a-zA-Z][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_.-]*)/' \
     | grep -vE '<[a-zA-Z]' \
     | sort -u \
     | while read -r d; do

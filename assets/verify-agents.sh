@@ -30,7 +30,7 @@ while read -r target; do
     cursor)       check "Cursor rules"        "test -d .cursor/rules && ls .cursor/rules/*.mdc" ;;
     codex)        check "Codex config"        "test -f agents/openai.yaml" ;;
     windsurf)     check "Windsurf rules"      "test -f .windsurfrules" ;;
-    vscode-mcp)   check "MCP wired (VS Code)" "grep -qr mcpServers .vscode/" ;;
+    vscode-mcp)   check "MCP wired (VS Code)" "grep -qr '\"servers\"\|mcpServers' .vscode/" ;;
   esac
 done < <(grep -vE '^#|^[[:space:]]*$' .platform-skills/manifest 2>/dev/null)
 
@@ -53,14 +53,14 @@ for agent in .github/agents/*.agent.md .cursor/rules/*.mdc; do
     [ -z "$p" ] && continue
     test -f "$p" || { echo "⚠️  $agent references missing file: $p"; FAIL=$((FAIL+1)); }
   done < <(echo "$BACKTICK_REFS" \
-    | grep -oE '[a-zA-Z0-9_./-]*(/[a-zA-Z0-9_.@-]+)+\.(py|ts|go|tf|yaml|yml|json|md|sh)' \
+    | grep -oE '[a-zA-Z0-9_./-]*(/[a-zA-Z0-9_.@-]+)+\.(py|ts|go|tf|yaml|yml|json|md|sh|kt|kts|rs|cs|rb|php)' \
     | grep -vE '<[a-zA-Z]')
-  # Check directory paths (trailing slash, must contain a /)
+  # Check directory paths (trailing slash; single segment like src/ is valid)
   while read -r d; do
     [ -z "$d" ] && continue
     test -d "${d%/}" || { echo "⚠️  $agent references missing directory: $d"; FAIL=$((FAIL+1)); }
   done < <(echo "$BACKTICK_REFS" \
-    | grep -oE '[a-zA-Z][a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+/' \
+    | grep -oE '[a-zA-Z][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_.-]*)/' \
     | grep -vE '<[a-zA-Z]' \
     | sort -u)
 done

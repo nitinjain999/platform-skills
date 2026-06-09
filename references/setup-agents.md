@@ -40,9 +40,7 @@ The same marker check applies to every per-tool agent file. See `references/setu
 The `.platform-skills/` directory is structural metadata — commit it. It is not personal state.
 
 - **Commit:** `manifest` — defines which tool targets were generated; `scripts/verify-agents.sh` reads it. If gitignored, CI will silently skip all tool-target checks and report 0 issues.
-- **Do not commit:** nothing sensitive lives here — the directory contains only the manifest.
-
-Add to your `.gitignore` audit: if `.platform-skills/` is gitignored (e.g. via a `.*` glob), remove the exclusion.
+- **Nothing to exclude:** the directory contains only the manifest — no secrets, no personal state. If `.platform-skills/` is gitignored (e.g. via a `.*` glob), remove the exclusion.
 
 ## .platform-skills/manifest — format
 
@@ -58,7 +56,7 @@ Valid tokens:
 | `cursor` | `.cursor/rules/*.mdc` |
 | `codex` | `agents/openai.yaml` |
 | `windsurf` | `.windsurfrules` |
-| `vscode-mcp` | `.vscode/settings.json` or `.vscode/mcp.json` mcpServers key |
+| `vscode-mcp` | `.vscode/mcp.json` (`servers` key) or `.vscode/settings.json` (`github.copilot.chat.mcpServers` key) |
 
 Example:
 ```
