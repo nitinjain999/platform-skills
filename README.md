@@ -3,7 +3,7 @@
 > A production-grade field handbook for platform, DevOps, SRE, and cloud engineers covering Kubernetes, Flux CD, Terraform, GitHub Actions, AWS, OPA/Rego, KEDA, Karpenter, supply chain security, Falco, observability, and more. Use it on GitHub, as a local reference, or with Claude, Codex, Cursor, and Copilot for interactive guidance with blast radius, validation steps, and rollback plans built in.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-v1.31.0-0e1117)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-v1.32.0-0e1117)](CHANGELOG.md)
 [![Domains](https://img.shields.io/badge/Domains-39-4c8eda)](references/)
 [![Commands](https://img.shields.io/badge/Commands-33-e87c2b)](commands/)
 [![Examples](https://img.shields.io/badge/Examples-28-6f42c1)](examples/)
@@ -164,7 +164,7 @@ All layers work independently. Agent integrations are optional.
 | 📊 DORA Metrics | [references/dora.md](references/dora.md) | Deployment Frequency, Lead Time, Change Failure Rate, MTTR — GitHub Actions + Prometheus Pushgateway instrumentation, recording rules, Grafana dashboards, SaaS decision matrix, anti-pattern detection — `/platform-skills:dora` |
 | ✨ Awesome Docs | [references/awesome-docs.md](references/awesome-docs.md) | Animated GitHub-safe Markdown document generation — any doc type (README, architecture guide, runbook, tutorial, API reference, RFC, post-mortem, or custom), 4 SVG patterns, convert existing docs, diff for staleness, audit quality, local preview, multi-platform export — `/platform-skills:awesome-docs` |
 | 🔄 Renovate | [references/renovate.md](references/renovate.md) | Dependency update automation — scan repo and generate renovate.json per ecosystem, private registry auth (ECR/GCR/ACR/Harbor/Helm OCI), custom regex managers for internal GitHub modules and private Terraform registries, pre-commit hook, GitHub Actions validation workflow — `/platform-skills:renovate` |
-| 🤖 Setup Agents | [references/setup-agents.md](references/setup-agents.md) | Multi-agent AI scaffold for any repo — ranked scan, interview-driven generate/upgrade/add/review modes, GitHub Copilot, Claude Code, Cursor, and Codex configs — `/platform-skills:setup-agents` |
+| 🤖 Setup Agents | [references/setup-agents.md](references/setup-agents.md) | Multi-agent AI scaffold for any repo — ranked scan, interview-driven generate/upgrade/add/review modes, GitHub Copilot, Claude Code, Cursor, Codex, and Windsurf configs — `/platform-skills:setup-agents` |
 
 ## Core principles
 
@@ -349,7 +349,7 @@ platform-skills/
 
 ## Roadmap
 
-**Current release: v1.31.0** — 33 commands, 39 domain reference guides, 50+ wiki pages.
+**Current release: v1.32.0** — 33 commands, 39 domain reference guides, 50+ wiki pages.
 
 Full version history is in [CHANGELOG.md](CHANGELOG.md).
 
