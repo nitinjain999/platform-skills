@@ -120,6 +120,12 @@ REQUIRED_REFERENCES=(
   references/dora.md
   references/llm-observability.md
   references/awesome-docs.md
+  references/setup-agents.md
+  references/setup-agents-build.md
+  references/setup-agents-add.md
+  references/setup-agents-review.md
+  references/setup-agents-schemas.md
+  references/setup-agents-template.md
 )
 
 for ref in "${REQUIRED_REFERENCES[@]}"; do

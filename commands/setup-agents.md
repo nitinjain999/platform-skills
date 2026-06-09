@@ -1,6 +1,6 @@
 ---
 name: setup-agents
-description: Scaffold a multi-agent AI setup for any repo. Scans the codebase, interviews the developer, generates agent configs for GitHub Copilot, Claude Code, Cursor, and Codex. Use when asked to "set up agents", "scaffold Copilot agents", or "create an AGENTS.md".
+description: Scaffold a multi-agent AI setup for any repo. Scans the codebase, interviews the developer, generates agent configs for whichever AI tools the repo uses (Copilot, Claude Code, Cursor, Codex, Windsurf). Use when asked to "set up agents", "scaffold Copilot agents", or "create an AGENTS.md".
 argument-hint: "[generate|upgrade|add|review]"
 ---
 

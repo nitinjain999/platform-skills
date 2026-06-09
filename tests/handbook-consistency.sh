@@ -64,6 +64,11 @@ declare -a REQUIRED_PATHS=(
   "examples/azure/README.md"
   "examples/kubernetes/README.md"
   "examples/openshift/README.md"
+  "assets/verify-agents.sh"
+  "assets/render.sh"
+  "assets/AGENTS.md.template"
+  "assets/copilot-setup-steps.template.yml"
+  "assets/windsurfrules.template"
 )
 
 echo "Checking required handbook paths..."
