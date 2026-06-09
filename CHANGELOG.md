@@ -5,6 +5,34 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.32.0] - 2026-06-09
+
+### Added
+
+- `setup-agents` command hardened with production-ready asset templates and CI coverage:
+  - `assets/verify-agents.sh` — canonical manifest-driven verify script; copy verbatim to target repos (no inline regeneration)
+  - `assets/render.sh` — `__TOKEN__` substitution engine for all template assets
+  - `assets/AGENTS.md.template` — canonical AGENTS.md structure with metadata block
+  - `assets/copilot-setup-steps.template.yml` — Copilot App setup steps template covering Terraform, AWS, Node, Python, Java/Kotlin/Spring Boot (conditional blocks)
+  - `assets/windsurfrules.template` — Windsurf rules template
+  - `assets/frontmatter/` — per-tool frontmatter templates (copilot-vscode, copilot-cloud, cursor, codex, claude-section)
+  - `assets/mcp/` — MCP wiring templates for VS Code and Claude Code
+  - `assets/agents/navigator.template.md` — navigator agent body template
+- `references/setup-agents-build.md` — unified generate/upgrade reference (replaces generate.md); includes widened language scan (9 runtimes: Go, Rust, Python, Node, Java, Kotlin/Spring Boot, Ruby, .NET, PHP), sed-based metadata read, manifest-driven coordinator discovery for all 5 tool targets, and asset-template render steps
+- Spring Boot and Kotlin detection added to the ranked language scan (`build.gradle.kts`, `settings.gradle.kts`, `pom.xml` with `spring-boot-starter`)
+- `tests/validate-skill.sh` — added 6 setup-agents reference files to `REQUIRED_REFERENCES`
+- `tests/handbook-consistency.sh` — added 5 asset files to `REQUIRED_PATHS`
+- Both SKILL.md files updated with setup-agents reference table entries
+
+### Fixed
+
+- `setup-agents-generate.md` replaced with a redirect shim to `setup-agents-build.md` — eliminates stale duplicate content
+- Upgrade mode coordinator discovery now covers all 5 tool targets with fallbacks to `agents/openai.yaml` and `CLAUDE.md` (previously could silently produce empty COORD on Codex-only repos)
+- Upgrade mode now reads `.platform-skills/manifest` for tool targets instead of scanning all possible paths
+- `setup-agents-template.md` is now a pointer to `assets/AGENTS.md.template` with render invocation — eliminates inline verbatim reproduction drift
+- `copilot-setup-steps.yml` schema section in `setup-agents-schemas.md` now points to asset template instead of inline YAML
+- `.platform-skills/` commit guidance added to `setup-agents.md` — manifest must be committed or CI silently skips all tool-target checks
+
 ## [1.31.0] - 2026-06-07
 
 ### Added

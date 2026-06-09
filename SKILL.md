@@ -128,6 +128,12 @@ Load only the files needed for the current request.
 | references/chaos.md | Litmus Chaos, Chaos Mesh, steady-state hypothesis, GameDay |
 | references/dora.md | Deployment Frequency, Lead Time, CFR, MTTR, Prometheus instrumentation |
 | references/awesome-docs.md | Animated SVG Markdown — architecture flow, lifecycle, carousel, timeline |
+| references/setup-agents.md | Mode routing table, signal→roster decisions, manifest format |
+| references/setup-agents-build.md | Generate/upgrade step-by-step build guide (language scan, interview, render, verify) |
+| references/setup-agents-add.md | Add a new agent or tool target to an existing setup |
+| references/setup-agents-review.md | Audit existing agent files for staleness, misalignment, missing sections |
+| references/setup-agents-schemas.md | Per-tool frontmatter schemas, managed-file markers, MCP wiring |
+| references/setup-agents-template.md | AGENTS.md template pointer and render.sh invocation |
 
 ## Slash Commands
 
