@@ -413,10 +413,12 @@ grep -rn -e "password:" -e "token:" -e "apiKey:" -e "_SECRET=" -e "ACCESS_KEY=" 
 grep -rn "insecure: true" . --include="*.yaml"
 
 # Cloud registries without Workload Identity
-grep -rn "ecr\.\|\.gcr\.io\|\.azurecr\.io" . --include="*.yaml" -B5 | grep -v "provider:"
+grep -rn "\.ecr\.amazonaws\.com\|\.gcr\.io\|\.azurecr\.io" . --include="*.yaml" -B5 | grep -v "provider:"
 
 # OCIRepository without Cosign verification
-grep -rn "kind: OCIRepository" . --include="*.yaml" -A20 | grep -v "verify:"
+grep -rln "kind: OCIRepository" . --include="*.yaml" | while read f; do
+  grep -q "verify:" "$f" || echo "NO COSIGN VERIFY: $f"
+done
 
 # cluster-admin bindings
 grep -rn "cluster-admin" . --include="*.yaml"
