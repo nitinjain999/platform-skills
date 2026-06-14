@@ -28,6 +28,8 @@ What do you need?
 Enter 1–5 or topic name:
 ```
 
+> **Scanning mechanics:** To run Checkov scans — static, plan-level, multi-cloud, with fix mode — use `/platform-skills:checkov`. This command handles SOC 2 control mapping and evidence collection.
+
 **Q2 — Context** (after topic selected, one at a time):
 - **gap**: `Paste your Terraform resource(s) or describe the configuration to assess:`
 - **control**: `Which SOC 2 criterion? (e.g. CC6.7, CC7.2, A1.2) or describe the control to implement:`

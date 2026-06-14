@@ -44,6 +44,8 @@ Walk through each gate in order. For each, state whether it would pass or fail b
 3. **`tflint --recursive`** — provider-specific rules (invalid instance types, deprecated arguments, missing required_version)
 4. **`tfsec . --minimum-severity HIGH`** or **`checkov -d . --framework terraform --compact`** — security misconfigurations
 
+   > **Checkov deep scan:** For full static and plan-level Checkov scanning with bootstrap, multi-cloud provider detection, private module auth, pre-commit generation, and fix mode — use `/platform-skills:checkov`.
+
    > **tfsec version note:** Flag syntax changed in v1.0+. Check with `tfsec --version`.
    > - `< v1.0`: use `--minimum-severity HIGH`
    > - `>= v1.0`: use `--severity HIGH`
