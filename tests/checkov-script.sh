@@ -17,8 +17,9 @@ else
 fi
 
 echo "--- Test 3: all documented flags parse without error ---"
-# Re-use the script's own parser by extracting the while/case block and testing every flag.
-# This test exercises the real parser from the script, not a copy.
+# Exercises a duplicate of the script's argument parser to verify every documented flag
+# is accepted without error. The parser here must be kept in sync with the script.
+# Rationale: sourcing the real script would execute side-effects (bootstrap checks, etc.).
 (
   # Extract and run just the argument-parsing section by sourcing up to the ROOT cd line.
   # We override set -euo pipefail so unknown args produce a clear error, not a silent abort.

@@ -10,7 +10,7 @@
 # Usage:
 #   ./checkov-terraform-plan.sh \
 #     [--root <path>]              Terraform root directory (default: .)
-#     [--output sarif|json|junitxml|all]  Output format (default: cli)
+#     [--output sarif|json|junitxml|all]  Output format (default: cli+json — JSON always written)
 #     [--keep-plan]                Retain tfplan.binary/tfplan.json after scan
 #     [--upgrade]                  Pass --upgrade to terraform init
 #     [--yes]                      Skip interactive prompts (workspace, var-file)
@@ -105,12 +105,21 @@ done
 
 # --- Cloud credential preflight ---
 if grep -r 'hashicorp/aws' "$ROOT" --include="*.tf" -l &>/dev/null; then
+  if ! command -v aws &>/dev/null; then
+    echo "ERROR: AWS provider detected but 'aws' CLI not installed. Install: https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2.html" >&2; exit 1
+  fi
   aws sts get-caller-identity --output text &>/dev/null || { echo "ERROR: AWS credentials not configured. Run: aws sso login or aws configure" >&2; exit 1; }
 fi
 if grep -r 'hashicorp/azurerm' "$ROOT" --include="*.tf" -l &>/dev/null; then
+  if ! command -v az &>/dev/null; then
+    echo "ERROR: azurerm provider detected but 'az' CLI not installed. Install: https://docs.microsoft.com/en-us/cli/azure/install-azure-cli" >&2; exit 1
+  fi
   az account show &>/dev/null || { echo "ERROR: Azure credentials not configured. Run: az login" >&2; exit 1; }
 fi
 if grep -r 'hashicorp/google' "$ROOT" --include="*.tf" -l &>/dev/null; then
+  if ! command -v gcloud &>/dev/null; then
+    echo "ERROR: google provider detected but 'gcloud' CLI not installed. Install: https://cloud.google.com/sdk/docs/install" >&2; exit 1
+  fi
   gcloud auth application-default print-access-token &>/dev/null || { echo "ERROR: GCP credentials not configured. Run: gcloud auth application-default login" >&2; exit 1; }
 fi
 
@@ -119,7 +128,7 @@ fi
 # to the broader shell session. Storing in a variable that is passed inline keeps it
 # out of 'ps aux' output and avoids leaking it via shell history or sub-processes.
 _GITHUB_PAT_VALUE=""
-if grep -rE 'source\s*=\s*"github\.com/' "$ROOT" --include="*.tf" -l &>/dev/null; then
+if grep -rE 'source[[:space:]]*=[[:space:]]*"(github\.com/|git::https://github\.com/)' "$ROOT" --include="*.tf" -l &>/dev/null; then
   if command -v gh &>/dev/null && gh auth status &>/dev/null 2>&1; then
     _GITHUB_PAT_VALUE=$(gh auth token)
     echo "INFO: GitHub PAT obtained from gh CLI for private module resolution"
@@ -220,9 +229,12 @@ BASELINE=""
 # --- Scan ---
 echo "INFO: Running Checkov plan scan..."
 set +e
-# GITHUB_PAT is passed inline (not exported) to scope it to this process only.
+# GITHUB_PAT is passed inline via env (not exported) to scope it to this process only.
+# Only inject when non-empty to avoid overriding a user-provided GITHUB_PAT with empty string.
+_pat_env=()
+[ -n "${_GITHUB_PAT_VALUE}" ] && _pat_env=("GITHUB_PAT=${_GITHUB_PAT_VALUE}")
 # shellcheck disable=SC2086
-GITHUB_PAT="${_GITHUB_PAT_VALUE}" checkov -f "${ROOT}/tfplan.json" \
+env "${_pat_env[@]}" checkov -f "${ROOT}/tfplan.json" \
   --repo-root-for-plan-enrichment "$ROOT" \
   --deep-analysis \
   --compact \

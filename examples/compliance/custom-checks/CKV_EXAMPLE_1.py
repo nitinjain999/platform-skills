@@ -9,7 +9,7 @@ Run with:
 """
 from checkov.common.models.enums import CheckResult, CheckCategories
 from checkov.terraform.checks.resource.base_resource_check import BaseResourceCheck
-from typing import Any
+from typing import Any, Dict, List
 
 
 class EnforceRequiredTags(BaseResourceCheck):
@@ -25,7 +25,7 @@ class EnforceRequiredTags(BaseResourceCheck):
             supported_resources=supported_resources,
         )
 
-    def scan_resource_conf(self, conf: dict[str, list[Any]]) -> CheckResult:
+    def scan_resource_conf(self, conf: Dict[str, List[Any]]) -> CheckResult:
         tags = conf.get("tags", [{}])
         tag_map = tags[0] if isinstance(tags, list) and tags else tags
         if isinstance(tag_map, dict) and "team" in tag_map and "environment" in tag_map:
