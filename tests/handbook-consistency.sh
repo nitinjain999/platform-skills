@@ -103,4 +103,7 @@ for pattern in "${STALE_LINK_PATTERNS[@]}"; do
   fi
 done
 
+echo "Running checkov script tests..."
+bash tests/checkov-script.sh
+
 echo "✅ Handbook consistency checks passed"
