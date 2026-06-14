@@ -152,6 +152,7 @@ See [COMMANDS.md](COMMANDS.md) for every command with modes and example prompts:
 | `review` | Production-readiness check on any manifest, Terraform, workflow |
 | `debug` | Structured troubleshooting for any platform symptom |
 | `terraform` | Blast radius, IAM least privilege, SOC 2, state impact |
+| `checkov` | Terraform static and plan scanning, multi-cloud (AWS/Azure/GCP/EKS), pre-commit, fix mode |
 | `gitops` | Flux / Argo CD — `debug` live issues or `audit` a GitOps repo |
 | `helmcheck` | Scaffold, review, or security-audit a Helm chart |
 | `kyverno` | Generate, test, audit, or migrate Kyverno policies |
