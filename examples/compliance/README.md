@@ -17,6 +17,9 @@ SOC 2 Trust Services Criteria controls implemented as Terraform — covering IAM
 | [vulnerability/main.tf](vulnerability/main.tf) | CC6.8 | Inspector v2 with ECR enhanced scanning |
 | [backup/main.tf](backup/main.tf) | A1.2, A1.3 | AWS Backup plan, vault lock, and cross-region DR |
 | [checkov-config.yaml](checkov-config.yaml) | All | Checkov config grouping SOC 2 check IDs by criterion |
+| [.pre-commit-checkov.yaml](.pre-commit-checkov.yaml) | All | Pre-commit hook template for Checkov — pinned rev, `checkov` and `checkov_diff` variants |
+| [checkov-terraform-plan.sh](checkov-terraform-plan.sh) | All | Plan-mode scan script — cloud auth preflight, workspace check, tfvars selection, `--deep-analysis`, cleanup |
+| [custom-checks/CKV_EXAMPLE_1.py](custom-checks/CKV_EXAMPLE_1.py) | All | Example custom Checkov check — enforce required tags, `CKV_<ORG>_<N>` naming convention |
 
 ## Quick Start
 
