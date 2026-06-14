@@ -20,6 +20,7 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:review](#platform-skillsreview) | Production-readiness review of any config |
 | [/platform-skills:debug](#platform-skillsdebug) | Structured troubleshooting for any symptom |
 | [/platform-skills:terraform](#platform-skillsterraform) | Terraform validation pipeline + blast radius |
+| [/platform-skills:checkov](#platform-skillscheckov) | Checkov bootstrap, static + plan-level Terraform scanning, multi-cloud, fix mode |
 | [/platform-skills:gitops](#platform-skillsgitops) | Flux CD / Argo CD — debug live cluster issues or audit a GitOps repo |
 | [/platform-skills:linkerd](#platform-skillslinkerd) | Linkerd mTLS, injection, policy, multi-cluster |
 | [/platform-skills:linux](#platform-skillslinux) | Linux, DNS, load balancing, VPC/VNet, networking |
@@ -159,6 +160,30 @@ Mysterious 503s after a deploy:
 AWS resource creation failing:
 ```
 /platform-skills:debug Terraform apply fails: "Error creating IAM role: LimitExceeded: Cannot exceed quota for InstanceSessionsPerInstanceProfile: 1"
+```
+
+---
+
+## `/platform-skills:checkov`
+
+**What it does:** Bootstraps Checkov on the developer's laptop (Homebrew/pip/venv), then runs static or plan-level Terraform security scanning for AWS, Azure, GCP, and EKS. Detects cloud provider from `required_providers`, resolves private GitHub modules via `gh auth token`, generates `.pre-commit-config.yaml` entries if pre-commit is installed, supports multi-format output (cli/json/sarif/junitxml), creates `.checkov.baseline` for brownfield repos, and offers AI-generated fix suggestions or auto-apply patches.
+
+```
+/platform-skills:checkov
+/platform-skills:checkov static terraform/aws/
+/platform-skills:checkov plan terraform/azure/ --output sarif
+/platform-skills:checkov baseline .
+/platform-skills:checkov fix terraform/gcp/
+/platform-skills:checkov scaffold
+```
+
+**Example prompts:**
+```
+/platform-skills:checkov scan my Terraform for security issues
+/platform-skills:checkov plan — run terraform plan and scan the output
+/platform-skills:checkov I'm getting CKV_AWS_19 failures — fix them
+/platform-skills:checkov set up checkov pre-commit hook for my repo
+/platform-skills:checkov scaffold a .checkov.yaml for my Azure Terraform
 ```
 
 ---
