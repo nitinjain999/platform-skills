@@ -58,12 +58,13 @@ REPO_ROOT=$(git -C "$ROOT" rev-parse --show-toplevel 2>/dev/null || echo "$ROOT"
 # Derive a slug from ROOT relative to REPO_ROOT for output file naming.
 # With --root terraform/aws, output files become checkov-results-terraform-aws.json etc.,
 # avoiding overwrite collisions when scanning multiple roots in sequence.
-ROOT_REL=$(realpath --relative-to="$REPO_ROOT" "$ROOT" 2>/dev/null || echo "$(basename "$ROOT")")
+ROOT_REL=$(realpath --relative-to="$REPO_ROOT" "$ROOT" 2>/dev/null || basename "$ROOT")
 ROOT_SLUG=$(echo "$ROOT_REL" | tr '/' '-' | tr -cd '[:alnum:]-_')
 [ -z "$ROOT_SLUG" ] || [ "$ROOT_SLUG" = "." ] && ROOT_SLUG="root"
 RESULTS_PREFIX="${ROOT}/checkov-results-${ROOT_SLUG}"
 
 # --- Guaranteed cleanup via trap (runs on exit, error, Ctrl+C, or SIGTERM) ---
+# shellcheck disable=SC2317  # cleanup() is called via trap, not directly
 cleanup() {
   if [ "$KEEP_PLAN" = false ]; then
     rm -f "${ROOT}/tfplan.binary" "${ROOT}/tfplan.json"
@@ -172,7 +173,7 @@ else
       i=1
       declare -a TFVAR_LIST
       while IFS= read -r f; do
-        TFVAR_LIST[$i]="$f"
+        TFVAR_LIST[i]="$f"
         echo "  $i. $f"
         i=$((i+1))
       done <<< "$TFVARS"
