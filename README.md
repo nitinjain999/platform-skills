@@ -135,6 +135,7 @@ All layers work independently. Agent integrations are optional.
 | <img src="https://cdn.simpleicons.org/amazonaws/FF9900" width="16" height="16" alt="AWS"> AWS WAF | [references/aws-waf.md](references/aws-waf.md) | Web ACLs, managed rule groups, rate limiting, Bot Control, Firewall Manager, Shield Advanced |
 | <img src="https://cdn.simpleicons.org/microsoftazure/0078D4" width="16" height="16" alt="Azure"> Azure | [references/azure.md](references/azure.md) | Workload identity, AKS, RBAC, resource tagging, Azure Policy |
 | <img src="https://cdn.simpleicons.org/terraform/844FBA" width="16" height="16" alt="Terraform"> Terraform | [references/terraform.md](references/terraform.md) | Module design, state management, testing, CI/CD integration |
+| <img src="https://cdn.simpleicons.org/checkov/ffffff" width="16" height="16" alt="Checkov"> Checkov | [references/checkov.md](references/checkov.md) | Bootstrap, static + plan scanning, multi-cloud provider detection, fix mode, custom checks |
 | <img src="https://cdn.simpleicons.org/githubactions/2088FF" width="16" height="16" alt="GitHub Actions"> GitHub Actions | [references/github-actions.md](references/github-actions.md) | Security hardening, OIDC, SHA pinning, reusable workflows |
 | <img src="https://cdn.simpleicons.org/githubactions/2088FF" width="16" height="16" alt="GitHub Actions"> Composite GitHub Actions | [references/composite-actions.md](references/composite-actions.md) | Composite action scaffolding, review, hardening, testing, release, private repo access |
 | 🗺️ Platform model | [references/platform-operating-model.md](references/platform-operating-model.md) | Ownership boundaries, promotion flows, cross-tool design |
@@ -328,6 +329,9 @@ platform-skills/
 │   ├── awesome-docs/                       # Animated SVG templates: arch-flow, lifecycle-loop, field-carousel, timeline-phases (v1.21.0)
 │   └── compliance/                     # SOC 2 Terraform examples (v1.6.0)
 │       ├── checkov-config.yaml         # Checkov config grouped by SOC 2 criterion
+│       ├── .pre-commit-checkov.yaml    # Pre-commit hook template
+│       ├── checkov-terraform-plan.sh   # Plan-mode scan script
+│       └── custom-checks/             # Custom check scaffold
 │       ├── iam/                        # CC6.1/CC6.2: IAM, IRSA, OIDC, SCPs
 │       ├── logging/                    # CC7.2: CloudTrail, Config, VPC flow logs
 │       ├── network/                    # CC6.6: WAF, security groups, flow logs
