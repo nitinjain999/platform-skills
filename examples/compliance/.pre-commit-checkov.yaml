@@ -1,0 +1,46 @@
+# examples/compliance/.pre-commit-checkov.yaml
+# Copy to .pre-commit-config.yaml and merge with existing hooks, or append this repo block.
+#
+# Install:
+#   pre-commit install --install-hooks
+#
+# Run manually:
+#   pre-commit run checkov --all-files
+#
+# Pin rev to a specific tag — find latest: pip index versions checkov 2>/dev/null | head -1
+
+repos:
+  - repo: https://github.com/bridgecrewio/checkov.git
+    rev: 3.2.451
+    hooks:
+      # checkov — scans all .tf files on every commit
+      - id: checkov
+        args:
+          - --framework
+          - terraform
+          - --download-external-modules
+          - "true"
+          # Uncomment to use a config file instead of args:
+          # - --config-file
+          # - .checkov.yaml
+          # Uncomment to use a baseline (suppress known violations):
+          # - --baseline
+          # - .checkov.baseline
+
+      # checkov_diff — scans only staged/changed .tf files (faster for large repos)
+      # Uncomment to use instead of checkov above:
+      # - id: checkov_diff
+      #   args:
+      #     - --framework
+      #     - terraform
+      #     - --download-external-modules
+      #     - "true"
+
+      # checkov_secrets — scans ALL file types for hardcoded secrets and tokens
+      # Uncomment to add alongside the Terraform hook:
+      # - id: checkov_secrets
+      #   args:
+      #     - --enable-secret-scan-all-files
+      # Note: checkov_secrets is slower than checkov because it scans every file,
+      # not just .tf. Keep it commented unless secrets scanning is a hard requirement
+      # for every commit — consider running it as a separate nightly CI job instead.

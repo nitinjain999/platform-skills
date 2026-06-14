@@ -1,5 +1,5 @@
 # Platform Engineering Instructions for GitHub Copilot
-# Version: 1.32.0
+# Version: 1.33.0
 # Source: https://github.com/nitinjain999/platform-skills
 # Scope: project-level — applies to every Copilot Chat session in this workspace
 # Install: ./install.sh --copilot --target /path/to/your-project

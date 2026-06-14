@@ -5,6 +5,31 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.33.0] - 2026-06-14
+
+### Added
+
+- **`/platform-skills:checkov`** — new slash command for Checkov static and plan-level Terraform security scanning
+  - Bootstrap: Homebrew (macOS), pip/venv (Linux), minimum version enforcement (≥ 2.3.0), `jq` guard for plan mode
+  - Multi-cloud provider detection: reads `required_providers` to focus checks — `CKV_AWS_*`, `CKV_AZ_*`, `CKV_GCP_*`, EKS/AKS/GKE subsets
+  - Plan mode: cloud credential preflight (AWS/Azure/GCP), workspace confirmation, `*.tfvars` detection, `--deep-analysis`, auto-cleanup; `terraform init` by default, `--upgrade` only when explicitly passed
+  - Private GitHub module auth: `gh auth token` → `GITHUB_PAT` fallback chain; Terraform Cloud, Bitbucket, self-hosted VCS also supported
+  - Pre-commit generation: auto-appends `bridgecrewio/checkov` hook if `pre-commit` is installed; `checkov_diff` and `checkov_secrets` variants documented
+  - Output formats: cli, json, sarif, junitxml, all; SARIF upload to GitHub Security tab via `gh` CLI; severity/API-key warning (`--check HIGH` requires `--bc-api-key`)
+  - `--bot` PR comment mode with `<!-- checkov-results -->` marker and `BLOCKED / NEEDS_FIX / CLEAN / ERROR` result
+  - Baseline mode: `--create-baseline` for brownfield repos; HIGH/CRITICAL count shown before suppression
+  - Fix mode: AI-generated HCL patches with suggest or auto-apply; inline `#checkov:skip` syntax shown per finding; post-fix validation (fmt → validate → re-scan)
+  - Scaffold mode: `.checkov.yaml` config for SOC 2, CIS Benchmarks, PCI DSS, HIPAA compliance profiles (4 provider variants each); `custom-checks/` Python scaffold
+  - Secrets mode: `--framework secrets --enable-secret-scan-all-files` for whole-repo secrets scanning
+  - Audit mode: `--scan-secrets-history` one-time git history scan for leaked credentials
+  - Multi-framework mode: combined Terraform + GitHub Actions + Dockerfile + Helm/Kubernetes scan; `--skip-framework` for large repos
+  - Common mistakes table: 12 entries including `--check HIGH` without API key, `--use-enforcement-rules` without Prisma Cloud, `--scan-secrets-history` in pre-commit
+- `references/checkov.md` — deep reference with all mode logic, secrets scanning, multi-framework, compliance profiles
+- `examples/compliance/.pre-commit-checkov.yaml` — pre-commit hook template with `checkov`, `checkov_diff`, and `checkov_secrets` variants
+- `examples/compliance/checkov-terraform-plan.sh` — production-ready plan scan script with cloud auth preflight and guaranteed cleanup via trap
+- `examples/compliance/custom-checks/` — Python custom check scaffold with `CKV_<ORG>_<N>` naming convention
+- Cross-references added to `/terraform` and `/compliance` commands
+
 ## [1.32.0] - 2026-06-09
 
 ### Added

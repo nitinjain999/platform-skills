@@ -92,6 +92,7 @@ Slash commands are predefined Claude workflows. In Codex or Cursor, ask for the 
 |---------|------------|
 | `/platform-skills:review` | You have a manifest, Terraform file, or workflow and want a production-readiness check |
 | `/platform-skills:terraform` | You want the full fmt/validate/tflint/security pipeline run against your Terraform |
+| `/platform-skills:checkov` | You want to bootstrap Checkov, run static or plan-level scanning, generate pre-commit hooks, or fix IaC security violations |
 | `/platform-skills:debug` | You have a platform symptom and want structured diagnosis |
 | `/platform-skills:gitops debug` | Flux or Argo CD live cluster issue — structured 5-workflow debug |
 | `/platform-skills:gitops audit` | Audit a Flux CD GitOps repo — 6-phase analysis, Critical/Warning/Info report |

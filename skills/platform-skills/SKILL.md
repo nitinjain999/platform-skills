@@ -82,6 +82,7 @@ Load only the files needed for the current request.
 |---|---|
 | references/platform-operating-model.md | Repo topology, ownership boundaries, promotion flow |
 | references/terraform.md | Module patterns, environments, state, testing |
+| references/checkov.md | Checkov bootstrap, scan modes, provider detection, private module auth, output formats, fix mode, custom checks |
 | references/kubernetes.md | Cluster baseline, workload, RBAC, policy |
 | references/openshift.md | OpenShift routing, SCC, OLM, tenancy |
 | references/fluxcd.md | Bootstrap, reconciliation, FluxInstance, ResourceSet, image automation |
@@ -142,6 +143,7 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:debug` — structured troubleshooting for any platform symptom
 - `/platform-skills:review` — production-readiness review of any manifest, Terraform, or workflow
 - `/platform-skills:terraform` — full fmt/validate/tflint/security pipeline + blast radius review
+- `/platform-skills:checkov` — Checkov bootstrap, static and plan-level Terraform scanning for AWS/Azure/GCP/EKS, private GitHub module auth via `gh` CLI, pre-commit generation, multi-format output, baseline, and AI-generated fix mode
 - `/platform-skills:fluxcd` — FluxCD entry point: routes to debug (live cluster issue), audit (repo health check), or helm (chart review) based on your input
 - `/platform-skills:gitops debug` — Flux CD and Argo CD live cluster troubleshooting (5-workflow structured debug)
 - `/platform-skills:gitops audit` — Flux CD GitOps repository 6-phase audit (discovery, validation, API compliance, best practices, security, report)
