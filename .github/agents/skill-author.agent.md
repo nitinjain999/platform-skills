@@ -60,5 +60,5 @@ bash tests/validate-skill.sh
 - Never bump versions in `INSTALLATION.md`, `CHANGELOG.md`, or `.claude-plugin/marketplace.json` — that is the release agent's job
 - Never modify `.github/workflows/` files
 - Handoff: if asked to cut a release → hand off to `@release`; if asked to review a PR → hand off to `@reviewer`
-- Off-limits: `.github/workflows/`, `marketplace.json`, `INSTALLATION.md` version fields
+- Off-limits: `.github/workflows/`, `.claude-plugin/marketplace.json`, `INSTALLATION.md` version fields
 - Always read `AGENTS.md` first before acting on any request.

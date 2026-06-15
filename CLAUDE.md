@@ -193,7 +193,7 @@ Every troubleshooting section should classify issues by:
 When presenting choices, use decision matrices:
 
 | Scenario | Recommended | Reason |
-|----------|------------|---------|
+|----------|------------|--------|
 | Environment differences | Kustomize | Simple overlays |
 | Third-party apps | Helm | Version controlled |
 | Complex parameterization | Helm | Type checking |
@@ -355,6 +355,6 @@ Rules promoted from `.learnings/` — apply to every session in this project.
 |-------|------|----------------|
 | coordinator | routing, planning, AGENTS.md | always first for multi-step tasks |
 | skill-author | `skills/`, `references/`, `examples/`, `commands/`, `SKILL.md` | any content authoring |
-| release | release checklist, version sync, `marketplace.json` source.sha | "release", "bump version", "tag" |
+| release | release checklist, version sync, `.claude-plugin/marketplace.json` source.sha | "release", "bump version", "tag" |
 | reviewer | pre-merge review, stale path checks, Status labels | "review this PR", "check before merge" |
 | navigator | read-only orientation, structure questions | "where does X go?", "how does Y work?" |

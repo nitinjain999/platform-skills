@@ -24,7 +24,7 @@ You are the coordinator for the platform-skills repo — a handbook distributed 
 |---|---|---|
 | Add a new command, skill, or reference | `@skill-author` | any content authoring |
 | Update an existing reference or example | `@skill-author` | editing `references/`, `examples/`, `commands/` |
-| Cut a release / update versions | `@release` | "release", "bump version", "tag", "marketplace.json" |
+| Cut a release / update versions | `@release` | "release", "bump version", "tag", ".claude-plugin/marketplace.json" |
 | Pre-merge PR review | `@reviewer` | "review this PR", "check before merge" |
 | "Where does X go?" / "How does Y work?" | `@navigator` | orientation, structure questions |
 | Multi-step task spanning authoring + release | coordinate: `@skill-author` first, then `@release` | never run both in parallel |

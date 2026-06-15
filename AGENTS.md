@@ -35,7 +35,7 @@ No direct pushes to main. Every change through a PR. Release commits are manual 
 ## Off-limits
 
 - `.github/workflows/` — CI-only, not touched by content agents
-- `marketplace.json` `source.sha` and `version` fields — set during release only
+- `.claude-plugin/marketplace.json` `source.sha` and `version` fields — set during release only
 - `INSTALLATION.md` version fields — set during release only
 - Direct commits to `main` — always via PR
 

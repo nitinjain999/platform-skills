@@ -3,7 +3,7 @@
 PASS=0; FAIL=0
 
 check() {
-  if eval "$2" &>/dev/null; then echo "✓ $1"; ((PASS++))
+  if bash -c -- "$2" &>/dev/null; then echo "✓ $1"; ((PASS++))
   else echo "✗ $1"; ((FAIL++)); fi
 }
 
@@ -63,13 +63,13 @@ for agent in .github/agents/*.agent.md; do
   # and bare filenames in table cells or inline descriptions.
   while read -r p; do
     test -f "$p" || { echo "⚠️  $agent references missing file: $p"; ((FAIL++)); }
-  done < <(echo "$AGENT_LINES" \
+  done < <(printf '%s\n' "$AGENT_LINES" \
     | grep -oE '\.?[a-zA-Z0-9_][a-zA-Z0-9_-]*(/[a-zA-Z0-9_.@-]+)+\.(py|ts|go|tf|yaml|yml|json|md|sh)' \
     | grep -vE '^example/' \
     | grep -vE '<[a-zA-Z]')
   while read -r d; do
     test -d "${d%/}" || { echo "⚠️  $agent references missing directory: $d"; ((FAIL++)); }
-  done < <(echo "$AGENT_LINES" \
+  done < <(printf '%s\n' "$AGENT_LINES" \
     | grep -oE '\.?[a-zA-Z][a-zA-Z0-9_-]+/[a-zA-Z0-9_-]+/' \
     | grep -vE '<[a-zA-Z]' \
     | sort -u)
