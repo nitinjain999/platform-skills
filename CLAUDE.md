@@ -193,7 +193,7 @@ Every troubleshooting section should classify issues by:
 When presenting choices, use decision matrices:
 
 | Scenario | Recommended | Reason |
-|----------|------------|---------|
+|----------|------------|--------|
 | Environment differences | Kustomize | Simple overlays |
 | Third-party apps | Helm | Version controlled |
 | Complex parameterization | Helm | Type checking |
@@ -346,3 +346,15 @@ Rules promoted from `.learnings/` — apply to every session in this project.
 - Never write SDK method names, parameter names, or env vars for external tools (Datadog, LLMObs, etc.) without fetching actual SDK source or docs first.
 - Lambda@Edge child module: declaring `configuration_aliases = [aws.us_east_1]` requires a matching `provider "aws" { alias = "us_east_1" }` block inside the module or `terraform validate` fails (ERR-20260522-003)
 - In Lambda@Edge viewer-request, `request.headers['set-cookie']` targets the origin, not the browser — use a forwarded header (`x-ab-bucket`) and set `Set-Cookie` in a viewer-response function (ERR-20260522-004)
+
+## Agent Context
+
+> AGENTS.md is the source of truth. Start every session by reading it.
+
+| Agent | Owns | Handoff trigger |
+|-------|------|----------------|
+| coordinator | routing, planning, AGENTS.md | always first for multi-step tasks |
+| skill-author | `skills/`, `references/`, `examples/`, `commands/`, `SKILL.md` | any content authoring |
+| release | release checklist, version sync, `.claude-plugin/marketplace.json` source.sha | "release", "bump version", "tag" |
+| reviewer | pre-merge review, stale path checks, Status labels | "review this PR", "check before merge" |
+| navigator | read-only orientation, structure questions | "where does X go?", "how does Y work?" |
