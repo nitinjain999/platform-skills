@@ -189,30 +189,54 @@ function InstallSection() {
       <p className="install-section__sub">One command. Works where you work.</p>
       <Tabs>
         <TabItem value="claude" label="Claude Code" default>
+          <div className="install-block__step-label">Install from marketplace</div>
+          <CodeBlock language="bash">
+            claude mcp add --marketplace platform-skills
+          </CodeBlock>
+          <div className="install-block__step-label">Or install directly</div>
           <CodeBlock language="bash">
             claude plugin install nitinjain999/platform-skills
           </CodeBlock>
+          <div className="install-block__step-label">Upgrade to latest</div>
+          <CodeBlock language="bash">
+            claude plugin update nitinjain999/platform-skills
+          </CodeBlock>
         </TabItem>
         <TabItem value="cursor" label="Cursor">
+          <div className="install-block__step-label">Install from marketplace</div>
           <p>
             Open Cursor Settings → Rules → search <code>platform-skills</code> in the marketplace.
           </p>
-          <p>Fallback (manual install):</p>
+          <div className="install-block__step-label">Or install manually</div>
           <CodeBlock language="bash">
             ./install.sh --cursor --target .
           </CodeBlock>
+          <div className="install-block__step-label">Upgrade</div>
+          <CodeBlock language="bash">
+            ./install.sh --cursor --target . --upgrade
+          </CodeBlock>
         </TabItem>
         <TabItem value="copilot" label="VS Code / Copilot">
+          <div className="install-block__step-label">Install</div>
           <CodeBlock language="bash">
             ./install.sh --copilot --target .
           </CodeBlock>
           <p>
             Drops <code>.github/copilot-instructions.md</code> into your project.
           </p>
+          <div className="install-block__step-label">Upgrade</div>
+          <CodeBlock language="bash">
+            ./install.sh --copilot --target . --upgrade
+          </CodeBlock>
         </TabItem>
         <TabItem value="codex" label="Codex">
+          <div className="install-block__step-label">Install</div>
           <CodeBlock language="bash">
             codex skill add nitinjain999/platform-skills
+          </CodeBlock>
+          <div className="install-block__step-label">Upgrade</div>
+          <CodeBlock language="bash">
+            codex skill update nitinjain999/platform-skills
           </CodeBlock>
         </TabItem>
       </Tabs>
