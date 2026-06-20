@@ -237,7 +237,7 @@ Follow this checklist when adding a net-new domain (e.g. a new command + referen
 ### 7. CI validation
 
 - [ ] `bash tests/validate-skill.sh` — all checks pass
-- [ ] `bash tests/validate-helmcheck.sh` — all checks pass
+- [ ] `bash tests/validate-helmchart.sh` — all checks pass
 - [ ] `bash tests/handbook-consistency.sh` — all checks pass
 - [ ] `bash tests/release-consistency.sh` — all checks pass
 - [ ] `bash tests/validate-ci.sh` — all checks pass

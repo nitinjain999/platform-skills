@@ -92,7 +92,7 @@
     "./commands/linux.md",
     "./commands/product.md",
     "./commands/compliance.md",
-    "./commands/helmcheck.md",
+    "./commands/helmchart.md",
     "./commands/mcp.md",
     "./commands/observability.md",
     "./commands/document.md",

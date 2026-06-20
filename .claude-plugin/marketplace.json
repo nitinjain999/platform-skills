@@ -18,7 +18,7 @@
         "kubernetes",
         "helm",
         "helm-chart",
-        "helmcheck",
+        "helmchart",
         "chart-lint",
         "docker",
         "containers",

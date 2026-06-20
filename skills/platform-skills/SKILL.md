@@ -153,7 +153,7 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:linux` — Linux administration, DNS, load balancing, VPC/VNet, and connectivity troubleshooting
 - `/platform-skills:product` — product thinking, friction audits, DevEx, RFC/ADR, incident updates, post-mortems
 - `/platform-skills:compliance` — SOC 2 gap analysis, control implementation, evidence collection, and Checkov remediation for Terraform
-- `/platform-skills:helmcheck` — Helm chart scaffolding, structural review, and security audit with full lint/validation pipeline
+- `/platform-skills:helmchart` — Helm chart scaffolding, structural review, and security audit with full lint/validation pipeline
 - `/platform-skills:mcp` — MCP server/client scaffolding, protocol review, and integration debugging
 - `/platform-skills:aws-profile` — discover, switch, and validate AWS profiles for MCP servers across VS Code and Claude Code
 - `/platform-skills:observability` — instrument services, build dashboards, write alerts, run load tests, plan capacity

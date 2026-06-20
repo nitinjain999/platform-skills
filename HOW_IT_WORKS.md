@@ -97,7 +97,7 @@ Slash commands are predefined Claude workflows. In Codex or Cursor, ask for the 
 | `/platform-skills:debug` | You have a platform symptom and want structured diagnosis |
 | `/platform-skills:gitops debug` | Flux or Argo CD live cluster issue — structured 5-workflow debug |
 | `/platform-skills:gitops audit` | Audit a Flux CD GitOps repo — 6-phase analysis, Critical/Warning/Info report |
-| `/platform-skills:helmcheck` | You want to create, review, or security-audit a Helm chart |
+| `/platform-skills:helmchart` | You want to create, review, or security-audit a Helm chart |
 | `/platform-skills:linkerd` | mTLS, proxy injection, or traffic policy issues |
 | `/platform-skills:linux` | DNS, load balancer, VPC connectivity, or kernel issue |
 | `/platform-skills:compliance` | SOC 2 gap analysis or Checkov remediation for Terraform |
@@ -130,7 +130,7 @@ Slash commands are predefined Claude workflows. In Codex or Cursor, ask for the 
 Invoke a command by typing it at the start of your message:
 
 ```text
-/platform-skills:helmcheck review
+/platform-skills:helmchart review
 
 apiVersion: v2
 name: payments-api
