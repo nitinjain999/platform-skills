@@ -17,8 +17,8 @@ function Hero() {
       </div>
       <h1 className="hero-section__title">Platform Skills</h1>
       <p className="hero-section__subtitle">
-        A production-grade field handbook for platform engineers — Kubernetes, GitOps, Terraform, AWS, and more.
-        Blast radius, validation steps, and rollback plan built in.
+        Your AI agent generates config. It doesn&apos;t know what breaks.
+        Platform Skills gives it the missing context — blast radius, validation steps, and rollback plan, built in.
       </p>
       <div className="hero-section__ctas">
         <Link className="button button--primary button--lg" to="/docs/kubernetes">
@@ -38,53 +38,95 @@ function Hero() {
   );
 }
 
-function BeforeAfter() {
-  const before = `spec:
-  containers:
-    - name: api-server
-      image: mycompany/api-server:latest   # ❌ unpinned
-      env:
-        - name: DATABASE_URL
-          value: "postgres://admin:password@db:5432/prod"  # ❌ hardcoded
-      # ❌ no securityContext, no resources, no probes`;
-
-  const after = `spec:
-  securityContext:
-    runAsNonRoot: true
-    runAsUser: 1000
-  containers:
-    - name: api-server
-      image: mycompany/api-server:v1.4.2   # ✅ pinned
-      resources:
-        requests: { cpu: 100m, memory: 128Mi }
-        limits:   { memory: 512Mi }
-      readinessProbe:
-        httpGet: { path: /healthz/ready, port: 8080 }
-      securityContext:
-        allowPrivilegeEscalation: false
-        readOnlyRootFilesystem: true
-      env:
-        - name: DATABASE_URL
-          valueFrom:
-            secretKeyRef: { name: api-server-secrets, key: database-url }  # ✅`;
-
+function ProblemStatement() {
   return (
-    <section className="before-after">
-      <div className="before-after__label">See it in action</div>
-      <h2 className="before-after__heading">What platform-skills catches</h2>
-      <div className="before-after__grid">
-        <div className="before-after__header before-after__header--before">
-          Before — what ships without it
+    <section className="problem-section">
+      <div className="problem-section__inner">
+        <div className="problem-section__label">The problem</div>
+        <h2 className="problem-section__heading">
+          AI agents are great at writing YAML.<br />They&apos;re not great at knowing what happens next.
+        </h2>
+        <div className="problem-grid">
+          <div className="problem-item">
+            <div className="problem-item__icon">💥</div>
+            <div className="problem-item__text">Adds a CPU limit that throttles production at peak load</div>
+          </div>
+          <div className="problem-item">
+            <div className="problem-item__icon">🔓</div>
+            <div className="problem-item__text">Writes IAM policies with wildcards because it&apos;s &quot;simpler&quot;</div>
+          </div>
+          <div className="problem-item">
+            <div className="problem-item__icon">🕳️</div>
+            <div className="problem-item__text">No mention of what breaks if the change is wrong</div>
+          </div>
+          <div className="problem-item">
+            <div className="problem-item__icon">🤷</div>
+            <div className="problem-item__text">No validation steps. No rollback plan. Ships anyway.</div>
+          </div>
         </div>
-        <div className="before-after__header before-after__header--after">
-          After — what platform-skills flags
-        </div>
-        <div className="before-after__body">
-          <pre><code>{before}</code></pre>
-        </div>
-        <div className="before-after__body">
-          <pre><code>{after}</code></pre>
-        </div>
+        <p className="problem-section__resolution">
+          Platform Skills is a plugin that teaches your agent to think like a senior platform engineer —
+          not just generate, but reason.
+        </p>
+      </div>
+    </section>
+  );
+}
+
+const STAR_SCENARIOS = [
+  {
+    tag: 'Security',
+    situation: 'A pipeline flags a CRITICAL CVE in your base image 30 minutes before a release window.',
+    task: 'Scan the image, understand blast radius, decide whether to block or accept risk with a documented exception.',
+    command: '/platform-skills:trivy image',
+    result: 'Severity-gated scan with exploitability context, a pre-filled .trivyignore entry with expiry date, and a go/no-go recommendation with rollback path if you ship.',
+  },
+  {
+    tag: 'Code Review',
+    situation: 'Copilot left 12 unresolved review threads on your PR. Release is blocked until they\'re cleared.',
+    task: 'Classify each comment, fix the real issues, reply to every thread, and resolve them — without missing one.',
+    command: '/platform-skills:triage --all 100',
+    result: 'Every thread triaged: ACTIONABLE ones fixed and committed, INFORMATIONAL ones answered, NOT_APPLICABLE ones closed with a reason. Summary table printed.',
+  },
+  {
+    tag: 'Infrastructure',
+    situation: 'Security asks if a Terraform change is safe to apply to production. You have 20 minutes.',
+    task: 'Scan against the actual plan (not just source), surface HIGH/CRITICAL findings, map them to SOC 2 controls.',
+    command: '/platform-skills:checkov plan',
+    result: 'Deep analysis against live state values, findings grouped by control, a .checkov.baseline diff showing what\'s new vs existing, and a one-line verdict: safe / needs fix / block.',
+  },
+];
+
+function StarScenarios() {
+  return (
+    <section className="star-section">
+      <div className="star-section__label">Real usage, real results</div>
+      <h2 className="star-section__heading">See it in a real situation</h2>
+      <p className="star-section__sub">
+        Every command follows the same pattern: understand the situation, take the right action, show the result.
+      </p>
+      <div className="star-cards">
+        {STAR_SCENARIOS.map((s) => (
+          <div className="star-card" key={s.command}>
+            <div className="star-card__tag">{s.tag}</div>
+            <div className="star-card__row">
+              <span className="star-card__letter">S</span>
+              <span className="star-card__content">{s.situation}</span>
+            </div>
+            <div className="star-card__row">
+              <span className="star-card__letter">T</span>
+              <span className="star-card__content">{s.task}</span>
+            </div>
+            <div className="star-card__row star-card__row--action">
+              <span className="star-card__letter star-card__letter--action">A</span>
+              <code className="star-card__command">{s.command}</code>
+            </div>
+            <div className="star-card__row">
+              <span className="star-card__letter star-card__letter--result">R</span>
+              <span className="star-card__content">{s.result}</span>
+            </div>
+          </div>
+        ))}
       </div>
     </section>
   );
@@ -126,7 +168,7 @@ const FEATURES = [
 function FeatureStrip() {
   return (
     <section className="feature-strip">
-      <h2 className="feature-strip__heading">Everything a platform team needs</h2>
+      <h2 className="feature-strip__heading">35+ commands. Every domain a platform team touches.</h2>
       <div className="feature-grid">
         {FEATURES.map((f) => (
           <div className="feature-tile" key={f.title}>
@@ -178,47 +220,16 @@ function InstallSection() {
   );
 }
 
-const COMMANDS = [
-  {
-    name: '/platform-skills:triage',
-    desc: 'Triages a PR comment from a bot or human reviewer — fetches via gh CLI, classifies it, applies the fix, posts a reply, and resolves the thread.',
-  },
-  {
-    name: '/platform-skills:checkov',
-    desc: 'Runs Checkov static and plan-level Terraform scanning with AI-generated fix mode. Supports AWS/Azure/GCP/EKS, private modules, SARIF output.',
-  },
-  {
-    name: '/platform-skills:karpenter',
-    desc: 'Diagnoses Karpenter node provisioning failures. Covers NodePool, NodeClaim, EC2NodeClass, spot interruptions — with blast radius and rollback plan.',
-  },
-];
-
-function CommandShowcase() {
-  return (
-    <section className="command-section">
-      <h2 className="command-section__heading">Slash commands that do real work</h2>
-      <div className="command-cards">
-        {COMMANDS.map((c) => (
-          <div className="command-card" key={c.name}>
-            <div className="command-card__name">{c.name}</div>
-            <div className="command-card__desc">{c.desc}</div>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 export default function Home(): ReactNode {
   const {siteConfig} = useDocusaurusContext();
   return (
     <Layout title={siteConfig.title} description={siteConfig.tagline}>
       <main>
         <Hero />
-        <BeforeAfter />
+        <ProblemStatement />
+        <StarScenarios />
         <FeatureStrip />
         <InstallSection />
-        <CommandShowcase />
       </main>
     </Layout>
   );
