@@ -47,6 +47,13 @@ Two `@docusaurus/plugin-content-docs` instances — direct path references, no f
 
 Search: Algolia DocSearch (free tier for public repos), wired in `docusaurus.config.js`.
 
+**Required config fields** — both must be set correctly or all assets and links 404 in production:
+- `url: 'https://nitinjain999.github.io'` — root domain, no trailing path
+- `baseUrl: '/platform-skills/'` — the project path prefix; Docusaurus prepends this to every internal link and static asset
+
+**Color mode:**
+- `colorMode: { defaultMode: 'dark', respectPrefersColorScheme: true }` — dark by default, respects OS preference, toggle always visible
+
 No blog, no versioning, no i18n.
 
 ---
@@ -166,11 +173,14 @@ Scope: all files in `references/` and `commands/`. Estimated ~40 files need fron
 ## Validation Steps
 
 1. `cd website && npm run build` succeeds locally with no broken links
-2. `npm run serve` — landing page renders all 5 sections correctly
-3. Nav sidebar shows all 9 domain groups with correct files under each
-4. Install tabs render correctly on mobile viewport
-5. Algolia search returns results for "flux", "terraform", "karpenter"
-6. GitHub Actions `pages.yml` run completes and site is live at `nitinjain999.github.io/platform-skills`
+2. `npm run serve` — verify all asset URLs start with `/platform-skills/` (not `/`)
+3. Landing page renders all 5 sections correctly in dark mode by default
+4. Light/dark toggle visible and functional
+5. Nav sidebar shows all 9 domain groups with correct files under each
+6. Install tabs render correctly on mobile viewport
+7. Algolia search returns results for "flux", "terraform", "karpenter"
+8. GitHub Actions `pages.yml` run completes and site is live at `nitinjain999.github.io/platform-skills`
+9. Existing `nitinjain999.github.io` root site is unaffected
 
 ---
 
