@@ -76,7 +76,7 @@ if [[ -z "$IGNOREFILE" && -f ".trivyignore" ]]; then
 fi
 
 # --- Guaranteed cleanup via trap ---
-# shellcheck disable=SC2317  # cleanup() is called via trap, not directly
+# shellcheck disable=SC2317,SC2329  # cleanup() is called via trap, not directly
 cleanup() {
   : # SARIF and JSON are kept for CI artifact upload; no temp files to remove
 }
@@ -84,6 +84,7 @@ trap cleanup EXIT INT TERM
 
 # --- Build trivy command ---
 TRIVY_ARGS=()
+# shellcheck disable=SC2054  # os,library is a comma-separated Trivy flag value, not separate array elements
 TRIVY_ARGS+=(image --severity "$SEVERITY" --exit-code 1 --vuln-type os,library)
 
 if [[ "$OUTPUT_FORMAT" == "sarif" ]]; then

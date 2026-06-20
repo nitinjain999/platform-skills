@@ -64,7 +64,7 @@ ROOT_SLUG=$(echo "$ROOT_REL" | tr '/' '-' | tr -cd '[:alnum:]-_')
 RESULTS_PREFIX="${ROOT}/checkov-results-${ROOT_SLUG}"
 
 # --- Guaranteed cleanup via trap (runs on exit, error, Ctrl+C, or SIGTERM) ---
-# shellcheck disable=SC2317  # cleanup() is called via trap, not directly
+# shellcheck disable=SC2317,SC2329  # cleanup() is called via trap, not directly
 cleanup() {
   if [ "$KEEP_PLAN" = false ]; then
     rm -f "${ROOT}/tfplan.binary" "${ROOT}/tfplan.json"
