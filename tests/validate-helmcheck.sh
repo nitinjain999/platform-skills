@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Validates the helmcheck skill, command, reference guide, and example chart.
+# Validates the helmchart skill, command, reference guide, and example chart.
 # Run from the repository root: bash tests/validate-helmcheck.sh
 
 set -euo pipefail
@@ -13,7 +13,7 @@ fail() { echo "  FAIL: $1"; ERRORS=$((ERRORS + 1)); }
 echo ""
 echo "=== Helmcheck command file ==="
 
-CMD="commands/helmcheck.md"
+CMD="commands/helmchart.md"
 
 if [ -f "$CMD" ]; then
   pass "$CMD exists"
@@ -47,28 +47,28 @@ fi
 echo ""
 echo "=== Helmcheck slash command registered in plugin.json ==="
 
-if grep -q '"./commands/helmcheck.md"' .claude-plugin/plugin.json; then
-  pass "commands/helmcheck.md registered in plugin.json"
+if grep -q '"./commands/helmchart.md"' .claude-plugin/plugin.json; then
+  pass "commands/helmchart.md registered in plugin.json"
 else
-  fail "commands/helmcheck.md not registered in plugin.json"
+  fail "commands/helmchart.md not registered in plugin.json"
 fi
 
 # ---------------------------------------------------------------------------
 echo ""
-echo "=== SKILL.md helmcheck integration ==="
+echo "=== SKILL.md helmchart integration ==="
 
 SKILL="skills/platform-skills/SKILL.md"
 
-if grep -q "Helm (Helmcheck)" "$SKILL"; then
+if grep -qE "Helm \(Helm(chart|check)\)|helmchart" "$SKILL"; then
   pass "SKILL.md lists Helm domain"
 else
   fail "SKILL.md missing Helm domain entry"
 fi
 
-if grep -q "helmcheck" "$SKILL"; then
-  pass "SKILL.md references /platform-skills:helmcheck slash command"
+if grep -q "helmchart" "$SKILL"; then
+  pass "SKILL.md references /platform-skills:helmchart slash command"
 else
-  fail "SKILL.md missing /platform-skills:helmcheck slash command"
+  fail "SKILL.md missing /platform-skills:helmchart slash command"
 fi
 
 if grep -q "references/helm.md" "$SKILL"; then
@@ -322,7 +322,7 @@ else
   fail "$HOW missing"
 fi
 
-for cmd in "helmcheck" "review" "terraform" "debug" "gitops" "linkerd" "linux" "compliance" "product" "mcp" "observability" "document" "datadog" "dynatrace" "commit" "opa" "kyverno" "pr-review" "triage" "keda"; do
+for cmd in "helmchart" "audit" "terraform" "debug" "gitops" "linkerd" "linux" "compliance" "product" "mcp" "observability" "document" "datadog" "dynatrace" "commit" "opa" "kyverno" "pr-review" "triage" "keda"; do
   if grep -q "platform-skills:$cmd" "$HOW"; then
     pass "$HOW references /platform-skills:$cmd"
   else
@@ -338,4 +338,4 @@ if [ "$ERRORS" -gt 0 ]; then
   exit 1
 fi
 
-echo "PASS: all helmcheck validation checks passed"
+echo "PASS: all helmchart validation checks passed"
