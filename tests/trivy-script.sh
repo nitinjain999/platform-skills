@@ -20,7 +20,7 @@ echo "--- Test 3: all documented flags parse without error ---"
 (
   set +euo pipefail
   IMAGE_REF=""; SEVERITY="HIGH,CRITICAL"; OUTPUT_FORMAT="sarif"
-  IGNORE_UNFIXED=false; IGNOREFILE=""; UPLOAD_SARIF=false; YES=false
+  IGNORE_UNFIXED=false; IGNOREFILE=""; UPLOAD_SARIF=false
 
   set -- \
     --image ghcr.io/org/image:latest \
@@ -39,7 +39,7 @@ echo "--- Test 3: all documented flags parse without error ---"
       --ignore-unfixed) IGNORE_UNFIXED=true; shift ;;
       --ignorefile)     IGNOREFILE="$2"; shift 2 ;;
       --upload-sarif)   UPLOAD_SARIF=true; shift ;;
-      --yes)            YES=true; shift ;;
+      --yes)            shift ;;
       *)                echo "FAIL: Unknown argument: $1" >&2; exit 1 ;;
     esac
   done
@@ -50,7 +50,6 @@ echo "--- Test 3: all documented flags parse without error ---"
   [ "$IGNORE_UNFIXED" = true ]                   || { echo "FAIL: IGNORE_UNFIXED not set"; exit 1; }
   [ "$IGNOREFILE" = ".trivyignore" ]             || { echo "FAIL: IGNOREFILE=$IGNOREFILE"; exit 1; }
   [ "$UPLOAD_SARIF" = true ]                     || { echo "FAIL: UPLOAD_SARIF not set"; exit 1; }
-  [ "$YES" = true ]                              || { echo "FAIL: YES not set"; exit 1; }
   echo "PASS: all documented flags parse correctly"
 )
 

@@ -31,7 +31,6 @@ OUTPUT_FORMAT="sarif"
 IGNORE_UNFIXED=false
 IGNOREFILE=""
 UPLOAD_SARIF=false
-YES=false
 SARIF_FILE="trivy-results.sarif"
 JSON_FILE="trivy-results.json"
 
@@ -43,7 +42,7 @@ while [[ $# -gt 0 ]]; do
     --ignore-unfixed) IGNORE_UNFIXED=true; shift ;;
     --ignorefile)     IGNOREFILE="$2"; shift 2 ;;
     --upload-sarif)   UPLOAD_SARIF=true; shift ;;
-    --yes)            YES=true; shift ;;
+    --yes)            shift ;;  # accepted for script compatibility; no interactive prompts in this script
     *)                echo "ERROR: Unknown argument: $1" >&2; exit 1 ;;
   esac
 done
@@ -84,8 +83,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 # --- Build trivy command ---
-TRIVY_ARGS=(
-  image
+TRIVY_ARGS=(image
   --severity "$SEVERITY"
   --exit-code 1
   --vuln-type os,library
