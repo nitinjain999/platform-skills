@@ -1,6 +1,6 @@
 ---
 name: fluxcd
-description: FluxCD entry point — routes to the right workflow based on what you need. Live cluster issue → structured 5-workflow debug trace. Repo health check → 6-phase audit (discovery, validation, API compliance, best practices, security). Helm chart review → helmcheck. Starts by asking one question to confirm the right mode.
+description: FluxCD entry point — routes to the right workflow based on what you need. Live cluster issue → structured 5-workflow debug trace. Repo health check → 6-phase audit (discovery, validation, API compliance, best practices, security). Helm chart review → helmchart. Starts by asking one question to confirm the right mode.
 argument-hint: "[describe your situation: a symptom, a repo path, or 'audit' / 'debug' / 'helm']"
 title: "Flux CD Command"
 sidebar_label: "fluxcd"
@@ -23,7 +23,7 @@ Determine which workflow applies from the input. If it is ambiguous, ask exactly
 |---|---|
 | An error message, `flux get` output, pod logs, or "not reconciling" | **Debug** → run `/platform-skills:gitops debug` |
 | A repo path, "audit", "review", "before merge", "is this correct" | **Audit** → run `/platform-skills:gitops audit` |
-| A Helm chart path, `Chart.yaml`, `values.yaml`, "helm", "chart" | **Helm** → run `/platform-skills:helmcheck` |
+| A Helm chart path, `Chart.yaml`, `values.yaml`, "helm", "chart" | **Helm** → run `/platform-skills:helmchart` |
 | A manifest to review (Kustomization, HelmRelease, FluxInstance YAML) | **Review** → run `/platform-skills:review` |
 
 ---

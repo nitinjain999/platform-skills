@@ -8,7 +8,7 @@ const sidebars = {
       type: 'category',
       label: 'Kubernetes',
       items: [
-        { type: 'doc', id: 'helmcheck' },
+        { type: 'doc', id: 'helmchart' },
         { type: 'doc', id: 'keda' },
         { type: 'doc', id: 'karpenter' },
       ],

@@ -1,9 +1,9 @@
 ---
-name: helmcheck
+name: helmchart
 description: Scaffold, lint, review, security-audit, test, and upgrade-verify Helm charts. Runs an interactive interview to build production-ready charts from scratch. Covers chart structure, values design, schema validation, kubeconform, helm diff, and multi-environment scaffolding. Use when asked to "create a helm chart", "lint my chart", "review my helm chart", "check helm security", "generate values schema", "run helm diff", or "add helm tests".
 argument-hint: "[create|lint|review|security|upgrade|schema|test|deps] [chart path]"
-title: "Helm Check Command"
-sidebar_label: "helmcheck"
+title: "Helm Chart Command"
+sidebar_label: "helmchart"
 custom_edit_url: null
 ---
 

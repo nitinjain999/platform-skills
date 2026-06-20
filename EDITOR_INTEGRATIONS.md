@@ -332,7 +332,7 @@ Argo CD application is perpetually OutOfSync despite successful manual sync. Wha
 
 ---
 
-### helmcheck — Helm chart scaffold, review, security
+### helmchart — Helm chart scaffold, review, security
 
 **Create a new chart:**
 ```
