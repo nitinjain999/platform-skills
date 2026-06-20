@@ -17,7 +17,7 @@ Commands work in any conversation — type the slash command or describe your pr
 
 | Command | What it's for |
 |---------|--------------|
-| [/platform-skills:preflight](#platform-skillsreview) | Production-readiness review of any config |
+| [/platform-skills:preflight](#platform-skillspreflight) | Production-readiness preflight for a folder, repo, or single file |
 | [/platform-skills:debug](#platform-skillsdebug) | Structured troubleshooting for any symptom |
 | [/platform-skills:terraform](#platform-skillsterraform) | Terraform validation pipeline + blast radius |
 | [/platform-skills:checkov](#platform-skillscheckov) | Checkov bootstrap, static + plan-level Terraform scanning, multi-cloud, fix mode |
@@ -55,12 +55,14 @@ Commands work in any conversation — type the slash command or describe your pr
 
 ## `/platform-skills:preflight`
 
-**What it does:** Senior-engineer production-readiness review of any platform config. Evaluates correctness → security → operational safety → deprecations. Returns findings as Critical / Improvement / Note.
+**What it does:** Production-readiness preflight check for a directory, repo, or single file. Discovers all files, classifies by type, and runs type-specific checks across the whole scope. Returns a per-file summary table and aggregated verdict (BLOCKED / NEEDS_FIX / MERGE_READY).
 
-**Works on:** Kubernetes manifests, Terraform modules, GitHub Actions workflows, Helm values, RBAC configs, network policies, Dockerfiles, any YAML.
+**Works on:** Entire folders, globs, or single files — Kubernetes manifests, Terraform modules, GitHub Actions workflows, Helm values, Flux resources, Dockerfiles, shell scripts.
 
 ```
-/platform-skills:preflight [paste file content or describe what to review]
+/platform-skills:preflight ./k8s/
+/platform-skills:preflight releases/my-app/ --env prod
+/platform-skills:preflight [paste single file content]
 ```
 
 **What gets checked:**

@@ -1,38 +1,114 @@
 ---
 name: preflight
-description: Production-readiness preflight check for a single file or pasted content. Auto-detects file type (Kubernetes manifest, Terraform, GitHub Actions workflow, Helm values/chart, Flux Kustomization/HelmRelease, Dockerfile, shell script) and applies type-specific checks. Covers correctness, security, operational safety, deprecations, and upgrade risk. Use when asked to "check this manifest", "is this safe to apply", "review my workflow", or "check my Terraform". For PR diffs spanning multiple files use /platform-skills:pr-review instead. For deep Helm chart work use /platform-skills:helmchart instead.
-argument-hint: "[paste file content or path] [--bot] [--diff]"
+description: Production-readiness preflight check for a directory, repo, or single file. Auto-detects file types (Kubernetes manifests, Terraform, GitHub Actions workflows, Helm values/charts, Flux Kustomizations/HelmReleases, Dockerfiles, shell scripts) and applies type-specific checks across the whole scope. Returns a per-file summary table and aggregated verdict. Use before deploying, merging, or applying a folder of config. For PR diffs spanning multiple files use /platform-skills:pr-review instead. For deep Helm chart work use /platform-skills:helmchart instead.
+argument-hint: "[path/to/folder or file] [--bot] [--env prod|staging|dev]"
 title: "Preflight Command"
 sidebar_label: "preflight"
 custom_edit_url: null
 ---
 
-You are a senior platform engineer performing a production-readiness preflight check.
+You are a senior platform engineer performing a production-readiness preflight check before a deployment or merge.
 
 Input: `$ARGUMENTS`
 
 ---
 
-## Interactive Interview
+## Step 1 — Determine scope
 
-Ask questions **one at a time**, in order. Wait for each answer before continuing.
+Parse `$ARGUMENTS` to decide the mode:
 
-### Q1 — Get the content
+| Input | Mode |
+|-------|------|
+| A directory path (e.g. `./k8s/`, `releases/my-app/`) | **Folder mode** — discover and check all files |
+| A glob (e.g. `*.yaml`, `terraform/*.tf`) | **Folder mode** — check all matching files |
+| A single file path or pasted content | **Single-file mode** |
+| Nothing | Ask: "What would you like to preflight? Paste a file, give a path, or name a directory." |
 
-If `$ARGUMENTS` already contains file content or a path, skip this question and go to Q2.
+---
 
-Otherwise ask:
+## Step 2 — Interview (ask one question at a time)
+
+### Q1 — Environment
 
 ```
-Paste the file content you want to audit
-(or give me a file path if it's accessible in this repo):
+Which environment is this targeting?
+  1. Production   [default]
+  2. Staging
+  3. Development
+
+Enter 1–3:
+```
+
+Adjust severity thresholds:
+- Production → surface Medium and above
+- Staging → surface High and above, note Mediums
+- Development → surface Critical and High only
+
+---
+
+### Q2 — What is this change doing?
+
+```
+One sentence: what does this change do?
+e.g. "Rolling out a new microservice", "Upgrading nginx to 1.27",
+     "Adding an IAM role for the data pipeline"
+```
+
+Used to verify the configuration achieves the stated intent and to scope blast radius.
+
+---
+
+### Q3 — Focus areas
+
+```
+Any specific concerns? (Enter letters, or press Enter for all)
+  a. Security
+  b. Correctness
+  c. Operational safety (blast radius, HA, rollback)
+  d. Deprecations and upgrade risk
+  e. All [default]
 ```
 
 ---
 
-### Q2 — Confirm or detect file type
+### Q4 — Output format
 
-Attempt to detect the file type from the content using these signals:
+```
+Output format:
+  1. Standard — findings with fixes [default]
+  2. Bot — GitHub-flavoured markdown for posting with gh pr comment
+
+Enter 1–2:
+```
+
+Now run the preflight. Do not ask further questions.
+
+---
+
+## Step 3 — Folder mode: discovery and triage
+
+When the input is a directory or glob:
+
+1. **List all files** — recursively enumerate files under the path, skipping: `.git/`, `node_modules/`, `vendor/`, `*.lock`, `*.sum`, binary files
+2. **Classify each file** by type using the signals in Step 4 below
+3. **Group by type** — check all files of the same type with the same checklist
+4. **Skip unknowns** — if a file type cannot be determined, note it in the output as `skipped (unknown type)` and move on
+5. **Aggregate findings** — count Critical/High/Medium/Low across all files
+6. **Derive overall verdict** — BLOCKED if any Critical, NEEDS_FIX if any High, MERGE_READY otherwise
+
+Discovery commands to suggest to the user if the directory is accessible:
+
+```bash
+# Preview what preflight will check
+find ./k8s -type f \( -name "*.yaml" -o -name "*.yml" -o -name "*.tf" -o -name "*.sh" -o -name "Dockerfile*" \) | sort
+
+# Count by type
+find ./k8s -name "*.yaml" | xargs grep -l "^apiVersion:" | wc -l
+```
+
+---
+
+## Step 4 — File type detection
 
 | Signal | Detected type |
 |--------|---------------|
@@ -43,138 +119,51 @@ Attempt to detect the file type from the content using these signals:
 | `apiVersion: kustomize.toolkit.fluxcd.io` or `kind: Kustomization` | Flux Kustomization |
 | `apiVersion: helm.toolkit.fluxcd.io` or `kind: HelmRelease` | Flux HelmRelease |
 | `apiVersion: source.toolkit.fluxcd.io` | Flux Source |
-| `resource "aws_` or `resource "azurerm_` or `variable "` | Terraform |
+| `resource "aws_` or `resource "azurerm_` or `variable "` + `.tf` extension | Terraform |
 | `on:` + `jobs:` + `runs-on:` | GitHub Actions workflow |
-| `image:` + `tag:` + `replicaCount:` | Helm values |
-| `apiVersion: v2` + `name:` + `description:` | Helm Chart.yaml |
+| `image:` + `tag:` + `replicaCount:` or `values.yaml` in Helm context | Helm values |
+| `apiVersion: v2` + `name:` + `description:` in Chart.yaml | Helm Chart.yaml |
 | `FROM ` at start of file | Dockerfile |
-| `#!/bin/bash` or `#!/bin/sh` | Shell script |
-
-If confident, confirm with the developer:
-
-```
-I can see this is a <detected type>. Is that right? (y / tell me what it is)
-```
-
-If ambiguous, ask:
-
-```
-What type of file is this?
-  1. Kubernetes manifest (Deployment, StatefulSet, Job, etc.)
-  2. Flux resource (Kustomization, HelmRelease, Source)
-  3. Terraform (.tf)
-  4. GitHub Actions workflow
-  5. Helm values or Chart.yaml
-  6. Dockerfile
-  7. Shell script
-  8. Other
-
-Enter 1–8:
-```
+| `#!/bin/bash` or `#!/bin/sh` or `.sh` extension | Shell script |
 
 ---
 
-### Q3 — Context: what's changing?
-
-```
-What is this change doing? (one sentence is enough)
-e.g. "Adding a new microservice", "Increasing replicas for peak load",
-     "Adding a new IAM role", "Upgrading the base image"
-```
-
-This is used to assess whether the configuration achieves the stated intent and to scope blast radius correctly.
-
----
-
-### Q4 — Environment
-
-```
-Which environment is this targeting?
-  1. Production
-  2. Staging
-  3. Development / local
-  4. All environments (shared config)
-
-Enter 1–4 [default: 1]:
-```
-
-Adjust severity thresholds based on the answer:
-- Production → surface all Medium and above
-- Staging → surface High and above, note Mediums
-- Development → surface Critical and High only
-
----
-
-### Q5 — What do you want focus on?
-
-```
-Any specific concerns? (select all that apply, or press Enter to run everything)
-  a. Security
-  b. Correctness
-  c. Operational safety (blast radius, rollback, HA)
-  d. Deprecations and upgrade risk
-  e. All of the above [default]
-
-Enter letters (e.g. "a c") or press Enter:
-```
-
----
-
-### Q6 — Output format
-
-```
-How should I output the findings?
-  1. Standard — narrative findings with fixes [default]
-  2. Bot / PR comment — GitHub-flavoured markdown for posting with gh pr comment
-
-Enter 1–2:
-```
-
-Now run the audit. Do not ask further questions.
-
----
-
-## Step 2 — Universal checks (all types)
-
-Run these regardless of file type:
+## Step 5 — Universal checks (all files)
 
 | Check | Severity |
 |-------|----------|
 | File is syntactically valid (YAML/HCL/JSON parseable) | Critical |
 | No plaintext secrets, tokens, or passwords | Critical |
-| References to external resources use pinned versions (no `latest`, `main`, floating tags) | High |
-| File is self-consistent (names, namespaces, labels match between sections) | High |
-| Author intent is achievable with this configuration | High |
+| External resource references use pinned versions (no `latest`, `main`, floating tags) | High |
+| File is internally self-consistent (names, namespaces, labels match) | High |
+| Author intent from Q2 is achievable with this configuration | High |
 
 ---
 
-## Step 3 — Type-specific checks
+## Step 6 — Type-specific checks
 
 ### Kubernetes Workload (Deployment, StatefulSet, DaemonSet, Job, CronJob)
 
 **Correctness**
-- API version current and not deprecated (see deprecation table below)
+- API version current and not deprecated
 - `selector.matchLabels` matches `template.metadata.labels` exactly
-- `app.kubernetes.io/version` absent from `selectorLabels` (immutable)
-- Container name matches what probes and resource entries reference
+- `app.kubernetes.io/version` absent from `selectorLabels` (immutable — breaks upgrades)
 - `image.tag` is pinned — not `latest`, `head`, or untagged
 
 **Security**
 - `securityContext.runAsNonRoot: true` on pod and container
 - `securityContext.readOnlyRootFilesystem: true` on container
 - `securityContext.allowPrivilegeEscalation: false`
-- `capabilities.drop: [ALL]` — add back only what is documented
+- `capabilities.drop: [ALL]`
 - `seccompProfile.type: RuntimeDefault` or `Localhost`
 - No `privileged: true`
 - `automountServiceAccountToken: false` unless API access is explicitly needed
 - No `hostNetwork`, `hostPID`, `hostIPC`
 
 **Operational Safety**
-- `resources.requests` and `resources.limits` set on every container — memory limit present, CPU limit absent (throttling risk)
+- `resources.requests` set; memory limit set; CPU limit absent (throttling risk)
 - `livenessProbe` and `readinessProbe` both defined
-- `startupProbe` present for slow-starting containers
-- `terminationGracePeriodSeconds` set if the app needs graceful shutdown > 30s
-- `PodDisruptionBudget` exists for HA workloads (minAvailable ≥ 1)
+- `PodDisruptionBudget` exists for HA workloads (`minAvailable ≥ 1`)
 - Deployment `strategy.type: RollingUpdate` with `maxSurge` and `maxUnavailable` explicit
 - `topologySpreadConstraints` or `podAntiAffinity` for multi-replica workloads
 
@@ -185,7 +174,6 @@ Run these regardless of file type:
 | `networking.k8s.io/v1beta1` Ingress | 1.22 | `networking.k8s.io/v1` |
 | `batch/v1beta1` CronJob | 1.25 | `batch/v1` |
 | `policy/v1beta1` PodDisruptionBudget | 1.25 | `policy/v1` |
-| `policy/v1beta1` PodSecurityPolicy | 1.25 | PSA / Kyverno |
 | `autoscaling/v2beta2` HPA | 1.26 | `autoscaling/v2` |
 
 ---
@@ -195,17 +183,16 @@ Run these regardless of file type:
 **Correctness**
 - `sourceRef` points to an existing GitRepository or OCIRepository
 - `path` exists in the referenced source
-- `interval` is set — warn if < 1m (noisy) or > 1h (slow recovery)
+- `interval` set — warn if < 1m or > 1h
 - `dependsOn` references exist and don't create a cycle
 
 **Security**
-- `postBuild.substituteFrom` only substitutes within this Kustomization's own `path` — not a sibling
+- `postBuild.substituteFrom` only substitutes within this Kustomization's own `path`
 - Secrets referenced in `substituteFrom` exist in the same namespace
 
 **Operational Safety**
-- `prune: true` — document blast radius (what gets deleted if removed from Git)
-- `wait: true` + `timeout` set — prevents silent stuck reconciliations
-- `retryInterval` set for flaky environments
+- `prune: true` — document blast radius (what gets deleted on removal from Git)
+- `wait: true` + `timeout` — prevents silent stuck reconciliations
 - `healthChecks` defined for workloads this Kustomization owns
 
 ---
@@ -213,202 +200,197 @@ Run these regardless of file type:
 ### Flux HelmRelease
 
 **Correctness**
-- `chartRef` or `chart.spec.chart` resolves to an existing HelmRepository source
-- `chart.spec.version` is pinned to a specific semver — not a range like `>=1.0.0`
-- `values` keys match the upstream chart's `values.yaml` schema
+- `chart.spec.version` pinned to specific semver — not `>=1.0.0`
+- `values` keys match the upstream chart schema
 - `targetNamespace` and `storageNamespace` are explicit
 
 **Security**
 - No plaintext secrets in `values` — use `valuesFrom` with a Secret reference
-- RBAC permissions granted to Helm controller are scoped to namespace
 
 **Operational Safety**
 - `install.remediation.retries` and `upgrade.remediation.retries` set
-- `upgrade.remediation.remediateLastFailure: true` for automatic rollback
+- `upgrade.remediation.remediateLastFailure: true`
 - `rollback.cleanupOnFail: true`
-- `timeout` explicit — default 5m may be too short for large charts
+- `timeout` explicit
 
 ---
 
 ### Terraform
 
 **Correctness**
-- `required_providers` blocks include version constraints
-- Provider version constraints are not too loose (`>= 3.0` without upper bound risks breaking changes)
-- Module sources include a version ref — no unversioned `git::` or `github.com/` references
+- `required_providers` has version constraints
+- Module sources include a version ref
 - All `variable` blocks have `type` and `description`
-- `sensitive = true` on output blocks that expose secrets
 
 **Security**
 - No wildcard `Action: "*"` or `Resource: "*"` in IAM policies
-- No hardcoded credentials in resource blocks
-- S3 buckets: `server_side_encryption_configuration` set, `block_public_acls = true`
-- RDS/databases: `storage_encrypted = true`, `deletion_protection = true`
-- Security groups: no `0.0.0.0/0` ingress on sensitive ports (22, 3306, 5432)
-- `prevent_destroy = true` on stateful resources (RDS, S3, DynamoDB)
+- No hardcoded credentials
+- S3: `server_side_encryption_configuration` set, `block_public_acls = true`
+- RDS: `storage_encrypted = true`, `deletion_protection = true`
+- Security groups: no `0.0.0.0/0` on sensitive ports (22, 3306, 5432)
+- `prevent_destroy = true` on stateful resources
 
 **Operational Safety**
-- `lifecycle.create_before_destroy` on resources that cause downtime when replaced
-- Remote backend configured — not local state
-- `variable` blocks have `validation` blocks for high-risk inputs
-- Changes to `tags` on large resources — confirm they don't force replacement
-
-**Blast radius**
-- List resources that will be **replaced** (not just updated) — these cause downtime
-- Identify data resources: RDS, S3, DynamoDB, ElastiCache — any replacement = data risk
+- Remote backend — not local state
+- `lifecycle.create_before_destroy` on downtime-causing replacements
+- Blast radius: list resources that will be **replaced** (not just updated)
 
 ---
 
 ### GitHub Actions Workflow
 
 **Correctness**
-- Trigger (`on:`) is appropriate — warn on `push` to `main` without protection rules
-- Steps reference correct output variable names from prior steps
-- `needs:` graph is acyclic and complete
-- Environment names match repo environment configuration
+- Trigger appropriate — warn on `push` to `main` without branch protection
+- `needs:` graph is acyclic
 
 **Security**
-- All `uses:` actions pinned to a full commit SHA — not a tag or branch
-- `permissions:` block present at workflow or job level — principle of least privilege
-- No `pull_request_target` with `checkout` of the PR head (injection risk)
-- Secrets not echoed in `run:` steps
-- OIDC (`id-token: write`) used instead of long-lived PAT where possible
-- No `continue-on-error: true` on security-sensitive steps
+- All `uses:` actions pinned to full commit SHA
+- `permissions:` block present — principle of least privilege
+- No `pull_request_target` with `checkout` of PR head (injection risk)
+- OIDC used instead of long-lived PAT where possible
 
 **Operational Safety**
-- `concurrency:` group defined to prevent duplicate runs
+- `concurrency:` group defined
 - `timeout-minutes:` set on long-running jobs
-- Artifact `retention-days:` explicit — default 90 days may be excessive
-- Cache keys include a hash of the lockfile — not just a static string
-- Composite actions: no `type:` or `options:` on `inputs:` (workflow_dispatch only), no `timeout-minutes:` on steps
 
 **Deprecations**
 | Action | Status | Replacement |
 |--------|--------|-------------|
-| `actions/checkout@v2` | Deprecated | `@v4` or SHA pin |
-| `actions/setup-node@v2` | Deprecated | `@v4` or SHA pin |
+| `actions/checkout@v2` | Deprecated | `@v4` or SHA |
+| `actions/setup-node@v2` | Deprecated | `@v4` or SHA |
 | `set-output` command | Removed | `$GITHUB_OUTPUT` |
-| `save-state` / `get-state` | Removed | `$GITHUB_STATE` |
-| Node 16 runners | Deprecated | Node 20+ |
 
 ---
 
 ### Helm Values
 
 **Correctness**
-- Keys match the chart's documented `values.yaml` schema — no unknown keys
-- `image.tag` is pinned — not `latest`
-- Required values are present (check chart `values.yaml` for empty defaults)
-- `ingress.hosts` and TLS entries are consistent
+- Keys match the chart schema
+- `image.tag` pinned
+- `ingress.hosts` and TLS entries consistent
 
 **Security**
-- No plaintext secrets in values — use external secrets or `secretKeyRef`
-- `securityContext` not weakened from chart defaults
+- No plaintext secrets — use external secrets or `secretKeyRef`
 
 **Operational Safety**
-- `resources.requests` and `resources.limits` explicitly set — do not rely on chart defaults
-- `replicaCount ≥ 2` for production workloads
-- HPA enabled if traffic is variable
-- PDB enabled alongside HPA
+- `resources.requests` and `resources.limits` explicit
+- `replicaCount ≥ 2` for production
+- HPA and PDB enabled for variable traffic
 
 ---
 
 ### Dockerfile
 
 **Correctness**
-- Base image uses a specific digest or version tag — not `latest`
-- Multi-stage build separates build and runtime layers
-- `COPY` uses explicit paths — not `COPY . .` in a multi-module repo
+- Base image uses specific digest or tag — not `latest`
+- Multi-stage build separates build and runtime
 
 **Security**
-- `USER` instruction sets a non-root user before `CMD`/`ENTRYPOINT`
-- No `--privileged` or `--cap-add` in RUN instructions
-- `apt-get install` pins versions — not `apt-get install curl`
-- Secrets not passed as `ARG` or `ENV` (visible in image history)
-- `.dockerignore` exists and excludes `.git`, `node_modules`, credentials
+- `USER` sets non-root before `CMD`/`ENTRYPOINT`
+- Secrets not passed as `ARG` or `ENV`
+- `.dockerignore` excludes `.git`, credentials
 
 **Operational Safety**
-- `HEALTHCHECK` instruction defined
-- `ENTRYPOINT` + `CMD` split correctly — `ENTRYPOINT` for binary, `CMD` for default args
-- Base image is a minimal distroless or Alpine variant, not `ubuntu:latest`
+- `HEALTHCHECK` defined
+- Base image is minimal (distroless or Alpine)
 
 ---
 
 ### Shell Script
 
 **Correctness**
-- `set -euo pipefail` at the top — fail fast on errors and unset variables
-- All variables quoted — `"$VAR"` not `$VAR`
-- `[[` used instead of `[` for string comparisons in bash
+- `set -euo pipefail` at the top
+- All variables quoted (`"$VAR"`)
 
 **Security**
 - No `eval` with user input
-- No `curl | bash` patterns
-- Temporary files use `mktemp` — not predictable paths in `/tmp`
-- Credentials not hardcoded — sourced from environment or secret manager
+- No `curl | bash`
+- Credentials sourced from environment or secret manager
 
 **Operational Safety**
-- `trap` used for cleanup on EXIT/ERR
-- Long-running commands have timeouts
-- Idempotent — safe to run twice without side effects
+- `trap` for cleanup on EXIT/ERR
+- Idempotent — safe to run twice
 
 ---
 
-## Step 4 — Handoff recommendations
-
-After the review, if deeper specialised analysis would help, suggest:
+## Step 7 — Handoff recommendations
 
 | Situation | Handoff |
 |-----------|---------|
-| Terraform IaC security scan needed | `/platform-skills:checkov` |
-| Full Helm chart scaffold or upgrade diff needed | `/platform-skills:helmchart` |
-| Container image CVE scan needed | `/platform-skills:trivy` |
+| Terraform IaC security scan | `/platform-skills:checkov` |
+| Helm chart scaffold or upgrade diff | `/platform-skills:helmchart` |
+| Container image CVE scan | `/platform-skills:trivy` |
 | Flux reconciliation issue | `/platform-skills:gitops` |
-| PR diff spanning multiple files | `/platform-skills:pr-review` |
-| Karpenter node provisioning issue | `/platform-skills:karpenter` |
+| PR diff across many changed files | `/platform-skills:pr-review` |
 
 ---
 
-## Step 5 — Output
+## Step 8 — Output
 
 ### Standard mode (default)
 
+**Folder / repo scope:**
+
 ```
-PREFLIGHT CHECK — <file name or type>
+PREFLIGHT — <path> (<N> files checked)
+Environment: <prod|staging|dev>
 
-Type detected: <type>
+CRITICAL:  <count>  HIGH:  <count>  MEDIUM:  <count>  LOW:  <count>
 
-CRITICAL:    <count>
-HIGH:        <count>
-MEDIUM:      <count>
-LOW:         <count>
+── FILE SUMMARY ──────────────────────────────────────
+File                              Type           C  H  M  Verdict
+k8s/deployment.yaml               K8s workload   1  2  0  BLOCKED
+k8s/helmrelease.yaml              Flux HR        0  1  1  NEEDS_FIX
+terraform/main.tf                 Terraform      0  0  2  MERGE_READY
+.github/workflows/deploy.yaml     GHA            0  1  0  NEEDS_FIX
+(skipped: k8s/secret.yaml — binary or encrypted, cannot check)
 
 ── CRITICAL ──────────────────────────────────────────
-[C1] <finding>
-  Evidence: <exact line or block>
-  Fix: <concrete corrected snippet>
-  Blast radius: <what breaks if not fixed>
+[C1] k8s/deployment.yaml — <finding>
+  Evidence: <exact line>
+  Fix: <corrected snippet>
+  Blast radius: <what breaks>
 
 ── HIGH ──────────────────────────────────────────────
-[H1] <finding>
+[H1] k8s/deployment.yaml — <finding>
   ...
 
 ── MEDIUM / LOW ──────────────────────────────────────
-[M1] <finding> — <one-line fix>
+[M1] terraform/main.tf — <finding> — <one-line fix>
+
+── OVERALL VERDICT ───────────────────────────────────
+BLOCKED — fix Critical findings before deploying
+
+Rollback plan: <how to undo this change>
+Validation steps:
+  kubectl get pods -n <ns> -w
+  flux get kustomizations -A
+
+── HANDOFF ───────────────────────────────────────────
+<specialised command recommendations>
+```
+
+**Single-file scope:**
+
+```
+PREFLIGHT CHECK — <file name>
+Type: <detected type>
+
+CRITICAL: <count>  HIGH: <count>  MEDIUM: <count>  LOW: <count>
+
+── CRITICAL ──────────────────────────────────────────
+...
 
 ── VERDICT ───────────────────────────────────────────
 BLOCKED / NEEDS_FIX / MERGE_READY
 
-Rollback plan: <how to undo this change>
-Validation steps: <commands to verify after apply>
-
-── HANDOFF ───────────────────────────────────────────
-<any specialised command recommendations>
+Rollback plan: <how to undo>
+Validation steps: <commands>
 ```
 
-### Bot / PR comment mode (`--bot` flag)
+---
 
-Emit GitHub-flavoured markdown using this exact structure so the workflow can post it with `gh pr comment` and update it on subsequent pushes using the HTML marker:
+### Bot / PR comment mode (`--bot` flag)
 
 ```markdown
 ## 🔍 Platform Skills Preflight
@@ -417,22 +399,21 @@ Emit GitHub-flavoured markdown using this exact structure so the workflow can po
 
 ### Result: {MERGE_READY | NEEDS_FIX | BLOCKED}
 
-**Type detected:** <type>
+**Scope:** <path> — <N> files  
+**Environment:** <prod|staging|dev>
 
-| Severity | Finding | Location |
-|---|---|---|
-| 🔴 Critical | <finding> | <file:line or n/a> |
-| 🟡 High | <finding> | <file:line or n/a> |
-| 🔵 Medium/Low | <finding> | <file:line or n/a> |
+| File | Type | C | H | M | Verdict |
+|------|------|---|---|---|---------|
+| deployment.yaml | K8s workload | 1 | 2 | 0 | 🔴 BLOCKED |
+| helmrelease.yaml | Flux HR | 0 | 1 | 1 | 🟡 NEEDS_FIX |
 
 #### Critical issues
-<!-- one subsection per Critical finding: problem, evidence, exact fix snippet, blast radius -->
+<!-- one subsection per Critical finding: file, problem, evidence, fix, blast radius -->
 
 #### High findings
-<!-- one subsection per High finding: problem, suggested fix -->
+<!-- one subsection per High finding: file, problem, suggested fix -->
 
 #### Rollback plan
-<!-- how to safely undo this change -->
 
 #### Validation steps
 ```bash
@@ -443,19 +424,12 @@ Emit GitHub-flavoured markdown using this exact structure so the workflow can po
 *Generated by [platform-skills](https://nitinjain999.github.io/platform-skills/)*
 ```
 
-**Result values:**
-- `BLOCKED` — one or more Critical findings
-- `NEEDS_FIX` — no Critical, but one or more High findings
-- `MERGE_READY` — Medium/Low only, or no findings
-
-**Updating existing comment:** The `<!-- platform-skills-preflight -->` marker lets workflows find and replace the comment on re-runs:
+**Updating existing comment:**
 
 ```bash
-# Find existing comment ID
 COMMENT_ID=$(gh api repos/{owner}/{repo}/issues/{pr}/comments --paginate \
   --jq '.[] | select(.body | contains("platform-skills-preflight")) | .id' | head -1)
 
-# Update if exists, create if not
 if [ -n "$COMMENT_ID" ]; then
   gh api --method PATCH repos/{owner}/{repo}/issues/comments/$COMMENT_ID \
     --field body="$REVIEW_BODY"
@@ -463,3 +437,8 @@ else
   gh pr comment {pr} --body "$REVIEW_BODY"
 fi
 ```
+
+**Result values:**
+- `BLOCKED` — one or more Critical findings in any file
+- `NEEDS_FIX` — no Critical, but one or more High findings
+- `MERGE_READY` — Medium/Low only, or no findings
