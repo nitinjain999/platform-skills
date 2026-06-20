@@ -1,3 +1,8 @@
+---
+title: LLM Observability
+custom_edit_url: null
+---
+
 # LLM Observability Reference
 
 Covers Datadog LLM Observability (LLMObs): tracing LLM calls, evaluating outputs, running experiments, and root-causing failures in production AI applications.

@@ -1,3 +1,8 @@
+---
+title: Argo CD
+custom_edit_url: null
+---
+
 # Argo CD Reference
 
 ## Contents

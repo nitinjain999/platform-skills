@@ -1,3 +1,8 @@
+---
+title: Documentation
+custom_edit_url: null
+---
+
 # Code Documentation Reference
 
 Covers inline docstrings, JSDoc, OpenAPI/Swagger specs, documentation sites, and developer guides.

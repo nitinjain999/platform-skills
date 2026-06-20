@@ -2,6 +2,9 @@
 name: review
 description: Reviews a Kubernetes manifest, Terraform file, GitHub Actions workflow, Helm values, or any platform configuration for correctness, security, and operational safety. Supports bot comment mode for automated PR feedback.
 argument-hint: "[paste file content or describe what to review] [--bot to emit GitHub-flavoured markdown for PR comments]"
+title: "Review Command"
+sidebar_label: "review"
+custom_edit_url: null
 ---
 
 ---

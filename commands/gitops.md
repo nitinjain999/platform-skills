@@ -2,6 +2,9 @@
 name: gitops
 description: "Flux CD and Argo CD — two modes. debug: five structured debug workflows for live clusters (installation, source, HelmRelease, Kustomization, ResourceSet) producing a five-section report. audit: six-phase read-only repo analysis (discovery, validation, API compliance, best practices, security) producing a prioritised Critical/Warning/Info report."
 argument-hint: "debug [describe symptom or paste flux/argocd output] | audit [repo path or paste directory listing]"
+title: "GitOps Command"
+sidebar_label: "gitops"
+custom_edit_url: null
 ---
 
 ---

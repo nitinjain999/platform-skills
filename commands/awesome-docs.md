@@ -2,6 +2,9 @@
 name: awesome-docs
 description: Generate, convert, and maintain animated GitHub-safe Markdown documents with animated SVG diagrams. Covers four SVG patterns (architecture flow, lifecycle loop, field carousel, timeline phases), guided interview for any doc type (README, architecture guide, runbook, API reference, tutorial, RFC, post-mortem, how-it-works, or custom), converting existing plain Markdown, diffing for stale diagrams, quality auditing, local preview, and multi-platform export. Use when asked to "create a README for X", "write an architecture doc", "animate this guide", "convert my doc to animated", "check if my diagrams are stale", or "export my doc for Confluence".
 argument-hint: "[generate|convert|update|diff|audit|preview|export] [doc type or file path]"
+title: "Awesome Docs Command"
+sidebar_label: "awesome-docs"
+custom_edit_url: null
 ---
 
 Generate, convert, and maintain animated Markdown documents with GitHub-safe SVG animations.

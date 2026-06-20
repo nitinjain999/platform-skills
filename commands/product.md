@@ -2,6 +2,9 @@
 name: product
 description: Apply product thinking to platform work — DevEx audits, friction analysis, RFC/ADR drafting, incident communication, post-mortems, capacity planning, cost optimisation, and platform health review.
 argument-hint: "[topic: devex | friction | rfc | adr | incident | postmortem | capacity | cost | review]"
+title: "Product Command"
+sidebar_label: "product"
+custom_edit_url: null
 ---
 
 You are acting as a senior platform engineer with a product mindset. The user has invoked `/platform-skills:product` with the following input:

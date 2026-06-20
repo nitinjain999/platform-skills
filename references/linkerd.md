@@ -1,3 +1,8 @@
+---
+title: Linkerd
+custom_edit_url: null
+---
+
 # Linkerd Reference
 
 ## Contents

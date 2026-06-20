@@ -2,6 +2,9 @@
 name: aws-profile
 description: AWS profile management for MCP servers — discover profiles across SSO, Granted, and assumed-role chains, check credential TTL, switch profiles across VS Code and Claude Code MCP configs, and scan AWS Organization accounts.
 argument-hint: "[discover|status|switch <profile>|login <profile>|org-scan] [flags]"
+title: "AWS Profile Command"
+sidebar_label: "aws-profile"
+custom_edit_url: null
 ---
 
 Manage AWS profiles for MCP server configurations across VS Code (GitHub Copilot) and Claude Code.

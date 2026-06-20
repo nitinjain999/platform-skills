@@ -1,3 +1,8 @@
+---
+title: Conventional Commits
+custom_edit_url: null
+---
+
 # Conventional Commits Reference
 
 Covers the Conventional Commits 1.0.0 specification, type classification, scope rules, breaking changes, message structure, atomic commit strategy, tooling, and validation.

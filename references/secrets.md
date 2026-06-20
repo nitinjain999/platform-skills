@@ -1,3 +1,8 @@
+---
+title: Secrets Management
+custom_edit_url: null
+---
+
 # Secrets Reference
 
 ## Contents

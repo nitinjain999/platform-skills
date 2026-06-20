@@ -1,3 +1,8 @@
+---
+title: AWS MCP Profiles
+custom_edit_url: null
+---
+
 # AWS MCP Profiles Reference
 
 Deep-dive guide for managing AWS MCP servers across VS Code (GitHub Copilot) and Claude Code with multiple AWS accounts.

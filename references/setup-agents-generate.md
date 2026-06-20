@@ -1,3 +1,8 @@
+---
+title: "Setup Agents: Generate"
+custom_edit_url: null
+---
+
 # setup-agents-generate.md — Renamed
 
 This file has been renamed to `setup-agents-build.md` (which covers both generate and upgrade modes).

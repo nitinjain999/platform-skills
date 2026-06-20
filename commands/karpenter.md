@@ -2,6 +2,9 @@
 name: karpenter
 description: Design, install, debug, review, plan capacity, audit scaling history, migrate from Cluster Autoscaler, and upgrade Karpenter v1.x on EKS. Covers NodePool, EC2NodeClass, NodeClaim, Spot diversity, disruption strategy, Pod Identity/IRSA, interruption queue, private clusters, AMI rotation, and GitOps integration. Use when asked to "set up Karpenter", "debug why nodes aren't provisioning", "review my NodePool", "what would Karpenter provision for this workload", "why did this node terminate", "migrate from CA", or "upgrade Karpenter".
 argument-hint: "[generate|debug|review|audit|plan|migrate|upgrade] [description or file path]"
+title: "Karpenter Command"
+sidebar_label: "karpenter"
+custom_edit_url: null
 ---
 
 Design, install, debug, review, plan capacity, audit, migrate, and upgrade Karpenter on EKS.

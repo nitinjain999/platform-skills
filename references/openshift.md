@@ -1,3 +1,8 @@
+---
+title: OpenShift
+custom_edit_url: null
+---
+
 # OpenShift Reference
 
 ## Contents

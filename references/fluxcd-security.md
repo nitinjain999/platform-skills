@@ -1,3 +1,8 @@
+---
+title: "Flux CD: Security"
+custom_edit_url: null
+---
+
 # FluxCD Security Audit Checklist
 
 Use this checklist when reviewing a GitOps repository for security posture. Run all scans regardless of earlier findings — issues compound.

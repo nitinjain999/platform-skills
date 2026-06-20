@@ -2,6 +2,9 @@
 name: terraform
 description: Runs through the full Terraform validation pipeline — fmt, validate, tflint, security scan — and reviews a module or plan for blast radius, IAM risk, and state impact.
 argument-hint: "[paste terraform code, plan output, or describe the change]"
+title: "Terraform Command"
+sidebar_label: "terraform"
+custom_edit_url: null
 ---
 
 ---

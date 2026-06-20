@@ -1,3 +1,8 @@
+---
+title: Helm
+custom_edit_url: null
+---
+
 # Helm Chart Reference
 
 ## Chart Structure

@@ -2,6 +2,9 @@
 name: linkerd
 description: Linkerd-specific diagnostics — mTLS verification, proxy injection issues, authorization policy debugging, traffic management, and multi-cluster connectivity problems.
 argument-hint: "[describe the Linkerd symptom or paste linkerd check / viz output]"
+title: "Linkerd Command"
+sidebar_label: "linkerd"
+custom_edit_url: null
 ---
 
 You are a senior platform engineer specialising in Linkerd service mesh.

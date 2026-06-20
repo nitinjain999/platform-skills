@@ -1,3 +1,8 @@
+---
+title: Platform Mindset
+custom_edit_url: null
+---
+
 # Platform Mindset Reference
 
 Guidance for platform engineers on treating developers as customers, communicating across teams, and proactively solving systemic problems.

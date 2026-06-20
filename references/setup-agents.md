@@ -1,3 +1,8 @@
+---
+title: Setup Agents
+custom_edit_url: null
+---
+
 # Setup Agents — Reference Index
 
 Routes to mode-specific reference files. Only load what the mode needs.

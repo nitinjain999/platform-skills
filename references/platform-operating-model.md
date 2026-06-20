@@ -1,3 +1,8 @@
+---
+title: Platform Operating Model
+custom_edit_url: null
+---
+
 # Platform Operating Model
 
 ## Contents

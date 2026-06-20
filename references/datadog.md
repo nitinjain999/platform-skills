@@ -1,3 +1,8 @@
+---
+title: Datadog
+custom_edit_url: null
+---
+
 # Datadog Reference
 
 Covers APM, Infrastructure Monitoring, Log Management, Synthetic Monitoring, Dashboards, Monitors, and SLOs.

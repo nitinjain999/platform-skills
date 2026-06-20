@@ -1,3 +1,8 @@
+---
+title: Runtime Security
+custom_edit_url: null
+---
+
 # Runtime Security Reference
 
 Covers Falco — eBPF-based syscall monitoring for Kubernetes workloads. Falco is a CNCF project, open-source, and free to run. Complements supply chain security (pre-deployment controls) with in-cluster threat detection (post-deployment controls).

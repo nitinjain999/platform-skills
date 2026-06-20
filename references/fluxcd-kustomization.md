@@ -1,3 +1,8 @@
+---
+title: "Flux CD: Kustomization"
+custom_edit_url: null
+---
+
 # FluxCD Kustomization Reference
 
 The Flux `Kustomization` CRD (`kustomize.toolkit.fluxcd.io/v1`) is managed by kustomize-controller. It is Flux's primary mechanism for deploying manifests to a cluster.

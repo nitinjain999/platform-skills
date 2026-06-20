@@ -1,3 +1,8 @@
+---
+title: Kyverno
+custom_edit_url: null
+---
+
 # Kyverno Reference
 
 Covers the new CEL-based policy types (`ValidatingPolicy`, `MutatingPolicy`, `GeneratingPolicy`, `ImageValidatingPolicy`) introduced in Kyverno v1.14–v1.15, their spec structure, match/exclude, CEL expressions, policy reporting, kyverno-cli testing, GitHub Actions integration, and troubleshooting.

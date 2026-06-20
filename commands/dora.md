@@ -2,6 +2,9 @@
 name: dora
 description: Measure, benchmark, instrument, and debug DORA metrics (Deployment Frequency, Lead Time for Changes, Change Failure Rate, MTTR) for production engineering teams. Covers GitHub Actions instrumentation, Prometheus recording rules, Grafana dashboards, incident source integration, SaaS tool selection, and anti-pattern detection. Use when asked to "instrument DORA metrics", "benchmark our deployment frequency", "why is my MTTR data missing", or "generate a DORA dashboard".
 argument-hint: "[instrument|dashboard|benchmark|debug] [description or file path]"
+title: "DORA Metrics Command"
+sidebar_label: "dora"
+custom_edit_url: null
 ---
 
 Measure, benchmark, and instrument DORA metrics for production engineering teams.

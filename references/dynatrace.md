@@ -1,3 +1,8 @@
+---
+title: Dynatrace
+custom_edit_url: null
+---
+
 # Dynatrace Reference
 
 Covers OneAgent deployment, Kubernetes Operator, Davis AI, Distributed Tracing, Log Monitoring, SLOs, and Dashboards.

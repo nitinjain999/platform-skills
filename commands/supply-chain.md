@@ -2,6 +2,9 @@
 name: supply-chain
 description: Secure the software supply chain from source to running container. Covers Cosign keyless image signing (Sigstore/Rekor), SBOM generation and attestation (Syft), vulnerability scanning with severity gates (Trivy/Grype), SLSA Level 2 provenance, and Kyverno/OPA admission enforcement. All open-source, no license cost. Use when asked to "sign my image", "generate an SBOM", "scan for CVEs", "attest build provenance", "enforce image signatures in Kubernetes", or "implement SLSA".
 argument-hint: "[audit|sign|sbom|scan|enforce|slsa] [description or file path]"
+title: "Supply Chain Command"
+sidebar_label: "supply-chain"
+custom_edit_url: null
 ---
 
 Secure the software supply chain — from the build pipeline to running containers.

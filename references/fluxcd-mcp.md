@@ -1,3 +1,8 @@
+---
+title: "Flux CD: MCP"
+custom_edit_url: null
+---
+
 # FluxCD MCP Server Reference
 
 The Flux Operator MCP server (`flux-operator-mcp`) exposes live cluster state to AI assistants via the Model Context Protocol. It enables AI-assisted GitOps debugging without leaving the conversation.

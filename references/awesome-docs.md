@@ -1,3 +1,8 @@
+---
+title: Awesome Docs
+custom_edit_url: null
+---
+
 # Awesome Docs Reference
 
 Covers animated GitHub-safe Markdown document generation — SVG blueprints, animation math, theme system, GitHub rendering constraints, multi-platform export, and external references.

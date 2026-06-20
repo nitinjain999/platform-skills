@@ -1,3 +1,8 @@
+---
+title: AWS
+custom_edit_url: null
+---
+
 # AWS Reference
 
 ## Contents

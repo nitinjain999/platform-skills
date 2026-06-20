@@ -1,3 +1,8 @@
+---
+title: PR Review
+custom_edit_url: null
+---
+
 # PR Review Reference
 
 Comprehensive pre-merge risk review across six dimensions: cost impact, environment drift, ownership and governance, SOC 2 compliance, deprecated API / version hygiene, and rollback feasibility.

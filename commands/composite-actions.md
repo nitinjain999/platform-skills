@@ -2,6 +2,9 @@
 name: composite-actions
 description: Generate, review, secure, and test composite GitHub Actions following best practices — full repo scaffold, interview-driven generation, PR creation on existing repos, SHA pinning, secrets-as-inputs, job summaries, and actionlint validation.
 argument-hint: "[generate|review|secure|test] [action.yml path or description]"
+title: "Composite Actions Command"
+sidebar_label: "composite-actions"
+custom_edit_url: null
 ---
 
 # Composite Actions Command

@@ -2,6 +2,9 @@
 name: renovate
 description: Generate renovate.json covering all dependency file types used in a repo, emit a GitHub Actions workflow that validates renovate.json on every PR, or generate a pre-commit hook for local validation.
 argument-hint: "[generate|workflow|precommit|all]"
+title: "Renovate Command"
+sidebar_label: "renovate"
+custom_edit_url: null
 ---
 
 ## Interactive Wizard (fires when $ARGUMENTS is empty)

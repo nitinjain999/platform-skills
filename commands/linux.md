@@ -2,6 +2,9 @@
 name: linux
 description: Linux administration and networking diagnostics — DNS, load balancing, VPCs, kernel tuning, and connectivity troubleshooting.
 argument-hint: "[topic: dns | lb | vpc | process | disk | network | security-groups | troubleshoot]"
+title: "Linux Command"
+sidebar_label: "linux"
+custom_edit_url: null
 ---
 
 You are acting as a senior platform engineer. The user has invoked `/platform-skills:linux` with the following input:

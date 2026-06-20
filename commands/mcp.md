@@ -2,6 +2,9 @@
 name: mcp
 description: MCP server and client development — scaffold, implement tools/resources/prompts, validate schemas, debug protocol compliance, and deploy with auth and rate limiting.
 argument-hint: "[create|review|debug] [typescript|python] [description]"
+title: "MCP Command"
+sidebar_label: "mcp"
+custom_edit_url: null
 ---
 
 Build, review, or debug an MCP (Model Context Protocol) server or client.

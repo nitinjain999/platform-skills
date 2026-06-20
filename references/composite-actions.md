@@ -1,3 +1,8 @@
+---
+title: "GitHub Actions: Composite Actions"
+custom_edit_url: null
+---
+
 # Composite GitHub Actions Reference
 
 ## Composite actions vs reusable workflows

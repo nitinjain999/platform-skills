@@ -2,6 +2,9 @@
 name: datadog
 description: Set up and troubleshoot Datadog — Agent deployment on Kubernetes, APM instrumentation, Log Management, Monitors, Dashboards, SLOs, Synthetic tests, and live incident investigation using the Datadog MCP server. Covers Terraform-managed Datadog resources.
 argument-hint: "[setup|instrument|monitor|dashboard|slo|investigate|debug] [service or description]"
+title: "Datadog Command"
+sidebar_label: "datadog"
+custom_edit_url: null
 ---
 
 Configure, troubleshoot, or investigate incidents in Datadog.

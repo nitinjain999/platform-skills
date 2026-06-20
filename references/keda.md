@@ -1,3 +1,8 @@
+---
+title: KEDA
+custom_edit_url: null
+---
+
 # KEDA Reference
 
 Covers KEDA (Kubernetes Event-Driven Autoscaling) v2.x — ScaledObject, ScaledJob, TriggerAuthentication, ClusterTriggerAuthentication, scalers (CPU, memory, Prometheus, Kafka, SQS, Redis, Cron, HTTP Add-on, Azure Service Bus), scaling lifecycle, security patterns, GitOps integration, and troubleshooting.

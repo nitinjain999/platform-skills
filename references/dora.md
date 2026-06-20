@@ -1,3 +1,8 @@
+---
+title: DORA Metrics
+custom_edit_url: null
+---
+
 # DORA Metrics
 
 DORA (DevOps Research and Assessment) metrics are the four evidence-based indicators of software delivery performance: Deployment Frequency, Lead Time for Changes, Change Failure Rate, and Mean Time to Restore (MTTR). Developed through multi-year research by the DORA team at Google, they are the industry standard for measuring the speed and stability of a delivery pipeline — teams that score high across all four consistently outperform peers on reliability, availability, and business outcomes. Tracking them in production (never staging) with real incident data is the only way to get a signal that is actionable rather than cosmetic.

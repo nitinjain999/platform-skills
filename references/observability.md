@@ -1,3 +1,8 @@
+---
+title: Observability
+custom_edit_url: null
+---
+
 # Observability Reference
 
 Covers the three pillars — logs, metrics, traces — plus alerting, dashboards, load testing, and capacity planning.

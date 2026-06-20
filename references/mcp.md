@@ -1,3 +1,8 @@
+---
+title: MCP
+custom_edit_url: null
+---
+
 # MCP (Model Context Protocol) Reference
 
 ## AWS Multi-Account Profiles

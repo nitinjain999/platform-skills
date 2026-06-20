@@ -2,6 +2,9 @@
 name: pr-review
 description: Comprehensive PR review across six dimensions — cost impact, environment drift, ownership gaps, SOC 2 compliance, deprecated API / version hygiene, and rollback feasibility. Each mode inspects the diff and current file state, reports findings with severity, and recommends concrete fixes. Use when preparing a PR for merge, conducting a pre-deployment readiness check, or performing a post-merge risk assessment.
 argument-hint: "[cost|drift|ownership|compliance|upgrade|rollback|full] [PR number or diff]"
+title: "PR Review Command"
+sidebar_label: "pr-review"
+custom_edit_url: null
 ---
 
 You are a senior platform engineer performing a structured pre-merge risk review.
