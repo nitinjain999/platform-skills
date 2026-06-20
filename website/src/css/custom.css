@@ -282,3 +282,206 @@
   color: var(--ifm-color-secondary-lightest);
   opacity: 0.7;
 }
+
+/* ── Problem statement section ─────────────────────────────────────── */
+.problem-section {
+  padding: 56px 24px;
+  background: rgba(239, 68, 68, 0.03);
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+}
+
+[data-theme='dark'] .problem-section {
+  background: rgba(239, 68, 68, 0.04);
+}
+
+.problem-section__inner {
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.problem-section__label {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #ef4444;
+  margin-bottom: 16px;
+}
+
+.problem-section__heading {
+  font-size: clamp(22px, 3.5vw, 32px);
+  font-weight: 700;
+  line-height: 1.3;
+  margin-bottom: 36px;
+}
+
+.problem-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 36px;
+  text-align: left;
+}
+
+.problem-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--ifm-background-surface-color);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.problem-item__icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.problem-item__text {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ifm-color-secondary-darkest);
+}
+
+[data-theme='dark'] .problem-item__text {
+  color: var(--ifm-color-secondary-lightest);
+  opacity: 0.75;
+}
+
+.problem-section__resolution {
+  font-size: 16px;
+  line-height: 1.6;
+  max-width: 640px;
+  margin: 0 auto;
+  opacity: 0.85;
+}
+
+/* ── STAR scenario cards ────────────────────────────────────────────── */
+.star-section {
+  padding: 64px 24px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.star-section__label {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--ifm-color-primary);
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.star-section__heading {
+  font-size: 28px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.star-section__sub {
+  text-align: center;
+  font-size: 15px;
+  opacity: 0.6;
+  margin-bottom: 40px;
+}
+
+.star-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.star-card {
+  background: var(--ifm-background-surface-color);
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 14px;
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.star-card:hover {
+  border-color: var(--ifm-color-primary);
+  transform: translateY(-2px);
+}
+
+.star-card__tag {
+  display: inline-block;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--ifm-color-primary);
+  background: rgba(167, 139, 250, 0.1);
+  border: 1px solid rgba(167, 139, 250, 0.25);
+  border-radius: 4px;
+  padding: 3px 8px;
+  align-self: flex-start;
+}
+
+.star-card__row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.star-card__row--action {
+  align-items: center;
+  background: rgba(167, 139, 250, 0.06);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 2px -4px;
+}
+
+.star-card__letter {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 11px;
+  font-weight: 800;
+  width: 18px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  opacity: 0.35;
+  text-transform: uppercase;
+}
+
+.star-card__letter--action {
+  color: var(--ifm-color-primary);
+  opacity: 0.9;
+  margin-top: 0;
+}
+
+.star-card__letter--result {
+  color: #059669;
+  opacity: 0.9;
+}
+
+.star-card__content {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ifm-color-secondary-darkest);
+}
+
+[data-theme='dark'] .star-card__content {
+  color: var(--ifm-color-secondary-lightest);
+  opacity: 0.75;
+}
+
+.star-card__command {
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ifm-color-primary);
+  background: none;
+  padding: 0;
+}
