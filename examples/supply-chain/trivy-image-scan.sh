@@ -40,7 +40,12 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --image)          IMAGE_REF="$2"; shift 2 ;;
     --severity)       SEVERITY="$2"; shift 2 ;;
-    --output)         OUTPUT_FORMAT="$2"; shift 2 ;;
+    --output)
+      case "$2" in
+        sarif|json|table) OUTPUT_FORMAT="$2" ;;
+        *) echo "ERROR: --output must be sarif, json, or table (got: $2)" >&2; exit 1 ;;
+      esac
+      shift 2 ;;
     --ignore-unfixed) IGNORE_UNFIXED=true; shift ;;
     --ignorefile)     IGNOREFILE="$2"; shift 2 ;;
     --upload-sarif)   UPLOAD_SARIF=true; shift ;;

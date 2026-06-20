@@ -213,7 +213,7 @@ Before asking any question, classify from the user's free-text request:
 | Private registry detected | "Registry credentials? Set TRIVY_USERNAME and TRIVY_PASSWORD, or provide a token." |
 | `.trivyignore` has entries without expiry | "These suppressions have no expiry date — add one? (y/N)" |
 
-Never ask about: output format (default table for CLI, sarif for CI), whether to bootstrap (always do it), or whether to add `.trivyignore` to `.gitignore` (always do it).
+Never ask about: output format (default table for CLI, sarif for CI), or whether to bootstrap (always do it). Never add `.trivyignore` to `.gitignore` — it must be committed so the suppression policy is shared and reviewable across the repo.
 
 ---
 

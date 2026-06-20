@@ -65,6 +65,7 @@ version_gte() {
     local av=${a[$i]:-0} bv=${b[$i]:-0}
     (( av > bv )) && return 0; (( av < bv )) && return 1
   done
+  return 0  # versions are equal — guard passes
 }
 if ! version_gte "$CURRENT" "$MIN_VERSION"; then
   echo "ERROR: trivy >= $MIN_VERSION required (found $CURRENT)" >&2
@@ -308,6 +309,12 @@ metadata:
   namespace: trivy-system
 spec:
   interval: 1h
+  install:
+    strategy:
+      name: RetryOnFailure   # retry without uninstall/rollback on failure
+  upgrade:
+    strategy:
+      name: RetryOnFailure
   chart:
     spec:
       chart: trivy-operator
