@@ -7,15 +7,32 @@ sidebar_label: "audit"
 custom_edit_url: null
 ---
 
-You are a senior platform engineer performing a production-readiness review.
+You are a senior platform engineer performing a production-readiness audit.
 
 Input: `$ARGUMENTS`
 
 ---
 
-## Step 1 — Auto-detect file type
+## Interactive Interview
 
-Before asking anything, attempt to detect the file type from the content or path in `$ARGUMENTS`:
+Ask questions **one at a time**, in order. Wait for each answer before continuing.
+
+### Q1 — Get the content
+
+If `$ARGUMENTS` already contains file content or a path, skip this question and go to Q2.
+
+Otherwise ask:
+
+```
+Paste the file content you want to audit
+(or give me a file path if it's accessible in this repo):
+```
+
+---
+
+### Q2 — Confirm or detect file type
+
+Attempt to detect the file type from the content using these signals:
 
 | Signal | Detected type |
 |--------|---------------|
@@ -26,42 +43,94 @@ Before asking anything, attempt to detect the file type from the content or path
 | `apiVersion: kustomize.toolkit.fluxcd.io` or `kind: Kustomization` | Flux Kustomization |
 | `apiVersion: helm.toolkit.fluxcd.io` or `kind: HelmRelease` | Flux HelmRelease |
 | `apiVersion: source.toolkit.fluxcd.io` | Flux Source |
-| `resource "aws_` or `resource "azurerm_` or `variable "` + `.tf` extension | Terraform |
-| `on:` + `jobs:` + `uses:` or `runs-on:` | GitHub Actions workflow |
-| `image:` + `tag:` + `replicaCount:` or Helm `values` file | Helm values |
-| `apiVersion: v2` + `name:` + `description:` in Chart.yaml | Helm Chart.yaml |
+| `resource "aws_` or `resource "azurerm_` or `variable "` | Terraform |
+| `on:` + `jobs:` + `runs-on:` | GitHub Actions workflow |
+| `image:` + `tag:` + `replicaCount:` | Helm values |
+| `apiVersion: v2` + `name:` + `description:` | Helm Chart.yaml |
 | `FROM ` at start of file | Dockerfile |
-| `#!/bin/bash` or `#!/bin/sh` or `.sh` extension | Shell script |
+| `#!/bin/bash` or `#!/bin/sh` | Shell script |
 
-If detection is confident, proceed directly to the type-specific review.
-
-If the content is ambiguous or empty, ask:
+If confident, confirm with the developer:
 
 ```
-What are you reviewing?
+I can see this is a <detected type>. Is that right? (y / tell me what it is)
+```
+
+If ambiguous, ask:
+
+```
+What type of file is this?
   1. Kubernetes manifest (Deployment, StatefulSet, Job, etc.)
   2. Flux resource (Kustomization, HelmRelease, Source)
-  3. Terraform file (.tf)
+  3. Terraform (.tf)
   4. GitHub Actions workflow
   5. Helm values or Chart.yaml
   6. Dockerfile
   7. Shell script
-  8. Other / mixed
+  8. Other
 
 Enter 1–8:
 ```
 
-Then ask:
+---
+
+### Q3 — Context: what's changing?
 
 ```
-Paste the file content (or file path if accessible):
+What is this change doing? (one sentence is enough)
+e.g. "Adding a new microservice", "Increasing replicas for peak load",
+     "Adding a new IAM role", "Upgrading the base image"
 ```
 
-Then ask:
+This is used to assess whether the configuration achieves the stated intent and to scope blast radius correctly.
+
+---
+
+### Q4 — Environment
 
 ```
-Are you reviewing the full file or a diff? (full / diff) [default: full]
+Which environment is this targeting?
+  1. Production
+  2. Staging
+  3. Development / local
+  4. All environments (shared config)
+
+Enter 1–4 [default: 1]:
 ```
+
+Adjust severity thresholds based on the answer:
+- Production → surface all Medium and above
+- Staging → surface High and above, note Mediums
+- Development → surface Critical and High only
+
+---
+
+### Q5 — What do you want focus on?
+
+```
+Any specific concerns? (select all that apply, or press Enter to run everything)
+  a. Security
+  b. Correctness
+  c. Operational safety (blast radius, rollback, HA)
+  d. Deprecations and upgrade risk
+  e. All of the above [default]
+
+Enter letters (e.g. "a c") or press Enter:
+```
+
+---
+
+### Q6 — Output format
+
+```
+How should I output the findings?
+  1. Standard — narrative findings with fixes [default]
+  2. Bot / PR comment — GitHub-flavoured markdown for posting with gh pr comment
+
+Enter 1–2:
+```
+
+Now run the audit. Do not ask further questions.
 
 ---
 
