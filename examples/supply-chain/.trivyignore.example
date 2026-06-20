@@ -1,0 +1,27 @@
+# .trivyignore — CVE suppression policy
+#
+# Rules:
+#   1. Every suppression MUST include an expiry date (exp:YYYY-MM-DD).
+#   2. Every suppression MUST include a justification comment.
+#   3. Run the expiry check below before every release to catch stale suppressions.
+#
+# Detect expired entries (paste into CI or pre-commit hook):
+#
+#   TODAY=$(date +%Y-%m-%d)
+#   while IFS= read -r line; do
+#     exp=$(echo "$line" | grep -oP 'exp:\K[0-9-]+')
+#     if [[ -n "$exp" && "$exp" < "$TODAY" ]]; then
+#       echo "EXPIRED: $line"
+#     fi
+#   done < .trivyignore
+#
+# Format: <CVE-ID> [exp:<YYYY-MM-DD>] [# justification]
+
+# OS base-image CVE — upstream fix not yet released; revisit at next base image bump
+CVE-2024-12345 exp:2026-09-01
+
+# False positive: test fixture file; never executed in production
+CVE-2024-67890 exp:2026-07-01
+
+# Go stdlib issue — our binary uses net/http but never accepts untrusted redirects
+CVE-2025-11111 exp:2026-08-01

@@ -125,5 +125,6 @@ Generate a production-ready Helm chart for a Node.js service with HPA and Networ
 | Triage PR review comments | `/platform-skills:triage` |
 | Scale workloads with KEDA | `/platform-skills:keda` |
 | Scan Terraform for security issues | `/platform-skills:checkov` |
+| Scan container images for CVEs | `/platform-skills:trivy` |
 | Browse reference guides | [references/](references/) |
 | Copy working examples | [examples/](examples/) |

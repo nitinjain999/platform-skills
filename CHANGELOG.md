@@ -5,6 +5,31 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.34.0] - 2026-06-20
+
+### Added
+
+- **`/platform-skills:trivy`** — new slash command for container image, filesystem, repo, SBOM, and live cluster CVE scanning with strict tool-ownership boundaries
+  - Three-layer interactive wizard: Layer 1 (developer intent → mode), Layer 2 (end goal: CLI / CI gate / continuous monitoring), Layer 3 (severity floor, `--ignore-unfixed`, `.trivyignore` template)
+  - Handoffs enforced at menu level: IaC misconfig → `/platform-skills:checkov`, admission posture → `/platform-skills:kyverno`, SBOM generation / image signing → `/platform-skills:supply-chain`
+  - Mode set: `image`, `fs`, `repo`, `secrets`, `sbom`, `k8s` — no `config` (overlaps Checkov), no SBOM generation (overlaps Syft), no manifest posture (overlaps Kyverno)
+  - Bootstrap: Homebrew (macOS), binary install (Linux), minimum version guard (≥ 0.50.0)
+  - Image mode: OS + library CVE scan, SARIF upload to GitHub Security tab, private-registry auth (`TRIVY_USERNAME`/`TRIVY_PASSWORD`, IRSA ECR, `TRIVY_GITHUB_TOKEN`)
+  - Filesystem mode: `--scanners vuln,secret,license` combined pass; repo mode for remote git URLs
+  - Secrets mode: standalone `--scanners secret` scan; custom rule sets via `trivy.yaml`
+  - SBOM mode: scan existing Syft-generated CycloneDX/SPDX files — does not generate SBOMs
+  - k8s mode: one-shot `trivy k8s --report summary cluster`; continuous monitoring via Trivy Operator deployed through Flux HelmRelease with `VulnerabilityReport` CRDs and Prometheus `serviceMonitor`
+  - Severity gating table: `HIGH,CRITICAL` recommended default; exit code 2 guard; `.trivyignore` expiry-date enforcement pattern
+  - Trivy Operator Flux HelmRelease with `serviceMonitor` for Prometheus; `kubectl` queries for `VulnerabilityReport` CRDs; PromQL examples
+  - `trivy.yaml` persistent config template
+  - Common mistakes table: 8 entries including `--exit-code 0` default, `CRITICAL`-only gate, `trivy config` on `.tf`, SBOM generation via Trivy, missing expiry dates, missing exit-code-2 check
+  - Pinned to `aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25` (v0.36.0)
+- `references/trivy.md` — deep reference with all mode logic, bootstrap, severity gating, Trivy Operator, `.trivyignore` policy, troubleshooting table
+- `examples/supply-chain/trivy-image-scan.sh` — production-ready image scan CI script with severity gate, SARIF output, optional GitHub Security tab upload, exit-code-2 guard, and guaranteed cleanup via trap
+- `examples/supply-chain/.trivyignore.example` — CVE suppression template with expiry-date headers and inline expiry checker
+- Cross-references added to `/checkov`, `/kyverno`, `/supply-chain`, and `/runtime-security` commands
+- Updated `examples/supply-chain/trivy-gate.yaml` pin from v0.30.0 to v0.36.0 (`ed142fd`)
+
 ## [1.33.0] - 2026-06-14
 
 ### Added

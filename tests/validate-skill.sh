@@ -126,6 +126,7 @@ REQUIRED_REFERENCES=(
   references/setup-agents-review.md
   references/setup-agents-schemas.md
   references/setup-agents-template.md
+  references/trivy.md
 )
 
 for ref in "${REQUIRED_REFERENCES[@]}"; do

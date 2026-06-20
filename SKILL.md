@@ -125,6 +125,7 @@ Load only the files needed for the current request.
 | references/karpenter.md | NodePool, EC2NodeClass, NodeClaim, IAM, Spot, disruption, private cluster, CA migration |
 | references/agent-self-improve.md | `.learnings/` workspace, WAL, VFM, ADL, status/migrate |
 | references/supply-chain.md | Cosign, Syft SBOM, Trivy/Grype, SLSA Level 2, ImageValidatingPolicy |
+| references/trivy.md | Trivy bootstrap, image/fs/repo/secrets/sbom/k8s modes, severity gating, Trivy Operator via Flux HelmRelease |
 | references/runtime-security.md | Falco eBPF, custom rules, Falcosidekick, Kyverno enforcement |
 | references/chaos.md | Litmus Chaos, Chaos Mesh, steady-state hypothesis, GameDay |
 | references/dora.md | Deployment Frequency, Lead Time, CFR, MTTR, Prometheus instrumentation |
@@ -144,6 +145,7 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:review` — production-readiness review of any manifest, Terraform, or workflow
 - `/platform-skills:terraform` — full fmt/validate/tflint/security pipeline + blast radius review
 - `/platform-skills:checkov` — Checkov bootstrap, static and plan-level Terraform scanning for AWS/Azure/GCP/EKS, private GitHub module auth via `gh` CLI, pre-commit generation, multi-format output, baseline, and AI-generated fix mode
+- `/platform-skills:trivy` — scan container images, filesystems, git repos, and existing SBOMs for CVEs, secrets, and license violations; three-layer wizard routes intent → goal → tuned scan; continuous cluster monitoring via Trivy Operator (Flux HelmRelease); hard handoffs to Checkov (IaC), Kyverno (admission), and supply-chain (SBOM generation/signing)
 - `/platform-skills:fluxcd` — FluxCD entry point: routes to debug (live cluster issue), audit (repo health check), or helm (chart review) based on your input
 - `/platform-skills:gitops debug` — Flux CD and Argo CD live cluster troubleshooting (5-workflow structured debug)
 - `/platform-skills:gitops audit` — Flux CD GitOps repository 6-phase audit (discovery, validation, API compliance, best practices, security, report)
