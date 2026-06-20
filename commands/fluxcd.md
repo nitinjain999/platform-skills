@@ -23,8 +23,8 @@ Determine which workflow applies from the input. If it is ambiguous, ask exactly
 |---|---|
 | An error message, `flux get` output, pod logs, or "not reconciling" | **Debug** → run `/platform-skills:gitops debug` |
 | A repo path, "audit", "review", "before merge", "is this correct" | **Audit** → run `/platform-skills:gitops audit` |
-| A Helm chart path, `Chart.yaml`, `values.yaml`, "helm", "chart" | **Helm** → run `/platform-skills:helmcheck` |
-| A manifest to review (Kustomization, HelmRelease, FluxInstance YAML) | **Review** → run `/platform-skills:review` |
+| A Helm chart path, `Chart.yaml`, `values.yaml`, "helm", "chart" | **Helm** → run `/platform-skills:helmchart` |
+| A manifest to review (Kustomization, HelmRelease, FluxInstance YAML) | **Review** → run `/platform-skills:audit` |
 
 ---
 

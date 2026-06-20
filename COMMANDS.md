@@ -17,7 +17,7 @@ Commands work in any conversation — type the slash command or describe your pr
 
 | Command | What it's for |
 |---------|--------------|
-| [/platform-skills:review](#platform-skillsreview) | Production-readiness review of any config |
+| [/platform-skills:audit](#platform-skillsreview) | Production-readiness review of any config |
 | [/platform-skills:debug](#platform-skillsdebug) | Structured troubleshooting for any symptom |
 | [/platform-skills:terraform](#platform-skillsterraform) | Terraform validation pipeline + blast radius |
 | [/platform-skills:checkov](#platform-skillscheckov) | Checkov bootstrap, static + plan-level Terraform scanning, multi-cloud, fix mode |
@@ -53,14 +53,14 @@ Commands work in any conversation — type the slash command or describe your pr
 
 ---
 
-## `/platform-skills:review`
+## `/platform-skills:audit`
 
 **What it does:** Senior-engineer production-readiness review of any platform config. Evaluates correctness → security → operational safety → deprecations. Returns findings as Critical / Improvement / Note.
 
 **Works on:** Kubernetes manifests, Terraform modules, GitHub Actions workflows, Helm values, RBAC configs, network policies, Dockerfiles, any YAML.
 
 ```
-/platform-skills:review [paste file content or describe what to review]
+/platform-skills:audit [paste file content or describe what to review]
 ```
 
 **What gets checked:**
@@ -76,7 +76,7 @@ Commands work in any conversation — type the slash command or describe your pr
 
 Review a Deployment manifest — paste it inline:
 ```
-/platform-skills:review
+/platform-skills:audit
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -95,12 +95,12 @@ spec:
 
 Review a GitHub Actions workflow file by path:
 ```
-/platform-skills:review .github/workflows/deploy.yml
+/platform-skills:audit .github/workflows/deploy.yml
 ```
 
 Review a Terraform IAM module inline:
 ```
-/platform-skills:review
+/platform-skills:audit
 resource "aws_iam_role_policy" "app" {
   policy = jsonencode({
     Statement = [{ Effect = "Allow", Action = "*", Resource = "*" }]
@@ -110,7 +110,7 @@ resource "aws_iam_role_policy" "app" {
 
 Review Helm values against a specific chart:
 ```
-/platform-skills:review my values.yaml for the ingress-nginx chart — are resource limits set? Is the service account locked down?
+/platform-skills:audit my values.yaml for the ingress-nginx chart — are resource limits set? Is the service account locked down?
 ```
 
 **What comes back:** A structured report grouped by severity. Critical items block merge; Improvements are non-blocking; Notes are informational.
@@ -1735,7 +1735,7 @@ Comprehensive pre-merge risk review across six dimensions. Each mode inspects th
 ```
 /platform-skills:pr-review full   # get the complete risk picture
 # fix blockers
-/platform-skills:review           # validate specific manifests before re-review
+/platform-skills:audit           # validate specific manifests before re-review
 ```
 
 Reference: `references/pr-review.md`
@@ -2184,7 +2184,7 @@ Reference: `references/awesome-docs.md` and `examples/awesome-docs/`
 
 **You don't need the slash command** — describe your problem in plain English and the skill activates automatically when you're working with relevant files.
 
-**Chain commands** — `/platform-skills:debug` to diagnose, then `/platform-skills:review` to validate the fix before merging.
+**Chain commands** — `/platform-skills:debug` to diagnose, then `/platform-skills:audit` to validate the fix before merging.
 
 **Multi-mode workflows:**
 - New service: `instrument` → `alert` → `dashboard` → `loadtest`
@@ -2276,8 +2276,8 @@ Reference: `commands/composite-actions.md`, `references/composite-actions.md`, a
 |---|---|
 | Error message, `flux get` output, pod logs, "not reconciling" | `/platform-skills:gitops debug` — 5-workflow debug |
 | Repo path, "audit", "review", "before merge", "is this correct" | `/platform-skills:gitops audit` — 6-phase audit |
-| Helm chart path, `Chart.yaml`, `values.yaml`, "helm", "chart" | `/platform-skills:helmcheck` — chart review |
-| A manifest to review (Kustomization, HelmRelease, FluxInstance YAML) | `/platform-skills:review` — production-readiness check |
+| Helm chart path, `Chart.yaml`, `values.yaml`, "helm", "chart" | `/platform-skills:helmchart` — chart review |
+| A manifest to review (Kustomization, HelmRelease, FluxInstance YAML) | `/platform-skills:audit` — production-readiness check |
 
 **Examples:**
 

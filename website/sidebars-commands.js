@@ -79,7 +79,7 @@ const sidebars = {
       label: 'Platform Engineering',
       items: [
         { type: 'doc', id: 'debug' },
-        { type: 'doc', id: 'review' },
+        { type: 'doc', id: 'audit' },
         { type: 'doc', id: 'product' },
         { type: 'doc', id: 'dora' },
         { type: 'doc', id: 'chaos' },

@@ -160,4 +160,4 @@ Blockers (must fix before merge):
 
 - [references/pr-review.md](../../references/pr-review.md) — full reference with pricing tables, SOC 2 control mapping, Kubernetes deprecation timeline, and rollback decision matrix
 - [commands/pr-review.md](../../commands/pr-review.md) — slash command definition with all mode specs
-- `/platform-skills:review` — production-readiness review for a single manifest or file
+- `/platform-skills:audit` — production-readiness review for a single manifest or file
