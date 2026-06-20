@@ -57,7 +57,7 @@ function BeforeAfter() {
       image: mycompany/api-server:v1.4.2   # ✅ pinned
       resources:
         requests: { cpu: 100m, memory: 128Mi }
-        limits:   { cpu: 500m, memory: 512Mi }
+        limits:   { memory: 512Mi }
       readinessProbe:
         httpGet: { path: /healthz/ready, port: 8080 }
       securityContext:
