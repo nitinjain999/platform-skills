@@ -13,7 +13,7 @@
 #   ./trivy-image-scan.sh \
 #     --image <ref>                   Image to scan (required)
 #     [--severity HIGH,CRITICAL]      Severity floor (default: HIGH,CRITICAL)
-#     [--output sarif|json|table]     Output format (default: sarif in CI, table locally)
+#     [--output sarif|json|table]     Output format (default: sarif when GITHUB_ACTIONS=true, table locally)
 #     [--ignore-unfixed]              Suppress CVEs with no upstream fix
 #     [--ignorefile .trivyignore]     Path to .trivyignore (default: .trivyignore if present)
 #     [--upload-sarif]                Upload trivy-results.sarif to GitHub Security tab
@@ -27,7 +27,9 @@ set -euo pipefail
 
 IMAGE_REF=""
 SEVERITY="HIGH,CRITICAL"
-OUTPUT_FORMAT="sarif"
+# Default to sarif in CI (GITHUB_ACTIONS=true), table for local runs
+OUTPUT_FORMAT="${GITHUB_ACTIONS:+sarif}"
+OUTPUT_FORMAT="${OUTPUT_FORMAT:-table}"
 IGNORE_UNFIXED=false
 IGNOREFILE=""
 UPLOAD_SARIF=false
@@ -60,11 +62,23 @@ if ! command -v trivy &>/dev/null; then
   exit 1
 fi
 
-# Minimum version guard
+# Minimum version guard (portable: no sort -V which is GNU-only)
 MIN_VERSION="0.50.0"
 CURRENT=$(trivy --version 2>/dev/null | awk '/Version:/{print $2}')
+version_gte() {
+  # returns 0 (true) if $1 >= $2 using dot-separated integer comparison
+  local IFS=.
+  # shellcheck disable=SC2206  # IFS=. split is intentional; values are numeric, no glob risk
+  local a=($1) b=($2)
+  for i in 0 1 2; do
+    local av=${a[$i]:-0} bv=${b[$i]:-0}
+    if (( av > bv )); then return 0; fi
+    if (( av < bv )); then return 1; fi
+  done
+  return 0
+}
 if [[ -n "$CURRENT" ]]; then
-  if ! printf '%s\n%s\n' "$MIN_VERSION" "$CURRENT" | sort -V -C; then
+  if ! version_gte "$CURRENT" "$MIN_VERSION"; then
     echo "ERROR: trivy >= $MIN_VERSION required (found $CURRENT)" >&2
     exit 1
   fi
@@ -132,13 +146,18 @@ if [[ "$UPLOAD_SARIF" == true ]]; then
     echo "WARN: gh CLI not found; skipping SARIF upload" >&2
   else
     echo "INFO: Uploading $SARIF_FILE to GitHub Security tab..."
+    # Prefer GITHUB_SHA/GITHUB_REF (set by Actions runner, works in detached-HEAD CI checkouts)
+    COMMIT_SHA="${GITHUB_SHA:-$(git rev-parse HEAD)}"
+    GIT_REF="${GITHUB_REF:-$(git symbolic-ref HEAD 2>/dev/null || echo refs/heads/main)}"
+    # base64 -w0 is GNU-only; use tr -d '\n' for macOS/BSD portability
+    SARIF_B64="$(gzip -c "$SARIF_FILE" | base64 | tr -d '\n')"
     gh api \
       --method POST \
       -H "Accept: application/vnd.github+json" \
       "/repos/$(gh repo view --json owner,name -q '.owner.login + "/" + .name')/code-scanning/sarifs" \
-      --field commit_sha="$(git rev-parse HEAD)" \
-      --field ref="$(git symbolic-ref HEAD 2>/dev/null || echo refs/heads/main)" \
-      --field sarif="$(gzip -c "$SARIF_FILE" | base64 -w0)" \
+      --field commit_sha="$COMMIT_SHA" \
+      --field ref="$GIT_REF" \
+      --field sarif="$SARIF_B64" \
       --field tool_name="Trivy"
     echo "INFO: SARIF upload complete"
   fi

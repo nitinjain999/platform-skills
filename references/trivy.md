@@ -57,7 +57,16 @@ Or use the official action (pinned to SHA):
 ```bash
 MIN_VERSION="0.50.0"
 CURRENT=$(trivy --version | awk '/Version:/{print $2}')
-if ! printf '%s\n%s\n' "$MIN_VERSION" "$CURRENT" | sort -V -C; then
+# sort -V is GNU-only; use dot-field integer comparison for macOS/Linux portability
+version_gte() {
+  local IFS=. a b
+  read -ra a <<< "$1"; read -ra b <<< "$2"
+  for i in 0 1 2; do
+    local av=${a[$i]:-0} bv=${b[$i]:-0}
+    (( av > bv )) && return 0; (( av < bv )) && return 1
+  done
+}
+if ! version_gte "$CURRENT" "$MIN_VERSION"; then
   echo "ERROR: trivy >= $MIN_VERSION required (found $CURRENT)" >&2
   exit 1
 fi
@@ -302,7 +311,7 @@ spec:
   chart:
     spec:
       chart: trivy-operator
-      version: ">=0.22.0 <1.0.0"
+      version: "0.33.2"
       sourceRef:
         kind: HelmRepository
         name: aquasecurity
@@ -406,14 +415,9 @@ A `.trivyignore` without expiry dates rots silently — the gate becomes meaning
 # .trivyignore
 # Format: <CVE-ID> [exp:<YYYY-MM-DD>] [# justification]
 
-# OS base-image CVE with no upstream fix yet — review by 2026-09-01
-CVE-2024-12345 exp:2026-09-01
-
-# False positive: internal tool never exposed to untrusted input
-CVE-2024-67890 exp:2026-07-01
-
-# Golang stdlib — our binary is statically linked, not affected
-CVE-2025-11111 exp:2026-08-01
+CVE-2024-12345 exp:2026-09-01  # OS base-image, no upstream fix yet — review at next base image bump
+CVE-2024-67890 exp:2026-07-01  # false positive: internal tool, never exposed to untrusted input
+CVE-2025-11111 exp:2026-08-01  # Go stdlib, binary statically linked, not affected by this vector
 ```
 
 ### Detect expired suppressions
@@ -421,7 +425,8 @@ CVE-2025-11111 exp:2026-08-01
 ```bash
 TODAY=$(date +%Y-%m-%d)
 while IFS= read -r line; do
-  exp=$(echo "$line" | grep -oP 'exp:\K[0-9-]+')
+  # sed -E is portable (macOS + Linux); grep -oP requires GNU grep
+  exp=$(echo "$line" | sed -E 's/.*exp:([0-9]{4}-[0-9]{2}-[0-9]{2}).*/\1/; t; d')
   if [[ -n "$exp" && "$exp" < "$TODAY" ]]; then
     echo "EXPIRED: $line"
   fi
