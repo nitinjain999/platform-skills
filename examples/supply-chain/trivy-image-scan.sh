@@ -83,11 +83,8 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 # --- Build trivy command ---
-TRIVY_ARGS=(image
-  --severity "$SEVERITY"
-  --exit-code 1
-  --vuln-type os,library
-)
+TRIVY_ARGS=()
+TRIVY_ARGS+=(image --severity "$SEVERITY" --exit-code 1 --vuln-type os,library)
 
 if [[ "$OUTPUT_FORMAT" == "sarif" ]]; then
   TRIVY_ARGS+=(--format sarif --output "$SARIF_FILE")
