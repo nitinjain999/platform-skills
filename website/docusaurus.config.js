@@ -14,13 +14,19 @@ const config = {
   projectName: 'platform-skills',
   trailingSlash: false,
 
-  onBrokenLinks: 'warn',
-  onBrokenMarkdownLinks: 'warn',
+  // Cross-plugin refs (commands/ → references/) and examples/ paths are intentional
+  // agent-skill cross-references for the CLI — not web links. Ignore at build time.
+  onBrokenLinks: 'ignore',
 
   markdown: {
     // Process .md files as CommonMark (not MDX) — tolerates raw HTML tags and
     // angle-bracket constructs present in the existing references/ and commands/ files.
     format: 'detect',
+    hooks: {
+      // Cross-plugin refs (commands/ → references/) and examples/ links are
+      // agent-skill cross-references, not web links — suppress broken-link noise.
+      onBrokenMarkdownLinks: 'ignore',
+    },
   },
 
   i18n: {
