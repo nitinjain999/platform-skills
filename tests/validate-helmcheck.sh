@@ -11,7 +11,7 @@ fail() { echo "  FAIL: $1"; ERRORS=$((ERRORS + 1)); }
 
 # ---------------------------------------------------------------------------
 echo ""
-echo "=== Helmcheck command file ==="
+echo "=== Helmchart command file ==="
 
 CMD="commands/helmchart.md"
 
@@ -45,7 +45,7 @@ fi
 
 # ---------------------------------------------------------------------------
 echo ""
-echo "=== Helmcheck slash command registered in plugin.json ==="
+echo "=== Helmchart slash command registered in plugin.json ==="
 
 if grep -q '"./commands/helmchart.md"' .claude-plugin/plugin.json; then
   pass "commands/helmchart.md registered in plugin.json"

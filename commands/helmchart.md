@@ -508,7 +508,9 @@ helm lint <chart>/ --strict
 
 Scaffold or run Helm test hooks.
 
-**If no test files exist** — scaffold `templates/tests/test-connection.yaml`:
+**If no test files exist** — scaffold a test hook. Pattern depends on workload type:
+
+**Service-based charts** (web service, stateful) — HTTP connectivity test:
 
 ```yaml
 apiVersion: v1
@@ -529,11 +531,31 @@ spec:
       args: ['{{ include "<chart>.fullname" . }}:{{ .Values.service.port }}{{ .Values.healthCheck.path | default "/healthz" }}']
 ```
 
+**Worker / CronJob charts** (no Service) — verify the pod ran without error:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "<chart>.fullname" . }}-test-run"
+  labels:
+    {{- include "<chart>.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  restartPolicy: Never
+  containers:
+    - name: check
+      image: busybox:1.36
+      command: ['sh', '-c', 'echo "test: worker chart deployed successfully"']
+```
+
 **If test files exist** — run them:
 
 ```bash
 # Install the chart first if not already installed
-helm install myrelease <chart>/ --generate-name --wait
+helm install myrelease <chart>/ --wait
 
 # Run tests
 helm test <release>

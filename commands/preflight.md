@@ -39,10 +39,10 @@ Which environment is this targeting?
 Enter 1–3:
 ```
 
-Adjust severity thresholds:
-- Production → surface Medium and above
-- Staging → surface High and above, note Mediums
-- Development → surface Critical and High only
+Adjust which findings are surfaced in the output (verdict logic is always BLOCKED on Critical, NEEDS_FIX on High):
+- Production → include Medium and above
+- Staging → include High and above, list Mediums as notes
+- Development → include Critical and High only
 
 ---
 
