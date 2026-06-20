@@ -206,7 +206,7 @@ jobs:
       - name: Validate JSON files
         run: |
           # Validate all JSON files
-          JSON_FILES=$(find . -type f -name "*.json" ! -path "./.git/*" ! -path "./node_modules/*")
+          JSON_FILES=$(find . -type f -name "*.json" ! -path "./.git/*" ! -path "./node_modules/*" ! -name "tsconfig*.json")
 
           if [ -n "$JSON_FILES" ]; then
             while IFS= read -r file; do
