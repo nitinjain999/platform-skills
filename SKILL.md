@@ -142,7 +142,7 @@ Load only the files needed for the current request.
 For explicit, repeatable workflows use these commands:
 
 - `/platform-skills:debug` — structured troubleshooting for any platform symptom
-- `/platform-skills:audit` — production-readiness review of any manifest, Terraform, or workflow
+- `/platform-skills:preflight` — production-readiness review of any manifest, Terraform, or workflow
 - `/platform-skills:terraform` — full fmt/validate/tflint/security pipeline + blast radius review
 - `/platform-skills:checkov` — Checkov bootstrap, static and plan-level Terraform scanning for AWS/Azure/GCP/EKS, private GitHub module auth via `gh` CLI, pre-commit generation, multi-format output, baseline, and AI-generated fix mode
 - `/platform-skills:trivy` — scan container images, filesystems, git repos, and existing SBOMs for CVEs, secrets, and license violations; three-layer wizard routes intent → goal → tuned scan; continuous cluster monitoring via Trivy Operator (Flux HelmRelease); hard handoffs to Checkov (IaC), Kyverno (admission), and supply-chain (SBOM generation/signing)

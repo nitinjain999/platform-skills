@@ -1,13 +1,13 @@
 ---
-name: audit
-description: Production-readiness audit for a single file or pasted content. Auto-detects file type (Kubernetes manifest, Terraform, GitHub Actions workflow, Helm values/chart, Flux Kustomization/HelmRelease, Dockerfile, shell script) and applies type-specific checks. Covers correctness, security, operational safety, deprecations, and upgrade risk. Use when asked to "audit this file", "check this manifest", "is this safe to apply", "review my workflow", or "check my Terraform". For PR diffs spanning multiple files use /platform-skills:pr-review instead. For deep Helm chart work use /platform-skills:helmchart instead.
+name: preflight
+description: Production-readiness preflight check for a single file or pasted content. Auto-detects file type (Kubernetes manifest, Terraform, GitHub Actions workflow, Helm values/chart, Flux Kustomization/HelmRelease, Dockerfile, shell script) and applies type-specific checks. Covers correctness, security, operational safety, deprecations, and upgrade risk. Use when asked to "check this manifest", "is this safe to apply", "review my workflow", or "check my Terraform". For PR diffs spanning multiple files use /platform-skills:pr-review instead. For deep Helm chart work use /platform-skills:helmchart instead.
 argument-hint: "[paste file content or path] [--bot] [--diff]"
-title: "Audit Command"
-sidebar_label: "audit"
+title: "Preflight Command"
+sidebar_label: "preflight"
 custom_edit_url: null
 ---
 
-You are a senior platform engineer performing a production-readiness audit.
+You are a senior platform engineer performing a production-readiness preflight check.
 
 Input: `$ARGUMENTS`
 
@@ -374,7 +374,7 @@ After the review, if deeper specialised analysis would help, suggest:
 ### Standard mode (default)
 
 ```
-PRODUCTION-READINESS REVIEW — <file name or type>
+PREFLIGHT CHECK — <file name or type>
 
 Type detected: <type>
 
@@ -411,9 +411,9 @@ Validation steps: <commands to verify after apply>
 Emit GitHub-flavoured markdown using this exact structure so the workflow can post it with `gh pr comment` and update it on subsequent pushes using the HTML marker:
 
 ```markdown
-## 🔍 Platform Skills Review
+## 🔍 Platform Skills Preflight
 
-<!-- platform-skills-review -->
+<!-- platform-skills-preflight -->
 
 ### Result: {MERGE_READY | NEEDS_FIX | BLOCKED}
 
@@ -448,12 +448,12 @@ Emit GitHub-flavoured markdown using this exact structure so the workflow can po
 - `NEEDS_FIX` — no Critical, but one or more High findings
 - `MERGE_READY` — Medium/Low only, or no findings
 
-**Updating existing comment:** The `<!-- platform-skills-review -->` marker lets workflows find and replace the comment on re-runs:
+**Updating existing comment:** The `<!-- platform-skills-preflight -->` marker lets workflows find and replace the comment on re-runs:
 
 ```bash
 # Find existing comment ID
 COMMENT_ID=$(gh api repos/{owner}/{repo}/issues/{pr}/comments --paginate \
-  --jq '.[] | select(.body | contains("platform-skills-review")) | .id' | head -1)
+  --jq '.[] | select(.body | contains("platform-skills-preflight")) | .id' | head -1)
 
 # Update if exists, create if not
 if [ -n "$COMMENT_ID" ]; then

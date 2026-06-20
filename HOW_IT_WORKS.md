@@ -41,7 +41,7 @@ When you install `platform-skills`, the agent gets access to:
 Skills activate in two ways:
 
 1. **Automatic** — the agent recognises platform engineering patterns in your question (Kubernetes manifest, Terraform code, Flux error, Helm chart, GitHub Actions workflow, etc.) and routes to the relevant section of the skill
-2. **Explicit** — you name the skill or workflow, such as `Use $platform-skills ...`; in Claude, you can also use slash commands like `/platform-skills:audit`
+2. **Explicit** — you name the skill or workflow, such as `Use $platform-skills ...`; in Claude, you can also use slash commands like `/platform-skills:preflight`
 
 ### What the Agent Actually Does
 
@@ -90,7 +90,7 @@ Slash commands are predefined Claude workflows. In Codex or Cursor, ask for the 
 
 | Command | When to use |
 |---------|------------|
-| `/platform-skills:audit` | You have a manifest, Terraform file, or workflow and want a production-readiness check |
+| `/platform-skills:preflight` | You have a manifest, Terraform file, or workflow and want a production-readiness check |
 | `/platform-skills:terraform` | You want the full fmt/validate/tflint/security pipeline run against your Terraform |
 | `/platform-skills:checkov` | You want to bootstrap Checkov, run static or plan-level scanning, generate pre-commit hooks, or fix IaC security violations |
 | `/platform-skills:trivy` | You want to scan a container image, filesystem, repo, or SBOM for CVEs, or deploy the Trivy Operator for continuous cluster monitoring |
@@ -141,7 +141,7 @@ name: payments-api
 
 ## How the Review Workflow Works
 
-`/platform-skills:audit` is the general-purpose production-readiness command. It accepts any platform artifact: Kubernetes manifest, Terraform file, GitHub Actions workflow, Helm values, or Helm chart.
+`/platform-skills:preflight` is the general-purpose production-readiness command. It accepts any platform artifact: Kubernetes manifest, Terraform file, GitHub Actions workflow, Helm values, or Helm chart.
 
 ### What It Checks
 
@@ -158,7 +158,7 @@ The review runs in this priority order — the same order an experienced platfor
 Paste the content directly:
 
 ```text
-/platform-skills:audit
+/platform-skills:preflight
 
 apiVersion: apps/v1
 kind: Deployment
@@ -170,7 +170,7 @@ metadata:
 Or describe what to review:
 
 ```text
-/platform-skills:audit
+/platform-skills:preflight
 
 Review my GitHub Actions workflow at .github/workflows/deploy.yml — it uses OIDC to deploy to EKS after PR merge. Check for unsafe trigger usage, least-privilege permissions, and whether the steps can be pinned more safely.
 ```
@@ -213,7 +213,7 @@ A practical loop for any platform task:
 3. Run the matching command or ask directly
    → /platform-skills:terraform for IaC review
    → /platform-skills:debug for a running system problem
-   → /platform-skills:audit for any config file
+   → /platform-skills:preflight for any config file
 
 4. Apply the smallest safe change first
    → Review the blast radius before applying

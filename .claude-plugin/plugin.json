@@ -86,7 +86,7 @@
   "commands": [
     "./commands/terraform.md",
     "./commands/debug.md",
-    "./commands/audit.md",
+    "./commands/preflight.md",
     "./commands/gitops.md",
     "./commands/linkerd.md",
     "./commands/linux.md",

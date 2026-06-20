@@ -16,7 +16,7 @@
 
 | Tool | What you get |
 |---|---|
-| **Claude Code** | Slash commands (`/platform-skills:audit`, `/platform-skills:debug`, and 9 more), interactive guidance, automatic activation on relevant files |
+| **Claude Code** | Slash commands (`/platform-skills:preflight`, `/platform-skills:debug`, and 9 more), interactive guidance, automatic activation on relevant files |
 | **Codex** | Skill invocation with `$platform-skills`, loaded on demand in any Codex session |
 | **Cursor** | Project rules for Chat and Agent — platform review and generation in every file context |
 | **GitHub Copilot plugin** | Interactive slash commands in Copilot Chat — install once per user via `copilot plugin install` |
