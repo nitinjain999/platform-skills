@@ -5,6 +5,28 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.35.0] - 2026-06-20
+
+### Added
+
+- **`/platform-skills:preflight`** — production-readiness preflight check for a folder, repo, or single file; auto-detects 14 file types, runs type-specific checks, returns a per-file summary table with aggregated BLOCKED/NEEDS_FIX/MERGE_READY verdict; replaces `/platform-skills:review`
+- **`/platform-skills:helmchart`** — complete rewrite of `helmcheck`; 8 modes (create, lint, review, security, upgrade, schema, test, deps), 10-stage interactive create interview, official Helm best practices from helm.sh/docs/chart_best_practices/
+- **Website** — Docusaurus site with STAR-method landing page, dark mode by default, GitHub Pages deployment via OIDC
+
+### Changed
+
+- `/platform-skills:helmcheck` renamed to `/platform-skills:helmchart`
+- `/platform-skills:review` renamed to `/platform-skills:preflight`
+- Landing page redesigned with ProblemStatement + StarScenarios sections
+- Install section updated with marketplace and upgrade commands for all agents
+
+### Fixed
+
+- `helm rollback <release> 0` corrected to `helm rollback <release>` (revision 0 is invalid)
+- `busybox` test hook image pinned to `busybox:1.36`
+- `kubeconform -kubernetes-version` now reads from live cluster with fallback
+- Helm test hook scaffold split into Service-based and worker/CronJob patterns
+
 ## [1.34.0] - 2026-06-20
 
 ### Added

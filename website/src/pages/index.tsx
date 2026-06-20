@@ -10,7 +10,7 @@ function Hero() {
   return (
     <div className="hero-section">
       <div className="hero-section__eyebrow">
-        v1.34.0 &mdash;{' '}
+        v1.35.0 &mdash;{' '}
         <a href="https://github.com/nitinjain999/platform-skills/blob/main/CHANGELOG.md">
           What&apos;s new
         </a>
