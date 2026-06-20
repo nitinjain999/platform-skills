@@ -80,7 +80,7 @@ jobs:
             (.plugins | type == "array" and length > 0) and
             (.plugins[0].name | type == "string" and length > 0) and
             (.plugins[0].version | type == "string" and length > 0) and
-            (.plugins[0].description | type == "string" and length > 0 and length <= 1024) and
+            (.plugins[0].description | type == "string" and length > 0) and
             (.plugins[0].author.name | type == "string" and length > 0) and
             (.plugins[0].license | type == "string" and length > 0) and
             (.plugins[0].source.url | type == "string" and length > 0) and
@@ -89,6 +89,14 @@ jobs:
             echo "❌ marketplace.json is missing required catalog fields"
             exit 1
           }
+
+          # Validate description length separately for an actionable error message
+          DESC_LEN=$(jq -r '.plugins[0].description | length' .claude-plugin/marketplace.json)
+          if [ "$DESC_LEN" -gt 1024 ]; then
+            echo "❌ marketplace.json plugins[0].description is ${DESC_LEN} chars (limit: 1024)"
+            echo "Trim the description to 1024 characters or fewer before releasing."
+            exit 1
+          fi
 
           ROOT_NAME=$(jq -r '.name' .claude-plugin/marketplace.json)
           PLUGIN_NAME=$(jq -r '.plugins[0].name' .claude-plugin/marketplace.json)
