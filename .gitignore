@@ -168,3 +168,8 @@ docs/superpowers/*
 docs/specs/2026-05-30-viral-adoption-design.md
 .superpowers/*
 awesome-agent-skills/*
+
+# ===== Docusaurus =====
+website/node_modules/
+website/build/
+website/.docusaurus/
