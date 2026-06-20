@@ -149,7 +149,7 @@ See [COMMANDS.md](COMMANDS.md) for every command with modes and example prompts:
 
 | Command | Use it for |
 |---|---|
-| `review` | Production-readiness check on any manifest, Terraform, workflow |
+| `preflight` | Production-readiness preflight for a folder, repo, or single file |
 | `debug` | Structured troubleshooting for any platform symptom |
 | `terraform` | Blast radius, IAM least privilege, SOC 2, state impact |
 | `checkov` | Terraform static and plan scanning, multi-cloud (AWS/Azure/GCP/EKS), pre-commit, fix mode |
@@ -181,7 +181,7 @@ See [COMMANDS.md](COMMANDS.md) for every command with modes and example prompts:
 | `awesome-docs` | Generate any animated Markdown doc (README, architecture guide, runbook, tutorial, RFC, post-mortem, or custom), convert existing Markdown, update/diff/audit diagrams, export |
 | `aws` | Generate or review CloudFront, WAF, Lambda@Edge, CloudFront Functions, and Firewall Manager patterns |
 | `composite-actions` | Scaffold, review, secure, debug, publish, and improve composite GitHub Actions |
-| `fluxcd` | FluxCD entry point — routes to `gitops debug`, `gitops audit`, `helmchart`, or `review` based on input |
+| `fluxcd` | FluxCD entry point — routes to `gitops debug`, `gitops audit`, `helmchart`, or `preflight` based on input |
 | `renovate` | Generate renovate.json covering all dep file types in the repo, or emit a GHA validation workflow |
 | `setup-agents` | Scaffold multi-agent AI configs for any repo — generate, upgrade, add, or review existing agents |
 

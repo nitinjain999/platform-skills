@@ -7,7 +7,7 @@
 
 Use when troubleshooting, implementing, reviewing, or auditing platform infrastructure as a system — where Kubernetes, GitOps, CI/CD, and security concerns intersect. Apply these patterns when generating or reviewing code across Kubernetes, Flux CD, Argo CD, Terraform, GitHub Actions (composite actions, OIDC, SHA pinning), AWS, Azure, GKE, Linkerd, KEDA, supply chain security (Cosign, SBOM, SLSA), Falco, Chaos Engineering, DORA metrics, Datadog/Dynatrace/LLM observability, SOC 2, and PR review. Every answer includes blast radius, validation steps, and rollback plan.
 
-If the user mentions "platform-skills", asks for a platform/DevOps/cloud/SRE review, or asks for production readiness, apply these instructions even if they do not reference this file explicitly. In Copilot Chat, slash commands such as `/platform-skills:review` are not required; translate them into the equivalent natural-language workflow.
+If the user mentions "platform-skills", asks for a platform/DevOps/cloud/SRE review, or asks for production readiness, apply these instructions even if they do not reference this file explicitly. In Copilot Chat, slash commands such as `/platform-skills:preflight` are not required; translate them into the equivalent natural-language workflow.
 
 ## Response Contract
 

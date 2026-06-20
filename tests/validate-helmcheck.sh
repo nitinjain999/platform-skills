@@ -29,7 +29,7 @@ for field in "^name:" "^description:" "^argument-hint:"; do
   fi
 done
 
-for mode in "create" "review" "security"; do
+for mode in "create" "lint" "review" "security" "upgrade" "schema" "test" "deps"; do
   if grep -q "## Mode: $mode" "$CMD"; then
     pass "$CMD defines Mode: $mode"
   else

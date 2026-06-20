@@ -289,7 +289,7 @@ for cmd_file in commands/*.md; do
     document)
       dir_candidates=("examples/documentation")
       ;;
-    helmcheck)
+    helmchart)
       dir_candidates=("examples/helm")
       ;;
     linux)

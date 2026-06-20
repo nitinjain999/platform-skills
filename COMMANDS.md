@@ -466,10 +466,10 @@ General-purpose structured checklist when you don't know the topic. Classifies s
 
 ## `/platform-skills:helmchart`
 
-**What it does:** Three modes — scaffold a production-ready chart from scratch, review an existing chart for structural issues, or run a security audit.
+**What it does:** Eight modes covering the full Helm chart lifecycle — scaffold, lint, review, security audit, upgrade, schema generation, test, and dependency management.
 
 ```
-/platform-skills:helmchart [create <workload-type> | review | security] [chart path or description]
+/platform-skills:helmchart [create | lint | review | security | upgrade | schema | test | deps] [chart path or description]
 ```
 
 ---

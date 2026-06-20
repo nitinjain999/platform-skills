@@ -290,7 +290,7 @@ helm template myrelease <chart>/ --debug 2>&1
 helm template myrelease <chart>/ | kubeconform \
   -strict \
   -summary \
-  -kubernetes-version 1.30.0 \
+  -kubernetes-version $(kubectl version --short 2>/dev/null | awk '/Server/{print $3}' | tr -d 'v' || echo "1.30.0") \
   -schema-location default \
   -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
 ```
@@ -476,7 +476,7 @@ Always print:
 
 ```bash
 # Rollback to previous revision if upgrade fails
-helm rollback <release> 0   # 0 = previous revision
+helm rollback <release>     # omit revision to roll back to the previous release
 helm status <release>
 ```
 
@@ -524,7 +524,7 @@ spec:
   restartPolicy: Never
   containers:
     - name: wget
-      image: busybox
+      image: busybox:1.36
       command: ['wget']
       args: ['{{ include "<chart>.fullname" . }}:{{ .Values.service.port }}{{ .Values.healthCheck.path | default "/healthz" }}']
 ```
