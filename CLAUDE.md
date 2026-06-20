@@ -292,7 +292,7 @@ Users can invoke via:
 - **Explicit request** - Ask for platform-skills guidance in context
 - **Slash commands** - Explicit entry points for repeatable workflows:
   - `/platform-skills:debug` - structured troubleshooting for any platform symptom
-  - `/platform-skills:review` - production-readiness review of manifests, Terraform, or workflows
+  - `/platform-skills:audit` - production-readiness review of manifests, Terraform, or workflows
   - `/platform-skills:terraform` - full fmt/validate/tflint/security pipeline + blast radius review
   - `/platform-skills:gitops` - Flux CD and Argo CD reconciliation troubleshooting
   - `/platform-skills:linkerd` - Linkerd mTLS, injection, policy, and multi-cluster diagnostics
