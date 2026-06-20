@@ -2,6 +2,9 @@
 name: helmcheck
 description: Scaffold, review, lint, and security-audit Helm charts. Runs helm lint --strict, template validation, and security checks. Covers chart structure, values design, template patterns, and dependency management.
 argument-hint: "[create <workload-type> | review | security] [chart path or description]"
+title: "Helm Check Command"
+sidebar_label: "helmcheck"
+custom_edit_url: null
 ---
 
 ---

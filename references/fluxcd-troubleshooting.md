@@ -1,3 +1,8 @@
+---
+title: "Flux CD: Troubleshooting"
+custom_edit_url: null
+---
+
 # FluxCD Troubleshooting — Failure Pattern Quick Reference
 
 <!-- Adapted from https://github.com/fluxcd/agent-skills (Apache-2.0, The Flux authors)

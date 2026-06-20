@@ -1,3 +1,8 @@
+---
+title: "Setup Agents: Build"
+custom_edit_url: null
+---
+
 # generate + upgrade Mode Steps
 
 ## Mode: generate

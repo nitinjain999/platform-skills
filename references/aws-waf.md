@@ -1,3 +1,8 @@
+---
+title: AWS WAF
+custom_edit_url: null
+---
+
 # AWS WAF Reference
 
 ## Contents

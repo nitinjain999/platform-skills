@@ -1,3 +1,8 @@
+---
+title: OPA / Rego
+custom_edit_url: null
+---
+
 # OPA / Conftest Reference
 
 Covers Rego v1 syntax, rule types, package namespacing, input shapes, unit testing, Conftest CLI, Regal linting, formatting, GitHub Actions integration, and troubleshooting.

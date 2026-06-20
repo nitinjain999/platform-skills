@@ -1,3 +1,8 @@
+---
+title: "Flux CD: Terraform"
+custom_edit_url: null
+---
+
 # FluxCD Terraform Bootstrap Reference
 
 Bootstrap Flux Operator and a `FluxInstance` into a Kubernetes cluster via Terraform. Designed for clusters provisioned with Terraform where Flux takes over GitOps reconciliation after bootstrap.

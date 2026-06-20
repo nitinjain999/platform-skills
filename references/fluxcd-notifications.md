@@ -1,3 +1,8 @@
+---
+title: "Flux CD: Notifications"
+custom_edit_url: null
+---
+
 # FluxCD Notifications Reference
 
 The notification-controller manages outgoing alerts (Provider + Alert) and incoming webhooks (Receiver). All resources share the namespace of their notification target.

@@ -2,6 +2,9 @@
 name: opa
 description: Generate, test, validate, explain, and debug OPA (Open Policy Agent) Rego policies and Conftest configurations. Covers deny/warn/violation rules, unit tests, regal linting, conftest fmt, namespace design, input shape analysis, and GitHub Actions integration. Use when asked to "write a policy", "test a rego file", "validate policies", "explain this rego", or "why is my policy not firing".
 argument-hint: "[generate|test|validate|explain|debug] [policy description or file path]"
+title: "OPA Command"
+sidebar_label: "opa"
+custom_edit_url: null
 ---
 
 Write, test, validate, explain, and debug OPA Rego policies with Conftest.

@@ -1,3 +1,8 @@
+---
+title: Compliance
+custom_edit_url: null
+---
+
 # Compliance Reference
 
 Guidance for platform engineers implementing compliance controls in Terraform. This version covers SOC 2 Trust Services Criteria (TSC) — the control mapping, Terraform patterns, Checkov enforcement rules, and evidence collection commands needed for an audit.

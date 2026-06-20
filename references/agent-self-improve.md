@@ -1,3 +1,8 @@
+---
+title: Agent Self-Improvement
+custom_edit_url: null
+---
+
 # Agent Self-Improvement Reference
 
 Covers two complementary patterns for AI agents working on platform engineering tasks:

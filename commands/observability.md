@@ -2,6 +2,9 @@
 name: observability
 description: Instrument services with structured logging, Prometheus metrics, and OpenTelemetry tracing. Build Grafana dashboards, write Prometheus alerting rules, run k6 load tests, and plan infrastructure capacity.
 argument-hint: "[instrument|dashboard|alert|slo|loadtest|capacity] [service description]"
+title: "Observability Command"
+sidebar_label: "observability"
+custom_edit_url: null
 ---
 
 Set up or improve observability for a service or platform component.

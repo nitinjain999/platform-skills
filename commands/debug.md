@@ -2,6 +2,9 @@
 name: debug
 description: Structured platform troubleshooting — classifies the problem layer, collects evidence, forms a root-cause hypothesis, and proposes a fix with validation and rollback steps.
 argument-hint: "[timeline <minutes>|symptom or error message]"
+title: "Debug Command"
+sidebar_label: "debug"
+custom_edit_url: null
 ---
 
 ---

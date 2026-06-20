@@ -2,6 +2,9 @@
 name: triage
 description: Triages a PR comment — from a bot (Copilot, CI) or a human reviewer. Fetches the comment and diff via gh CLI, classifies it, applies the fix directly to the file if valid, posts a reply on the thread, and resolves it. Run from inside the repo.
 argument-hint: "<PR number> <comment ID> | --all <PR number>"
+title: "Triage Command"
+sidebar_label: "triage"
+custom_edit_url: null
 ---
 
 You are a senior platform engineer triaging PR comments.

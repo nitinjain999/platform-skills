@@ -2,6 +2,9 @@
 name: aws
 description: Structured guidance for AWS CloudFront distributions, WAF web ACLs, Lambda@Edge, CloudFront Functions, Firewall Manager multi-account enforcement, and IAM/IRSA patterns. Covers OAC, cache policies, security headers, managed rule groups, rate limiting, FMS FIRST/MIDDLE/LAST ownership model, and production-ready Terraform generation.
 argument-hint: "[cloudfront|waf|lambda-edge|multi-account|orgs|review|terraform] [description or code]"
+title: "AWS Command"
+sidebar_label: "aws"
+custom_edit_url: null
 ---
 
 # AWS Command

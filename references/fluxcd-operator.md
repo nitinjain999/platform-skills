@@ -1,3 +1,8 @@
+---
+title: "Flux CD: Operator"
+custom_edit_url: null
+---
+
 # FluxCD Operator Reference
 
 The Flux Operator manages Flux installations declaratively via two CRDs: `FluxInstance` (desired state) and `FluxReport` (observed state). It replaces the `flux bootstrap` imperative workflow with a fully GitOps-managed lifecycle.

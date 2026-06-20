@@ -1,3 +1,8 @@
+---
+title: "Setup Agents: Prompts"
+custom_edit_url: null
+---
+
 # Agent Prompt Writing Guide
 
 ## 3-section format

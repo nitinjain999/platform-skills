@@ -1,3 +1,8 @@
+---
+title: "Flux CD: Migration"
+custom_edit_url: null
+---
+
 # FluxCD API Migration Guide
 
 Flux has removed deprecated API versions in two waves. Running any `v1beta1` or `v1beta2` resource in a post-removal cluster will cause reconciliation failures.

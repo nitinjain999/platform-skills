@@ -1,3 +1,8 @@
+---
+title: "Setup Agents: Schemas"
+custom_edit_url: null
+---
+
 # Tool Frontmatter Schemas
 
 ## Managed-file marker — per format (single source of truth)

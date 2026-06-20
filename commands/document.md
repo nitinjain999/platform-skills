@@ -2,6 +2,9 @@
 name: document
 description: Generate, format, and validate code documentation — docstrings, JSDoc, OpenAPI/Swagger specs, documentation sites, and developer guides.
 argument-hint: "[docstrings|openapi|site|guide] [language/framework] [path or description]"
+title: "Document Command"
+sidebar_label: "document"
+custom_edit_url: null
 ---
 
 Generate or improve technical documentation for a codebase or API.

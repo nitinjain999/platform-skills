@@ -2,6 +2,9 @@
 name: keda
 description: Design, debug, and review KEDA ScaledObject/ScaledJob autoscaling. Covers all major scalers (Prometheus, SQS, Kafka, Redis, Cron, HTTP Add-on, Azure Service Bus), TriggerAuthentication, scaling lifecycle tuning, GitOps integration, and troubleshooting. Use when asked to "add KEDA autoscaling", "debug why my ScaledObject isn't scaling", "review my KEDA config", or "generate a ScaledObject for <trigger>".
 argument-hint: "[scale|debug|review|generate] [description or file path]"
+title: "KEDA Command"
+sidebar_label: "keda"
+custom_edit_url: null
 ---
 
 Design, debug, and review KEDA (Kubernetes Event-Driven Autoscaling) ScaledObject and ScaledJob resources.

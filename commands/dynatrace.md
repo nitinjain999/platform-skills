@@ -2,6 +2,9 @@
 name: dynatrace
 description: Deploy and configure Dynatrace — OneAgent Kubernetes Operator, code-level instrumentation, Log Monitoring, custom metrics, SLOs, Dashboards, anomaly detection, Davis AI, and live incident investigation using the Dynatrace MCP server. Covers Terraform-managed Dynatrace resources.
 argument-hint: "[setup|instrument|monitor|slo|dashboard|investigate|debug] [service or description]"
+title: "Dynatrace Command"
+sidebar_label: "dynatrace"
+custom_edit_url: null
 ---
 
 Configure, troubleshoot, or investigate incidents in Dynatrace.

@@ -1,3 +1,8 @@
+---
+title: AWS CloudFront
+custom_edit_url: null
+---
+
 # AWS CloudFront Reference
 
 ## Contents

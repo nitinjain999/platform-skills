@@ -2,6 +2,9 @@
 name: commit
 description: Analyze git diffs or staged changes and generate conventional commit messages that explain WHY a change was made. Supports auto-detecting type and scope, intelligent file staging, and interactive overrides. Use when asked to "write a commit message", "generate a commit", "describe my changes", "commit this", "summarize my diff", or "/commit".
 argument-hint: "[analyze|generate|stage|validate] [optional: type/scope override or description]"
+title: "Commit Command"
+sidebar_label: "commit"
+custom_edit_url: null
 ---
 
 Analyze changes and generate a Conventional Commits message explaining the motivation behind the change.

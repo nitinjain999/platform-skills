@@ -1,3 +1,8 @@
+---
+title: Chaos Engineering
+custom_edit_url: null
+---
+
 # Chaos Engineering Reference
 
 Covers Chaos Engineering on Kubernetes using Litmus Chaos v3 (CNCF graduated) and Chaos Mesh v2 (CNCF incubating). Both tools use Kubernetes CRDs for experiment definition and are GitOps-compatible.

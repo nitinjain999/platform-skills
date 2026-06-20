@@ -2,6 +2,9 @@
 name: runtime-security
 description: Detect and respond to in-container threats at the syscall level using Falco (eBPF-based, CNCF, open-source, no license cost). Covers Falco installation on EKS/GKE with eBPF driver, custom rule authoring, alert routing via Falcosidekick, rule debugging, and bridging Falco runtime signals to Kyverno admission enforcement. Use when asked to "detect privilege escalation in containers", "set up runtime threat detection", "write a Falco rule", "route Falco alerts to Slack", or "debug why my Falco rule is not firing".
 argument-hint: "[install|rules|alerts|debug|harden] [description or symptom]"
+title: "Runtime Security Command"
+sidebar_label: "runtime-security"
+custom_edit_url: null
 ---
 
 Detect and respond to threats inside running containers using Falco.

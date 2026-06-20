@@ -2,6 +2,9 @@
 name: self-improve
 description: Bootstrap and operate a self-improving agent workspace. Scaffolds .learnings/ and memory/ directories, captures errors and learnings during a session, detects recurring patterns, and promotes stable entries to project memory (CLAUDE.md, AGENTS.md, or references/). Also implements the Proactive Agent pillars — WAL protocol, working buffer, SESSION-STATE, daily notes, VBR, VFM scoring, ADL decision logic, heartbeat, and reverse prompting. Use when asked to "remember this lesson", "set up agent memory", "log that error", "promote learnings", "capture session state", or "enable proactive mode".
 argument-hint: "[init [global|local]|log [LRN|ERR|FEAT]|promote <ID>|migrate [global|local]|status|resume|review|state]"
+title: "Self-Improve Command"
+sidebar_label: "self-improve"
+custom_edit_url: null
 ---
 
 Bootstrap and operate a self-improving, proactive agent workspace.

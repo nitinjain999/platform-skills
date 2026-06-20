@@ -1,3 +1,8 @@
+---
+title: Flux CD
+custom_edit_url: null
+---
+
 # Flux Reference
 
 ## Contents

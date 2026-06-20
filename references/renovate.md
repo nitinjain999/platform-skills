@@ -1,3 +1,8 @@
+---
+title: Renovate
+custom_edit_url: null
+---
+
 # Renovate Reference
 
 Companion to `/platform-skills:renovate`. Deep-dive on managers, presets, security, GitOps integration, private registries, custom regex managers, pre-commit hooks, and troubleshooting.

@@ -1,3 +1,8 @@
+---
+title: Azure
+custom_edit_url: null
+---
+
 # Azure Reference
 
 ## Contents

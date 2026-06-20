@@ -1,3 +1,8 @@
+---
+title: "Setup Agents: Review"
+custom_edit_url: null
+---
+
 # Review Mode — Scoring Rubric + Output Options
 
 ## Discover agent files

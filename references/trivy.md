@@ -1,3 +1,8 @@
+---
+title: Trivy
+custom_edit_url: null
+---
+
 # Trivy Reference
 
 Covers all `/platform-skills:trivy` mode logic: bootstrap, per-mode execution, severity gating, output formats, `.trivyignore` / `trivy.yaml` config, private-registry auth, and the Trivy Operator via Flux HelmRelease.

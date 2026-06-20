@@ -1,3 +1,8 @@
+---
+title: "Setup Agents: Add"
+custom_edit_url: null
+---
+
 # add Mode Steps
 
 Add one agent to an existing setup without re-running the full interview.

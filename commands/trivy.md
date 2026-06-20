@@ -2,6 +2,9 @@
 name: trivy
 description: Scan container images, filesystems, git repos, and existing SBOMs for CVEs, secrets, and license violations using Trivy. Covers local CLI, CI severity gates with SARIF upload, and continuous monitoring via Trivy Operator (Flux HelmRelease). Use when asked to "scan my image", "check for CVEs", "scan this repo for secrets", "scan an SBOM", or "set up continuous cluster vulnerability monitoring". IaC misconfig → /platform-skills:checkov. Admission posture → /platform-skills:kyverno. Image signing/SBOM generation → /platform-skills:supply-chain.
 argument-hint: "[image|fs|repo|secrets|sbom|k8s] [target]"
+title: "Trivy Command"
+sidebar_label: "trivy"
+custom_edit_url: null
 ---
 
 Scan for vulnerabilities, secrets, and license violations — from local dev to running cluster.

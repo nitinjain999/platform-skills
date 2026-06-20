@@ -1,3 +1,8 @@
+---
+title: "Flux CD: ResourceSets"
+custom_edit_url: null
+---
+
 # FluxCD ResourceSet Reference
 
 `ResourceSet` (`fluxcd.controlplane.io/v1`) generates Kubernetes resources from input value matrices using templates. It powers multi-tenant orchestration, fleet management, and self-service platform patterns that would otherwise require N copies of the same manifest.

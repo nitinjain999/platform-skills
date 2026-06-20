@@ -1,3 +1,8 @@
+---
+title: "Flux CD: HelmRelease"
+custom_edit_url: null
+---
+
 # FluxCD HelmRelease Reference
 
 `HelmRelease` (`helm.toolkit.fluxcd.io/v2`) is managed by helm-controller. It installs, upgrades, tests, and garbage-collects Helm releases with drift detection and structured remediation.

@@ -1,3 +1,8 @@
+---
+title: Linux Networking
+custom_edit_url: null
+---
+
 # Linux and Networking Reference
 
 Practical guidance for Linux administration and networking fundamentals as they apply to platform engineering: DNS, load balancing, and VPC/network design.

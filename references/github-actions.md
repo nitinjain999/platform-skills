@@ -1,3 +1,8 @@
+---
+title: GitHub Actions
+custom_edit_url: null
+---
+
 # GitHub Actions Reference
 
 ## Contents

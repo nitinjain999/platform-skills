@@ -2,6 +2,9 @@
 name: kyverno
 description: Generate, test, audit, debug, and migrate Kyverno policies using the new CEL-based policy types (ValidatingPolicy, MutatingPolicy, GeneratingPolicy, ImageValidatingPolicy — all apiVersion policies.kyverno.io/v1). Covers matchConstraints, matchConditions, CEL validations/mutations, generator.Apply(), Audit→Deny promotion, PolicyException, kyverno-cli testing, and migration from legacy ClusterPolicy or PodSecurityPolicy. Use when asked to "write a Kyverno policy", "test a ValidatingPolicy", "audit my cluster for violations", "why is my policy not firing", or "migrate from ClusterPolicy".
 argument-hint: "[generate|test|audit|debug|migrate] [policy description or file path]"
+title: "Kyverno Command"
+sidebar_label: "kyverno"
+custom_edit_url: null
 ---
 
 Write, test, audit, debug, and migrate Kyverno policies using the new CEL-based policy types.

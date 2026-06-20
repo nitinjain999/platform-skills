@@ -1,3 +1,8 @@
+---
+title: Karpenter
+custom_edit_url: null
+---
+
 # Karpenter Reference
 
 Covers Karpenter **v1.x** (`karpenter.sh/v1` API) on Amazon EKS. Resources: `NodePool`, `EC2NodeClass`, `NodeClaim`. The v0.x `Provisioner`/`AWSNodeTemplate` API was removed in v1.0.

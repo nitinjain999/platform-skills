@@ -1,3 +1,8 @@
+---
+title: Kubernetes
+custom_edit_url: null
+---
+
 # Kubernetes Reference
 
 ## Contents

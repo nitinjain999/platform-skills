@@ -1,3 +1,8 @@
+---
+title: Supply Chain Security
+custom_edit_url: null
+---
+
 # Supply Chain Security Reference
 
 Covers the full supply chain security stack: keyless image signing with Cosign, SBOM generation and attestation with Syft, CVE scanning with Trivy/Grype, SLSA Level 2 provenance, and Kyverno admission enforcement. All tools are open-source with no license cost.

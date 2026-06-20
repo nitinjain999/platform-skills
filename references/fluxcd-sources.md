@@ -1,3 +1,8 @@
+---
+title: "Flux CD: Sources"
+custom_edit_url: null
+---
+
 # FluxCD Sources Reference
 
 All source CRDs use `apiVersion: source.toolkit.fluxcd.io/v1`, except `ArtifactGenerator` which uses `source.extensions.fluxcd.io/v1beta1`. The source-controller polls at the configured interval and produces versioned, immutable artifacts consumed by kustomize-controller and helm-controller.

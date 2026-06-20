@@ -1,3 +1,8 @@
+---
+title: "Setup Agents: Template"
+custom_edit_url: null
+---
+
 # AGENTS.md Template
 
 > **Use `assets/AGENTS.md.template` as the canonical source.** Render it with `assets/render.sh` — do not regenerate the structure verbatim from this file. This page documents the sections and their intent; the asset file is what gets written to the target repo.

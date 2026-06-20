@@ -2,6 +2,9 @@
 name: chaos
 description: Design, run, and debug Chaos Engineering experiments on Kubernetes using Litmus Chaos v3 and Chaos Mesh v2. Covers fault injection (pod-delete, network-loss, CPU stress, node-drain), steady-state hypothesis probes, GameDay runbooks, scheduled experiments, DORA feedback loop, and RBAC setup. Use when asked to "inject a pod fault", "run a GameDay", "schedule chaos experiments", or "debug why my ChaosEngine is stuck".
 argument-hint: "[install|experiment|schedule|gameday|debug|report] [description or file path]"
+title: "Chaos Engineering Command"
+sidebar_label: "chaos"
+custom_edit_url: null
 ---
 
 Design, run, and debug Chaos Engineering experiments on Kubernetes.
