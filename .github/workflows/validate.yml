@@ -80,7 +80,7 @@ jobs:
             (.plugins | type == "array" and length > 0) and
             (.plugins[0].name | type == "string" and length > 0) and
             (.plugins[0].version | type == "string" and length > 0) and
-            (.plugins[0].description | type == "string" and length > 0) and
+            (.plugins[0].description | type == "string" and length > 0 and length <= 1024) and
             (.plugins[0].author.name | type == "string" and length > 0) and
             (.plugins[0].license | type == "string" and length > 0) and
             (.plugins[0].source.url | type == "string" and length > 0) and
