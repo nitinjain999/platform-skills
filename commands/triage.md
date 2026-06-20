@@ -118,7 +118,7 @@ git push
 For a review comment:
 ```bash
 gh api --method POST \
-  repos/{owner}/{repo}/pulls/comments/<comment_id>/replies \
+  repos/{owner}/{repo}/pulls/<pr_number>/comments/<comment_id>/replies \
   --field body="<reply>"
 ```
 

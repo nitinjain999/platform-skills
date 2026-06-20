@@ -89,4 +89,4 @@ resource "azurerm_resource_group" "app" {
 ## See Also
 
 - [references/azure.md](../../references/azure.md) — subscription model, AKS, RBAC, managed identities, tagging
-- `/platform-skills:review` — production-readiness review of Azure Terraform resources
+- `/platform-skills:preflight` — production-readiness review of Azure Terraform resources

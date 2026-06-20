@@ -8,7 +8,7 @@ const sidebars = {
       type: 'category',
       label: 'Kubernetes',
       items: [
-        { type: 'doc', id: 'helmcheck' },
+        { type: 'doc', id: 'helmchart' },
         { type: 'doc', id: 'keda' },
         { type: 'doc', id: 'karpenter' },
       ],
@@ -79,7 +79,7 @@ const sidebars = {
       label: 'Platform Engineering',
       items: [
         { type: 'doc', id: 'debug' },
-        { type: 'doc', id: 'review' },
+        { type: 'doc', id: 'preflight' },
         { type: 'doc', id: 'product' },
         { type: 'doc', id: 'dora' },
         { type: 'doc', id: 'chaos' },

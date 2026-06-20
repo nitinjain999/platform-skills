@@ -17,7 +17,7 @@ Commands work in any conversation — type the slash command or describe your pr
 
 | Command | What it's for |
 |---------|--------------|
-| [/platform-skills:review](#platform-skillsreview) | Production-readiness review of any config |
+| [/platform-skills:preflight](#platform-skillspreflight) | Production-readiness preflight for a folder, repo, or single file |
 | [/platform-skills:debug](#platform-skillsdebug) | Structured troubleshooting for any symptom |
 | [/platform-skills:terraform](#platform-skillsterraform) | Terraform validation pipeline + blast radius |
 | [/platform-skills:checkov](#platform-skillscheckov) | Checkov bootstrap, static + plan-level Terraform scanning, multi-cloud, fix mode |
@@ -25,7 +25,7 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:gitops](#platform-skillsgitops) | Flux CD / Argo CD — debug live cluster issues or audit a GitOps repo |
 | [/platform-skills:linkerd](#platform-skillslinkerd) | Linkerd mTLS, injection, policy, multi-cluster |
 | [/platform-skills:linux](#platform-skillslinux) | Linux, DNS, load balancing, VPC/VNet, networking |
-| [/platform-skills:helmcheck](#platform-skillshelmcheck) | Helm chart scaffold, review, security audit |
+| [/platform-skills:helmchart](#platform-skillshelmchart) | Helm chart scaffold, review, security audit |
 | [/platform-skills:commit](#platform-skillscommit) | Conventional commit message generation |
 | [/platform-skills:observability](#platform-skillsobservability) | Instrument, alert, dashboard, load test, capacity |
 | [/platform-skills:opa](#platform-skillsopa) | OPA/Conftest Rego policy generate, test, validate |
@@ -53,14 +53,16 @@ Commands work in any conversation — type the slash command or describe your pr
 
 ---
 
-## `/platform-skills:review`
+## `/platform-skills:preflight`
 
-**What it does:** Senior-engineer production-readiness review of any platform config. Evaluates correctness → security → operational safety → deprecations. Returns findings as Critical / Improvement / Note.
+**What it does:** Production-readiness preflight check for a directory, repo, or single file. Discovers all files, classifies by type, and runs type-specific checks across the whole scope. Returns a per-file summary table and aggregated verdict (BLOCKED / NEEDS_FIX / MERGE_READY).
 
-**Works on:** Kubernetes manifests, Terraform modules, GitHub Actions workflows, Helm values, RBAC configs, network policies, Dockerfiles, any YAML.
+**Works on:** Entire folders, globs, or single files — Kubernetes manifests, Terraform modules, GitHub Actions workflows, Helm values, Flux resources, Dockerfiles, shell scripts.
 
 ```
-/platform-skills:review [paste file content or describe what to review]
+/platform-skills:preflight ./k8s/
+/platform-skills:preflight releases/my-app/ --env prod
+/platform-skills:preflight [paste single file content]
 ```
 
 **What gets checked:**
@@ -76,7 +78,7 @@ Commands work in any conversation — type the slash command or describe your pr
 
 Review a Deployment manifest — paste it inline:
 ```
-/platform-skills:review
+/platform-skills:preflight
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -95,12 +97,12 @@ spec:
 
 Review a GitHub Actions workflow file by path:
 ```
-/platform-skills:review .github/workflows/deploy.yml
+/platform-skills:preflight .github/workflows/deploy.yml
 ```
 
 Review a Terraform IAM module inline:
 ```
-/platform-skills:review
+/platform-skills:preflight
 resource "aws_iam_role_policy" "app" {
   policy = jsonencode({
     Statement = [{ Effect = "Allow", Action = "*", Resource = "*" }]
@@ -110,7 +112,7 @@ resource "aws_iam_role_policy" "app" {
 
 Review Helm values against a specific chart:
 ```
-/platform-skills:review my values.yaml for the ingress-nginx chart — are resource limits set? Is the service account locked down?
+/platform-skills:preflight my values.yaml for the ingress-nginx chart — are resource limits set? Is the service account locked down?
 ```
 
 **What comes back:** A structured report grouped by severity. Critical items block merge; Improvements are non-blocking; Notes are informational.
@@ -462,12 +464,12 @@ General-purpose structured checklist when you don't know the topic. Classifies s
 
 ---
 
-## `/platform-skills:helmcheck`
+## `/platform-skills:helmchart`
 
-**What it does:** Three modes — scaffold a production-ready chart from scratch, review an existing chart for structural issues, or run a security audit.
+**What it does:** Eight modes covering the full Helm chart lifecycle — scaffold, lint, review, security audit, upgrade, schema generation, test, and dependency management.
 
 ```
-/platform-skills:helmcheck [create <workload-type> | review | security] [chart path or description]
+/platform-skills:helmchart [create | lint | review | security | upgrade | schema | test | deps] [chart path or description]
 ```
 
 ---
@@ -494,13 +496,13 @@ Generates a complete, production-ready Helm chart based on workload type.
 **Examples:**
 
 ```
-/platform-skills:helmcheck create web service for a Node.js REST API — needs ingress, HPA, and network policy
+/platform-skills:helmchart create web service for a Node.js REST API — needs ingress, HPA, and network policy
 ```
 ```
-/platform-skills:helmcheck create worker for a Python background job that reads from SQS — no inbound traffic
+/platform-skills:helmchart create worker for a Python background job that reads from SQS — no inbound traffic
 ```
 ```
-/platform-skills:helmcheck create stateful for PostgreSQL with PVC and headless service
+/platform-skills:helmchart create stateful for PostgreSQL with PVC and headless service
 ```
 
 ---
@@ -512,10 +514,10 @@ Checks a chart against a severity table. Reports Critical/High/Medium/Low findin
 **Checks include:** missing `_helpers.tpl`, no resource limits, no probes, hardcoded image tags, wrong label immutability, missing NOTES.txt, `automountServiceAccountToken: true`, undocumented values.
 
 ```
-/platform-skills:helmcheck review ./charts/orders-service
+/platform-skills:helmchart review ./charts/orders-service
 ```
 ```
-/platform-skills:helmcheck review — the chart has no liveness probes and I suspect the values.yaml has secrets hardcoded
+/platform-skills:helmchart review — the chart has no liveness probes and I suspect the values.yaml has secrets hardcoded
 ```
 
 ---
@@ -531,10 +533,10 @@ Full security audit across pod security, RBAC, network, and secrets.
 - Secrets: plaintext in values.yaml defaults, missing PDB
 
 ```
-/platform-skills:helmcheck security ./charts/payments-service
+/platform-skills:helmchart security ./charts/payments-service
 ```
 ```
-/platform-skills:helmcheck security — our chart runs as root and mounts the host docker socket, help me fix it
+/platform-skills:helmchart security — our chart runs as root and mounts the host docker socket, help me fix it
 ```
 
 ---
@@ -1735,7 +1737,7 @@ Comprehensive pre-merge risk review across six dimensions. Each mode inspects th
 ```
 /platform-skills:pr-review full   # get the complete risk picture
 # fix blockers
-/platform-skills:review           # validate specific manifests before re-review
+/platform-skills:preflight           # validate specific manifests before re-review
 ```
 
 Reference: `references/pr-review.md`
@@ -2184,7 +2186,7 @@ Reference: `references/awesome-docs.md` and `examples/awesome-docs/`
 
 **You don't need the slash command** — describe your problem in plain English and the skill activates automatically when you're working with relevant files.
 
-**Chain commands** — `/platform-skills:debug` to diagnose, then `/platform-skills:review` to validate the fix before merging.
+**Chain commands** — `/platform-skills:debug` to diagnose, then `/platform-skills:preflight` to validate the fix before merging.
 
 **Multi-mode workflows:**
 - New service: `instrument` → `alert` → `dashboard` → `loadtest`
@@ -2276,8 +2278,8 @@ Reference: `commands/composite-actions.md`, `references/composite-actions.md`, a
 |---|---|
 | Error message, `flux get` output, pod logs, "not reconciling" | `/platform-skills:gitops debug` — 5-workflow debug |
 | Repo path, "audit", "review", "before merge", "is this correct" | `/platform-skills:gitops audit` — 6-phase audit |
-| Helm chart path, `Chart.yaml`, `values.yaml`, "helm", "chart" | `/platform-skills:helmcheck` — chart review |
-| A manifest to review (Kustomization, HelmRelease, FluxInstance YAML) | `/platform-skills:review` — production-readiness check |
+| Helm chart path, `Chart.yaml`, `values.yaml`, "helm", "chart" | `/platform-skills:helmchart` — chart review |
+| A manifest to review (Kustomization, HelmRelease, FluxInstance YAML) | `/platform-skills:preflight` — production-readiness check |
 
 **Examples:**
 

@@ -4,7 +4,7 @@ globs: []
 alwaysApply: true
 ---
 
-# Platform Skills — v1.34.0
+# Platform Skills — v1.35.0
 
 You are a senior platform engineer. Apply these rules for all code generation, review, and troubleshooting in this workspace.
 

@@ -142,7 +142,7 @@ Load only the files needed for the current request.
 For explicit, repeatable workflows use these commands:
 
 - `/platform-skills:debug` — structured troubleshooting for any platform symptom
-- `/platform-skills:review` — production-readiness review of any manifest, Terraform, or workflow
+- `/platform-skills:preflight` — production-readiness preflight for a folder, repo, or single file
 - `/platform-skills:terraform` — full fmt/validate/tflint/security pipeline + blast radius review
 - `/platform-skills:checkov` — Checkov bootstrap, static and plan-level Terraform scanning for AWS/Azure/GCP/EKS, private GitHub module auth via `gh` CLI, pre-commit generation, multi-format output, baseline, and AI-generated fix mode
 - `/platform-skills:trivy` — scan container images, filesystems, git repos, and existing SBOMs for CVEs, secrets, and license violations; three-layer wizard routes intent → goal → tuned scan; continuous cluster monitoring via Trivy Operator (Flux HelmRelease); hard handoffs to Checkov (IaC), Kyverno (admission), and supply-chain (SBOM generation/signing)
@@ -153,7 +153,7 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:linux` — Linux administration, DNS, load balancing, VPC/VNet, and connectivity troubleshooting
 - `/platform-skills:product` — product thinking, friction audits, DevEx, RFC/ADR, incident updates, post-mortems
 - `/platform-skills:compliance` — SOC 2 gap analysis, control implementation, evidence collection, and Checkov remediation for Terraform
-- `/platform-skills:helmcheck` — Helm chart scaffolding, structural review, and security audit with full lint/validation pipeline
+- `/platform-skills:helmchart` — Helm chart scaffolding, structural review, and security audit with full lint/validation pipeline
 - `/platform-skills:mcp` — MCP server/client scaffolding, protocol review, and integration debugging
 - `/platform-skills:aws-profile` — discover, switch, and validate AWS profiles for MCP servers across VS Code and Claude Code
 - `/platform-skills:observability` — instrument services, build dashboards, write alerts, run load tests, plan capacity

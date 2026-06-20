@@ -89,5 +89,5 @@ readinessProbe:
 ## See Also
 
 - [references/kubernetes.md](../../references/kubernetes.md) — cluster baselines, workload patterns, RBAC, network policy, pod security
-- `/platform-skills:review` — production-readiness review of any manifest
+- `/platform-skills:preflight` — production-readiness review of any manifest
 - `/platform-skills:debug` — structured diagnosis for Kubernetes issues
