@@ -15,12 +15,16 @@ const config = {
   trailingSlash: false,
 
   onBrokenLinks: 'warn',
-  onBrokenMarkdownLinks: 'warn',
 
   markdown: {
     // Process .md files as CommonMark (not MDX) — tolerates raw HTML tags and
     // angle-bracket constructs present in the existing references/ and commands/ files.
     format: 'detect',
+    hooks: {
+      // Cross-plugin refs (commands/ → references/) and examples/ links are
+      // agent-skill cross-references, not web links — suppress broken-link noise.
+      onBrokenMarkdownLinks: 'warn',
+    },
   },
 
   i18n: {
