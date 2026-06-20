@@ -21,6 +21,7 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:debug](#platform-skillsdebug) | Structured troubleshooting for any symptom |
 | [/platform-skills:terraform](#platform-skillsterraform) | Terraform validation pipeline + blast radius |
 | [/platform-skills:checkov](#platform-skillscheckov) | Checkov bootstrap, static + plan-level Terraform scanning, multi-cloud, fix mode |
+| [/platform-skills:trivy](#platform-skillstrivy) | Container image, fs, repo, SBOM, and cluster CVE scanning; three-layer wizard; Trivy Operator via Flux |
 | [/platform-skills:gitops](#platform-skillsgitops) | Flux CD / Argo CD — debug live cluster issues or audit a GitOps repo |
 | [/platform-skills:linkerd](#platform-skillslinkerd) | Linkerd mTLS, injection, policy, multi-cluster |
 | [/platform-skills:linux](#platform-skillslinux) | Linux, DNS, load balancing, VPC/VNet, networking |
@@ -184,6 +185,30 @@ AWS resource creation failing:
 /platform-skills:checkov I'm getting CKV_AWS_19 failures — fix them
 /platform-skills:checkov set up checkov pre-commit hook for my repo
 /platform-skills:checkov scaffold a .checkov.yaml for my Azure Terraform
+```
+
+---
+
+## `/platform-skills:trivy`
+
+**What it does:** Scans container images, local filesystems, remote git repos, and existing Syft-generated SBOMs for CVEs, secrets, and license violations. A three-layer interactive wizard routes intent → end goal → tuned scan. Continuous cluster image-CVE monitoring via Trivy Operator deployed through a Flux HelmRelease. Hard handoffs ensure no overlap with Checkov (IaC), Kyverno (admission posture), or Syft (SBOM generation).
+
+```
+/platform-skills:trivy
+/platform-skills:trivy image ghcr.io/org/image:latest
+/platform-skills:trivy fs .
+/platform-skills:trivy secrets
+/platform-skills:trivy sbom sbom.spdx.json
+/platform-skills:trivy k8s
+```
+
+**Example prompts:**
+```
+/platform-skills:trivy is this image safe to ship?
+/platform-skills:trivy scan this repo for secrets and CVEs
+/platform-skills:trivy set up a CI severity gate for my container image
+/platform-skills:trivy deploy Trivy Operator for continuous cluster monitoring
+/platform-skills:trivy scan this SBOM for known vulnerabilities
 ```
 
 ---

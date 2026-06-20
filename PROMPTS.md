@@ -103,6 +103,10 @@ Review this supply chain pipeline for Cosign signing, SBOM generation, provenanc
 ```
 
 ```text
+/platform-skills:trivy is this container image safe to ship? Set up a CI severity gate with SARIF upload and a .trivyignore policy.
+```
+
+```text
 Review these Kyverno or OPA policies for audit-first rollout, false positive risk, test coverage, exception handling, and promotion to enforcement.
 ```
 

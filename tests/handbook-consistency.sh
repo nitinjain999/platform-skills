@@ -106,4 +106,7 @@ done
 echo "Running checkov script tests..."
 bash tests/checkov-script.sh
 
+echo "Running trivy script tests..."
+bash tests/trivy-script.sh
+
 echo "✅ Handbook consistency checks passed"
