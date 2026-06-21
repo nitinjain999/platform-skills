@@ -346,3 +346,5 @@ Rules promoted from `.learnings/` — apply to every session in this project.
 - Never write SDK method names, parameter names, or env vars for external tools (Datadog, LLMObs, etc.) without fetching actual SDK source or docs first.
 - Lambda@Edge child module: declaring `configuration_aliases = [aws.us_east_1]` requires a matching `provider "aws" { alias = "us_east_1" }` block inside the module or `terraform validate` fails (ERR-20260522-003)
 - In Lambda@Edge viewer-request, `request.headers['set-cookie']` targets the origin, not the browser — use a forwarded header (`x-ab-bucket`) and set `Set-Cookie` in a viewer-response function (ERR-20260522-004)
+- In GHA `run:` scripts, never use `${{ expr || expr }}` to pick between two context SHA values — assign each to a named `env:` var and resolve in shell; add `fetch-depth: 2` so `HEAD~1` is available as fallback (ERR-20260621-002)
+- In `commands/secrets.md` sealed mode, Q2 asks for the controller **Service** name (used by `kubeseal --controller-name`), not the Deployment name — the two may differ; always use `kubectl get svc` for discovery (ERR-20260621-001)
