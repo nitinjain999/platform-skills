@@ -42,21 +42,30 @@ jobs:
       terraform: ${{ steps.filter.outputs.terraform }}
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
+        with:
+          fetch-depth: 2
       - id: filter
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
         run: |
-          BASE=${{ github.event.pull_request.base.sha || github.event.before }}
-          HEAD=${{ github.sha }}
-          # Fall back to HEAD~1 on push when before is all-zeros (first push)
-          if [[ "$BASE" == "0000000000000000000000000000000000000000" ]]; then
-            BASE=$(git rev-parse HEAD~1 2>/dev/null || echo "$HEAD")
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            BASE="$PR_BASE_SHA"
+          else
+            BASE="$PUSH_BEFORE_SHA"
           fi
-          CHANGED=$(git diff --name-only "$BASE" "$HEAD" 2>/dev/null || git diff --name-only HEAD~1 HEAD)
-          has_md=$(echo "$CHANGED"    | grep -qE '\.md$'          && echo true || echo false)
-          has_yaml=$(echo "$CHANGED"  | grep -qE '\.(yml|yaml)$'  && echo true || echo false)
-          has_tf=$(echo "$CHANGED"    | grep -qE '\.tf$'          && echo true || echo false)
-          echo "markdown=$has_md"   >> "$GITHUB_OUTPUT"
-          echo "yaml=$has_yaml"     >> "$GITHUB_OUTPUT"
-          echo "terraform=$has_tf"  >> "$GITHUB_OUTPUT"
+          # Fall back to HEAD~1 when base SHA is all-zeros (force-push or first push)
+          if [[ -z "$BASE" || "$BASE" == "0000000000000000000000000000000000000000" ]]; then
+            BASE=$(git rev-parse HEAD~1 2>/dev/null || git rev-parse HEAD)
+          fi
+          CHANGED=$(git diff --name-only "$BASE" HEAD)
+          has_md=$(echo "$CHANGED"   | grep -qE '\.md$'         && echo true || echo false)
+          has_yaml=$(echo "$CHANGED" | grep -qE '\.(yml|yaml)$' && echo true || echo false)
+          has_tf=$(echo "$CHANGED"   | grep -qE '\.tf$'         && echo true || echo false)
+          echo "markdown=$has_md"  >> "$GITHUB_OUTPUT"
+          echo "yaml=$has_yaml"    >> "$GITHUB_OUTPUT"
+          echo "terraform=$has_tf" >> "$GITHUB_OUTPUT"
 
   validate-structure:
     name: Validate Repository Structure
