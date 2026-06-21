@@ -52,6 +52,8 @@ Start here based on your task:
 | Azure platform guidance | [references/azure.md](references/azure.md) |
 | GitHub Actions security | [references/github-actions.md](references/github-actions.md) |
 | Composite GitHub Actions | [references/composite-actions.md](references/composite-actions.md) |
+| OpenShift SCC, Routes, upgrades | [references/openshift.md](references/openshift.md) |
+| Secrets management (ESO, Sealed Secrets) | [references/secrets.md](references/secrets.md) |
 | SOC 2 controls in Terraform | [references/compliance.md](references/compliance.md) |
 | Helm chart patterns | [references/helm.md](references/helm.md) |
 | Kyverno admission policies | [references/kyverno.md](references/kyverno.md) |
@@ -143,7 +145,7 @@ My Flux Kustomization `apps` is stuck in NotReady with: "context deadline exceed
 - It cannot see your cluster or cloud account — paste the relevant output
 - It works best on one concrete problem at a time, not "review everything"
 
-### All 35 command workflows
+### All 40 command workflows
 
 See [COMMANDS.md](COMMANDS.md) for every command with modes and example prompts:
 

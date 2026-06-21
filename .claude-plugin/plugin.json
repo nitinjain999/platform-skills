@@ -1,7 +1,7 @@
 {
   "name": "platform-skills",
-  "version": "1.35.0",
-  "description": "Practical guidance for platform engineers across Claude, Codex, Cursor, and Copilot: Kubernetes, Kyverno, Helm, Terraform, Flux CD (Flux Operator, FluxInstance, gitless OCI delivery, cluster debug, repo audit), Argo CD, GitHub Actions (composite actions, SHA pinning, OIDC, 11 production examples), AWS (CloudFront, WAF, Lambda@Edge, IAM, IRSA), Azure (AKS workload identity), GKE (Workload Identity Federation), Linkerd, Linux, networking, MCP development, observability, SOC 2 compliance, PR review, PR triage, KEDA autoscaling, Karpenter node autoscaling, supply chain security (Cosign, SBOM, SLSA), Falco runtime security, Chaos Engineering, DORA Metrics, LLM Observability (Datadog LLMObs), and animated docs. Every answer includes blast radius, validation steps, and rollback plan.",
+  "version": "1.36.0",
+  "description": "Practical guidance for platform engineers across Claude, Codex, Cursor, and Copilot: Kubernetes (baseline, RBAC, workload hardening, debug), GitHub Actions (design, security, review, debug), Azure (Workload Identity, tagging, AKS, RBAC), OpenShift (SCC, Routes, GitOps, upgrades), Secrets (ESO, Sealed Secrets, rotation, audit), Kyverno, Helm, Terraform, Flux CD (Flux Operator, FluxInstance, OCI delivery), Argo CD, AWS (CloudFront, WAF, Lambda@Edge, IAM, IRSA), Linkerd, Linux, networking, MCP development, observability, SOC 2 compliance, PR review, PR triage, KEDA, Karpenter, supply chain security (Cosign, SBOM, SLSA), Falco runtime security, Chaos Engineering, DORA Metrics, LLM Observability (Datadog LLMObs), and animated docs. Every answer includes blast radius, validation steps, and rollback plan.",
   "author": {
     "name": "Nitin Jain",
     "email": "nitin.solna@gmail.com",
@@ -118,6 +118,11 @@
     "./commands/karpenter.md",
     "./commands/setup-agents.md",
     "./commands/checkov.md",
-    "./commands/trivy.md"
+    "./commands/trivy.md",
+    "./commands/github-actions.md",
+    "./commands/kubernetes.md",
+    "./commands/azure.md",
+    "./commands/openshift.md",
+    "./commands/secrets.md"
   ]
 }

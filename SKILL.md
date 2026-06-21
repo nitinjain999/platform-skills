@@ -12,13 +12,14 @@ Use this skill for hands-on help with Kubernetes, GitOps, cloud infrastructure, 
 | Layer | When to use |
 |---|---|
 | `Terraform` | Cloud primitives, cluster bootstrap, IAM, networking, secrets backends |
-| `Kubernetes` | Workload, RBAC, network policy, platform baseline across distributions |
-| `OpenShift` | Kubernetes patterns adapted to OpenShift routing, SCC, and OLM |
+| `Kubernetes` | Workload, RBAC, network policy, platform baseline across distributions — `/platform-skills:kubernetes` |
+| `OpenShift` | Kubernetes patterns adapted to OpenShift SCC, Routes, GitOps, and cluster upgrades — `/platform-skills:openshift` |
 | `Flux` / `Argo CD` | In-cluster reconciliation, Helm releases, workload promotion |
-| `GitHub Actions` | Validate, package, gate, and promote. Keep workflows declarative. |
-| `AWS` / `Azure` / `GKE` | Provider-specific account, identity, and governance patterns |
+| `GitHub Actions` | Validate, package, gate, and promote — OIDC, SHA pinning, reusable workflows, debug — `/platform-skills:github-actions` |
+| `AWS` / `Azure` / `GKE` | Provider-specific account, identity, and governance patterns — Azure: `/platform-skills:azure` |
 | `Linkerd` | Automatic mTLS, golden-signal observability, traffic management |
 | `Linux & Networking` | DNS, load balancer routing, VPC/VNet, kernel tuning, connectivity |
+| `Secrets` | ESO, Sealed Secrets, rotation runbooks, Kubernetes-side audit — `/platform-skills:secrets` |
 | `Compliance` | SOC 2 controls in Terraform — IAM, encryption, audit logging, Checkov |
 | `Helm (Helmcheck)` | Chart scaffolding, lint/validate pipeline, values design, security hardening |
 | `MCP` | Build/debug MCP servers — tools, resources, transports, auth |
@@ -175,6 +176,11 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:awesome-docs` — generate any animated Markdown document (README, architecture guide, runbook, tutorial, RFC, post-mortem, or custom), convert existing Markdown to animated, update diagrams, diff for staleness, audit quality, preview locally, or export to Confluence/Notion HTML
 - `/platform-skills:aws` — CloudFront distributions, WAF web ACLs, Lambda@Edge, CloudFront Functions, Firewall Manager multi-account enforcement, and Terraform module generation with best practices
 - `/platform-skills:composite-actions` — generate a full composite action repo scaffold, review an existing action.yml, harden with SHA pinning and env isolation, or generate a test workflow
+- `/platform-skills:github-actions` — design reusable workflows and job graphs, review for OIDC/SHA pinning/token scoping, or debug failing CI workflows
+- `/platform-skills:kubernetes` — generate cluster baseline scaffolds, diagnose 401/403 RBAC errors, harden Deployment specs, or debug crashloop/OOMKill/pending pods
+- `/platform-skills:azure` — Workload Identity and OIDC federation, resource tagging with Azure Policy, AKS provisioning, RBAC scoping, and production-readiness review
+- `/platform-skills:openshift` — SCC diagnosis and minimum grants, Route TLS modes and 503 debug, OpenShift GitOps app delivery, and cluster upgrade validation
+- `/platform-skills:secrets` — design ESO vs Sealed Secrets strategy, scaffold SecretStore/ExternalSecret, seal and rotate secrets, run rotation runbooks, and audit Kubernetes-side secrets hygiene
 - `/platform-skills:renovate` — generate renovate.json for any repo, or emit a GHA workflow to validate it on PR
 - `/platform-skills:setup-agents` — scaffold multi-agent AI configs for any repo: ranked scan, interview-driven, generate/upgrade/add/review
 - Working Flux CD examples: examples/fluxcd/
