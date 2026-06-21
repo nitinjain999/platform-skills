@@ -213,49 +213,78 @@ kubectl describe secretstore -n app-team my-secret-store
 
 Read `references/secrets.md` → Sealed Secrets section before responding.
 
+### Interview — ask before generating any commands
+
+Before writing any `kubeseal` or `kubectl` commands, collect the following. Different organisations deploy the controller with different names and namespaces.
+
+```
+Q1 — Controller namespace:
+  Where is the sealed-secrets controller running?
+  (common: sealed-secrets, kube-system, platform-system — check with: kubectl get pods -A | grep sealed)
+
+Q2 — Controller name:
+  What is the controller deployment name?
+  (common: sealed-secrets, sealed-secrets-controller — check with: kubectl get deploy -n <namespace> | grep sealed)
+
+Q3 — Secret namespace:
+  Which namespace will the unsealed Secret live in?
+
+Q4 — Secret name:
+  What is the name of the secret?
+
+Q5 — Action:
+  1. Seal a new secret
+  2. Rotate an existing sealed secret
+  3. Back up the master key
+  4. Restore the master key
+  5. Troubleshoot a decryption failure
+```
+
+Use the answers to substitute `<controller-namespace>`, `<controller-name>`, and `<secret-namespace>` in all commands below. Never output hardcoded namespace or deployment names — always use the values the user provided.
+
 ### Seal a new secret
 
 ```bash
 # Fetch the cluster public key — run once per cluster or after key rotation
 kubeseal --fetch-cert \
-  --controller-name=sealed-secrets \
-  --controller-namespace=sealed-secrets \
+  --controller-name=<controller-name> \
+  --controller-namespace=<controller-namespace> \
   > pub-cert.pem
 
 # Create a plain Secret and immediately seal it — never commit the plain Secret
-kubectl create secret generic database-credentials \
-  --namespace=app-team \
-  --from-literal=DB_PASSWORD=supersecret \
+kubectl create secret generic <secret-name> \
+  --namespace=<secret-namespace> \
+  --from-literal=KEY=value \
   --dry-run=client -o yaml \
   | kubeseal --cert pub-cert.pem --format yaml \
-  > database-credentials-sealed.yaml
+  > <secret-name>-sealed.yaml
 
-git add database-credentials-sealed.yaml
-git commit -m "chore: seal database-credentials for app-team"
+git add <secret-name>-sealed.yaml
+git commit -m "chore: seal <secret-name> for <secret-namespace>"
 ```
 
 ### Rotate an existing sealed secret
 
 ```bash
-kubectl create secret generic database-credentials \
-  --namespace=app-team \
-  --from-literal=DB_PASSWORD=newvalue \
+kubectl create secret generic <secret-name> \
+  --namespace=<secret-namespace> \
+  --from-literal=KEY=newvalue \
   --dry-run=client -o yaml \
   | kubeseal --cert pub-cert.pem --format yaml \
-  > database-credentials-sealed.yaml
+  > <secret-name>-sealed.yaml
 
-git add database-credentials-sealed.yaml
-git commit -m "chore: rotate database-credentials"
+git add <secret-name>-sealed.yaml
+git commit -m "chore: rotate <secret-name>"
 ```
 
 After GitOps applies the updated SealedSecret:
 - Pods using a mounted volume pick up the new value automatically via kubelet refresh
-- Pods using env vars require a rollout restart: `kubectl rollout restart deployment/<name> -n app-team`
+- Pods using env vars require a rollout restart: `kubectl rollout restart deployment/<name> -n <secret-namespace>`
 
 ### Back up the master key
 
 ```bash
-kubectl get secret -n sealed-secrets \
+kubectl get secret -n <controller-namespace> \
   -l sealedsecrets.bitnami.com/sealed-secrets-key \
   -o yaml > sealed-secrets-master-key-backup.yaml
 ```
@@ -266,20 +295,20 @@ Store this file outside the cluster (password manager, vault, encrypted object s
 
 ```bash
 kubectl apply -f sealed-secrets-master-key-backup.yaml
-kubectl rollout restart deploy/sealed-secrets-controller -n sealed-secrets
+kubectl rollout restart deploy/<controller-name> -n <controller-namespace>
 ```
 
 ### Troubleshoot
 
 ```bash
 # Confirm the controller is running
-kubectl get pods -n sealed-secrets
+kubectl get pods -n <controller-namespace>
 
 # Inspect SealedSecret status
-kubectl describe sealedsecret -n app-team database-credentials
+kubectl describe sealedsecret <secret-name> -n <secret-namespace>
 
 # Controller logs for decryption errors
-kubectl logs -n sealed-secrets deploy/sealed-secrets-controller | tail -50
+kubectl logs -n <controller-namespace> deploy/<controller-name> | tail -50
 ```
 
 | Symptom | Cause | Fix |
