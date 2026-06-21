@@ -47,6 +47,11 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:awesome-docs](#platform-skillsawesome-docs) | Generate any animated Markdown doc (README, architecture guide, runbook, tutorial, RFC, post-mortem, or custom), convert existing Markdown, update/diff/audit, preview, export |
 | [/platform-skills:aws](#platform-skillsaws) | CloudFront, WAF, Lambda@Edge, Firewall Manager multi-account enforcement, and Terraform module generation |
 | [/platform-skills:composite-actions](#platform-skillscomposite-actions) | Generate, review, secure, and test composite GitHub Actions |
+| [/platform-skills:github-actions](#platform-skillsgithub-actions) | Design reusable workflows, harden with OIDC and SHA pinning, review for production readiness, and debug CI failures |
+| [/platform-skills:kubernetes](#platform-skillskubernetes) | Cluster baseline scaffold, RBAC diagnosis and generation, workload hardening, and pod debug |
+| [/platform-skills:azure](#platform-skillsazure) | Workload Identity, resource tagging, AKS provisioning, RBAC scoping, and production-readiness review |
+| [/platform-skills:openshift](#platform-skillsopenshift) | SCC diagnosis, Route TLS modes, OpenShift GitOps delivery, and cluster upgrade validation |
+| [/platform-skills:secrets](#platform-skillssecrets) | ESO and Sealed Secrets strategy, scaffolding, rotation runbooks, and Kubernetes-side audit |
 | [/platform-skills:fluxcd](#platform-skillsfluxcd) | FluxCD entry point — routes to debug, audit, or helm review based on your input |
 | [/platform-skills:renovate](#platform-skillsrenovate) | Generate renovate.json (with private registry support), pre-commit hook, or GHA validation workflow |
 | [/platform-skills:setup-agents](#platform-skillssetup-agents) | Scaffold multi-agent AI setup — generate, upgrade, add, review |
@@ -2336,6 +2341,132 @@ Reference: `commands/fluxcd.md`, `references/fluxcd.md`, `references/fluxcd-sour
 ```
 
 **Reference:** `references/renovate.md`
+
+---
+
+## `/platform-skills:github-actions`
+
+Design, review, secure, and debug GitHub Actions workflows.
+
+| Mode | What it does |
+|------|-------------|
+| `design` | Reusable workflow and job graph design; promotion orchestration patterns |
+| `security` | OIDC federation (AWS/Azure), SHA pinning with `gh api` resolution, token scoping per job, secret hygiene |
+| `review` | Production-readiness checklist — CRITICAL/WARNING/INFORMATIONAL findings with score |
+| `debug` | Classify failure layer (syntax, auth, context, action version, runner, downstream); OIDC rejection diagnosis |
+
+```
+/platform-skills:github-actions design
+/platform-skills:github-actions security
+/platform-skills:github-actions review
+/platform-skills:github-actions debug
+```
+
+**Handoffs:** Step extraction → `/platform-skills:composite-actions`; Terraform plan/apply → `/platform-skills:terraform`
+
+**Reference:** `references/github-actions.md`
+
+---
+
+## `/platform-skills:kubernetes`
+
+Cluster baseline scaffolding, RBAC diagnosis, workload hardening, and pod debug.
+
+| Mode | What it does |
+|------|-------------|
+| `baseline` | Namespace, ResourceQuota, LimitRange, default-deny NetworkPolicy, PDB scaffold |
+| `rbac` | Diagnose 401 vs 403; `auth can-i` simulation; generate minimum Role/RoleBinding |
+| `workload` | Hardened Deployment template, HPA, liveness/readiness/startup probes, securityContext |
+| `debug` | CrashLoopBackOff, OOMKill, Pending scheduling, ImagePullBackOff — structured evidence collection |
+
+```
+/platform-skills:kubernetes baseline
+/platform-skills:kubernetes rbac
+/platform-skills:kubernetes workload
+/platform-skills:kubernetes debug
+```
+
+**Handoffs:** Policy enforcement → `/platform-skills:kyverno` or `/platform-skills:opa`; Secrets → `/platform-skills:secrets`; KEDA autoscaling → `/platform-skills:keda`
+
+**Reference:** `references/kubernetes.md`
+
+---
+
+## `/platform-skills:azure`
+
+Azure identity, resource tagging, AKS platform patterns, RBAC, and production-readiness review.
+
+| Mode | What it does |
+|------|-------------|
+| `identity` | Workload Identity federation, OIDC for GitHub Actions, managed identities, Entra ID groups |
+| `tagging` | `merge(local.common_tags, {...})` pattern, Azure Policy enforce/remediate, AKS MC_ group tagging |
+| `aks` | Terraform AKS baseline with Azure CNI Overlay, workload identity, node pools, Flux bootstrap |
+| `rbac` | Role assignment scoping, custom roles, audit over-permissioned identities |
+| `review` | Production-readiness checklist — CRITICAL/WARNING/INFORMATIONAL |
+
+```
+/platform-skills:azure identity
+/platform-skills:azure tagging
+/platform-skills:azure aks
+/platform-skills:azure rbac
+/platform-skills:azure review
+```
+
+**Handoffs:** Terraform generation → `/platform-skills:terraform`; In-cluster secrets → `/platform-skills:secrets`; GitOps bootstrap → `/platform-skills:gitops`
+
+**Reference:** `references/azure.md`
+
+---
+
+## `/platform-skills:openshift`
+
+OpenShift SCC diagnosis, Route TLS patterns, GitOps delivery, and cluster upgrade validation.
+
+| Mode | What it does |
+|------|-------------|
+| `scc` | Diagnose SCC rejections; map rejection to root cause; generate minimum SCC; PSA interaction |
+| `route` | Route TLS modes (edge/passthrough/reencrypt), 503/504 diagnosis, Route vs Ingress decision |
+| `gitops` | OpenShift GitOps (Argo CD) app-of-apps, sync wave ordering, SCC + Argo interaction fix |
+| `upgrade` | Pre-upgrade checklist, operator InstallPlan approval, post-upgrade validation, rollback notes |
+| `debug` | Classify symptom → SCC / Route / GitOps / runtime; route to matching mode |
+
+```
+/platform-skills:openshift scc
+/platform-skills:openshift route
+/platform-skills:openshift gitops
+/platform-skills:openshift upgrade
+/platform-skills:openshift debug
+```
+
+**Handoffs:** Standard Kubernetes debug → `/platform-skills:kubernetes`; Argo CD deep debug → `/platform-skills:gitops`
+
+**Reference:** `references/openshift.md`
+
+---
+
+## `/platform-skills:secrets`
+
+Secrets strategy, ESO scaffolding, Sealed Secrets with controller interview, rotation runbooks, and audit.
+
+| Mode | What it does |
+|------|-------------|
+| `design` | ESO vs Sealed Secrets decision matrix based on infrastructure and GitOps setup |
+| `eso` | SecretStore/ExternalSecret scaffold for AWS SM, Azure KV, Vault; ESO installation callout; debug sync errors |
+| `sealed` | Controller interview (namespace, deploy name) before generating any commands; seal, rotate, backup, restore, troubleshoot |
+| `rotate` | End-to-end rotation runbook — update provider, force sync, verify Kubernetes Secret, reload pods |
+| `audit` | SA token hygiene, ExternalSecret health across namespaces, SecretStore status, operational rules checklist |
+
+```
+/platform-skills:secrets design
+/platform-skills:secrets eso
+/platform-skills:secrets sealed
+/platform-skills:secrets rotate
+/platform-skills:secrets audit
+```
+
+**Handoffs:** Git/FS secret scanning → `/platform-skills:trivy`; Azure Key Vault identity → `/platform-skills:azure identity`; AWS IRSA → `/platform-skills:aws`
+
+**Reference:** `references/secrets.md`
 
 ---
 

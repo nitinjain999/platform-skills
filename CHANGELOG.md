@@ -5,6 +5,21 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.36.0] - 2026-06-21
+
+### Added
+
+- **`/platform-skills:github-actions`** — design reusable workflows and job graphs, harden with OIDC federation and SHA pinning, review for production readiness, and debug failing CI workflows; modes: `design`, `security`, `review`, `debug`
+- **`/platform-skills:kubernetes`** — generate cluster baseline scaffolds (namespace, RBAC, network policy, PDB, quota), diagnose 401/403 errors, harden Deployment specs, and debug crashloop/OOMKill/pending pods; modes: `baseline`, `rbac`, `workload`, `debug`
+- **`/platform-skills:azure`** — Workload Identity and OIDC federation for GitHub Actions and in-cluster pods, resource tagging with Azure Policy enforce/remediate, AKS provisioning, RBAC scoping, and production-readiness review; modes: `identity`, `tagging`, `aks`, `rbac`, `review`
+- **`/platform-skills:openshift`** — SCC rejection diagnosis and minimum SCC generation, Route TLS modes and 503/504 debug, OpenShift GitOps app delivery with sync waves, cluster upgrade validation; modes: `scc`, `route`, `gitops`, `upgrade`, `debug`
+- **`/platform-skills:secrets`** — ESO vs Sealed Secrets strategy decision, SecretStore/ExternalSecret scaffolding for AWS SM/Azure KV/Vault, seal/rotate/backup with controller interview, rotation runbooks, and Kubernetes-side secrets audit; modes: `design`, `eso`, `sealed`, `rotate`, `audit`
+- **`references/openshift.md` expanded** — added concrete SCC diagnostic commands, Route TLS YAML (edge/passthrough/reencrypt), OpenShift GitOps app-of-apps patterns, namespace quota/LimitRange baseline, and day-2 cluster upgrade runbook
+
+### Changed
+
+- `SKILL.md` "Pick the right tool" table updated with command pointers for Kubernetes, OpenShift, GitHub Actions, and Azure; new Secrets row added
+
 ## [1.35.0] - 2026-06-20
 
 ### Added

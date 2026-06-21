@@ -125,6 +125,11 @@ Slash commands are predefined Claude workflows. In Codex or Cursor, ask for the 
 | `/platform-skills:awesome-docs` | Generate any animated Markdown doc (README, architecture guide, runbook, tutorial, RFC, post-mortem, or custom), convert existing Markdown, update/diff/audit, preview, export to Confluence/Notion |
 | `/platform-skills:aws` | CloudFront distributions, WAF web ACLs, Lambda@Edge, CloudFront Functions, Firewall Manager multi-account enforcement, and Terraform module generation with best practices |
 | `/platform-skills:composite-actions` | Generate, review, secure, and test composite GitHub Actions — scaffold, SHA pinning, secrets-as-inputs, observability, input validation, versioning |
+| `/platform-skills:github-actions` | Design reusable workflows and job graphs, harden with OIDC and SHA pinning, review for production readiness, or debug failing CI workflows |
+| `/platform-skills:kubernetes` | Cluster baseline scaffold, RBAC diagnosis and generation, workload hardening, and structured pod debug |
+| `/platform-skills:azure` | Workload Identity and OIDC federation, resource tagging with Azure Policy, AKS provisioning, RBAC scoping, and production-readiness review |
+| `/platform-skills:openshift` | SCC diagnosis and minimum grants, Route TLS modes and 503 debug, OpenShift GitOps app delivery, and cluster upgrade validation |
+| `/platform-skills:secrets` | ESO vs Sealed Secrets strategy, scaffold SecretStore/ExternalSecret, seal and rotate secrets, run rotation runbooks, and audit Kubernetes-side secrets hygiene |
 | `/platform-skills:fluxcd` | FluxCD entry point: debug a live cluster issue, audit a GitOps repo, or review a Helm chart — smart router to the right workflow |
 
 Invoke a command by typing it at the start of your message:

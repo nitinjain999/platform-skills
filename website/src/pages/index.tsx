@@ -10,7 +10,7 @@ function Hero() {
   return (
     <div className="hero-section">
       <div className="hero-section__eyebrow">
-        v1.35.0 &mdash;{' '}
+        v1.36.0 &mdash;{' '}
         <a href="https://github.com/nitinjain999/platform-skills/blob/main/CHANGELOG.md">
           What&apos;s new
         </a>
@@ -150,8 +150,18 @@ const FEATURES = [
   },
   {
     icon: '☁️',
-    title: 'AWS',
-    desc: 'CloudFront, WAF, Lambda@Edge, IAM / IRSA, multi-account SSO',
+    title: 'AWS & Azure',
+    desc: 'CloudFront, WAF, Lambda@Edge, IAM / IRSA, AKS, Workload Identity, Azure Policy',
+  },
+  {
+    icon: '⚙️',
+    title: 'GitHub Actions',
+    desc: 'OIDC federation, SHA pinning, token scoping, composite actions, workflow security review',
+  },
+  {
+    icon: '🔐',
+    title: 'Secrets',
+    desc: 'External Secrets Operator, Sealed Secrets, provider setup, rotation runbook, audit',
   },
   {
     icon: '🔒',
@@ -168,7 +178,7 @@ const FEATURES = [
 function FeatureStrip() {
   return (
     <section className="feature-strip">
-      <h2 className="feature-strip__heading">35+ commands. Every domain a platform team touches.</h2>
+      <h2 className="feature-strip__heading">40 commands. Every domain a platform team touches.</h2>
       <div className="feature-grid">
         {FEATURES.map((f) => (
           <div className="feature-tile" key={f.title}>
