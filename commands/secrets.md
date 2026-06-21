@@ -84,6 +84,13 @@ Read `references/secrets.md` before responding.
 
 Read `references/secrets.md` → External Secrets Operator section before responding.
 
+> **Before generating commands, confirm:**
+> - ESO namespace — common values: `external-secrets`, `platform-system`, `kube-system`. Discover with: `kubectl get pods -A | grep external-secrets`
+> - ESO deploy name — common values: `external-secrets`, `external-secrets-controller`. Discover with: `kubectl get deploy -n <eso-namespace>`
+> - ESO service account name — the SA annotated with IRSA or Workload Identity. Common: `external-secrets-sa`, but teams name it differently.
+>
+> Substitute these into all namespace flags, `kubectl logs`, and `serviceAccountRef` fields below.
+
 ### ExternalSecret scaffold (provider-agnostic)
 
 ```yaml
