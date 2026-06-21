@@ -50,10 +50,10 @@ Priority order when multiple SCCs match: higher `.priority` value wins. Service 
 oc get pod <pod-name> -n <namespace> \
   -o jsonpath='{.metadata.annotations.openshift\.io/scc}'
 
-# Simulate which SCC a service account would receive
+# List subjects (users, groups, SA) that are allowed to use a specific SCC
 oc adm policy who-can use scc restricted-v2 -n <namespace>
 
-# List SCCs the service account can use
+# List Role/ClusterRole names bound to a specific service account
 oc get rolebindings,clusterrolebindings -n <namespace> -o json \
   | jq -r '
     .items[]

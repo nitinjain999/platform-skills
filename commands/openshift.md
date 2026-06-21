@@ -65,7 +65,7 @@ oc get pod <pod-name> -n <namespace> \
 oc adm policy scc-subject-review -z <service-account> -n <namespace> \
   -f <manifest.yaml>
 
-# Which SCCs the service account can use
+# List subjects allowed to use a specific SCC (users, groups, service accounts)
 oc adm policy who-can use scc restricted-v2 -n <namespace>
 ```
 

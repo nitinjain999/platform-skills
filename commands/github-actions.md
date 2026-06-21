@@ -317,7 +317,7 @@ permissions:
 3. Confirm the workflow is running from the branch/environment specified in the condition
 4. For environment-scoped trust: `repo:org/repo:environment:production` — job must use `environment: production`
 
-```bash
+```yaml
 # Decode the OIDC token to inspect claims (add a debug step temporarily)
 - name: Inspect OIDC token claims
   run: |

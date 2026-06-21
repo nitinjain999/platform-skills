@@ -229,9 +229,9 @@ Q1 — Controller namespace:
   Where is the sealed-secrets controller running?
   (common: sealed-secrets, kube-system, platform-system — check with: kubectl get pods -A | grep sealed)
 
-Q2 — Controller name:
-  What is the controller deployment name?
-  (common: sealed-secrets, sealed-secrets-controller — check with: kubectl get deploy -n <namespace> | grep sealed)
+Q2 — Controller Service name:
+  What is the controller Service name? (used by kubeseal --controller-name — this is the Service, not the Deployment)
+  (common: sealed-secrets, sealed-secrets-controller — check with: kubectl get svc -n <namespace> | grep sealed)
 
 Q3 — Secret namespace:
   Which namespace will the unsealed Secret live in?
@@ -248,6 +248,8 @@ Q5 — Action:
 ```
 
 Use the answers to substitute `<controller-namespace>`, `<controller-name>`, and `<secret-namespace>` in all commands below. Never output hardcoded namespace or deployment names — always use the values the user provided.
+
+> **Note:** `<controller-name>` means the **Service name** when used with `kubeseal --controller-name`, and the **Deployment name** when used with `kubectl rollout restart deploy/<controller-name>`. If they differ in your cluster, substitute accordingly.
 
 ### Seal a new secret
 
@@ -385,8 +387,12 @@ Pods using mounted volumes reload automatically within the kubelet sync period (
 
 ```bash
 # Application-specific validation — confirm connectivity to the backend
+# Do NOT print secret values; test the connection functionally instead
 kubectl exec -n app-team deploy/<name> -- \
-  env | grep DB_PASSWORD   # or test the connection directly
+  sh -c 'wget -qO- http://localhost:8080/healthz || curl -sf http://localhost:8080/healthz'
+# For a database: test the connection, not the credential value
+kubectl exec -n app-team deploy/<name> -- \
+  sh -c 'pg_isready -h $DB_HOST -p $DB_PORT' 2>/dev/null || echo "adjust command for your backend"
 ```
 
 ---
