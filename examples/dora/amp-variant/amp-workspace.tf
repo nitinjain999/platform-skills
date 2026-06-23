@@ -55,7 +55,7 @@ variable "tags" {
 
 module "amp" {
   source  = "terraform-aws-modules/managed-service-prometheus/aws"
-  version = "~> 3.0"
+  version = "~> 4.0"
 
   workspace_alias = var.workspace_alias
   kms_key_arn     = var.kms_key_arn
