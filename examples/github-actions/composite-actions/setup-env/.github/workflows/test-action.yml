@@ -21,7 +21,7 @@ jobs:
   test-invalid-runtime:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - name: Run with invalid runtime — expect failure
         id: setup
         uses: ./
@@ -58,7 +58,7 @@ jobs:
             check_cmd: 'go version'
 
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
 
       - name: Setup ${{ matrix.runtime }} ${{ matrix.version }}
         id: setup
@@ -84,7 +84,7 @@ jobs:
       matrix:
         runtime: [node, python, go]
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - name: Setup ${{ matrix.runtime }} with default version
         id: setup
         uses: ./
@@ -102,7 +102,7 @@ jobs:
   test-no-cache:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - name: Setup node without cache
         id: setup
         uses: ./

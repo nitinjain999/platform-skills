@@ -25,7 +25,7 @@ jobs:
   test-empty-database-url:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - name: Run with empty database_url — expect failure
         id: migrate
         uses: ./
@@ -42,7 +42,7 @@ jobs:
   test-invalid-tool:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - name: Run with invalid tool — expect failure
         id: migrate
         uses: ./
@@ -60,7 +60,7 @@ jobs:
   test-unreachable-database:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - name: Run against unreachable database — expect failure
         id: migrate
         uses: ./
@@ -81,7 +81,7 @@ jobs:
     if: ${{ vars.TEST_DATABASE_AVAILABLE == 'true' }}
     services:
       postgres:
-        image: postgres:16@sha256:081f1bc7bd5e143dbb6e487b710bbc27712cdcfaced4c071b8e47349aa1b4171
+        image: postgres:18@sha256:29ee7bb30d804447dc9a91fd0d74322ae1dc3a4072cc6346f70a5ed6e783b565
         env:
           POSTGRES_USER: testuser
           POSTGRES_PASSWORD: testpass
@@ -94,7 +94,7 @@ jobs:
         ports:
           - 5432:5432
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - name: Create test migration files
         shell: bash
         run: |
@@ -132,7 +132,7 @@ jobs:
             version_input: flyway_version
             version_value: '10.10.0'
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - name: Run with unreachable DB to test install only
         id: migrate
         uses: ./

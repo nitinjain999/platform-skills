@@ -21,7 +21,7 @@ jobs:
   test-empty-version:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - name: Run with empty version — expect failure
         id: setup
         uses: ./
@@ -42,7 +42,7 @@ jobs:
       matrix:
         terraform_version: ['1.6.0', '1.7.0', '1.8.0']
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - name: Setup Terraform ${{ matrix.terraform_version }}
         id: setup
         uses: ./
@@ -61,7 +61,7 @@ jobs:
   test-no-cache:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - name: Setup Terraform with cache disabled
         id: setup
         uses: ./
@@ -78,7 +78,7 @@ jobs:
   test-no-wrapper:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - name: Setup Terraform without wrapper
         id: setup
         uses: ./

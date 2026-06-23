@@ -94,7 +94,7 @@ runs:
     # ── 2. Authenticate — AWS OIDC ────────────────────────────────────────────
     - name: Configure AWS credentials (OIDC)
       if: inputs.aws_role_arn != ''
-      uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a  # v4.3.1
+      uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b  # v6.2.0
       with:
         role-to-assume: ${{ inputs.aws_role_arn }}
         aws-region: ${{ inputs.aws_region }}
@@ -103,7 +103,7 @@ runs:
     # ── 3. Authenticate — Azure OIDC ──────────────────────────────────────────
     - name: Configure Azure credentials (OIDC)
       if: inputs.azure_client_id != ''
-      uses: azure/login@a457da9ea143d694b1b9c7c869ebb04ebe844ef5  # v2.3.0
+      uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43  # v3.0.0
       with:
         client-id: ${{ inputs.azure_client_id }}
         tenant-id: ${{ inputs.azure_tenant_id }}
@@ -117,7 +117,7 @@ runs:
         echo 'plugin_cache_dir = "$HOME/.terraform.d/plugin-cache"' > ~/.terraformrc
 
     - name: Cache Terraform providers
-      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830  # v4.3.0
+      uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8  # v6.0.0
       with:
         path: |
           ~/.terraform.d/plugin-cache
@@ -199,7 +199,7 @@ runs:
     # ── 6. Post plan as PR comment ────────────────────────────────────────────
     - name: Post plan comment
       if: inputs.comment_on_pr == 'true' && github.event_name == 'pull_request'
-      uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b  # v7.1.0
+      uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9.0.0
       env:
         GITHUB_TOKEN: ${{ inputs.github_token }}
         WORKING_DIR: ${{ inputs.working_directory }}

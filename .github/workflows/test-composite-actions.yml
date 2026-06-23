@@ -27,7 +27,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - id: cloud
         uses: ./examples/github-actions/composite-actions/configure-cloud
         with:
@@ -43,7 +43,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - id: cloud
         uses: ./examples/github-actions/composite-actions/configure-cloud
         with:
@@ -60,7 +60,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - id: cloud
         uses: ./examples/github-actions/composite-actions/configure-cloud
         with:
@@ -79,7 +79,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - id: cloud
         uses: ./examples/github-actions/composite-actions/configure-cloud
         with:
@@ -102,7 +102,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - id: deploy
         uses: ./examples/github-actions/composite-actions/k8s-deploy
         with:
@@ -120,7 +120,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - id: deploy
         uses: ./examples/github-actions/composite-actions/k8s-deploy
         with:
@@ -141,7 +141,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - id: deploy
         uses: ./examples/github-actions/composite-actions/k8s-deploy
         with:
@@ -164,7 +164,7 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - id: deploy
         uses: ./examples/github-actions/composite-actions/k8s-deploy
         with:
@@ -185,7 +185,7 @@ jobs:
   docker-build-push-invalid-image-name:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - id: build
         uses: ./examples/github-actions/composite-actions/docker-build-push
         with:
@@ -201,7 +201,7 @@ jobs:
   notify-slack-invalid-webhook:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - id: notify
         uses: ./examples/github-actions/composite-actions/notify-slack
         with:
@@ -215,7 +215,7 @@ jobs:
   notify-slack-invalid-status:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - id: notify
         uses: ./examples/github-actions/composite-actions/notify-slack
         with:
@@ -231,7 +231,7 @@ jobs:
   terraform-plan-missing-working-dir:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - id: plan
         uses: ./examples/github-actions/composite-actions/terraform-plan
         with:
@@ -245,7 +245,7 @@ jobs:
   terraform-plan-azure-missing-tenant:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - id: plan
         uses: ./examples/github-actions/composite-actions/terraform-plan
         with:
@@ -264,7 +264,7 @@ jobs:
   security-scan-invalid-severity:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - id: scan
         uses: ./examples/github-actions/composite-actions/security-scan
         with:
@@ -278,7 +278,7 @@ jobs:
   security-scan-image:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - id: scan
         uses: ./examples/github-actions/composite-actions/security-scan
         with:
@@ -296,7 +296,7 @@ jobs:
   release-tag-missing-token:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - id: release
         uses: ./examples/github-actions/composite-actions/release-tag
         with:
@@ -311,7 +311,7 @@ jobs:
   pr-comment-missing-title:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - id: comment
         uses: ./examples/github-actions/composite-actions/pr-comment
         with:
@@ -332,7 +332,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - id: comment
         uses: ./examples/github-actions/composite-actions/pr-comment
         with:
@@ -351,7 +351,7 @@ jobs:
   setup-env-invalid-runtime:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - id: setup
         uses: ./examples/github-actions/composite-actions/setup-env
         with:
@@ -364,7 +364,7 @@ jobs:
   setup-env-node:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - id: setup
         uses: ./examples/github-actions/composite-actions/setup-env
         with:
@@ -382,7 +382,7 @@ jobs:
   setup-terraform-empty-version:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - id: setup
         uses: ./examples/github-actions/composite-actions/setup-terraform
         with:
@@ -395,7 +395,7 @@ jobs:
   setup-terraform-install:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - id: setup
         uses: ./examples/github-actions/composite-actions/setup-terraform
         with:
@@ -412,7 +412,7 @@ jobs:
   db-migrate-empty-url:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - id: migrate
         uses: ./examples/github-actions/composite-actions/db-migrate
         with:
@@ -425,7 +425,7 @@ jobs:
   db-migrate-invalid-tool:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - id: migrate
         uses: ./examples/github-actions/composite-actions/db-migrate
         with:
@@ -439,7 +439,7 @@ jobs:
   db-migrate-unreachable-host:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - id: migrate
         uses: ./examples/github-actions/composite-actions/db-migrate
         with:
