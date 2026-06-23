@@ -214,7 +214,7 @@ runs:
     # ── 4b. GKE — fetch cluster credentials ──────────────────────────────────
     - name: Get GKE cluster credentials
       if: inputs.cloud_provider == 'gke'
-      uses: google-github-actions/get-gke-credentials@20b2b9f6b9a6a5cc0b7a435e26fdb9cf6de2e1fa  # v2.3.1
+      uses: google-github-actions/get-gke-credentials@64bc7249bbcf78056bb92f14d3cedc2da193946c  # v2.3.5
       with:
         cluster_name: ${{ inputs.gcp_cluster_name }}
         location: ${{ inputs.gcp_cluster_location }}
