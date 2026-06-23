@@ -21,7 +21,7 @@ jobs:
   test-invalid-severity:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - name: Run with invalid severity — expect failure
         id: scan
         uses: ./
@@ -39,7 +39,7 @@ jobs:
   test-scan-public-image:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - name: Scan alpine — findings expected, but not failing
         id: scan
         uses: ./
@@ -61,7 +61,7 @@ jobs:
   test-fs-scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - name: Scan filesystem
         id: scan
         uses: ./
@@ -87,7 +87,7 @@ jobs:
       matrix:
         scan_type: [image, fs]
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       - name: Scan with type=${{ matrix.scan_type }}
         uses: ./
         with:
