@@ -99,7 +99,7 @@ runs:
     - name: Configure AWS credentials via OIDC
       if: inputs.cloud_provider == 'aws'
       id: aws_config
-      uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7  # v6.0.0
+      uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b  # v6.2.0
       with:
         role-to-assume: ${{ inputs.aws_role_arn }}
         aws-region: ${{ inputs.aws_region }}
@@ -137,7 +137,7 @@ runs:
     # GKE path
     - name: Authenticate to GCP via Workload Identity Federation
       if: inputs.cloud_provider == 'gke'
-      uses: google-github-actions/auth@6fc4af4b145ae7821d527454aa9bd537d1f2dc5f  # v2.1.7
+      uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed  # v2.1.13
       with:
         workload_identity_provider: ${{ inputs.gcp_workload_identity_provider }}
         service_account: ${{ inputs.gcp_service_account }}
