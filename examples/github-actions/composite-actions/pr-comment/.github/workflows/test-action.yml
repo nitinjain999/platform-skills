@@ -19,7 +19,7 @@ jobs:
   test-missing-title:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
       - name: Run with empty title — expect failure
         id: comment
         uses: ./
@@ -38,7 +38,7 @@ jobs:
   test-missing-body:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
       - name: Run with empty body — expect failure
         id: comment
         uses: ./
@@ -57,7 +57,7 @@ jobs:
   test-non-pr-event:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
       - name: Run on push event (no PR number) — should warn, not fail
         id: comment
         uses: ./
@@ -82,7 +82,7 @@ jobs:
     permissions:
       pull-requests: write
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
 
       - name: Post initial comment
         id: first

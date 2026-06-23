@@ -148,7 +148,7 @@ runs:
     # ── 2a. AWS — assume role via OIDC ────────────────────────────────────────
     - name: Configure AWS credentials via OIDC
       if: inputs.cloud_provider == 'aws'
-      uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7  # v6.0.0
+      uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b  # v6.2.0
       with:
         role-to-assume: ${{ inputs.aws_role_arn }}
         aws-region: ${{ inputs.aws_region }}
@@ -206,7 +206,7 @@ runs:
     # ── 4a. GKE — authenticate via Workload Identity Federation ──────────────
     - name: Authenticate to GCP via Workload Identity Federation
       if: inputs.cloud_provider == 'gke'
-      uses: google-github-actions/auth@6fc4af4b145ae7821d527454aa9bd537d1f2dc5f  # v2.1.7
+      uses: google-github-actions/auth@c200f3691d83b41bf9bbd8638997a462592937ed  # v2.1.13
       with:
         workload_identity_provider: ${{ inputs.gcp_workload_identity_provider }}
         service_account: ${{ inputs.gcp_service_account }}
@@ -214,7 +214,7 @@ runs:
     # ── 4b. GKE — fetch cluster credentials ──────────────────────────────────
     - name: Get GKE cluster credentials
       if: inputs.cloud_provider == 'gke'
-      uses: google-github-actions/get-gke-credentials@20b2b9f6b9a6a5cc0b7a435e26fdb9cf6de2e1fa  # v2.3.1
+      uses: google-github-actions/get-gke-credentials@64bc7249bbcf78056bb92f14d3cedc2da193946c  # v2.3.5
       with:
         cluster_name: ${{ inputs.gcp_cluster_name }}
         location: ${{ inputs.gcp_cluster_location }}

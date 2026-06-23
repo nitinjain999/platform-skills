@@ -22,7 +22,7 @@ jobs:
   test-invalid-provider:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
       - name: Run with invalid provider — expect failure
         id: cloud
         uses: ./
@@ -39,7 +39,7 @@ jobs:
   test-missing-aws-role:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
       - name: Run AWS without role_arn — expect failure
         id: cloud
         uses: ./
@@ -56,7 +56,7 @@ jobs:
   test-missing-azure-client-id:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
       - name: Run Azure without client_id — expect failure
         id: cloud
         uses: ./
@@ -75,7 +75,7 @@ jobs:
   test-missing-azure-tenant:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
       - name: Run Azure without tenant_id — expect failure
         id: cloud
         uses: ./
@@ -94,7 +94,7 @@ jobs:
   test-gke-missing-provider:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
       - name: Run GKE without workload_identity_provider — expect failure
         id: cloud
         uses: ./
@@ -115,7 +115,7 @@ jobs:
   test-gke-missing-service-account:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
       - name: Run GKE without service_account — expect failure
         id: cloud
         uses: ./
@@ -136,7 +136,7 @@ jobs:
   test-gke-input-validation-passes:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
       - name: All GKE inputs valid — will fail at OIDC step without real WIF trust
         id: cloud
         uses: ./

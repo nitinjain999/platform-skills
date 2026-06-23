@@ -24,7 +24,7 @@ jobs:
   test-missing-cloud-provider:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
       - name: Run with missing cloud_provider — expect failure
         id: deploy
         uses: ./
@@ -44,7 +44,7 @@ jobs:
   test-aws-missing-role-arn:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
       - name: Run with aws but no role ARN — expect failure
         id: deploy
         uses: ./
@@ -66,7 +66,7 @@ jobs:
   test-azure-missing-client-id:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
       - name: Run with azure but no client ID — expect failure
         id: deploy
         uses: ./
@@ -90,7 +90,7 @@ jobs:
   test-missing-namespace:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
       - name: Run with empty namespace — expect failure
         id: deploy
         uses: ./
@@ -113,7 +113,7 @@ jobs:
   test-invalid-timeout:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
       - name: Run with bad timeout — expect failure
         id: deploy
         uses: ./
@@ -137,7 +137,7 @@ jobs:
   test-aws-input-validation-passes:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
       - name: All EKS inputs valid — will fail at OIDC step without real AWS trust
         id: deploy
         uses: ./
@@ -159,7 +159,7 @@ jobs:
   test-azure-input-validation-passes:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
       - name: All AKS inputs valid — will fail at OIDC step without real Azure federated credential
         id: deploy
         uses: ./
@@ -183,7 +183,7 @@ jobs:
   test-gke-missing-provider:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
       - name: Run GKE without workload_identity_provider — expect failure
         id: deploy
         uses: ./
@@ -207,7 +207,7 @@ jobs:
   test-gke-missing-cluster:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
       - name: Run GKE without gcp_cluster_name — expect failure
         id: deploy
         uses: ./
@@ -231,7 +231,7 @@ jobs:
   test-gke-input-validation-passes:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
       - name: All GKE inputs valid — will fail at OIDC step without real WIF trust
         id: deploy
         uses: ./
