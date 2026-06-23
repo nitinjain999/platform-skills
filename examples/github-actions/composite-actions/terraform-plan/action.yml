@@ -126,7 +126,7 @@ runs:
           ${{ runner.os }}-terraform-${{ inputs.terraform_version }}-
 
     - name: Install Terraform
-      uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269ef065  # v3.2.0
+      uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e  # v4.0.1
       with:
         terraform_version: ${{ inputs.terraform_version }}
         terraform_wrapper: true
