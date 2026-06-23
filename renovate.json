@@ -102,33 +102,30 @@
       "groupName": "Python packages"
     }
   ],
-  "regexManagers": [
+  "customManagers": [
     {
+      "customType": "regex",
       "description": "Update Terraform version in GitHub Actions workflows",
-      "fileMatch": ["^\\.github/workflows/.*\\.ya?ml$"],
-      "matchStrings": [
-        "terraform_version:\\s*['\"]?(?<currentValue>[^'\"\\s]+)['\"]?"
-      ],
+      "managerFilePatterns": ["/^\\.github/workflows/.*\\.ya?ml$/"],
+      "matchStrings": ["terraform_version:\\s*['\"]?(?<currentValue>[^'\"\\s]+)['\"]?"],
       "depNameTemplate": "hashicorp/terraform",
       "datasourceTemplate": "github-releases",
       "extractVersionTemplate": "^v(?<version>.*)$"
     },
     {
+      "customType": "regex",
       "description": "Update Flux CD version in documentation",
-      "fileMatch": ["^examples/fluxcd/.*\\.md$"],
-      "matchStrings": [
-        "Flux CLI \\((?<currentValue>[^)]+)\\)"
-      ],
+      "managerFilePatterns": ["/^examples/fluxcd/.*\\.md$/"],
+      "matchStrings": ["Flux CLI \\((?<currentValue>[^)]+)\\)"],
       "depNameTemplate": "fluxcd/flux2",
       "datasourceTemplate": "github-releases",
       "extractVersionTemplate": "^v(?<version>.*)$"
     },
     {
+      "customType": "regex",
       "description": "Update Kubernetes version in documentation",
-      "fileMatch": ["^examples/.*/.*\\.md$"],
-      "matchStrings": [
-        "Kubernetes cluster \\((?<currentValue>[^)]+)\\+?\\)"
-      ],
+      "managerFilePatterns": ["/^examples/.*/.*\\.md$/"],
+      "matchStrings": ["Kubernetes cluster \\((?<currentValue>[^)]+)\\+?\\)"],
       "depNameTemplate": "kubernetes/kubernetes",
       "datasourceTemplate": "github-releases",
       "extractVersionTemplate": "^v(?<version>.*)$"
