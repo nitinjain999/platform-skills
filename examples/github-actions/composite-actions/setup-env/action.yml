@@ -77,7 +77,7 @@ runs:
     - name: Restore npm cache
       if: inputs.runtime == 'node' && inputs.enable_cache == 'true'
       id: cache-node
-      uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8  # v6.0.0
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
       with:
         path: ~/.npm
         key: ${{ runner.os }}-node-${{ steps.version.outputs.resolved }}-${{ hashFiles(format('{0}/**/package-lock.json', inputs.working_directory)) }}
@@ -104,7 +104,7 @@ runs:
     - name: Restore pip cache
       if: inputs.runtime == 'python' && inputs.enable_cache == 'true'
       id: cache-python
-      uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8  # v6.0.0
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
       with:
         path: ~/.cache/pip
         key: ${{ runner.os }}-pip-${{ steps.version.outputs.resolved }}-${{ hashFiles(format('{0}/**/requirements*.txt', inputs.working_directory)) }}
@@ -136,7 +136,7 @@ runs:
     - name: Restore Go module cache
       if: inputs.runtime == 'go' && inputs.enable_cache == 'true'
       id: cache-go
-      uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8  # v6.0.0
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
       with:
         path: |
           ~/go/pkg/mod
