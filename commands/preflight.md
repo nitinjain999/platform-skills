@@ -171,6 +171,34 @@ find ./k8s -name "*.yaml" | xargs grep -l "^apiVersion:" | wc -l
 
 ## Step 6 — Type-specific checks
 
+### Execution honesty — the `Confidence` field
+
+Every finding below carries a `Confidence` value — exactly one of three:
+
+| Value | Meaning | Requirement to use it |
+|---|---|---|
+| `Tool verified` | A real command was executed this session and its output inspected | The exact command run and a relevant snippet of its actual output MUST be shown as evidence alongside the finding. Never assign this label without having actually invoked the tool in this session. |
+| `Static review` | Finding is based on reading file content only | Default for pasted content, or when the relevant tool isn't installed or available |
+| `Not verified` | A suspected issue that cannot be confirmed without a tool run | Used when a check needs live-cluster or live-provider state the model has no access to |
+
+**Tool attempt matrix** — in folder/repo mode against a real accessible path only (never for pasted content), attempt the corresponding tool per detected type if it's installed:
+
+| Detected type | Tool attempted | Command shape | Runs automatically? |
+|---|---|---|---|
+| Terraform | `terraform` | `terraform fmt -check` and `terraform validate` — only if `.terraform/` is already initialized; never run `init` as a side effect | Yes, if installed and initialized |
+| Kubernetes manifests | `kubectl` | `kubectl apply --dry-run=server -f <file>` if a cluster context is configured, else `kubectl apply --dry-run=client -f <file>` | Yes, if installed |
+| Flux Kustomization/HelmRelease | `flux` | `flux --version` gate only — live reconciliation checks stay `Static review` and belong to `/platform-skills:gitops` | No — version gate only |
+| Terraform (deeper policy) | `checkov` | Not run automatically — stays a Step 7 handoff to `/platform-skills:checkov` | No |
+| Dockerfile / images | `trivy` | Not run automatically — requires a built image, stays a Step 7 handoff to `/platform-skills:trivy` | No |
+| GitHub Actions workflow | `actionlint` | `actionlint <file>` | Yes, if installed |
+| Shell script | `shellcheck` | `shellcheck <file>` | Yes, if installed |
+
+If a tool isn't installed, skip execution, label affected findings `Static review`, and note once per file type: `<tool> not found — findings for this file are Static review only`.
+
+**Hard rule:** never claim `terraform`, `kubectl`, `helm`, `checkov`, `trivy`, `actionlint`, or `shellcheck` was run unless it was actually executed in this session and its output was inspected. If a tool isn't installed or a check requires access the model doesn't have, say so and mark the finding `Static review` or `Not verified` — never `Tool verified`.
+
+---
+
 ### Kubernetes Workload (Deployment, StatefulSet, DaemonSet, Job, CronJob)
 
 **Correctness**
