@@ -386,6 +386,8 @@ If a tool isn't installed, skip execution, label affected findings `Static revie
 
 ### Standard mode (default)
 
+Every finding uses the same 9-field block (`ID`, `Severity`, `Confidence`, `File`, `Line`, `Problem`, `Impact`, `Suggested fix`, `Validation step`) — identical across Standard, Bot, and JSON modes; only the wrapper differs. Use `Line: N/A` when a finding isn't line-scoped (e.g. "missing PodDisruptionBudget" has no single line). `ID` stays the existing convention: `C`/`H`/`M`/`L` prefix, numbered sequentially within severity.
+
 **Folder / repo scope:**
 
 ```
@@ -403,17 +405,37 @@ terraform/main.tf                 Terraform      0  0  2  MERGE_READY
 (skipped: k8s/secret.yaml — binary or encrypted, cannot check)
 
 ── CRITICAL ──────────────────────────────────────────
-[C1] k8s/deployment.yaml — <finding>
-  Evidence: <exact line>
-  Fix: <corrected snippet>
-  Blast radius: <what breaks>
+ID: C1
+Severity: Critical
+Confidence: Static review
+File: k8s/deployment.yaml
+Line: 42
+Problem: <one sentence, no line breaks>
+Impact: <blast radius — what breaks and who's affected>
+Suggested fix: <corrected snippet or exact command>
+Validation step: <command to confirm the fix worked>
 
 ── HIGH ──────────────────────────────────────────────
-[H1] k8s/deployment.yaml — <finding>
-  ...
+ID: H1
+Severity: High
+Confidence: Tool verified
+File: k8s/deployment.yaml
+Line: 17
+Problem: <one sentence>
+Impact: <blast radius>
+Suggested fix: <corrected snippet or exact command>
+Validation step: <command to confirm the fix worked>
 
 ── MEDIUM / LOW ──────────────────────────────────────
-[M1] terraform/main.tf — <finding> — <one-line fix>
+ID: M1
+Severity: Medium
+Confidence: Static review
+File: terraform/main.tf
+Line: N/A
+Problem: <one sentence>
+Impact: <blast radius>
+Suggested fix: <one-line fix>
+Validation step: <command to confirm the fix worked>
 
 ── OVERALL VERDICT ───────────────────────────────────
 BLOCKED — fix Critical findings before deploying
@@ -436,7 +458,15 @@ Type: <detected type>
 CRITICAL: <count>  HIGH: <count>  MEDIUM: <count>  LOW: <count>
 
 ── CRITICAL ──────────────────────────────────────────
-...
+ID: C1
+Severity: Critical
+Confidence: Static review
+File: <file name>
+Line: <line or N/A>
+Problem: <one sentence>
+Impact: <blast radius>
+Suggested fix: <corrected snippet or exact command>
+Validation step: <command to confirm the fix worked>
 
 ── VERDICT ───────────────────────────────────────────
 BLOCKED / NEEDS_FIX / MERGE_READY
@@ -465,10 +495,10 @@ Validation steps: <commands>
 | helmrelease.yaml | Flux HR | 0 | 1 | 1 | 🟡 NEEDS_FIX |
 
 #### Critical issues
-<!-- one subsection per Critical finding: file, problem, evidence, fix, blast radius -->
+<!-- one subsection per Critical finding, rendered as the same 9-field block used in Standard mode: ID, Severity, Confidence, File, Line, Problem, Impact, Suggested fix, Validation step -->
 
 #### High findings
-<!-- one subsection per High finding: file, problem, suggested fix -->
+<!-- one subsection per High finding, same 9-field block -->
 
 #### Rollback plan
 
