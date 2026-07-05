@@ -28,7 +28,7 @@ Scan `$ARGUMENTS` for flags before determining scope. Strip them from the string
 
 **Rule:** any question already answered by a flag is skipped in Step 2. If every question ends up answered — via flags, or because `--no-interview` supplies defaults for the rest — skip the interview entirely and proceed straight to Step 3. Q2 ("what is this change doing?") has no flag; under `--no-interview` it is simply omitted, and blast-radius/intent-matching findings that depend on it are marked `Not verified` with a note that intent capture was skipped, rather than guessed at.
 
-`--bot` and `--json` are mutually exclusive. If both are passed, `--json` silently wins — no warning is printed, since correctness of automated parsing matters more than a flag-conflict notice a CI author would notice from their own command line anyway.
+`--bot` and `--json` select different output formats for the same Q4. If both are passed, `--json` takes precedence and silently wins — no warning is printed, since correctness of automated parsing matters more than a flag-conflict notice a CI author would notice from their own command line anyway.
 
 ---
 
