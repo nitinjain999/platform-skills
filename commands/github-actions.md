@@ -95,7 +95,7 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
         with:
           token: ${{ secrets.token }}
 ```
@@ -112,7 +112,7 @@ promote:
   permissions:
     contents: write
   steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
     - name: Update image tag
       env:
         NEW_TAG: ${{ needs.build.outputs.image_tag }}
@@ -146,7 +146,7 @@ permissions:
   contents: read
 
 steps:
-  - uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502  # v4.0.2
+  - uses: aws-actions/configure-aws-credentials@254c19bd240aabef8777f48595e9d2d7b972184b  # v6.2.1
     with:
       role-to-assume: arn:aws:iam::123456789012:role/github-actions-deploy
       aws-region: eu-north-1
@@ -172,7 +172,7 @@ permissions:
   contents: read
 
 steps:
-  - uses: azure/login@a65d910e8af852a8061c627c456678983e180302  # v2.2.0
+  - uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43  # v3.0.0
     with:
       client-id: ${{ secrets.AZURE_CLIENT_ID }}
       tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -193,7 +193,7 @@ gh api repos/{owner}/{repo}/commits/{tag} --jq '.sha'
 Add the version as a comment so reviewers can audit without resolving the SHA manually:
 
 ```yaml
-uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
 ```
 
 ### Token scoping — minimum permissions per job

@@ -256,8 +256,8 @@ find ./k8s -name "*.yaml" | xargs grep -l "^apiVersion:" | wc -l
 **Deprecations**
 | Action | Status | Replacement |
 |--------|--------|-------------|
-| `actions/checkout@v2` | Deprecated | `@v4` or SHA |
-| `actions/setup-node@v2` | Deprecated | `@v4` or SHA |
+| `actions/checkout@v2`/`v3` | Deprecated (Node 16 runner) | latest major, SHA-pinned |
+| `actions/setup-node@v2`/`v3` | Deprecated (Node 16 runner) | latest major, SHA-pinned |
 | `set-output` command | Removed | `$GITHUB_OUTPUT` |
 
 ---
@@ -431,7 +431,7 @@ COMMENT_ID=$(gh api repos/{owner}/{repo}/issues/{pr}/comments --paginate \
   --jq '.[] | select(.body | contains("platform-skills-preflight")) | .id' | head -1)
 
 if [ -n "$COMMENT_ID" ]; then
-  gh api --method PATCH repos/{owner}/{repo}/issues/comments/$COMMENT_ID \
+  gh api --method PATCH "repos/{owner}/{repo}/issues/comments/$COMMENT_ID" \
     --field body="$REVIEW_BODY"
 else
   gh pr comment {pr} --body "$REVIEW_BODY"
