@@ -319,6 +319,8 @@ If a tool isn't installed, skip execution, label affected findings `Static revie
 - Remote backend — not local state
 - `lifecycle.create_before_destroy` on downtime-causing replacements
 - Blast radius: list resources that will be **replaced** (not just updated)
+- **High: `count.index` used as the effective identity of a resource in a list that can reorder** (e.g. `count = length(var.subnets)` where `var.subnets` is not itself a stable, order-independent structure) — inserting or removing an early element shifts every later index, causing Terraform to plan destroy+recreate for resources that didn't conceptually change
+- **High: `for_each` iterating over a computed/unstable expression** (e.g. a data source result not sorted or keyed deterministically) — same destroy/recreate risk; `for_each` keys must be stable across plans. Suggested fix for both: convert to `for_each` over a map/set keyed by a stable natural identifier (name, ID) rather than a positional index.
 
 ---
 
@@ -337,6 +339,7 @@ If a tool isn't installed, skip execution, label affected findings `Static revie
 **Operational Safety**
 - `concurrency:` group defined
 - `timeout-minutes:` set on long-running jobs
+- **High: a job that deploys to production (matched by job name containing `deploy`/`prod`, or an environment name matching `prod*`) lacks an `environment:` block** — without `environment:`, GitHub's environment protection rules (required reviewers, wait timer, deployment branch restriction) cannot apply, so there is no human gate before a prod deploy runs
 
 **Deprecations**
 | Action | Status | Replacement |
