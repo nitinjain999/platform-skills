@@ -1,7 +1,7 @@
 ---
 name: preflight
 description: Production-readiness preflight check for a directory, repo, or single file. Auto-detects file types (Kubernetes manifests, Terraform, GitHub Actions workflows, Helm values/charts, Flux Kustomizations/HelmReleases, Dockerfiles, shell scripts) and applies type-specific checks across the whole scope. Returns a per-file summary table and aggregated verdict. Use before deploying, merging, or applying a folder of config. For PR diffs spanning multiple files use /platform-skills:pr-review instead. For deep Helm chart work use /platform-skills:helmchart instead.
-argument-hint: "[path/to/folder or file] [--bot] [--env prod|staging|dev]"
+argument-hint: "[path/to/folder or file] [--bot|--json] [--env prod|staging|dev] [--focus security|correctness|ops|deprecations|all] [--changed-only[=<ref>]] [--no-interview]"
 title: "Preflight Command"
 sidebar_label: "preflight"
 custom_edit_url: null
@@ -10,6 +10,25 @@ custom_edit_url: null
 You are a senior platform engineer performing a production-readiness preflight check before a deployment or merge.
 
 Input: `$ARGUMENTS`
+
+---
+
+## Step 0 — Flags (parsed before Step 1)
+
+Scan `$ARGUMENTS` for flags before determining scope. Strip them from the string before it is used as a path or pasted content in Step 1.
+
+| Flag | Effect | Interview question it answers |
+|---|---|---|
+| `--env prod\|staging\|dev` | Sets environment | Q1 |
+| `--focus security\|correctness\|ops\|deprecations\|all` | Sets focus scope | Q3 |
+| `--bot` | Sets output format to Bot | Q4 |
+| `--json` | Sets output format to JSON (see Step 8) | Q4 |
+| `--changed-only[=<ref>]` | Restricts folder-mode discovery to files changed vs `<ref>` | N/A — modifies Step 3 discovery, not an interview answer |
+| `--no-interview` | Skips all remaining interview questions; unanswered ones take documented defaults | Q1, Q2, Q3, Q4 |
+
+**Rule:** any question already answered by a flag is skipped in Step 2. If every question ends up answered — via flags, or because `--no-interview` supplies defaults for the rest — skip the interview entirely and proceed straight to Step 3. Q2 ("what is this change doing?") has no flag; under `--no-interview` it is simply omitted, and blast-radius/intent-matching findings that depend on it are marked `Not verified` with a note that intent capture was skipped, rather than guessed at.
+
+`--bot` and `--json` are mutually exclusive. If both are passed, `--json` silently wins — no warning is printed, since correctness of automated parsing matters more than a flag-conflict notice a CI author would notice from their own command line anyway.
 
 ---
 
@@ -27,6 +46,8 @@ Parse `$ARGUMENTS` to decide the mode:
 ---
 
 ## Step 2 — Interview (ask one question at a time)
+
+Any question already answered by a flag in Step 0 is skipped here.
 
 ### Q1 — Environment
 
@@ -90,11 +111,19 @@ Now run the preflight. Do not ask further questions.
 When the input is a directory or glob:
 
 1. **List all files** — recursively enumerate files under the path, skipping: `.git/`, `node_modules/`, `vendor/`, `*.lock`, `*.sum`, binary files
-2. **Classify each file** by type using the signals in Step 4 below
-3. **Group by type** — check all files of the same type with the same checklist
-4. **Skip unknowns** — if a file type cannot be determined, note it in the output as `skipped (unknown type)` and move on
-5. **Aggregate findings** — count Critical/High/Medium/Low across all files
-6. **Derive overall verdict** — BLOCKED if any Critical, NEEDS_FIX if any High, MERGE_READY otherwise
+2. **Restrict to changed files if `--changed-only` was passed** — see resolution algorithm below; intersect the file list from step 1 with the changed-file list before classifying anything
+3. **Classify each file** by type using the signals in Step 4 below
+4. **Group by type** — check all files of the same type with the same checklist
+5. **Skip unknowns** — if a file type cannot be determined, note it in the output as `skipped (unknown type)` and move on
+6. **Aggregate findings** — count Critical/High/Medium/Low across all files
+7. **Derive overall verdict** — BLOCKED if any Critical, NEEDS_FIX if any High, MERGE_READY otherwise
+
+### `--changed-only` diff base resolution
+
+1. If `--changed-only=<ref>` is given, use `<ref>` directly as the base.
+2. If `--changed-only` is given with no value, detect the repo's default branch — `gh repo view --json defaultBranchRef -q .defaultBranchRef.name`, falling back to `git symbolic-ref refs/remotes/origin/HEAD` if `gh` is unavailable or unauthenticated — and use `origin/<default-branch>`.
+3. Run `git diff --name-only <base-ref>...HEAD` to get the changed-file list. Intersect it with the files Step 3 item 1 would otherwise discover, and proceed with only that intersection.
+4. If not inside a git repository, or the base ref doesn't resolve, fall back to full folder-mode discovery and print a one-line note that `--changed-only` was ignored and why.
 
 Discovery commands to suggest to the user if the directory is accessible:
 
