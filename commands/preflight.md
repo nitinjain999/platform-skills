@@ -529,3 +529,39 @@ fi
 - `BLOCKED` — one or more Critical findings in any file
 - `NEEDS_FIX` — no Critical, but one or more High findings
 - `MERGE_READY` — Medium/Low only, or no findings
+
+---
+
+### JSON mode (`--json` flag)
+
+`--json` output is a single JSON object, printed with no other prose before or after it — pipeable directly to `jq`:
+
+```json
+{
+  "verdict": "BLOCKED",
+  "environment": "prod",
+  "scope": "k8s/",
+  "filesChecked": 4,
+  "counts": { "critical": 1, "high": 2, "medium": 1, "low": 0 },
+  "files": [
+    { "file": "k8s/deployment.yaml", "type": "K8s workload", "critical": 1, "high": 1, "medium": 0, "verdict": "BLOCKED" }
+  ],
+  "findings": [
+    {
+      "id": "C1",
+      "severity": "Critical",
+      "confidence": "Static review",
+      "file": "k8s/deployment.yaml",
+      "line": 42,
+      "problem": "...",
+      "impact": "...",
+      "suggestedFix": "...",
+      "validationStep": "..."
+    }
+  ]
+}
+```
+
+`line` is `null` (not the string `"N/A"`) when a finding isn't line-scoped, so consumers can type-check it.
+
+If `--bot` and `--json` are both passed, `--json` silently wins (see Step 0) — the JSON object is the entire output, with no bot-mode markdown mixed in.
