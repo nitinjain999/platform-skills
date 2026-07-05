@@ -558,10 +558,15 @@ fi
       "suggestedFix": "...",
       "validationStep": "..."
     }
-  ]
+  ],
+  "rollbackPlan": "kubectl rollout undo deployment/app -n prod",
+  "validationSteps": ["kubectl get pods -n prod -w", "flux get kustomizations -A"],
+  "handoff": ["/platform-skills:checkov"]
 }
 ```
 
 `line` is `null` (not the string `"N/A"`) when a finding isn't line-scoped, so consumers can type-check it.
+
+`rollbackPlan` and `validationSteps` mirror Standard mode's aggregate rollback/validation block; `handoff` mirrors Step 7's recommendations for this scope — empty array if none apply.
 
 If `--bot` and `--json` are both passed, `--json` silently wins (see Step 0) — the JSON object is the entire output, with no bot-mode markdown mixed in.
