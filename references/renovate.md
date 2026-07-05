@@ -481,6 +481,8 @@ Use a service principal with the `AcrPull` role. Set `ACR_CLIENT_ID` and `ACR_CL
 
 ### Private Terraform registry
 
+Module sources of the form `<hostname>/<namespace>/<module>/<provider>` with a `version = "..."` attribute are handled natively by the `terraform` manager for *any* hostname (not just `registry.terraform.io`) via the `terraform-module` datasource — no custom manager needed. Add a `hostRules` entry for authentication:
+
 ```json
 {
   "hostRules": [
@@ -494,33 +496,15 @@ Use a service principal with the `AcrPull` role. Set `ACR_CLIENT_ID` and `ACR_CL
 
 Set `TF_REGISTRY_TOKEN` to a Terraform Cloud team token with read access.
 
----
-
-## 10. Custom Regex Managers
-
-Use `customManagers` (`customType: "regex"`) when a dependency version appears in a file format that Renovate's built-in managers do not parse — internal GitHub module sources, pinned tool versions in scripts, or version strings in YAML/JSON config files. `regexManagers` and `fileMatch` are deprecated aliases for `customManagers`/`managerFilePatterns` — Renovate auto-migrates them with a `WARN`, but write new configs with the current keys directly. `managerFilePatterns` treats bare strings as globs; existing regex patterns must be wrapped in `/.../ ` delimiters.
-
 ### Internal GitHub org Terraform modules
 
-Terraform module sources of the form `github.com/<org>/<repo>//<path>?ref=<tag>` are not picked up by the standard `terraform` manager. Add a regex manager:
+Module sources of the form `github.com/<org>/<repo>//<path>?ref=<tag>` are also handled natively by the `terraform` manager, under the `github-tags` datasource with `packageName` set to `<org>/<repo>` — no custom manager needed. Use `packageRules` to group and gate them:
 
 ```json
 {
-  "customManagers": [
-    {
-      "customType": "regex",
-      "description": "Terraform modules from internal GitHub org myorg",
-      "managerFilePatterns": ["/\\.tf$/"],
-      "matchStrings": [
-        "source\\s*=\\s*\"github\\.com/myorg/(?<depName>[^/]+)//[^\"]*\\?ref=(?<currentValue>[^\"]+)\""
-      ],
-      "datasourceTemplate": "github-tags",
-      "packageNameTemplate": "myorg/{{{depName}}}"
-    }
-  ],
   "packageRules": [
     {
-      "matchManagers": ["custom.regex"],
+      "matchManagers": ["terraform"],
       "matchPackageNames": ["/^myorg\\//"],
       "automerge": false,
       "groupName": "Internal Terraform modules (myorg)"
@@ -531,26 +515,11 @@ Terraform module sources of the form `github.com/<org>/<repo>//<path>?ref=<tag>`
 
 Replace `myorg` with your GitHub org. Renovate will open PRs that update `?ref=v1.2.3` to the latest tag on the referenced repo.
 
-### Private Terraform registry modules
+---
 
-For modules sourced from a private registry (`<hostname>/<namespace>/<module>/<provider>`):
+## 10. Custom Regex Managers
 
-```json
-{
-  "customManagers": [
-    {
-      "customType": "regex",
-      "description": "Terraform modules from private registry app.terraform.io",
-      "managerFilePatterns": ["/\\.tf$/"],
-      "matchStrings": [
-        "source\\s*=\\s*\"app\\.terraform\\.io/(?<namespace>[^/]+)/(?<depName>[^/]+)/(?<provider>[^\"]+)\""
-      ],
-      "datasourceTemplate": "terraform-module",
-      "registryUrlTemplate": "https://app.terraform.io"
-    }
-  ]
-}
-```
+Use `customManagers` (`customType: "regex"`) when a dependency version appears in a file format that Renovate's built-in managers do not parse — pinned tool versions in scripts, or version strings in YAML/JSON config files. `regexManagers` and `fileMatch` are deprecated aliases for `customManagers`/`managerFilePatterns` — Renovate auto-migrates them with a `WARN`, but write new configs with the current keys directly. `managerFilePatterns` treats bare strings as globs; existing regex patterns must be wrapped in `/.../ ` delimiters.
 
 ### Terraform version pinned in GitHub Actions workflows
 

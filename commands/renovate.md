@@ -393,27 +393,17 @@ Emit the following sections only for the options chosen in Q5–Q7. Omit any sec
 
 #### Q5 — Internal Terraform module sources
 
+Both source forms below are extracted natively by the `terraform` manager — no `customManagers` entry is needed for either.
+
 **Option A — GitHub org (`github-org`, org = `<org>`):**
 
-Add to `customManagers`:
-```json
-{
-  "customType": "regex",
-  "description": "Terraform modules sourced from internal GitHub org <org>",
-  "managerFilePatterns": ["/\\.tf$/"],
-  "matchStrings": [
-    "source\\s*=\\s*\"github\\.com/<org>/(?<depName>[^/]+)//[^\"]*\\?ref=(?<currentValue>[^\"]+)\""
-  ],
-  "datasourceTemplate": "github-tags",
-  "packageNameTemplate": "<org>/{{{depName}}}"
-}
-```
+`source = "github.com/<org>/<repo>//<path>?ref=<tag>"` is parsed under the `github-tags` datasource, with `packageName` set to `<org>/<repo>`.
 
 Add to `packageRules`:
 ```json
 {
   "description": "Terraform modules from <org> GitHub org — require manual review",
-  "matchManagers": ["custom.regex"],
+  "matchManagers": ["terraform"],
   "matchPackageNames": ["/^<org>\\//"],
   "automerge": false,
   "groupName": "Internal Terraform modules (<org>)"
@@ -422,19 +412,7 @@ Add to `packageRules`:
 
 **Option B — Private Terraform registry (`private-registry`, host = `<hostname>`):**
 
-Add to `customManagers`:
-```json
-{
-  "customType": "regex",
-  "description": "Terraform modules from private registry <hostname>",
-  "managerFilePatterns": ["/\\.tf$/"],
-  "matchStrings": [
-    "source\\s*=\\s*\"<hostname>/(?<namespace>[^/]+)/(?<depName>[^/]+)/(?<provider>[^\"]+)\""
-  ],
-  "datasourceTemplate": "terraform-module",
-  "registryUrlTemplate": "https://<hostname>"
-}
-```
+`source = "<hostname>/<namespace>/<module>/<provider>"` with a `version = "..."` attribute is parsed under the `terraform-module` datasource for any hostname — only a `hostRules` entry for authentication is needed.
 
 Add to `hostRules`:
 ```json
