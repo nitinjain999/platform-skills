@@ -150,6 +150,7 @@ find ./k8s -name "*.yaml" | xargs grep -l "^apiVersion:" | wc -l
 | `apiVersion: source.toolkit.fluxcd.io` | Flux Source |
 | `resource "aws_` or `resource "azurerm_` or `variable "` + `.tf` extension | Terraform |
 | `apiVersion: keda.sh/*` or `kind: ScaledObject/ScaledJob` | KEDA Scaler |
+| `apiVersion: rbac.authorization.k8s.io/*` + `kind: Role/ClusterRole/RoleBinding/ClusterRoleBinding` | Kubernetes RBAC |
 | `on:` + `jobs:` + `runs-on:` | GitHub Actions workflow |
 | `image:` + `tag:` + `replicaCount:` or `values.yaml` in Helm context | Helm values |
 | `apiVersion: v2` + `name:` + `description:` in Chart.yaml | Helm Chart.yaml |
@@ -217,6 +218,7 @@ If a tool isn't installed, skip execution, label affected findings `Static revie
 - No `privileged: true`
 - `automountServiceAccountToken: false` unless API access is explicitly needed
 - No `hostNetwork`, `hostPID`, `hostIPC`
+- `serviceAccountName` unset or explicitly `default`, when environment is `prod` — Medium severity; the default ServiceAccount typically has no meaningful RBAC binding by convention but is an easy target for privilege creep over time. Only fires when the environment (from Q1/`--env`) is `prod`.
 
 **Operational Safety**
 - `resources.requests` set; memory limit set; CPU limit absent (throttling risk)
@@ -233,6 +235,18 @@ If a tool isn't installed, skip execution, label affected findings `Static revie
 | `batch/v1beta1` CronJob | 1.25 | `batch/v1` |
 | `policy/v1beta1` PodDisruptionBudget | 1.25 | `policy/v1` |
 | `autoscaling/v2beta2` HPA | 1.26 | `autoscaling/v2` |
+
+---
+
+### Kubernetes RBAC (Role, ClusterRole, RoleBinding, ClusterRoleBinding)
+
+**Correctness**
+- `roleRef` in a RoleBinding/ClusterRoleBinding resolves to a Role/ClusterRole that exists in scope
+
+**Security**
+- **Critical: `verbs: ["*"]` on a `rules` entry without an inline comment justifying it** — wildcard verbs on any resource grant unbounded actions (create/delete/patch/etc.), not just read
+- **Critical: `resources: ["*"]` without justification** — same reasoning, resource-scoped
+- **High: `ClusterRoleBinding` to a namespaced ServiceAccount without documented cross-namespace need** — cluster-wide binding is broader than almost any workload actually requires
 
 ---
 
