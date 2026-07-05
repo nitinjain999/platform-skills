@@ -576,7 +576,7 @@ fi
   "filesChecked": 4,
   "counts": { "critical": 1, "high": 2, "medium": 1, "low": 0 },
   "files": [
-    { "file": "k8s/deployment.yaml", "type": "K8s workload", "critical": 1, "high": 1, "medium": 0, "verdict": "BLOCKED" }
+    { "file": "k8s/deployment.yaml", "type": "K8s workload", "critical": 1, "high": 1, "medium": 0, "low": 0, "verdict": "BLOCKED" }
   ],
   "findings": [
     {
