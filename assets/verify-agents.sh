@@ -60,7 +60,7 @@ for agent in .github/agents/*.agent.md .cursor/rules/*.mdc; do
     [ -z "$d" ] && continue
     test -d "${d%/}" || { echo "⚠️  $agent references missing directory: $d"; FAIL=$((FAIL+1)); }
   done < <(echo "$BACKTICK_REFS" \
-    | grep -oE '[a-zA-Z.][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_.-]*)/' \
+    | grep -oE '^[a-zA-Z.][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_.-]*)*/$' \
     | grep -vE '<[a-zA-Z]' \
     | sort -u)
 done
