@@ -570,3 +570,17 @@ fi
 `rollbackPlan` and `validationSteps` mirror Standard mode's aggregate rollback/validation block; `handoff` mirrors Step 7's recommendations for this scope — empty array if none apply.
 
 If `--bot` and `--json` are both passed, `--json` silently wins (see Step 0) — the JSON object is the entire output, with no bot-mode markdown mixed in.
+
+---
+
+## Step 9 — Exit code (CI mode only)
+
+Applies only when the interview was actually skipped per Step 0's rule — i.e., `--no-interview` was passed, or every question happened to already be answered by other flags (`--env` + `--focus` + `--bot`/`--json`, with Q2 omitted as specified in Step 0). Passing `--changed-only` or `--json` alone does not by itself trigger this — if the interview still ran because some question was left unanswered, the run is interactive and no exit call is made, regardless of which flags were present.
+
+When it does apply, after printing output:
+- Verdict `BLOCKED` → run `exit 1`
+- Verdict `NEEDS_FIX` or `MERGE_READY` → run `exit 0`
+
+Only `BLOCKED` (at least one Critical finding) fails the pipeline — this matches the existing verdict semantics, where `BLOCKED` is already the documented hard merge-gate.
+
+In fully interactive mode (no flags), no exit call is made — behavior is unchanged from before this step existed.
