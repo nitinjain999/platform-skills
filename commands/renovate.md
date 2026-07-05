@@ -373,15 +373,19 @@ Apply `pinDigests` based on Q2:
 **`customManagers`** — include if `.github/workflows/*.yml` contains `terraform_version:`:
 ```json
 {
-  "customType": "regex",
-  "description": "Update Terraform version pinned in GitHub Actions workflows",
-  "managerFilePatterns": ["/^\\.github/workflows/.*\\.ya?ml$/"],
-  "matchStrings": [
-    "terraform_version:\\s*['\"]?(?<currentValue>[^'\"\\s]+)['\"]?"
-  ],
-  "depNameTemplate": "hashicorp/terraform",
-  "datasourceTemplate": "github-releases",
-  "extractVersionTemplate": "^v(?<version>.*)$"
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Update Terraform version pinned in GitHub Actions workflows",
+      "managerFilePatterns": ["/^\\.github/workflows/.*\\.ya?ml$/"],
+      "matchStrings": [
+        "terraform_version:\\s*['\"]?(?<currentValue>[^'\"\\s]+)['\"]?"
+      ],
+      "depNameTemplate": "hashicorp/terraform",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    }
+  ]
 }
 ```
 
