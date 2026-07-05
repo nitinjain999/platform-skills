@@ -149,6 +149,7 @@ find ./k8s -name "*.yaml" | xargs grep -l "^apiVersion:" | wc -l
 | `apiVersion: helm.toolkit.fluxcd.io` or `kind: HelmRelease` | Flux HelmRelease |
 | `apiVersion: source.toolkit.fluxcd.io` | Flux Source |
 | `resource "aws_` or `resource "azurerm_` or `variable "` + `.tf` extension | Terraform |
+| `apiVersion: keda.sh/*` or `kind: ScaledObject/ScaledJob` | KEDA Scaler |
 | `on:` + `jobs:` + `runs-on:` | GitHub Actions workflow |
 | `image:` + `tag:` + `replicaCount:` or `values.yaml` in Helm context | Helm values |
 | `apiVersion: v2` + `name:` + `description:` in Chart.yaml | Helm Chart.yaml |
@@ -272,6 +273,19 @@ If a tool isn't installed, skip execution, label affected findings `Static revie
 
 ---
 
+### KEDA Scaler (ScaledObject, ScaledJob)
+
+**Correctness**
+- `scaleTargetRef.name` matches an actual Deployment/StatefulSet in scope (or is documented if out of scope)
+- `minReplicaCount` ≤ `maxReplicaCount`, both present
+
+**Operational Safety**
+- **Critical: an HPA already targets the same `scaleTargetRef`** — KEDA manages the HPA it creates internally; a hand-written HPA on the same target causes the two to fight over replica count. Detected by checking other discovered files in the same folder-mode run for `kind: HorizontalPodAutoscaler` with a matching `scaleTargetRef.name`. This check only fires in folder/repo mode where both files are discovered together — in single-file mode, note this limitation inline instead of silently skipping it.
+- `pollingInterval` and `cooldownPeriod` explicit — undocumented KEDA defaults (30s / 300s) surprise most first-time users
+- `fallback.failureThreshold` and `fallback.replicas` set for triggers with an external dependency (avoids scale-to-zero deadlock if the trigger source is unreachable)
+
+---
+
 ### Terraform
 
 **Correctness**
@@ -378,6 +392,7 @@ If a tool isn't installed, skip execution, label affected findings `Static revie
 | Helm chart scaffold or upgrade diff | `/platform-skills:helmchart` |
 | Container image CVE scan | `/platform-skills:trivy` |
 | Flux reconciliation issue | `/platform-skills:gitops` |
+| Deeper KEDA ScaledObject design or debug | `/platform-skills:keda` |
 | PR diff across many changed files | `/platform-skills:pr-review` |
 
 ---
