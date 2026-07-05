@@ -275,15 +275,19 @@ Use `customManagers` (`customType: "regex"`) when no native manager supports the
 
 ```json
 {
-  "customType": "regex",
-  "description": "Track Terraform CLI version in workflow YAML",
-  "managerFilePatterns": ["/^\\.github/workflows/.*\\.ya?ml$/"],
-  "matchStrings": [
-    "terraform_version:\\s*['\"]?(?<currentValue>[^'\"\\s]+)['\"]?"
-  ],
-  "depNameTemplate": "hashicorp/terraform",
-  "datasourceTemplate": "github-releases",
-  "extractVersionTemplate": "^v(?<version>.*)$"
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Track Terraform CLI version in workflow YAML",
+      "managerFilePatterns": ["/^\\.github/workflows/.*\\.ya?ml$/"],
+      "matchStrings": [
+        "terraform_version:\\s*['\"]?(?<currentValue>[^'\"\\s]+)['\"]?"
+      ],
+      "depNameTemplate": "hashicorp/terraform",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    }
+  ]
 }
 ```
 
@@ -291,15 +295,19 @@ Use `customManagers` (`customType: "regex"`) when no native manager supports the
 
 ```json
 {
-  "customType": "regex",
-  "description": "Track kubectl version in install scripts",
-  "managerFilePatterns": ["/scripts/.*\\.sh$/"],
-  "matchStrings": [
-    "KUBECTL_VERSION=['\"]?(?<currentValue>[^'\"\\s]+)['\"]?"
-  ],
-  "depNameTemplate": "kubernetes/kubernetes",
-  "datasourceTemplate": "github-releases",
-  "extractVersionTemplate": "^v(?<version>.*)$"
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Track kubectl version in install scripts",
+      "managerFilePatterns": ["/scripts/.*\\.sh$/"],
+      "matchStrings": [
+        "KUBECTL_VERSION=['\"]?(?<currentValue>[^'\"\\s]+)['\"]?"
+      ],
+      "depNameTemplate": "kubernetes/kubernetes",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    }
+  ]
 }
 ```
 
@@ -307,15 +315,19 @@ Use `customManagers` (`customType: "regex"`) when no native manager supports the
 
 ```json
 {
-  "customType": "regex",
-  "description": "Track Flux CLI version in docs",
-  "managerFilePatterns": ["/^docs/.*\\.md$/", "/^examples/.*\\.md$/"],
-  "matchStrings": [
-    "Flux CLI \\((?<currentValue>[^)]+)\\)"
-  ],
-  "depNameTemplate": "fluxcd/flux2",
-  "datasourceTemplate": "github-releases",
-  "extractVersionTemplate": "^v(?<version>.*)$"
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Track Flux CLI version in docs",
+      "managerFilePatterns": ["/^docs/.*\\.md$/", "/^examples/.*\\.md$/"],
+      "matchStrings": [
+        "Flux CLI \\((?<currentValue>[^)]+)\\)"
+      ],
+      "depNameTemplate": "fluxcd/flux2",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^v(?<version>.*)$"
+    }
+  ]
 }
 ```
 
