@@ -55,8 +55,12 @@ jobs:
           else
             BASE="$PUSH_BEFORE_SHA"
           fi
-          # Fall back to HEAD~1 when base SHA is all-zeros (force-push or first push)
-          if [[ -z "$BASE" || "$BASE" == "0000000000000000000000000000000000000000" ]]; then
+          # Fall back to HEAD~1 when base SHA is all-zeros (force-push or first push),
+          # or when it isn't present in this shallow clone (e.g. a multi-commit merge
+          # pushes more commits than fetch-depth covers) — verify the object exists
+          # before trusting it, rather than only checking for the all-zeros sentinel.
+          if [[ -z "$BASE" || "$BASE" == "0000000000000000000000000000000000000000" ]] \
+             || ! git cat-file -e "$BASE" 2>/dev/null; then
             BASE=$(git rev-parse HEAD~1 2>/dev/null || git rev-parse HEAD)
           fi
           CHANGED=$(git diff --name-only "$BASE" HEAD)
