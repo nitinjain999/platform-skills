@@ -31,6 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      id-token: write  # required for the AWS OIDC step below — remove if the AWS block is removed
     steps:
       - name: Checkout
         uses: actions/checkout@__CHECKOUT_SHA__  # v__CHECKOUT_VERSION__
