@@ -5,6 +5,18 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.37.0] - 2026-07-05
+
+### Fixed
+
+- **`assets/copilot-setup-steps.template.yml`** — wrapped the bare steps list in the required workflow structure (`name`, `on`, `jobs.copilot-setup-steps`) with a `concurrency` block; GitHub only invokes a job whose key is literally `copilot-setup-steps`
+- **Wrong output path** — `.github/copilot-setup-steps.yml` corrected to `.github/workflows/copilot-setup-steps.yml` in `references/setup-agents-schemas.md` and `assets/verify-agents.sh`; GitHub only reads the file from `.github/workflows/`
+- **`assets/render.sh`** — added `shopt -u patsub_replacement` guard; on bash 5.2+ an unescaped `&` in a substitution value was silently treated as a sed-style backreference, corrupting output
+- **`assets/verify-agents.sh`** — directory-reference regex widened to allow a leading dot (`.github/workflows/`, `.cursor/`) without misparsing it as a bare path; added `tpl` to the file-extension allowlist; replaced `eval` with `bash -c`; replaced non-portable BRE `\|` alternation with `grep -E`
+- **`references/setup-agents-build.md` / `references/setup-agents-template.md`** — `AGENTS.md`'s "How to invoke agents" section now prunes per-tool subsections (VS Code, Cursor, Codex) to the confirmed manifest instead of always including all of them, avoiding dead references like an unrendered `agents/openai.yaml` when Codex wasn't generated
+- **`commands/renovate.md` schedule example** — `weekday-morning` mapped to `["before 6am on weekdays"]`, which Renovate's migration rewrites to the unparseable `"before 6am on weekday"`; corrected to `["before 6am every weekday"]`
+- **Renovate docs** — replaced deprecated `regexManagers`/`fileMatch`/`matchPackagePatterns` with current `customManagers`/`managerFilePatterns`/`matchPackageNames` across `references/renovate.md` and `commands/renovate.md`; `managerFilePatterns` requires regex values wrapped in `/.../ ` delimiters
+
 ## [1.36.0] - 2026-06-21
 
 ### Added

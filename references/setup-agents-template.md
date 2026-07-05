@@ -27,7 +27,7 @@ bash assets/render.sh assets/AGENTS.md.template \
 
 | Section | Purpose |
 |---------|---------|
-| `## How to invoke agents` | Always include — developers don't know @mentions exist |
+| `## How to invoke agents` | Always include the section; keep only the per-tool subsections in the confirmed manifest — see `references/setup-agents-build.md` Step 7 |
 | `## Repo` | One sentence — what this is and who depends on it |
 | `## Stack` | Runtime, framework, deploy target — one line each |
 | `## How we work` | Deploy process in plain English, review gates, environments |

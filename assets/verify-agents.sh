@@ -5,7 +5,7 @@
 PASS=0; FAIL=0
 
 check() {
-  if eval "$2" &>/dev/null; then
+  if bash -c "$2" &>/dev/null; then
     echo "✓ $1"
     PASS=$((PASS+1))
   else
@@ -26,11 +26,11 @@ check "AGENTS.md present" "test -f AGENTS.md"
 while read -r target; do
   case "$target" in
     copilot-vscode|copilot-cloud) check "Copilot agent files" "ls .github/agents/*.agent.md" ;;
-    copilot-app)  check "Copilot App setup"  "test -f .github/copilot-setup-steps.yml" ;;
+    copilot-app)  check "Copilot App setup"  "test -f .github/workflows/copilot-setup-steps.yml" ;;
     cursor)       check "Cursor rules"        "test -d .cursor/rules && ls .cursor/rules/*.mdc" ;;
     codex)        check "Codex config"        "test -f agents/openai.yaml" ;;
     windsurf)     check "Windsurf rules"      "test -f .windsurfrules" ;;
-    vscode-mcp)   check "MCP wired (VS Code)" "grep -qr '\"servers\"\|mcpServers' .vscode/" ;;
+    vscode-mcp)   check "MCP wired (VS Code)" "grep -qrE '\"servers\"|mcpServers' .vscode/" ;;
   esac
 done < <(grep -vE '^#|^[[:space:]]*$' .platform-skills/manifest 2>/dev/null)
 
@@ -53,14 +53,14 @@ for agent in .github/agents/*.agent.md .cursor/rules/*.mdc; do
     [ -z "$p" ] && continue
     test -f "$p" || { echo "⚠️  $agent references missing file: $p"; FAIL=$((FAIL+1)); }
   done < <(echo "$BACKTICK_REFS" \
-    | grep -oE '[a-zA-Z0-9_./-]*(/[a-zA-Z0-9_.@-]+)+\.(py|ts|go|tf|yaml|yml|json|md|sh|kt|kts|rs|cs|rb|php)' \
+    | grep -oE '[a-zA-Z0-9_./-]*(/[a-zA-Z0-9_.@-]+)+\.(py|ts|go|tf|yaml|yml|json|md|sh|kt|kts|rs|cs|rb|php|tpl)' \
     | grep -vE '<[a-zA-Z]')
   # Check directory paths (trailing slash; single segment like src/ is valid)
   while read -r d; do
     [ -z "$d" ] && continue
     test -d "${d%/}" || { echo "⚠️  $agent references missing directory: $d"; FAIL=$((FAIL+1)); }
   done < <(echo "$BACKTICK_REFS" \
-    | grep -oE '[a-zA-Z][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_.-]*)/' \
+    | grep -oE '[a-zA-Z.][a-zA-Z0-9_.-]*(/[a-zA-Z0-9_.-]*)/' \
     | grep -vE '<[a-zA-Z]' \
     | sort -u)
 done

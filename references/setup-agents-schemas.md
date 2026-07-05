@@ -170,7 +170,7 @@ bash assets/render.sh assets/copilot-setup-steps.template.yml \
   CHECKOUT_SHA="<fetch>" CHECKOUT_VERSION="4" \
   SETUP_TERRAFORM_SHA="<fetch>" SETUP_TERRAFORM_VERSION="3" TERRAFORM_VERSION="<detected>" \
   CONFIGURE_AWS_SHA="<fetch>" CONFIGURE_AWS_VERSION="4" \
-  > .github/copilot-setup-steps.yml
+  > .github/workflows/copilot-setup-steps.yml
 ```
 
 Remove blocks for runtimes not present in the repo (Node, Python, Java/Kotlin). Keep only what the repo actually uses.

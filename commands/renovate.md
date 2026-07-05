@@ -181,7 +181,7 @@ Generate a `renovate.json` containing only the managers detected in Step 1.
 - `semver` pinning chosen → use `config:recommended` + `":separateMajorReleases"`
 
 **`schedule` — set based on Q4:**
-- `weekday-morning` → `["before 6am on weekdays"]`
+- `weekday-morning` → `["before 6am every weekday"]`
 - `monday-morning`  → `["before 6am on monday"]`
 - `weekend`         → `["before 6am on saturday and sunday"]`
 - `always`          → omit the `schedule` key entirely
@@ -370,11 +370,12 @@ Apply `pinDigests` based on Q2:
 - `gomod` detected → add `"gomodTidy"`
 - `npm` detected → add `"npmDedupe"`
 
-**`regexManagers`** — include if `.github/workflows/*.yml` contains `terraform_version:`:
+**`customManagers`** — include if `.github/workflows/*.yml` contains `terraform_version:`:
 ```json
 {
+  "customType": "regex",
   "description": "Update Terraform version pinned in GitHub Actions workflows",
-  "fileMatch": ["^\\.github/workflows/.*\\.ya?ml$"],
+  "managerFilePatterns": ["/^\\.github/workflows/.*\\.ya?ml$/"],
   "matchStrings": [
     "terraform_version:\\s*['\"]?(?<currentValue>[^'\"\\s]+)['\"]?"
   ],
@@ -394,11 +395,12 @@ Emit the following sections only for the options chosen in Q5–Q7. Omit any sec
 
 **Option A — GitHub org (`github-org`, org = `<org>`):**
 
-Add to `regexManagers`:
+Add to `customManagers`:
 ```json
 {
+  "customType": "regex",
   "description": "Terraform modules sourced from internal GitHub org <org>",
-  "fileMatch": ["\\.tf$"],
+  "managerFilePatterns": ["/\\.tf$/"],
   "matchStrings": [
     "source\\s*=\\s*\"github\\.com/<org>/(?<depName>[^/]+)//[^\"]*\\?ref=(?<currentValue>[^\"]+)\""
   ],
@@ -411,8 +413,8 @@ Add to `packageRules`:
 ```json
 {
   "description": "Terraform modules from <org> GitHub org — require manual review",
-  "matchManagers": ["regex"],
-  "matchPackagePatterns": ["^<org>/"],
+  "matchManagers": ["custom.regex"],
+  "matchPackageNames": ["/^<org>\\//"],
   "automerge": false,
   "groupName": "Internal Terraform modules (<org>)"
 }
@@ -420,11 +422,12 @@ Add to `packageRules`:
 
 **Option B — Private Terraform registry (`private-registry`, host = `<hostname>`):**
 
-Add to `regexManagers`:
+Add to `customManagers`:
 ```json
 {
+  "customType": "regex",
   "description": "Terraform modules from private registry <hostname>",
-  "fileMatch": ["\\.tf$"],
+  "managerFilePatterns": ["/\\.tf$/"],
   "matchStrings": [
     "source\\s*=\\s*\"<hostname>/(?<namespace>[^/]+)/(?<depName>[^/]+)/(?<provider>[^\"]+)\""
   ],
@@ -548,7 +551,7 @@ After collecting all private registry `hostRules`, also add a `packageRules` ent
 {
   "description": "Container images from private registry <registry-host>",
   "matchManagers": ["dockerfile", "docker-compose", "kubernetes"],
-  "matchPackagePatterns": ["^<registry-host>/"],
+  "matchPackageNames": ["/^<registry-host>\\//"],
   "automerge": false,
   "groupName": "Private images (<registry-host>)"
 }
@@ -566,12 +569,12 @@ Collect all objects from Steps 2 and 2.5 into the final `renovate.json` followin
   "extends": [...],
   ... base config keys ...,
   "hostRules": [ ... one entry per private registry ... ],
-  "regexManagers": [ ... one entry per custom source pattern ... ],
+  "customManagers": [ ... one entry per custom source pattern ... ],
   "packageRules": [ ... all per-manager + private registry rules ... ]
 }
 ```
 
-Omit `hostRules` if no private registries were configured. Omit `regexManagers` if no custom source patterns apply.
+Omit `hostRules` if no private registries were configured. Omit `customManagers` if no custom source patterns apply.
 
 Collect all per-detected-manager objects into a single `"packageRules": [...]` array in the final `renovate.json`. Do not emit them as separate JSON blocks.
 

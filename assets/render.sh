@@ -5,6 +5,7 @@
 # Values may contain slashes and newlines; bash parameter expansion handles both
 # without the escaping hazards of sed.
 set -euo pipefail
+shopt -u patsub_replacement 2>/dev/null || true
 template="$1"; shift
 content="$(cat "$template")"
 for pair in "$@"; do

@@ -26,7 +26,7 @@ Companion to `/platform-skills:renovate`. Deep-dive on managers, presets, securi
 | `docker-compose` | `docker-compose*.yml` | Service image tags |
 | `kubernetes` | Manifests with `kind: Deployment/StatefulSet/DaemonSet/Job/CronJob` | Container image tags in `spec.containers[].image` |
 | `cargo` | `Cargo.toml` | Rust crate dependencies |
-| `regex` | Any file via `fileMatch` | Custom version strings — no native manager support |
+| `custom.regex` | Any file via `managerFilePatterns` | Custom version strings — no native manager support |
 
 ---
 
@@ -269,14 +269,15 @@ Store secrets in Renovate's encrypted secrets (Mend Renovate App) or as env vars
 
 ## 7. Regex Managers
 
-Use `regexManagers` when no native manager supports the file format.
+Use `customManagers` (`customType: "regex"`) when no native manager supports the file format.
 
 ### Terraform version in GitHub Actions workflows
 
 ```json
 {
+  "customType": "regex",
   "description": "Track Terraform CLI version in workflow YAML",
-  "fileMatch": ["^\\.github/workflows/.*\\.ya?ml$"],
+  "managerFilePatterns": ["/^\\.github/workflows/.*\\.ya?ml$/"],
   "matchStrings": [
     "terraform_version:\\s*['\"]?(?<currentValue>[^'\"\\s]+)['\"]?"
   ],
@@ -290,8 +291,9 @@ Use `regexManagers` when no native manager supports the file format.
 
 ```json
 {
+  "customType": "regex",
   "description": "Track kubectl version in install scripts",
-  "fileMatch": ["scripts/.*\\.sh$"],
+  "managerFilePatterns": ["/scripts/.*\\.sh$/"],
   "matchStrings": [
     "KUBECTL_VERSION=['\"]?(?<currentValue>[^'\"\\s]+)['\"]?"
   ],
@@ -305,8 +307,9 @@ Use `regexManagers` when no native manager supports the file format.
 
 ```json
 {
+  "customType": "regex",
   "description": "Track Flux CLI version in docs",
-  "fileMatch": ["^docs/.*\\.md$", "^examples/.*\\.md$"],
+  "managerFilePatterns": ["/^docs/.*\\.md$/", "/^examples/.*\\.md$/"],
   "matchStrings": [
     "Flux CLI \\((?<currentValue>[^)]+)\\)"
   ],
@@ -495,7 +498,7 @@ Set `TF_REGISTRY_TOKEN` to a Terraform Cloud team token with read access.
 
 ## 10. Custom Regex Managers
 
-Use `regexManagers` when a dependency version appears in a file format that Renovate's built-in managers do not parse — internal GitHub module sources, pinned tool versions in scripts, or version strings in YAML/JSON config files.
+Use `customManagers` (`customType: "regex"`) when a dependency version appears in a file format that Renovate's built-in managers do not parse — internal GitHub module sources, pinned tool versions in scripts, or version strings in YAML/JSON config files. `regexManagers` and `fileMatch` are deprecated aliases for `customManagers`/`managerFilePatterns` — Renovate auto-migrates them with a `WARN`, but write new configs with the current keys directly. `managerFilePatterns` treats bare strings as globs; existing regex patterns must be wrapped in `/.../ ` delimiters.
 
 ### Internal GitHub org Terraform modules
 
@@ -503,10 +506,11 @@ Terraform module sources of the form `github.com/<org>/<repo>//<path>?ref=<tag>`
 
 ```json
 {
-  "regexManagers": [
+  "customManagers": [
     {
+      "customType": "regex",
       "description": "Terraform modules from internal GitHub org myorg",
-      "fileMatch": ["\\.tf$"],
+      "managerFilePatterns": ["/\\.tf$/"],
       "matchStrings": [
         "source\\s*=\\s*\"github\\.com/myorg/(?<depName>[^/]+)//[^\"]*\\?ref=(?<currentValue>[^\"]+)\""
       ],
@@ -516,8 +520,8 @@ Terraform module sources of the form `github.com/<org>/<repo>//<path>?ref=<tag>`
   ],
   "packageRules": [
     {
-      "matchManagers": ["regex"],
-      "matchPackagePatterns": ["^myorg/"],
+      "matchManagers": ["custom.regex"],
+      "matchPackageNames": ["/^myorg\\//"],
       "automerge": false,
       "groupName": "Internal Terraform modules (myorg)"
     }
@@ -533,10 +537,11 @@ For modules sourced from a private registry (`<hostname>/<namespace>/<module>/<p
 
 ```json
 {
-  "regexManagers": [
+  "customManagers": [
     {
+      "customType": "regex",
       "description": "Terraform modules from private registry app.terraform.io",
-      "fileMatch": ["\\.tf$"],
+      "managerFilePatterns": ["/\\.tf$/"],
       "matchStrings": [
         "source\\s*=\\s*\"app\\.terraform\\.io/(?<namespace>[^/]+)/(?<depName>[^/]+)/(?<provider>[^\"]+)\""
       ],
@@ -551,10 +556,11 @@ For modules sourced from a private registry (`<hostname>/<namespace>/<module>/<p
 
 ```json
 {
-  "regexManagers": [
+  "customManagers": [
     {
+      "customType": "regex",
       "description": "Update Terraform version pinned in GitHub Actions workflows",
-      "fileMatch": ["^\\.github/workflows/.*\\.ya?ml$"],
+      "managerFilePatterns": ["/^\\.github/workflows/.*\\.ya?ml$/"],
       "matchStrings": [
         "terraform_version:\\s*['\"]?(?<currentValue>[^'\"\\s]+)['\"]?"
       ],
@@ -570,10 +576,11 @@ For modules sourced from a private registry (`<hostname>/<namespace>/<module>/<p
 
 ```json
 {
-  "regexManagers": [
+  "customManagers": [
     {
+      "customType": "regex",
       "description": "Update tools pinned in .tool-versions (asdf)",
-      "fileMatch": ["^\\.tool-versions$"],
+      "managerFilePatterns": ["/^\\.tool-versions$/"],
       "matchStrings": [
         "(?<depName>[a-z0-9_-]+)\\s+(?<currentValue>[\\d\\.]+)"
       ],
@@ -588,10 +595,11 @@ For modules sourced from a private registry (`<hostname>/<namespace>/<module>/<p
 
 ```json
 {
-  "regexManagers": [
+  "customManagers": [
     {
+      "customType": "regex",
       "description": "Update kubectl version pinned in CI scripts",
-      "fileMatch": ["^\\.github/workflows/.*\\.ya?ml$", "^scripts/.*\\.sh$"],
+      "managerFilePatterns": ["/^\\.github/workflows/.*\\.ya?ml$/", "/^scripts/.*\\.sh$/"],
       "matchStrings": [
         "kubectl_version[=:]\\s*['\"]?v?(?<currentValue>[\\d\\.]+)['\"]?"
       ],
@@ -612,7 +620,7 @@ Test your `matchStrings` pattern against actual file content:
 npm install -g renovate
 
 # Dry-run against a single file — prints what Renovate would extract
-LOG_LEVEL=debug renovate --dry-run --print-config 2>&1 | grep -A5 "regexManagers"
+LOG_LEVEL=debug renovate --dry-run --print-config 2>&1 | grep -A5 "customManagers"
 ```
 
 Common mistakes:

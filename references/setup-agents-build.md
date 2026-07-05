@@ -212,6 +212,16 @@ Render with `assets/render.sh` — substitute `__TOKEN__` placeholders. **The mo
 
 **Active staleness guard:** Before writing any agent file, verify every path referenced in `## How to work here` exists in the current file tree. Fix inline — don't write a dead reference.
 
+**Prune `AGENTS.md`'s "How to invoke agents" section to the confirmed roster.** The rendered template includes a subsection for every tool surface (VS Code, Cursor, Codex), regardless of which ones this run actually generated. After rendering, delete any subsection whose tool target is not in the confirmed manifest for this run:
+
+| Subsection | Keep only if manifest contains |
+|---|---|
+| `### VS Code (GitHub Copilot Chat)` | `copilot-vscode` or `copilot-cloud` |
+| `### Cursor` | `cursor` |
+| `### Codex` | `codex` |
+
+`### Claude Code` always stays — `AGENTS.md` is its entry point regardless of roster. A leftover Codex subsection references `agents/openai.yaml`, which won't exist if Codex wasn't generated — a dead reference the staleness guard above would otherwise catch, so don't skip this step.
+
 ### Step 8 — Write metadata block to AGENTS.md
 
 At the bottom of AGENTS.md, after all sections:
