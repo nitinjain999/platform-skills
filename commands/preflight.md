@@ -616,3 +616,16 @@ When it does apply, after printing output:
 Only `BLOCKED` (at least one Critical finding) fails the pipeline — this matches the existing verdict semantics, where `BLOCKED` is already the documented hard merge-gate.
 
 In fully interactive mode (no flags), no exit call is made — behavior is unchanged from before this step existed.
+
+---
+
+## Common mistakes
+
+| Mistake | Impact | Prevention |
+|---|---|---|
+| Marking a finding `Tool verified` without actually running the tool | User trusts an unverified claim as if a real tool confirmed it | Show the command + output snippet as evidence for every `Tool verified` finding — never assign the label without it |
+| Running `terraform init` as a side effect of a validate check | Preflight silently mutates `.terraform/` state or downloads providers on a read-only review | Only run `terraform validate`/`fmt -check` when `.terraform/` already exists; otherwise mark `Static review` with a note |
+| `--changed-only` silently checking nothing when not in a git repo | User thinks the whole folder was checked when in fact 0 files were | Print the explicit fallback note when `--changed-only` can't resolve a base ref, and run full folder-mode discovery instead |
+| Treating `NEEDS_FIX` as a CI failure | Pipelines block on High findings that don't warrant a hard gate | The exit-code contract (Step 9) only fails on `BLOCKED` |
+| `--json` and `--bot` both passed | Ambiguous which format renders | `--json` wins silently, no warning printed — keeps output strictly parseable |
+| KEDA/HPA conflict check false-negative in single-file mode | The conflicting HPA lives in a different file never seen by this run | The conflict check only fires in folder/repo mode where both files are discovered together; single-file mode notes this limitation inline |
