@@ -11,6 +11,7 @@
 [![GitHub Stars](https://img.shields.io/github/stars/nitinjain999/platform-skills?style=flat&label=Stars&color=0e1117)](https://github.com/nitinjain999/platform-skills/stargazers)
 [![Tessl Registry](https://img.shields.io/badge/Tessl-nitinjain999%2Fplatform--skills-6366f1)](https://tessl.io/registry/nitinjain999/platform-skills)
 [![Skill Check](https://img.shields.io/badge/SkillCheck-Validated-brightgreen)](tests/validate-skill.sh)
+[![HOL Guard Scanner](https://img.shields.io/badge/HOL%20Guard-passing-00a67e)](https://github.com/hashgraph-online/hol-guard)
 
 ## Works With
 

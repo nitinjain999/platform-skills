@@ -69,7 +69,7 @@ Use `/platform-skills:datadog investigate` for a guided 4-phase workflow:
 ```yaml
 # datadog-values.yaml
 datadog:
-  apiKeyExistingSecret: "datadog-secret"  # kubectl create secret generic datadog-secret --from-literal=api-key="${DD_API_KEY}"
+  apiKeyExistingSecret: datadog-secret  # kubectl create secret generic datadog-secret --from-literal=api-key=$DD_API_KEY
   site: "datadoghq.eu"                    # or datadoghq.com
   apm:
     portEnabled: true

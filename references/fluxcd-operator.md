@@ -37,7 +37,7 @@ spec:
   distribution:
     version: "2.x"                         # semver range — tracks latest 2.x
     registry: "ghcr.io/fluxcd"
-    imagePullSecret: "ghcr-registry-auth"  # optional, for private registries
+    imagePullSecret: ghcr-registry-auth  # optional, for private registries
   cluster:
     type: kubernetes        # kubernetes | openshift | k3s
     multitenant: false      # enables cross-namespace reference restrictions
@@ -57,7 +57,7 @@ spec:
     url: "oci://ghcr.io/my-org/fleet-manifests"
     ref: "latest"
     path: "clusters/production"
-    pullSecret: "registry-auth"
+    pullSecret: registry-auth
   storage:
     class: "standard"
     size: "10Gi"
