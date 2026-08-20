@@ -97,7 +97,7 @@ jobs:
           fi
 
   summary:
-    name: Validation Summary
+    name: Renovate Config Validation Summary
     runs-on: ubuntu-latest
     needs: [validate-schema, validate-config, validate-coverage]
     if: always()
