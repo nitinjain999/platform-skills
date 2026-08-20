@@ -4,7 +4,7 @@ description: Reviews Renovate PRs in a pre-approved low-risk subset, verifies CI
 on:
   pull_request:
     types: [opened, synchronize, reopened]
-  bots: [renovate[bot]]
+  bots: ["renovate[bot]"]
   workflow_dispatch:
     inputs:
       pr_number:
