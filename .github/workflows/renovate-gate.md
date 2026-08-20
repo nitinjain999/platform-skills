@@ -50,10 +50,15 @@ pre-steps:
   - name: Install actionlint
     run: |
       set -euo pipefail
-      curl -sLo /tmp/actionlint.tar.gz https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+      curl -f -sLo /tmp/actionlint.tar.gz --max-time 120 --retry 3 https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
       echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  /tmp/actionlint.tar.gz" | sha256sum -c -
       tar xz -C /tmp -f /tmp/actionlint.tar.gz actionlint
       sudo mv /tmp/actionlint /usr/local/bin/
+  - name: Install Terraform
+    uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e  # v4.0.1
+    with:
+      terraform_version: 1.15.8
+      terraform_wrapper: false
 safe-outputs:
   submit-pull-request-review:
     allowed-events: [APPROVE, COMMENT]
@@ -78,8 +83,6 @@ safe-outputs:
       - "requirements*.txt"
       - "**/*.py"
       - "**/*.go"
-      - ".github/workflows/*.yml"
-      - ".github/workflows/*.yaml"
       - "examples/github-actions/**/*.yml"
     protected-files: allowed
 ---
@@ -134,7 +137,7 @@ Do not approve or merge in this run. Instead:
 1. Read the changelog's migration guidance in full.
 2. Search the repository for usages of the changed API, argument, or interface — scoped to files this PR already touches or directly adjacent call sites. Do not search the whole repository speculatively.
 3. Decide whether the fix is a bounded, mechanical adaptation confined to a small, identifiable set of files (for example: a renamed Terraform argument, a changed Helm values key, an updated function signature, a renamed GitHub Actions input).
-   - **If yes**: make the edit locally. Then verify it with the one matching command from your bash allowlist for the affected ecosystem (`terraform validate` for Terraform, `go build ./...` for Go, `npm run build --if-present` / `npm test --if-present` for npm, `python -m py_compile` for Python, `actionlint` for GitHub Actions workflow/action YAML).
+   - **If yes**: Files under `.github/workflows/` cannot be written by this workflow (no `push-to-pull-request-branch` capability for that path), so if the fix would require editing a workflow file, stop here and take the "out of scope" comment-only path below instead. Otherwise, make the edit locally, then verify it with the one matching command from your bash allowlist for the affected ecosystem (`terraform validate` for Terraform, `go build ./...` for Go, `npm run build --if-present` / `npm test --if-present` for npm, `python -m py_compile` for Python, `actionlint` for GitHub Actions workflow/action YAML).
      - **If verification passes**: call `push-to-pull-request-branch` with the fix as a new commit on the same PR branch. Then call `submit-pull-request-review` with event `COMMENT` (never `APPROVE`) whose body states: what broke, what you changed to adapt it, and that it needs human re-review once CI re-runs against the new commit. Do not call `merge-pull-request` on this path, under any circumstance, even if CI was green before your push. Stop.
      - **If verification fails**: discard the edit. Do not push anything. Go to the "out of scope" branch below.
    - **If no** (spans unrelated files, ambiguous migration, or you're not confident): make no code changes ("out of scope"). Call `submit-pull-request-review` with event `COMMENT` whose body is the changelog's breaking-change/migration summary, so a human has full context. Stop.
@@ -145,7 +148,7 @@ Do not approve or merge in this run. Instead:
   1. which pre-approved category matched (from Step 1),
   2. that all CI checks are green (from Step 2),
   3. a one-line summary confirming the release notes show no breaking changes (from Step 3).
-- Then call `merge-pull-request` for this PR, passing `merge_method: squash` explicitly. The tool's schema exposes `merge_method` as an optional `merge`/`squash`/`rebase` enum with no enforced default, so leaving it unset delegates the choice to the underlying merge behavior rather than guaranteeing squash, which is the intended strategy for keeping dependency-bump history linear.
+- Then call `merge-pull-request` for this PR, passing `merge_method: squash` explicitly. The tool schema documents `merge` as the default, so `squash` must be passed explicitly to keep dependency-bump history linear.
 - If this is a `workflow_dispatch` run, pass the resolved PR number explicitly to both calls.
 
 ## Always
