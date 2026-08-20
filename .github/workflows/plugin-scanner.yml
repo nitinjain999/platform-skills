@@ -1,0 +1,33 @@
+name: HOL Plugin Scanner
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: plugin-scanner-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    name: Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run HOL Plugin Scanner
+        uses: hashgraph-online/ai-plugin-scanner-action@19b40ecd28deeb603cfeb788f4def5f1c19d8ff4  # v1.2.527
+        with:
+          plugin_dir: "."
+          min_score: 80
+          fail_on_severity: high

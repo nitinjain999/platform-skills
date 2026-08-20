@@ -260,7 +260,7 @@ livenessProbe:
 **Before:**
 ```yaml
 app:
-  stripe_api_key: "sk_live_<YOUR_KEY>"   # hardcoded secret — never do this
+  stripe_api_key: "<hardcoded-stripe-key-literal>"   # hardcoded secret — never do this
 ```
 
 **After (fix applied):**

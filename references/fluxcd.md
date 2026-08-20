@@ -221,7 +221,7 @@ spec:
     url: "oci://ghcr.io/my-org/fleet-manifests"
     ref: "latest"
     path: "clusters/production"
-    pullSecret: "registry-auth"
+    pullSecret: registry-auth
 ```
 
 ### Check FluxReport health
