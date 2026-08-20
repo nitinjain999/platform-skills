@@ -34,7 +34,7 @@
       "schedule": ["before 6am on monday"]
     },
     {
-      "description": "Terraform providers - automerge minor/patch",
+      "description": "Terraform providers - minor/patch, merged by renovate-gate",
       "matchManagers": ["terraform"],
       "matchDepTypes": ["required_provider"],
       "groupName": "Terraform providers",
@@ -51,7 +51,7 @@
       "groupName": "Terraform modules"
     },
     {
-      "description": "Helm charts - automerge patch only",
+      "description": "Helm charts - patch only, merged by renovate-gate",
       "matchManagers": ["helmv3"],
       "automerge": false,
       "automergeType": "pr",
@@ -65,7 +65,7 @@
       "groupName": "Container images"
     },
     {
-      "description": "Stable patch updates - automerge",
+      "description": "Stable patch updates - merged by renovate-gate",
       "matchManagers": ["terraform", "helmv3", "kubernetes", "docker-compose"],
       "matchUpdateTypes": ["patch"],
       "matchCurrentVersion": "!/^0/",
@@ -74,7 +74,7 @@
       "automergeType": "pr"
     },
     {
-      "description": "Go modules — automerge minor/patch",
+      "description": "Go modules — minor/patch, merged by renovate-gate",
       "matchManagers": ["gomod"],
       "automerge": false,
       "automergeType": "pr",
@@ -83,7 +83,7 @@
       "groupName": "Go modules"
     },
     {
-      "description": "npm packages — automerge minor/patch",
+      "description": "npm packages — minor/patch, merged by renovate-gate",
       "matchManagers": ["npm"],
       "automerge": false,
       "automergeType": "pr",
@@ -92,7 +92,7 @@
       "groupName": "npm packages"
     },
     {
-      "description": "Python packages — automerge minor/patch",
+      "description": "Python packages — minor/patch, merged by renovate-gate",
       "matchManagers": ["pip_requirements", "pip-compile", "pipenv", "poetry"],
       "automerge": false,
       "automergeType": "pr",
