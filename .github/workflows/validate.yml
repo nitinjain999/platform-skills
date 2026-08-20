@@ -12,6 +12,13 @@ on:
       - '**.json'
       - '**.sh'
       - '.github/workflows/**'
+      - '**go.mod'
+      - '**go.sum'
+      - '**requirements*.txt'
+      - '**Pipfile'
+      - '**Pipfile.lock'
+      - '**pyproject.toml'
+      - '**poetry.lock'
   push:
     branches:
       - main
@@ -23,6 +30,13 @@ on:
       - '**.json'
       - '**.sh'
       - '.github/workflows/**'
+      - '**go.mod'
+      - '**go.sum'
+      - '**requirements*.txt'
+      - '**Pipfile'
+      - '**Pipfile.lock'
+      - '**pyproject.toml'
+      - '**poetry.lock'
 
 concurrency:
   group: validate-${{ github.head_ref || github.ref_name }}
