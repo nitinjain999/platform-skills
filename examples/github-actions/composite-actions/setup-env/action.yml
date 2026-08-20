@@ -70,7 +70,7 @@ runs:
     # ── 3a. Node.js setup ─────────────────────────────────────────────────────
     - name: Set up Node.js
       if: inputs.runtime == 'node'
-      uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38  # v6.5.0
+      uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7.0.0
       with:
         node-version: ${{ steps.version.outputs.resolved }}
 
@@ -97,7 +97,7 @@ runs:
     # ── 3b. Python setup ──────────────────────────────────────────────────────
     - name: Set up Python
       if: inputs.runtime == 'python'
-      uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1  # v6.3.0
+      uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
       with:
         python-version: ${{ steps.version.outputs.resolved }}
 
@@ -129,7 +129,7 @@ runs:
     # ── 3c. Go setup ──────────────────────────────────────────────────────────
     - name: Set up Go
       if: inputs.runtime == 'go'
-      uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16  # v6.5.0
+      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
       with:
         go-version: ${{ steps.version.outputs.resolved }}
 
