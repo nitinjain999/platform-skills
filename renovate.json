@@ -69,7 +69,6 @@
       "matchManagers": ["terraform", "helmv3", "kubernetes", "docker-compose"],
       "matchUpdateTypes": ["patch"],
       "matchCurrentVersion": "!/^0/",
-      "labels": ["dependencies"],
       "automerge": false,
       "minimumReleaseAge": "3 days",
       "automergeType": "pr"
@@ -135,6 +134,7 @@
     "**/node_modules/**",
     "**/vendor/**",
     "**/.terraform/**",
-    "**/charts/**"
+    "**/charts/**",
+    ".github/workflows/*.lock.yml"
   ]
 }

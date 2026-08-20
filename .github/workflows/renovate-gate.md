@@ -35,7 +35,7 @@ tools:
     - "terraform validate"
     - "go build ./..."
     - "go vet ./..."
-    - "npm ci"
+    - "npm ci --ignore-scripts"
     - "npm run build --if-present"
     - "npm test --if-present"
     - "python -m py_compile"
