@@ -133,7 +133,10 @@ Only if the deny-list passes: read the PR's changed files and title, and confirm
 ## Step 2 — Check CI status
 
 - Read all status checks on the PR's head commit.
-- If any check is failing, or any check is still pending/in-progress, call `noop` explaining which check and its state. Do not wait or retry.
+- **Ignore this workflow's own check runs when assessing status.** They belong to the run you are executing inside, so some of them are always in progress or queued while you evaluate this step — counting them would make this check impossible to pass. Exclude check runs named: `pre_activation`, `activation`, `agent`, `detection`, `safe_outputs`, `conclusion`, and anything else belonging to the `Renovate Gate` workflow.
+- Of the remaining checks: if any is failing, call `noop` naming the check and its conclusion. Do not approve or merge on a red PR.
+- If any remaining check is still pending or in progress, call `noop` naming it. Do not wait, poll, or retry — a later run (a new commit, or a manual `workflow_dispatch` once CI has finished) will re-evaluate.
+- If there are no remaining checks at all after the exclusion, treat that as "CI has not reported" and `noop` rather than assuming success.
 
 ## Step 3 — Read the embedded release notes
 

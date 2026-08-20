@@ -451,6 +451,38 @@ jobs:
 
           echo "✅ No obvious secrets detected"
 
+      - name: Check for secrets in agentic workflow sources
+        run: |
+          # The scan above excludes *.md (prose) and *.lock.yml (generated —
+          # machine-generated mega-lines self-match the heuristic). Together those
+          # would leave gh-aw workflow sources with NO credential coverage, even
+          # though they are executable CI with secrets access: a hard-coded value
+          # in frontmatter or pre-steps compiles straight into the .lock.yml.
+          # So scan .github/workflows/**/*.md explicitly, with a tighter pattern
+          # (keyword + separator + a long literal value) that does not self-match.
+          AW_SOURCES=$(find .github/workflows -name "*.md" 2>/dev/null || true)
+
+          if [ -z "$AW_SOURCES" ]; then
+            echo "ℹ️  No agentic workflow sources found"
+            exit 0
+          fi
+
+          FOUND=$(grep -HnE '(password|secret|key|token|apikey)[[:space:]]*[:=][[:space:]]*["]?[A-Za-z0-9/+_-]{16,}' \
+             $AW_SOURCES | \
+             grep -v 'secrets\.' | \
+             grep -v 'vars\.' | \
+             grep -v 'github\.token' || true)
+
+          if [ -n "$FOUND" ]; then
+            echo "❌ Potential hard-coded credential in agentic workflow source:"
+            echo "$FOUND"
+            echo ""
+            echo "Reference secrets as \${{ secrets.NAME }} instead of inlining values."
+            exit 1
+          fi
+
+          echo "✅ No hard-coded credentials in agentic workflow sources"
+
       - name: Check for GitHub Actions security
         run: |
           REPO_WORKFLOWS=$(find .github/workflows -type f \
