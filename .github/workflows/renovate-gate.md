@@ -19,6 +19,7 @@ permissions:
   pull-requests: read
   issues: read
   checks: read
+  copilot-requests: write
 engine: copilot
 tools:
   github:
