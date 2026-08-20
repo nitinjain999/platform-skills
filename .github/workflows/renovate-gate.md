@@ -24,6 +24,10 @@ tools:
     mode: gh-proxy
     toolsets: [default, pull_requests]
   bash:
+    - grep
+    - rg
+    - find
+    - cat
     - "terraform fmt -check -recursive"
     - "terraform init -backend=false"
     - "terraform validate"
@@ -32,7 +36,7 @@ tools:
     - "npm ci"
     - "npm run build --if-present"
     - "npm test --if-present"
-    - "python -m py_compile *.py"
+    - "python -m py_compile"
     - "actionlint"
 network:
   allowed:
@@ -78,7 +82,18 @@ You review pull requests opened by `renovate[bot]` against a pre-approved, low-r
 
 - If this run was triggered by `workflow_dispatch`, the target PR number is `${{ inputs.pr_number }}`. Otherwise it is the triggering pull request.
 - Confirm the PR author is `renovate[bot]`. If not, call `noop` with that reason and stop.
-- Read the PR's changed files and title. Confirm it matches exactly one of these pre-approved categories:
+
+### Deny-list — apply this BEFORE matching any category
+
+Call `noop` and stop if the PR touches any of the following, regardless of update type. These are permanently human-reviewed. Check this first: the categories below are partly defined by exclusion, so without this gate a forbidden change could satisfy the catch-all category.
+
+- a Terraform **module** source or version — a `module` block, a `source =` line, or a module version constraint. (A `required_providers` provider entry is *not* a module and *is* in scope.)
+- a **container image** reference or tag, under any manager (`kubernetes`, `docker-compose`, `dockerfile`) — including an image tag bumped inside a Helm `values*.yaml`, which would otherwise satisfy the Helm category on file-glob grounds alone.
+- a **major**-version bump of anything that is not a GitHub Action.
+
+### Categories
+
+Only if the deny-list passes: read the PR's changed files and title, and confirm it matches exactly one of these pre-approved categories:
   - **GitHub Actions**: changed files are `.github/workflows/*.yml`/`.yaml` or `**/action.yml`, and the PR is a version bump of one or more GitHub Actions (any update type, including major).
   - **Terraform providers**: changed files are `*.tf` `required_providers` version constraints, update type minor or patch.
   - **Helm patch**: changed files are `Chart.yaml`/`values*.yaml`, update type patch.
@@ -110,7 +125,7 @@ Do not approve or merge in this run. Instead:
 2. Search the repository for usages of the changed API, argument, or interface — scoped to files this PR already touches or directly adjacent call sites. Do not search the whole repository speculatively.
 3. Decide whether the fix is a bounded, mechanical adaptation confined to a small, identifiable set of files (for example: a renamed Terraform argument, a changed Helm values key, an updated function signature, a renamed GitHub Actions input).
    - **If yes**: make the edit locally. Then verify it with the one matching command from your bash allowlist for the affected ecosystem (`terraform validate` for Terraform, `go build ./...` for Go, `npm run build --if-present` / `npm test --if-present` for npm, `python -m py_compile` for Python, `actionlint` for GitHub Actions workflow/action YAML).
-     - **If verification passes**: call `push-to-pull-request-branch` with the fix as a new commit on the same PR branch. Then call `submit-pull-request-review` with event `COMMENT` (never `APPROVE`) whose body states: what broke, what you changed to adapt it, and that it needs human re-review once CI re-runs against the new commit. Do not call `merge-pull-request` on this path, under any circumstance, even if CI was green before your push.
+     - **If verification passes**: call `push-to-pull-request-branch` with the fix as a new commit on the same PR branch. Then call `submit-pull-request-review` with event `COMMENT` (never `APPROVE`) whose body states: what broke, what you changed to adapt it, and that it needs human re-review once CI re-runs against the new commit. Do not call `merge-pull-request` on this path, under any circumstance, even if CI was green before your push. Stop.
      - **If verification fails**: discard the edit. Do not push anything. Go to the "out of scope" branch below.
    - **If no** (spans unrelated files, ambiguous migration, or you're not confident): make no code changes ("out of scope"). Call `submit-pull-request-review` with event `COMMENT` whose body is the changelog's breaking-change/migration summary, so a human has full context. Stop.
 
