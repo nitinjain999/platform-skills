@@ -17,6 +17,7 @@ concurrency:
 permissions:
   contents: read
   pull-requests: read
+  issues: read
   checks: read
 engine: copilot
 tools:
@@ -41,9 +42,18 @@ tools:
 network:
   allowed:
     - defaults
+    - terraform
     - go
     - node
     - python
+pre-steps:
+  - name: Install actionlint
+    run: |
+      set -euo pipefail
+      curl -sLo /tmp/actionlint.tar.gz https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
+      echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  /tmp/actionlint.tar.gz" | sha256sum -c -
+      tar xz -C /tmp -f /tmp/actionlint.tar.gz actionlint
+      sudo mv /tmp/actionlint /usr/local/bin/
 safe-outputs:
   submit-pull-request-review:
     allowed-events: [APPROVE, COMMENT]
@@ -135,7 +145,7 @@ Do not approve or merge in this run. Instead:
   1. which pre-approved category matched (from Step 1),
   2. that all CI checks are green (from Step 2),
   3. a one-line summary confirming the release notes show no breaking changes (from Step 3).
-- Then call `merge-pull-request` for this PR.
+- Then call `merge-pull-request` for this PR, passing `merge_method: squash` explicitly. The tool's schema exposes `merge_method` as an optional `merge`/`squash`/`rebase` enum with no enforced default, so leaving it unset delegates the choice to the underlying merge behavior rather than guaranteeing squash, which is the intended strategy for keeping dependency-bump history linear.
 - If this is a `workflow_dispatch` run, pass the resolved PR number explicitly to both calls.
 
 ## Always
