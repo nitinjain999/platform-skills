@@ -38,7 +38,7 @@
       "matchManagers": ["terraform"],
       "matchDepTypes": ["required_provider"],
       "groupName": "Terraform providers",
-      "automerge": true,
+      "automerge": false,
       "automergeType": "pr",
       "minimumReleaseAge": "3 days",
       "matchUpdateTypes": ["minor", "patch"]
@@ -53,7 +53,7 @@
     {
       "description": "Helm charts - automerge patch only",
       "matchManagers": ["helmv3"],
-      "automerge": true,
+      "automerge": false,
       "automergeType": "pr",
       "minimumReleaseAge": "3 days",
       "matchUpdateTypes": ["patch"]
@@ -70,14 +70,14 @@
       "matchUpdateTypes": ["patch"],
       "matchCurrentVersion": "!/^0/",
       "labels": ["dependencies"],
-      "automerge": true,
+      "automerge": false,
       "minimumReleaseAge": "3 days",
       "automergeType": "pr"
     },
     {
       "description": "Go modules — automerge minor/patch",
       "matchManagers": ["gomod"],
-      "automerge": true,
+      "automerge": false,
       "automergeType": "pr",
       "minimumReleaseAge": "3 days",
       "matchUpdateTypes": ["minor", "patch"],
@@ -86,7 +86,7 @@
     {
       "description": "npm packages — automerge minor/patch",
       "matchManagers": ["npm"],
-      "automerge": true,
+      "automerge": false,
       "automergeType": "pr",
       "minimumReleaseAge": "3 days",
       "matchUpdateTypes": ["minor", "patch"],
@@ -95,7 +95,7 @@
     {
       "description": "Python packages — automerge minor/patch",
       "matchManagers": ["pip_requirements", "pip-compile", "pipenv", "poetry"],
-      "automerge": true,
+      "automerge": false,
       "automergeType": "pr",
       "minimumReleaseAge": "3 days",
       "matchUpdateTypes": ["minor", "patch"],
