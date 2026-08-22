@@ -14,7 +14,7 @@ Claude Code reads `CLAUDE.md` automatically at session start. The `## Agent Cont
 Agents apply via globs — open a file matching the agent's glob pattern and it activates.
 
 ### Codex
-Agents are registered in `agents/openai.yaml`. The skill activates on `$__SKILL_NAME__` prefix.
+Codex discovers `AGENTS.md` natively — no per-tool file to register. It walks from the Git root down to the working directory, merging any `AGENTS.override.md` files (which take precedence) up to a 32 KiB combined cap.
 
 ---
 

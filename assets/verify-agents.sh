@@ -18,14 +18,39 @@ info() { echo "ℹ️  $1 (not generated for this repo)"; }
 
 echo "=== Agent setup verification ==="
 check "AGENTS.md present" "test -f AGENTS.md"
+check "CLAUDE.md Agent Context" "grep -q '## Agent Context' CLAUDE.md"
+
+# Derive the expected agent roster from AGENTS.md's "## Agent roster" table so we can
+# check that every agent's file exists individually, not just that *a* file exists.
+ROSTER=$(awk '
+  /^## Agent roster/ { flag=1; next }
+  /^## / { flag=0 }
+  flag && /^\|/ {
+    name=$0
+    sub(/^\| */, "", name)
+    sub(/ *\|.*/, "", name)
+    if (name != "" && name !~ /^-+$/ && name != "Agent") print name
+  }
+' AGENTS.md 2>/dev/null)
 
 # Read which tool targets were generated from .platform-skills/manifest
 # Valid tokens: copilot-vscode, copilot-cloud, copilot-app, cursor, codex, windsurf, vscode-mcp
 # One token per line; lines starting with # are comments.
 
+COPILOT_CHECKED=0
 while read -r target; do
   case "$target" in
-    copilot-vscode|copilot-cloud) check "Copilot agent files" "ls .github/agents/*.agent.md" ;;
+    copilot-vscode|copilot-cloud)
+      [ "$COPILOT_CHECKED" -eq 1 ] && continue
+      COPILOT_CHECKED=1
+      if [ -n "$ROSTER" ]; then
+        for a in $ROSTER; do
+          check "Copilot agent: $a" "test -f .github/agents/$a.agent.md"
+        done
+      else
+        check "Copilot agent files" "ls .github/agents/*.agent.md"
+      fi
+      ;;
     copilot-app)  check "Copilot App setup"  "test -f .github/workflows/copilot-setup-steps.yml" ;;
     cursor)       check "Cursor rules"        "test -d .cursor/rules && ls .cursor/rules/*.mdc" ;;
     codex)        check "Codex config"        "test -f agents/openai.yaml" ;;
@@ -53,7 +78,7 @@ for agent in .github/agents/*.agent.md .cursor/rules/*.mdc; do
     [ -z "$p" ] && continue
     test -f "$p" || { echo "⚠️  $agent references missing file: $p"; FAIL=$((FAIL+1)); }
   done < <(echo "$BACKTICK_REFS" \
-    | grep -oE '[a-zA-Z0-9_./-]*(/[a-zA-Z0-9_.@-]+)+\.(py|ts|go|tf|yaml|yml|json|md|sh|kt|kts|rs|cs|rb|php|tpl)' \
+    | grep -oE '[a-zA-Z0-9_./-]*(/[a-zA-Z0-9_.@-]+)+\.(py|ts|go|tf|yaml|yml|json|md|sh|kt|kts|rs|cs|rb|php|tpl|hcl)' \
     | grep -vE '<[a-zA-Z]')
   # Check directory paths (trailing slash; single segment like src/ is valid)
   while read -r d; do

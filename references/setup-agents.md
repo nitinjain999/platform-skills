@@ -71,3 +71,5 @@ codex
 ```
 
 `scripts/verify-agents.sh` reads this file to know which checks to run. `generate` writes it at Step 9. `add` appends to it at Step 7. `upgrade` reads it to know which tool paths to scan.
+
+Note: `agents/openai.yaml` (the `codex` token's verified file) is setup-agents' own internal tooling metadata — a roster plus per-agent model record consumed by `verify-agents.sh` and `upgrade` mode. Codex itself does not read it; Codex discovers `AGENTS.md` / `AGENTS.override.md` natively (see the "Codex" subsection in `assets/AGENTS.md.template`).

@@ -661,11 +661,14 @@ jobs:
   validate-coverage:
     name: Coverage Scan
     runs-on: ubuntu-latest
+    outputs:
+      uncovered_count: ${{ steps.coverage.outputs.uncovered_count }}
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd  # v6.0.2
 
       - name: Check manager coverage
+        id: coverage
         run: |
           UNCOVERED=0
 
@@ -686,7 +689,7 @@ jobs:
             fi
           }
 
-          if find .github/workflows -name "*.yml" 2>/dev/null | grep -q .; then
+          if find .github/workflows \( -name "*.yml" -o -name "*.yaml" \) 2>/dev/null | grep -q .; then
             if grep -q '"github-actions"' renovate.json; then
               echo "✅ COVERED: GitHub Actions (github-actions)"
             else
@@ -713,6 +716,8 @@ jobs:
             echo "✅ All detected ecosystems are covered"
           fi
 
+          echo "uncovered_count=$UNCOVERED" >> "$GITHUB_OUTPUT"
+
   summary:
     name: Validation Summary
     runs-on: ubuntu-latest
@@ -727,7 +732,7 @@ jobs:
           printf "| Check | Status |\n|-------|--------|\n" >> $GITHUB_STEP_SUMMARY
           printf "| JSON Syntax | %s |\n" "${{ needs.validate-schema.result == 'success' && '✅ Passed' || '❌ Failed' }}" >> $GITHUB_STEP_SUMMARY
           printf "| Config Validator | %s |\n" "${{ needs.validate-config.result == 'success' && '✅ Passed' || '❌ Failed' }}" >> $GITHUB_STEP_SUMMARY
-          printf "| Coverage Scan | %s |\n" "${{ needs.validate-coverage.result == 'success' && '✅ Passed' || '⚠️ Warnings' }}" >> $GITHUB_STEP_SUMMARY
+          printf "| Coverage Scan | %s |\n" "${{ needs.validate-coverage.outputs.uncovered_count == '0' && '✅ Passed' || '⚠️ Warnings' }}" >> $GITHUB_STEP_SUMMARY
 
       - name: Enforce required checks
         run: |
