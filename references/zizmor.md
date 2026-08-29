@@ -210,6 +210,13 @@ zizmor --no-online-audits --gh-token "$(gh auth token)" example/example
 
 **Four audits are online-only** and silently do nothing offline: `impostor-commit`, `known-vulnerable-actions`, `ref-confusion`, `stale-action-refs`. If a review claims "zizmor is clean" from an offline run, that review did not check for impostor commits or known-vulnerable action versions.
 
+**Offline mode also changes severities on audits that do run.** Since v1.17.0 `artipacked` downgrades its finding when `actions/checkout` is v6.0.0 or newer, because v6 moved the persisted credential to `$RUNNER_TEMP`. Resolving a SHA pin to a version needs the network, so a SHA-pinned `actions/checkout@<sha>  # v7.0.1` reports **medium** offline (zizmor assumes the pre-v6 worst case) and **low** online (zizmor confirms v7). In a repo that SHA-pins every checkout, that single difference moves every `artipacked` finding between severity buckets. Do not compare a local `--offline` total against a CI total and conclude something regressed — reproduce CI's mode first:
+
+```bash
+# Reproduce what CI sees, including severity assignment
+GH_TOKEN="$(gh auth token)" zizmor --persona=regular .
+```
+
 ### Token permissions
 
 Zizmor generally needs **no special scopes** — the token exists mainly to lift API rate limits. Extra permissions are needed only for private inputs:

@@ -11,7 +11,8 @@ name: Zizmor
 # Output goes three places: a single sticky comment on the pull request, the
 # Security > Code scanning tab (category `zizmor`), and the job summary.
 #
-# This check is ADVISORY today — see ZIZMOR_FAIL_ON below.
+# This check BLOCKS on high-severity findings and reports everything else —
+# see ZIZMOR_FAIL_ON below.
 
 on:
   pull_request:
@@ -51,12 +52,17 @@ env:
   # Fail the job when a finding at or above this severity is present.
   # One of: none | informational | low | medium | high
   #
-  # Currently `none` (report, do not block). The repository carries a
-  # pre-existing backlog of findings, so a hard gate would fail every PR
-  # regardless of what that PR changed. Clear .github/workflows first, then
-  # set this to `high`, then to `medium`. Do not raise it before the backlog
-  # is gone — a gate that always fails gets ignored, then bypassed.
-  ZIZMOR_FAIL_ON: none
+  # `high`: the high and medium backlog is cleared (0 of each at v1.29.0,
+  # regular persona), so this gate now blocks only on new regressions.
+  #
+  # Not `medium` yet, for a reason that is not obvious: 103 `artipacked`
+  # findings remain, and that audit reports low online but medium offline —
+  # it downgrades when actions/checkout is v6.0.0+, and resolving a SHA pin
+  # to a version needs the network. At `medium` the gate would pass online
+  # and fail every PR the moment the token is missing or rate-limited.
+  # Raise to `medium` only after those findings are closed with an explicit
+  # persist-credentials on every checkout.
+  ZIZMOR_FAIL_ON: high
 
 jobs:
   audit:
