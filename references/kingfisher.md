@@ -305,12 +305,13 @@ kingfisher config init \
   --exclude '**/node_modules/**' \
   --format sarif \
   --output ./kingfisher.sarif \
-  --alert-webhook https://hooks.slack.com/services/T0/B0/AAA \
   > kingfisher.yaml
 
 kingfisher scan . --config ./kingfisher.yaml
 kingfisher scan . --config ./kingfisher.yaml --confidence low   # per-run override
 ```
+
+**Never pass `--alert-webhook` to `config init`.** A webhook URL is a bearer credential — anyone who can trigger a call to it can post as your security channel — and `kingfisher.yaml` is meant to be committed. Leave webhooks out of the generated file and inject them at scan time from a CI secret instead, as the [CI pattern](#ci-pattern) below does.
 
 ### Full schema
 
@@ -381,7 +382,9 @@ Unknown fields are rejected (typo protection). `rules.enabled` only *replaces* t
 kingfisher scan . \
   --config ./kingfisher.yaml \
   --alert-webhook "$SLACK_SECURITY_WEBHOOK"
-# --alert-webhook here is appended to any webhooks already in kingfisher.yaml
+# kingfisher.yaml intentionally has no webhooks baked in (see the config
+# init warning above) — this is how one gets added, from a CI secret, at
+# scan time, with nothing credential-bearing in the committed file
 ```
 
 Full worked example, including alert routing, in [CI integration](#ci-integration) below.
@@ -564,7 +567,11 @@ Chains **before** any existing `pre-commit` hook rather than replacing it.
 
 ```bash
 npx husky init
-echo 'curl -fsSL https://raw.githubusercontent.com/mongodb/kingfisher/main/scripts/kingfisher-pre-commit-auto.sh | bash' >> .husky/pre-commit
+# Pin the script to the v2.0.0 commit (not `main`) and pin the binary version
+# it installs — otherwise an upstream change to either runs on every
+# contributor's machine on their next commit, with no PR in this repo to
+# review it.
+echo 'curl -fsSL https://raw.githubusercontent.com/mongodb/kingfisher/50dd87544632716fbb029f0eda7326cd868bef68/scripts/kingfisher-pre-commit-auto.sh | KINGFISHER_VERSION=2.0.0 bash' >> .husky/pre-commit
 ```
 
 **State the caveat when installing any of these:** these hooks run locally and cannot enforce anything on a contributor who commits with `--no-verify` or on a clone that skipped hook install — the CI gate (below) is the actual control; the hook is a fast, friendly first line.
@@ -604,8 +611,11 @@ jobs:
 
       - name: Install kingfisher
         run: |
+          # Pin the raw script to the v2.0.0 commit, not the mutable `main`
+          # branch — otherwise --tag v2.0.0 only pins the binary, and upstream
+          # can still change what this job executes without a PR here.
           curl --silent --location --fail \
-            https://raw.githubusercontent.com/mongodb/kingfisher/main/scripts/install-kingfisher.sh | \
+            https://raw.githubusercontent.com/mongodb/kingfisher/50dd87544632716fbb029f0eda7326cd868bef68/scripts/install-kingfisher.sh | \
             bash -s -- --tag v2.0.0
           # install-kingfisher.sh places the binary in ~/.local/bin by default.
           # $GITHUB_PATH is the runner-safe way to make it available to later
@@ -614,11 +624,28 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Scan PR diff for secrets
+        env:
+          # Named env vars, resolved in shell — `${{ a || b }}` does not
+          # evaluate `||` between two context lookups, it silently picks
+          # empty string whenever `a` is unset.
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
         run: |
           set +e
+          BASE_SHA="${PR_BASE_SHA:-$PUSH_BEFORE_SHA}"
+          # On `push`, checkout has already moved the branch ref to this
+          # commit, so comparing against it (or against `origin/main`, which
+          # is the same commit on a direct push to main) diffs a commit
+          # against itself and finds nothing. `github.event.before` is the
+          # immutable pre-push SHA. A force-push or a branch's first push
+          # reports an all-zero `before`, so fall back to the parent commit.
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "0000000000000000000000000000000000000000" ]; then
+            BASE_SHA="HEAD~1"
+          fi
           kingfisher scan . \
-            --since-commit "origin/${{ github.event.pull_request.base.ref || 'main' }}" \
-            --branch "HEAD"
+            --since-commit "$BASE_SHA" \
+            --branch "HEAD" \
+            --redact
           rc=$?
           set -e
           case "$rc" in
@@ -636,7 +663,7 @@ Pin `--tag` to a specific released version so the gate doesn't silently change b
 ```yaml
       - name: Scan and emit SARIF
         run: |
-          kingfisher scan . --format sarif --output kingfisher.sarif || true
+          kingfisher scan . --format sarif --output kingfisher.sarif --redact || true
           # kingfisher's exit code still reflects findings; `|| true` here because
           # this step's job is producing the SARIF, not gating — do the gating
           # in a separate step against the live exit code (Option A), not this one.

@@ -267,11 +267,12 @@ kingfisher config init \
   --exclude '**/node_modules/**' \
   --format sarif \
   --output ./kingfisher.sarif \
-  --alert-webhook https://hooks.slack.com/services/T0/B0/AAA \
   > kingfisher.yaml
 ```
 
-State plainly, once, because it trips people: **this file is never auto-discovered.** Every invocation, local or CI, needs `--config kingfisher.yaml` explicitly or the file has no effect. Walk through: confidence/redaction defaults, exclude globs, skip-words for known fixture patterns, output format/path, and alert webhooks — and remind that scan-target inputs (paths, org/user/bucket flags, auth tokens) are deliberately **not** config-overridable; they stay on the CLI.
+**Never pass `--alert-webhook` to `config init`.** A webhook URL is a bearer credential, and `kingfisher.yaml` is meant to be committed — baking a webhook in serializes that credential straight into git. Leave webhooks out of the generated file and inject them at scan time from a CI secret (`--alert-webhook "$SLACK_SECURITY_WEBHOOK"`) instead, per `references/kingfisher.md` → CI pattern.
+
+State plainly, once, because it trips people: **this file is never auto-discovered.** Every invocation, local or CI, needs `--config kingfisher.yaml` explicitly or the file has no effect. Walk through: confidence/redaction defaults, exclude globs, skip-words for known fixture patterns, and output format/path — and remind that alert webhooks belong at runtime, not in this file, and that scan-target inputs (paths, org/user/bucket flags, auth tokens) are deliberately **not** config-overridable; they stay on the CLI.
 
 ## Mode: ci
 
