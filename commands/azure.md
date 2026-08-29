@@ -105,13 +105,14 @@ resource "azurerm_user_assigned_identity" "app" {
 }
 
 # Federated credential — links the Kubernetes service account to the managed identity
+# Requires azurerm >= 5.0.0. On 4.x and earlier this resource took parent_id plus
+# resource_group_name; 5.0.0 replaced both with user_assigned_identity_id.
 resource "azurerm_federated_identity_credential" "app" {
-  name                = "app-k8s-sa"
-  resource_group_name = azurerm_resource_group.this.name
-  parent_id           = azurerm_user_assigned_identity.app.id
-  audience            = ["api://AzureADTokenExchange"]
-  issuer              = azurerm_kubernetes_cluster.this.oidc_issuer_url
-  subject             = "system:serviceaccount:app-team:app-sa"
+  name                      = "app-k8s-sa"
+  user_assigned_identity_id = azurerm_user_assigned_identity.app.id
+  audience                  = ["api://AzureADTokenExchange"]
+  issuer                    = azurerm_kubernetes_cluster.this.oidc_issuer_url
+  subject                   = "system:serviceaccount:app-team:app-sa"
 }
 ```
 
