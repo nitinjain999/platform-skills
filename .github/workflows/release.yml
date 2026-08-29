@@ -140,15 +140,17 @@ jobs:
 
       - name: Validate no secrets in code
         run: |
-          # Keep the exclusion list in step with the identical scan in
-          # validate.yml ("Check for secrets in code"). Excluded here:
-          #   GitHub Actions variables, terraform backend config,
+          # Check for common secret patterns
+          # This exclusion list is duplicated in validate.yml ("Check for
+          # secrets in code"). Keep the two byte-identical — they have drifted
+          # before and it fails this gate, not that one.
+          # Exclude: GitHub Actions variables, terraform backend config,
           #   examples/ (templates — sensitive values always use var.xxx),
-          #   release.yml and validate.yml (both carry this regex, so both
-          #     self-match),
-          #   *.lock.yml (gh-aw generated workflows — machine-generated
-          #     mega-lines self-match, e.g. keyserver.ubuntu.com +
-          #     imageTag=sha256:...; the step below covers their source .md)
+          #   validate.yml and release.yml (both carry these regex patterns, and
+          #     the patterns self-match, so each file must exclude both),
+          #   *.lock.yml (gh-aw generated workflows — machine-generated mega-lines
+          #     self-match, e.g. keyserver.ubuntu.com + imageTag=sha256:...; their
+          #     source .md is covered by the next step, so no coverage is lost)
           POTENTIAL_SECRETS=$(grep -rE '(password|secret|key|token|apikey).*=.*["\x27][^"\x27]{8,}["\x27]' \
              --exclude-dir=.git \
              --exclude-dir=node_modules \
