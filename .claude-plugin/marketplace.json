@@ -7,8 +7,8 @@
   "plugins": [
     {
       "name": "platform-skills",
-      "version": "1.37.0",
-      "description": "Production-grade platform engineering handbook for Claude, Codex, and Cursor. 40 slash-command workflows: Kubernetes (baseline, RBAC, workload, debug), GitHub Actions (design, security, review, debug), Azure (Workload Identity, AKS, tagging, RBAC), OpenShift (SCC, Routes, GitOps, upgrades), Secrets (ESO, Sealed Secrets, rotation, audit), Helm, Terraform, Flux CD, Argo CD, AWS, Kyverno, OPA, KEDA, Karpenter, supply chain security, Falco, chaos engineering, DORA metrics, Datadog, Dynatrace, Linkerd, AWS MCP, Renovate, Checkov, Trivy, and multi-agent scaffolding. Every answer includes blast radius, validation steps, and rollback plan.",
+      "version": "1.38.0",
+      "description": "Production-grade platform engineering handbook for Claude, Codex, and Cursor. 41 slash-command workflows: Kubernetes (baseline, RBAC, workload, debug), GitHub Actions (design, security, review, debug), Azure (Workload Identity, AKS, tagging, RBAC), OpenShift (SCC, Routes, GitOps, upgrades), Secrets (ESO, Sealed Secrets, rotation, audit), Helm, Terraform, Flux CD, Argo CD, AWS, Kyverno, OPA, KEDA, Karpenter, supply chain security, Falco, chaos engineering, DORA metrics, Datadog, Dynatrace, Linkerd, AWS MCP, Renovate, Checkov, Trivy, Zizmor workflow auditing, and multi-agent scaffolding. Every answer includes blast radius, validation steps, and rollback plan.",
       "author": {
         "name": "Nitin Jain"
       },
@@ -171,7 +171,13 @@
         "iac-security",
         "pre-commit-hooks",
         "brownfield-baseline",
-        "fix-mode"
+        "fix-mode",
+        "zizmor",
+        "workflow-security",
+        "template-injection",
+        "actions-static-analysis",
+        "unpinned-uses",
+        "sarif"
       ],
       "source": {
         "source": "url",

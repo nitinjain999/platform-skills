@@ -55,6 +55,7 @@ const sidebars = {
         { type: 'doc', id: 'runtime-security' },
         { type: 'doc', id: 'trivy' },
         { type: 'doc', id: 'checkov' },
+        { type: 'doc', id: 'zizmor' },
         { type: 'doc', id: 'linkerd' },
       ],
     },

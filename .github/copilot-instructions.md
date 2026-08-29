@@ -1,5 +1,5 @@
 # Platform Engineering Instructions for GitHub Copilot
-# Version: 1.37.0
+# Version: 1.38.0
 # Source: https://github.com/nitinjain999/platform-skills
 # Scope: project-level — applies to every Copilot Chat session in this workspace
 # Install: ./install.sh --copilot --target /path/to/your-project
@@ -324,6 +324,7 @@ When reviewing any PR that touches infrastructure, check all six dimensions:
 - `references/agent-self-improve.md` — `.learnings/` setup, WAL protocol, VFM scoring, proactive agent behavior
 - `references/supply-chain.md` — Cosign signing, Syft SBOM, Trivy CVE gates, SLSA Level 2, Kyverno enforcement
 - `references/trivy.md` — image/fs/repo/SBOM/cluster CVE scanning, severity gating, Trivy Operator via Flux HelmRelease
+- `references/zizmor.md` — GitHub Actions workflow/action security audit, personas, `zizmor.yml` policy, exit-code gating, auto-fix, SARIF, pre-commit
 - `references/runtime-security.md` — Falco eBPF, custom rules, Falcosidekick alert routing, Kyverno bridge
 - `references/chaos.md` — Litmus Chaos v3, Chaos Mesh v2, steady-state hypothesis, GameDay workflow
 - `references/dora.md` — Deployment Frequency, Lead Time, Change Failure Rate, MTTR — GitHub Actions + Prometheus
