@@ -782,7 +782,7 @@ Full input surface (v0.6.2):
 | Input | Default | Notes |
 |---|---|---|
 | `inputs` | `"."` | Whitespace-separated, split with shell rules |
-| `collect` | `default` | `all`, `default`, `workflows`, `actions`, `dependabot` |
+| `collect` | `default` | Action's own docs list `all`, `default`, `workflows`, `actions`, `dependabot`. The value is passed verbatim to `--collect=`, so `pre-commit` and comma-combined lists also work |
 | `online-audits` | `"true"` | |
 | `persona` | `regular` | `regular`, `pedantic`, `auditor` |
 | `min-severity` | — | `unknown`, `informational`, `low`, `medium`, `high` |
@@ -808,7 +808,9 @@ Output: `output-file` — path to the generated SARIF.
        annotations: true
    ```
 
-2. **`advanced-security: true` means SARIF, and SARIF means exit codes 11+ are suppressed.** The job goes green even with high-severity findings. Findings land as code-scanning alerts, and blocking merges is then a **ruleset / branch-protection** decision, not a workflow-exit decision. If you want the job itself to fail, use Option B or add a second non-SARIF run.
+2. **`advanced-security: true` means SARIF, and SARIF means exit codes 11+ are suppressed.** The job goes green even with high-severity findings. Findings land as code-scanning alerts, and blocking merges is then a **ruleset / branch-protection** decision, not a workflow-exit decision. If you want the job itself to fail, use Option B, add a second non-SARIF run, or gate on the SARIF you already have (Option D).
+
+3. **The action exposes no `--strict-collection` input.** So the usual guardrail — turn parse warnings into failures, so "0 findings" cannot mean "0 files audited" — is not available here. `fail-on-no-inputs: true` (the default) covers the worst case by surfacing exit code 3 when *nothing* was collected, but a single malformed workflow inside a larger set is still skipped with a warning. If that distinction matters, use Option B.
 
 Pin `version` for reproducibility:
 
@@ -898,6 +900,66 @@ jobs:
 ```
 
 This job needs `security-events: write` for the upload step.
+
+### Option D — one run: SARIF alerts, a PR comment, and a gate you control
+
+Options B and C run zizmor twice: once for SARIF, once with live exit codes so something can fail. That is wasteful and, worse, the two runs can disagree if anything changes between them.
+
+The SARIF already carries the severity, so a single run is enough. Every zizmor result includes:
+
+```json
+"properties": {
+  "zizmor/severity": "High",
+  "zizmor/confidence": "Low",
+  "zizmor/persona": "Regular"
+}
+```
+
+Parse that and you own the threshold, in one place, without a second audit.
+
+```yaml
+      - name: Run zizmor
+        id: zizmor
+        uses: zizmorcore/zizmor-action@3dc1ecc9bcb9e94e9b2c709687979e1298497054  # v0.6.2
+        with:
+          version: 1.29.0
+          inputs: .
+          advanced-security: true   # SARIF -> Security tab, and exposes output-file
+          fail-on-no-inputs: true
+
+      - name: Gate on severity
+        env:
+          SARIF_FILE: ${{ steps.zizmor.outputs.output-file }}
+          # none | informational | low | medium | high
+          FAIL_ON: high
+        run: |
+          set -euo pipefail
+          [ "${FAIL_ON}" = "none" ] && exit 0
+
+          n=$(jq --arg want "${FAIL_ON}" '
+            {high: 4, medium: 3, low: 2, informational: 1}[$want] as $t
+            | {High: 4, Medium: 3, Low: 2, Informational: 1} as $rank
+            | [ .runs[0].results[]
+                | select(($rank[.properties["zizmor/severity"]] // 0) >= $t) ]
+            | length
+          ' "${SARIF_FILE}")
+
+          [ "$n" -eq 0 ] || { echo "::error::${n} finding(s) at or above ${FAIL_ON}"; exit 1; }
+```
+
+The same SARIF drives a PR comment. Group by severity and by path prefix so the comment says something a reviewer can act on, cap the table, and leave the long tail in the Security tab. Use `github.paginate` when looking for your own previous comment — `listComments` returns 30 by default, so on a busy PR the marker is never found and you post a fresh comment on every push.
+
+**Rolling this out on a repository that has never run zizmor.** Do not start blocking. A first run on an established repo typically returns tens to hundreds of findings, most of them `artipacked` and `template-injection`; a gate that fails every PR from day one gets routed around, not fixed. Ship it advisory, with one knob:
+
+```yaml
+env:
+  # Raise to `high` once .github/workflows is clean, then to `medium`.
+  ZIZMOR_FAIL_ON: none
+```
+
+State the mode in the PR comment itself — "advisory, does not block the merge" — so nobody reads a green check as an all-clear. Then burn the backlog down by audit, not by file: every `artipacked` finding is one `persist-credentials: false`, and `--fix=safe` handles a large share of them in a single commit.
+
+This repository's own [`.github/workflows/zizmor.yml`](https://github.com/nitinjain999/platform-skills/blob/main/.github/workflows/zizmor.yml) is the working version of this pattern.
 
 ---
 

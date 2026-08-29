@@ -1,0 +1,293 @@
+name: Zizmor
+
+# Audits this repository's GitHub Actions definitions with zizmor.
+#
+# Scope is the whole repo, which covers two distinct things:
+#   1. .github/workflows/**  — this repository's own CI.
+#   2. examples/**           — composite actions and example workflows that
+#                              users copy into their own repos, so they are
+#                              in scope for the same standard.
+#
+# Output goes three places: a single sticky comment on the pull request, the
+# Security > Code scanning tab (category `zizmor`), and the job summary.
+#
+# This check is ADVISORY today — see ZIZMOR_FAIL_ON below.
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+      - '.github/dependabot.yml'
+      - '.github/zizmor.yml'
+      - '.pre-commit-config.yaml'
+      - 'examples/github-actions/**'
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/**'
+      - '.github/actions/**'
+      - '.github/dependabot.yml'
+      - '.github/zizmor.yml'
+      - '.pre-commit-config.yaml'
+      - 'examples/github-actions/**'
+  workflow_dispatch:
+
+concurrency:
+  group: zizmor-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+# Deny by default. Each job grants only what it needs.
+permissions: {}
+
+env:
+  # Pinned so a new zizmor release cannot change this check's verdict without
+  # a commit. Renovate keeps it current.
+  ZIZMOR_VERSION: 1.29.0
+
+  # Fail the job when a finding at or above this severity is present.
+  # One of: none | informational | low | medium | high
+  #
+  # Currently `none` (report, do not block). The repository carries a
+  # pre-existing backlog of findings, so a hard gate would fail every PR
+  # regardless of what that PR changed. Clear .github/workflows first, then
+  # set this to `high`, then to `medium`. Do not raise it before the backlog
+  # is gone — a gate that always fails gets ignored, then bypassed.
+  ZIZMOR_FAIL_ON: none
+
+jobs:
+  audit:
+    name: Audit workflows and actions
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read # check out the definitions being audited
+      security-events: write # upload the SARIF to Security > Code scanning
+      pull-requests: write # post the findings comment on the PR
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          # Nothing here pushes. Leaving the token in .git/config is exactly
+          # what zizmor's own `artipacked` audit flags.
+          persist-credentials: false
+
+      - name: Run zizmor
+        id: zizmor
+        uses: zizmorcore/zizmor-action@3dc1ecc9bcb9e94e9b2c709687979e1298497054  # v0.6.2
+        with:
+          version: ${{ env.ZIZMOR_VERSION }}
+          inputs: .
+          persona: regular
+          # The four online audits (impostor-commit, known-vulnerable-actions,
+          # ref-confusion, stale-action-refs) need a GitHub token. The default
+          # GITHUB_TOKEN is sufficient — they only read public metadata.
+          online-audits: true
+          token: ${{ github.token }}
+          # SARIF output. Two effects: results land in the Security tab, and
+          # `output-file` gives the next step machine-readable findings.
+          # Mutually exclusive with `annotations: true`.
+          #
+          # Note: --format=sarif suppresses zizmor's severity exit codes
+          # (11-14), so this step succeeds even with high-severity findings.
+          # The gate is therefore explicit, in the last step of this job.
+          advanced-security: true
+          # Exit non-zero if zizmor collected nothing, so "0 findings" can
+          # never quietly mean "0 files audited". The action exposes no
+          # --strict-collection input, so this is the available guard.
+          fail-on-no-inputs: true
+
+      - name: Build findings report
+        id: report
+        env:
+          SARIF_FILE: ${{ steps.zizmor.outputs.output-file }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          SECURITY_URL: ${{ github.server_url }}/${{ github.repository }}/security/code-scanning?query=tool%3Azizmor
+          # Rows shown per table before collapsing into a "and N more" line.
+          MAX_ROWS: 25
+        run: |
+          set -euo pipefail
+
+          if [[ ! -s "${SARIF_FILE}" ]]; then
+            echo "::error::zizmor produced no SARIF at '${SARIF_FILE}'"
+            exit 1
+          fi
+
+          findings="${RUNNER_TEMP}/findings.tsv"
+          report="${RUNNER_TEMP}/zizmor-report.md"
+
+          # severity, rule, docs URL, path, line, message — one finding per line.
+          # Pipes in the message are escaped so they cannot break the Markdown table.
+          jq -r '
+            ((.runs[0].tool.driver.rules // [])
+              | map({key: .id, value: (.helpUri // "https://docs.zizmor.sh/audits/")})
+              | from_entries) as $help
+            | .runs[0].results[]
+            | [ (.properties["zizmor/severity"] // "Unknown"),
+                (.ruleId | sub("^zizmor/"; "")),
+                ($help[.ruleId] // "https://docs.zizmor.sh/audits/"),
+                (.locations[0].physicalLocation.artifactLocation.uri // "unknown"),
+                ((.locations[0].physicalLocation.region.startLine // 0) | tostring),
+                (.message.text | gsub("[\r\n]+"; " ") | gsub("\\|"; "\\\\|"))
+              ]
+            | @tsv
+          ' "${SARIF_FILE}" > "${findings}"
+
+          count() { # count <severity|any> <scope-regex>
+            awk -F'\t' -v sev="$1" -v scope="$2" \
+              '($4 ~ scope) && (sev == "any" || $1 == sev) { n++ } END { print n+0 }' "${findings}"
+          }
+
+          total=$(count any '.')
+          # Character classes rather than backslash escapes: awk warns about
+          # unknown escape sequences in a dynamic regex.
+          own='^[.]github/'
+          ex='^examples/'
+
+          # Backticks in the strings below are Markdown, not command substitution.
+          # shellcheck disable=SC2016
+          {
+            echo '<!-- zizmor-report -->'
+            echo '## 🌈 zizmor — GitHub Actions security audit'
+            echo
+            printf 'zizmor `%s` · persona `regular` · online audits enabled\n\n' "${ZIZMOR_VERSION}"
+
+            if [[ "${ZIZMOR_FAIL_ON}" == "none" ]]; then
+              echo '**Advisory — this check reports findings and does not block the merge.**'
+            else
+              printf '**Blocking at `%s` severity and above.**\n' "${ZIZMOR_FAIL_ON}"
+            fi
+            echo
+
+            if [[ "${total}" -eq 0 ]]; then
+              echo 'No findings. 🎉'
+            else
+              echo '| Severity | This repo'"'"'s CI | Shipped examples | Total |'
+              echo '|---|---|---|---|'
+              for sev in High Medium Low Informational; do
+                printf '| %s | %s | %s | %s |\n' \
+                  "${sev}" "$(count "${sev}" "${own}")" "$(count "${sev}" "${ex}")" "$(count "${sev}" '.')"
+              done
+              echo
+            fi
+          } > "${report}"
+
+          # table <heading> <scope-regex> — High and Medium only; the long tail
+          # lives in the Security tab, not in a PR comment nobody reads.
+          table() {
+            local heading="$1" scope="$2" rows shown
+            # "High" sorts before "Medium" ascending, which is the order we want.
+            rows=$(awk -F'\t' -v scope="${scope}" \
+              '($4 ~ scope) && ($1 == "High" || $1 == "Medium") { print }' "${findings}" \
+              | sort -t$'\t' -k1,1 -k4,4 -k5,5n)
+            [[ -z "${rows}" ]] && return 0
+
+            shown=$(printf '%s\n' "${rows}" | wc -l | tr -d ' ')
+            {
+              printf '\n### %s — %s high/medium\n\n' "${heading}" "${shown}"
+              echo '| Severity | Rule | Location | Finding |'
+              echo '|---|---|---|---|'
+              printf '%s\n' "${rows}" | head -n "${MAX_ROWS}" | \
+                awk -F'\t' '{ printf "| %s | [%s](%s) | `%s:%s` | %s |\n", $1, $2, $3, $4, $5, $6 }'
+              if [[ "${shown}" -gt "${MAX_ROWS}" ]]; then
+                printf '\n_… and %s more._\n' "$(( shown - MAX_ROWS ))"
+              fi
+            } >> "${report}"
+          }
+
+          table "This repo's CI (.github/)" "${own}"
+          table 'Shipped examples (examples/)' "${ex}"
+
+          # shellcheck disable=SC2016
+          if [[ "${total}" -gt 0 ]]; then
+            {
+              printf '\nLow and informational findings are not listed here. '
+              printf 'Full results: [Security → Code scanning](%s) · [job summary](%s).\n' \
+                "${SECURITY_URL}" "${RUN_URL}"
+              printf '\nTriage any single finding with `/platform-skills:zizmor triage <rule>`.\n'
+            } >> "${report}"
+          fi
+
+          cat "${report}" >> "${GITHUB_STEP_SUMMARY}"
+
+          {
+            echo "report-file=${report}"
+            echo "findings-file=${findings}"
+            echo "total=${total}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Comment findings on the pull request
+        # Forked PRs get a read-only token, so the comment would 403. The
+        # audit and the annotations still run for them.
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9.0.0
+        env:
+          REPORT_FILE: ${{ steps.report.outputs.report-file }}
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- zizmor-report -->';
+            const body = fs.readFileSync(process.env.REPORT_FILE, 'utf8');
+
+            // paginate() — listComments returns only 30 results without it,
+            // so a busy PR would never match the marker and would accumulate
+            // a new comment on every push.
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              per_page: 100,
+            });
+
+            const existing = comments.find(
+              (c) => c.user.type === 'Bot' && c.body && c.body.includes(marker),
+            );
+
+            if (existing) {
+              await github.rest.issues.updateComment({
+                ...context.repo,
+                comment_id: existing.id,
+                body,
+              });
+              core.info(`Updated zizmor comment: ${existing.html_url}`);
+            } else {
+              const { data } = await github.rest.issues.createComment({
+                ...context.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+              core.info(`Created zizmor comment: ${data.html_url}`);
+            }
+
+      - name: Gate on severity
+        env:
+          FINDINGS_FILE: ${{ steps.report.outputs.findings-file }}
+        run: |
+          set -euo pipefail
+
+          case "${ZIZMOR_FAIL_ON}" in
+            none)          echo "ZIZMOR_FAIL_ON=none — advisory only, not gating."; exit 0 ;;
+            high)          threshold=4 ;;
+            medium)        threshold=3 ;;
+            low)           threshold=2 ;;
+            informational) threshold=1 ;;
+            *)
+              echo "::error::ZIZMOR_FAIL_ON must be one of none|informational|low|medium|high (got '${ZIZMOR_FAIL_ON}')"
+              exit 1
+              ;;
+          esac
+
+          blocking=$(awk -F'\t' -v t="${threshold}" '
+            { rank = ($1 == "High") ? 4 : ($1 == "Medium") ? 3 : ($1 == "Low") ? 2 : ($1 == "Informational") ? 1 : 0 }
+            rank >= t { n++ }
+            END { print n+0 }
+          ' "${FINDINGS_FILE}")
+
+          if [[ "${blocking}" -gt 0 ]]; then
+            echo "::error::${blocking} zizmor finding(s) at or above '${ZIZMOR_FAIL_ON}' severity"
+            exit 1
+          fi
+
+          echo "No zizmor findings at or above '${ZIZMOR_FAIL_ON}' severity."

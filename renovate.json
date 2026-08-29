@@ -92,6 +92,12 @@
       "groupName": "npm packages"
     },
     {
+      "description": "Hold TypeScript on 6.x. TypeScript 7 removed the 'baseUrl' compiler option, and @docusaurus/tsconfig 3.10.x still sets it, so 'npm run typecheck' fails with TS5102 on any 7.x. The option is inherited from the package, so it cannot be overridden locally. Lift this cap once Docusaurus ships a tsconfig without baseUrl.",
+      "matchDatasources": ["npm"],
+      "matchPackageNames": ["typescript"],
+      "allowedVersions": "<7"
+    },
+    {
       "description": "Python packages — minor/patch, merged by renovate-gate",
       "matchManagers": ["pip_requirements", "pip-compile", "pipenv", "poetry"],
       "automerge": false,

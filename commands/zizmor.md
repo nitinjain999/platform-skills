@@ -186,6 +186,8 @@ zizmor --strict-collection \
 
 `--no-ignores` (v1.25.0+) re-surfaces everything currently suppressed by `zizmor.yml` and inline comments. That is the point of an audit: suppressions rot, and a review that trusts them is not a review.
 
+`--collect=all` here means "ignore `.gitignore` while collecting", not "collect more input kinds" — default collection already finds workflows, `action.yml`, Dependabot and pre-commit configs. It belongs in an audit and nowhere else: it is materially slower on any repo with a large ignored tree, and a gate does not need it.
+
 State up front that the auditor persona is documented to include likely false positives, so a raw count from this mode is not a security score. Present findings in three buckets: **confirmed**, **needs repo context to judge**, **likely false positive**.
 
 ## Mode: fix
