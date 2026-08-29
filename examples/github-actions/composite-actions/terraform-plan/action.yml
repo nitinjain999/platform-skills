@@ -94,7 +94,7 @@ runs:
     # ── 2. Authenticate — AWS OIDC ────────────────────────────────────────────
     - name: Configure AWS credentials (OIDC)
       if: inputs.aws_role_arn != ''
-      uses: aws-actions/configure-aws-credentials@517a711dbcd0e402f90c77e7e2f81e849156e31d  # v6.2.2
+      uses: aws-actions/configure-aws-credentials@e6de054238d6b7531b4efff3b6587d9aade6a06c  # v6.2.3
       with:
         role-to-assume: ${{ inputs.aws_role_arn }}
         aws-region: ${{ inputs.aws_region }}
@@ -103,7 +103,7 @@ runs:
     # ── 3. Authenticate — Azure OIDC ──────────────────────────────────────────
     - name: Configure Azure credentials (OIDC)
       if: inputs.azure_client_id != ''
-      uses: azure/login@532459ea530d8321f2fb9bb10d1e0bcf23869a43  # v3.0.0
+      uses: azure/login@7ddb5af1ef8758cf1353cf3b42f940aee27ba21c  # v3.0.2
       with:
         client-id: ${{ inputs.azure_client_id }}
         tenant-id: ${{ inputs.azure_tenant_id }}
