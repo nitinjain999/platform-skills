@@ -12,10 +12,10 @@ on:
       - 'CHANGELOG.md'
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+# Deny by default; each job grants only what it needs. Granting pages: write and
+# id-token: write at the workflow level handed them to the build job too, which
+# only reads the repo — and that job is the one that runs third-party npm code.
+permissions: {}
 
 concurrency:
   group: pages
@@ -25,6 +25,8 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read        # checkout only; the artifact upload needs nothing more
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -53,6 +55,9 @@ jobs:
     name: Deploy
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write          # publish the Pages deployment
+      id-token: write       # OIDC token deploy-pages exchanges for the upload
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

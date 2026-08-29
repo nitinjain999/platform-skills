@@ -20,7 +20,12 @@ jobs:
         with:
           token: ${{ secrets.TESSL_TOKEN }}
       - name: Set version in tile.json
+        env:
+          # A workflow_dispatch input is caller-supplied. ${{ }} is substituted
+          # before bash parses the line, so interpolating it directly into the
+          # run: block would let the caller inject shell.
+          VERSION: ${{ inputs.version }}
         run: |
-          jq --arg v "${{ inputs.version }}" '.version = $v' tile.json > tile.json.tmp && mv tile.json.tmp tile.json
+          jq --arg v "${VERSION}" '.version = $v' tile.json > tile.json.tmp && mv tile.json.tmp tile.json
       - name: Publish skill
         run: tessl tile publish .

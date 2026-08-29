@@ -56,7 +56,12 @@ pre-steps:
       tar xz -C /tmp -f /tmp/actionlint.tar.gz actionlint
       sudo mv /tmp/actionlint /usr/local/bin/
   - name: Install Terraform
-    uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e  # v4.0.1
+    # Reference the tag here, not the SHA. gh-aw resolves it and writes the SHA
+    # pin into renovate-gate.lock.yml plus .github/aw/actions-lock.json, so what
+    # runs is still immutable. Hand-pinning the SHA here makes the compiler emit
+    # `@<sha> # <sha>` in the lock — a version comment that does not name a
+    # version — which zizmor reports as ref-version-mismatch.
+    uses: hashicorp/setup-terraform@v4.0.1
     with:
       terraform_version: 1.15.8
       terraform_wrapper: false

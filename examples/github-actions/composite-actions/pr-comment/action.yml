@@ -101,6 +101,11 @@ runs:
         INPUT_ICON: ${{ inputs.icon }}
         INPUT_COLLAPSIBLE: ${{ inputs.collapsible }}
         INPUT_SUMMARY: ${{ inputs.collapsible_summary }}
+        # ${{ }} inside script: is substituted before Node parses the source, so
+        # an expression containing a backtick or ${ escapes the template literal.
+        # Everything the script reads goes through env, same as the inputs above.
+        WORKFLOW_NAME: ${{ github.workflow }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       with:
         github-token: ${{ inputs.github_token }}
         script: |
@@ -124,7 +129,7 @@ runs:
             '',
             formattedBody,
             '',
-            `_Posted by \`${{ github.workflow }}\` · [View run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})_`,
+            `_Posted by \`${process.env.WORKFLOW_NAME}\` · [View run](${process.env.RUN_URL})_`,
           ].join('\n');
 
           const prNumber = context.issue?.number ?? context.payload?.pull_request?.number;

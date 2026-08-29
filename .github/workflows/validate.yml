@@ -42,9 +42,12 @@ concurrency:
   group: validate-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
+# contents: read is all any job here needs — every one of them only checks out and
+# inspects files. pull-requests: write was granted but never used, and this
+# workflow runs on pull_request, so it handed a comment/label-write token to jobs
+# that npm-install and download third-party linters.
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
   detect-changes:
