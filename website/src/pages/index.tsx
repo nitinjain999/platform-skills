@@ -10,7 +10,7 @@ function Hero() {
   return (
     <div className="hero-section">
       <div className="hero-section__eyebrow">
-        v1.36.0 &mdash;{' '}
+        v1.38.0 &mdash;{' '}
         <a href="https://github.com/nitinjain999/platform-skills/blob/main/CHANGELOG.md">
           What&apos;s new
         </a>
@@ -89,6 +89,13 @@ const STAR_SCENARIOS = [
     result: 'Every thread triaged: ACTIONABLE ones fixed and committed, INFORMATIONAL ones answered, NOT_APPLICABLE ones closed with a reason. Summary table printed.',
   },
   {
+    tag: 'CI/CD',
+    situation: 'Your workflows have never been audited. Someone asks whether a PR from a fork could steal your deploy credentials.',
+    task: 'Audit every workflow and composite action, separate real exposure from noise, and decide what to pin and what to fix first.',
+    command: '/platform-skills:zizmor',
+    result: 'Findings grouped by severity with the four online-only audits named explicitly, an explicit hash-pin vs semver-tag decision (SHA recommended, and why), auto-fixable items applied as a reviewable diff, and a CI gate that starts advisory instead of blocking every PR on day one.',
+  },
+  {
     tag: 'Infrastructure',
     situation: 'Security asks if a Terraform change is safe to apply to production. You have 20 minutes.',
     task: 'Scan against the actual plan (not just source), surface HIGH/CRITICAL findings, map them to SOC 2 controls.',
@@ -156,7 +163,7 @@ const FEATURES = [
   {
     icon: '⚙️',
     title: 'GitHub Actions',
-    desc: 'OIDC federation, SHA pinning, token scoping, composite actions, workflow security review',
+    desc: 'OIDC federation, SHA pinning, token scoping, composite actions, zizmor workflow audit',
   },
   {
     icon: '🔐',
@@ -178,7 +185,7 @@ const FEATURES = [
 function FeatureStrip() {
   return (
     <section className="feature-strip">
-      <h2 className="feature-strip__heading">40 commands. Every domain a platform team touches.</h2>
+      <h2 className="feature-strip__heading">41 commands. Every domain a platform team touches.</h2>
       <div className="feature-grid">
         {FEATURES.map((f) => (
           <div className="feature-tile" key={f.title}>

@@ -277,7 +277,7 @@ gh pr create \
 - [ ] Test workflow passes on this branch
 - [ ] Matrix covers all input combinations
 - [ ] `actionlint` passes
-- [ ] `zizmor --strict-collection --collect=all .` reports no medium or high findings
+- [ ] `zizmor --strict-collection .` reports no medium or high findings
 - [ ] Tested locally with `act`
 - [ ] README inputs/outputs table reviewed
 - [ ] Secret inputs confirmed to use `env:` isolation
@@ -556,7 +556,7 @@ Next steps:
 
 Full documentation: `references/composite-actions.md`
 
-For a security audit of the generated `action.yml` and its test/release workflows — template injection in `run:` steps, unpinned `uses:`, credential persistence, over-broad `permissions:` — run `zizmor --collect=all` or use `/platform-skills:zizmor`. Note that composite-action findings cannot be suppressed from `.github/zizmor.yml`; only inline `# zizmor: ignore[rule]` comments work there.
+For a security audit of the generated `action.yml` and its test/release workflows — template injection in `run:` steps, unpinned `uses:`, credential persistence, over-broad `permissions:` — run `zizmor --strict-collection .` or use `/platform-skills:zizmor`. Default collection already picks up `action.yml` alongside the workflows, so no `--collect=` flag is needed; `--collect=all` only adds paths your `.gitignore` excludes, at a real speed cost. Note that composite-action findings cannot be suppressed from `.github/zizmor.yml`; only inline `# zizmor: ignore[rule]` comments work there.
 
 Examples:
 - `examples/github-actions/composite-actions/docker-build-push/` — GHCR push, OIDC, multi-platform
