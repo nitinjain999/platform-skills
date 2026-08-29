@@ -78,7 +78,13 @@ cargo install --locked zizmor
 ### Docker
 
 ```bash
-docker pull ghcr.io/zizmorcore/zizmor:latest
+# Pin the tag. `:latest` moves under you, so a CI run that passed yesterday
+# can fail today on audits that did not exist when you wrote the gate.
+docker pull ghcr.io/zizmorcore/zizmor:1.29.0
+
+# Pin the digest where reproducibility matters. A tag is a mutable pointer;
+# zizmor's own `unpinned-images` audit flags tag-only image references.
+docker pull ghcr.io/zizmorcore/zizmor:1.29.0@sha256:863026d54f91271b10b60b67ad8054cb37120167e162482597db102b3026a284
 ```
 
 Also packaged for conda-forge, Nix, Arch (`pacman -S zizmor`), and Alpine/Chimera (`apk add zizmor`).
@@ -394,7 +400,9 @@ Findings **not** visible under the default persona:
 
 ### Auto-fixable audits
 
-`artipacked`, `bot-conditions`, `cache-poisoning`, `dependabot-cooldown`, `dependabot-execution`, `impostor-commit`, `insecure-commands`, `known-vulnerable-actions`, `misfeature`, `obfuscation`, `ref-version-mismatch`, `self-repository`, `template-injection`, `unpinned-uses`, `unsound-condition`.
+Available in the v1.29.0 baseline: `artipacked`, `bot-conditions`, `cache-poisoning`, `dependabot-cooldown`, `dependabot-execution`, `impostor-commit`, `insecure-commands`, `known-vulnerable-actions`, `misfeature`, `obfuscation`, `ref-version-mismatch`, `template-injection`, `unpinned-uses`, `unsound-condition`.
+
+Auto-fixable but **not** in the v1.29.0 baseline: `self-repository` (v1.30.0+). `--fix` will not touch it on an older binary, so do not count it toward what a fix run will clean up.
 
 ---
 
