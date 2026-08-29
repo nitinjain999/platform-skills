@@ -11,6 +11,19 @@ on:
         description: "Renovate PR number to (re-)evaluate manually"
         type: number
         required: true
+# `bots:` above is an allowlist that lets renovate[bot] past the bot-author check
+# in pre_activation. It does NOT restrict the workflow to Renovate — a human PR
+# from anyone with write access still satisfies the role check and starts the
+# agent, burning a Copilot request to reach Step 1 and noop. Gate on the author
+# instead, before activation.
+#
+# 29139614 is renovate[bot] (`gh api users/renovate%5Bbot%5D`). Matching on the
+# immutable id rather than the login means a renamed or impersonated account
+# cannot satisfy it. workflow_dispatch has no pull_request payload, so it is
+# allowed through explicitly and Step 1 re-verifies the author for that path.
+if: >-
+  github.event_name == 'workflow_dispatch' ||
+  github.event.pull_request.user.id == 29139614
 concurrency:
   group: renovate-gate-${{ github.event.pull_request.number || inputs.pr_number }}
   cancel-in-progress: false
@@ -113,7 +126,7 @@ You review pull requests opened by `renovate[bot]` against a pre-approved, low-r
 ## Step 1 — Resolve the target PR and re-verify scope
 
 - If this run was triggered by `workflow_dispatch`, the target PR number is `${{ inputs.pr_number }}`. Otherwise it is the triggering pull request.
-- Confirm the PR author is `renovate[bot]`. If not, call `noop` with that reason and stop.
+- Confirm the PR author is `renovate[bot]`. If not, call `noop` with that reason and stop. On the `pull_request` path the frontmatter `if:` has already guaranteed this, so the check is redundant there and you should pass it immediately; on the `workflow_dispatch` path it is the only author check, because `pr_number` is whatever the operator typed.
 
 ### Deny-list — apply this BEFORE matching any category
 

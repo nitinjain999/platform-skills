@@ -5,6 +5,12 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **`.github/workflows/renovate-gate.md` ran on human pull requests** — `bots: ["renovate[bot]"]` is an allowlist that lets Renovate past the bot-author check in `pre_activation`; it does not restrict the workflow to Renovate. Any PR from an account with write access satisfied the role check and started the agent, which then spent a Copilot request reaching Step 1 only to `noop` on the author. A frontmatter `if:` now gates on `github.event.pull_request.user.id == 29139614` (renovate[bot]'s immutable id, so a renamed or impersonated login cannot satisfy it), with `workflow_dispatch` allowed through for manual re-evaluation. gh-aw compiles the condition into both `pre_activation` and `activation`, so on a human PR every job skips before a runner starts
+
 ## [1.38.0] - 2026-08-29
 
 Brings the count to 41 command workflows.
