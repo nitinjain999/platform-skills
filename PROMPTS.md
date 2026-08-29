@@ -78,6 +78,10 @@ Use $platform-skills to harden this GitHub Actions workflow. Check permissions, 
 Generate a GitHub Actions pipeline for Terraform with fmt, validate, tflint, checkov, plan, approval gates, and least-privilege OIDC.
 ```
 
+```text
+/platform-skills:zizmor audit every workflow in this repo. Show me template injection, credential persistence, unpinned uses, and over-broad permissions, ranked by severity.
+```
+
 ## AWS, Azure, And Cloud
 
 ```text
@@ -104,6 +108,10 @@ Review this supply chain pipeline for Cosign signing, SBOM generation, provenanc
 
 ```text
 /platform-skills:trivy is this container image safe to ship? Set up a CI severity gate with SARIF upload and a .trivyignore policy.
+```
+
+```text
+/platform-skills:zizmor add a workflow security gate to CI. Block on medium and high findings, upload SARIF to the Security tab, and generate a .github/zizmor.yml policy that hash-pins every third-party action.
 ```
 
 ```text

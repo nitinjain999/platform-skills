@@ -341,13 +341,18 @@ Caused by accessing a context that does not exist for the triggering event (e.g.
 ### Validation command
 
 ```bash
-# Lint the workflow file locally before pushing
+# Lint the workflow file locally before pushing — syntax, expressions, shell
 actionlint .github/workflows/<workflow>.yml
+
+# Audit the same file for security findings — a valid workflow can still be unsafe
+zizmor --strict-collection .github/workflows/<workflow>.yml
 
 # Check recent run failures with full logs
 gh run list --workflow <workflow>.yml --limit 10
 gh run view <run-id> --log-failed
 ```
+
+`actionlint` and `zizmor` do not overlap. `actionlint` answers "is this workflow **valid**" (syntax, expression types, `shellcheck` on `run:`). `zizmor` answers "is this workflow **safe**" (template injection, credential persistence, unpinned `uses:`, over-broad `permissions:`, impostor commits). Run both. For the full audit catalogue, policy file, and CI gate: `/platform-skills:zizmor`.
 
 ---
 
@@ -366,6 +371,8 @@ gh run view <run-id> --log-failed
 Full guidance: `references/github-actions.md`
 
 For composite action scaffolding and review: `/platform-skills:composite-actions`
+
+For workflow security auditing with zizmor (audit catalogue, `zizmor.yml` policy, auto-fix, CI gate, pre-commit): `/platform-skills:zizmor`
 
 Examples:
 - `examples/github-actions/terraform-cicd.yml` — Terraform plan + apply with OIDC

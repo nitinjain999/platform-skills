@@ -22,6 +22,7 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:terraform](#platform-skillsterraform) | Terraform validation pipeline + blast radius |
 | [/platform-skills:checkov](#platform-skillscheckov) | Checkov bootstrap, static + plan-level Terraform scanning, multi-cloud, fix mode |
 | [/platform-skills:trivy](#platform-skillstrivy) | Container image, fs, repo, SBOM, and cluster CVE scanning; three-layer wizard; Trivy Operator via Flux |
+| [/platform-skills:zizmor](#platform-skillszizmor) | GitHub Actions workflow security audit — template injection, unpinned uses, permissions; three-layer wizard; auto-fix, policy file, CI gate, pre-commit |
 | [/platform-skills:gitops](#platform-skillsgitops) | Flux CD / Argo CD — debug live cluster issues or audit a GitOps repo |
 | [/platform-skills:linkerd](#platform-skillslinkerd) | Linkerd mTLS, injection, policy, multi-cluster |
 | [/platform-skills:linux](#platform-skillslinux) | Linux, DNS, load balancing, VPC/VNet, networking |
@@ -216,6 +217,57 @@ AWS resource creation failing:
 /platform-skills:trivy set up a CI severity gate for my container image
 /platform-skills:trivy deploy Trivy Operator for continuous cluster monitoring
 /platform-skills:trivy scan this SBOM for known vulnerabilities
+```
+
+---
+
+## `/platform-skills:zizmor`
+
+**What it does:** Audits GitHub Actions workflows, composite actions, `dependabot.yml`, and `.pre-commit-config.yaml` for security findings using [zizmor](https://docs.zizmor.sh) — template injection, credential persistence via `actions/checkout`, unpinned `uses:`, over-broad `permissions:`, impostor commits, known-vulnerable action versions, and 35 more audits. A three-layer interactive wizard routes intent → scope and operating mode → explicit trade-offs, so the output is a triaged verdict rather than a finding dump.
+
+Zizmor answers *"is this workflow safe?"*; actionlint answers *"is this workflow valid?"* This command complements `/platform-skills:github-actions` — it does not replace it.
+
+```
+/platform-skills:zizmor
+/platform-skills:zizmor scan .
+/platform-skills:zizmor audit
+/platform-skills:zizmor fix
+/platform-skills:zizmor triage
+/platform-skills:zizmor config
+/platform-skills:zizmor ci
+/platform-skills:zizmor precommit
+/platform-skills:zizmor explain template-injection
+```
+
+**Modes:**
+
+| Mode | What it does |
+|------|-------------|
+| `scan` | Default-persona audit with `--strict-collection`, online if a token is available — the everyday run |
+| `audit` | Deep sweep for human review: `--persona=auditor --min-confidence=low --collect=all --no-ignores` |
+| `fix` | `--fix=safe` on a clean tree, diff review, then re-audit what remains |
+| `triage` | Walk findings one at a time → fix / inline-ignore / config-ignore / severity remap / disable |
+| `config` | Generate or repair `.github/zizmor.yml` — pinning policy, allowlists, suppressions with justifications |
+| `ci` | Emit the GHA workflow: SARIF alerts, hard-fail severity gate, or both |
+| `precommit` | Add the `zizmorcore/zizmor-pre-commit` hook and state the offline caveat |
+| `explain` | Explain one audit id or finding: mechanism, why it matters, persona gating, exact remediation |
+
+**Guardrails it enforces:**
+
+- Asks the pinning policy explicitly before reporting `unpinned-uses` findings or writing a config — full commit SHA (`hash-pin`, recommended) or semver tag (`ref-pin`) — and states what a tag pin costs: a tag is a mutable pointer the author can repoint at different code after review. Never relaxes the policy just to clear findings.
+- Never reports a repo "clean" from an offline run without naming the four online-only audits that did not execute (`impostor-commit`, `known-vulnerable-actions`, `ref-confusion`, `stale-action-refs`).
+- Never presents a SARIF-only workflow as a merge blocker — `--format=sarif` suppresses exit codes 11–14, so the job stays green with high-severity findings.
+- Never puts `--fix` inside a CI gate — a gate that repairs its own input always passes.
+- Never gates CI on `--persona=auditor`, which is documented to include likely false positives.
+- Always adds `--strict-collection`, so "0 findings" cannot silently mean "0 files audited".
+
+**Example prompts:**
+```
+/platform-skills:zizmor audit my workflows before I merge this PR
+/platform-skills:zizmor pin every action to a SHA and show me the diff
+/platform-skills:zizmor these findings are too noisy — help me triage
+/platform-skills:zizmor set up a PR check that actually fails on medium+ findings
+/platform-skills:zizmor why is this run: block flagged as template-injection?
 ```
 
 ---

@@ -40,6 +40,7 @@ Use this skill for hands-on help with Kubernetes, GitOps, cloud infrastructure, 
 | `Runtime Security` | Falco eBPF, custom rules, Falcosidekick routing, Kyverno enforcement |
 | `Awesome Docs` | Animated SVG Markdown — README, runbook, RFC, architecture, post-mortem |
 | `Composite Actions` | Full action repo scaffold, SHA pinning, secrets-as-inputs, actionlint |
+| `Zizmor` | Workflow and action security audit — template injection, credential persistence, unpinned `uses:`, over-broad permissions |
 | `GitOps debug` | 5-workflow structured debug → 5-section report with root cause |
 | `GitOps audit` | 6-phase repo audit → prioritized Critical/Warning/Info report |
 | `Platform Mindset` | DevEx, friction audits, RFC/ADR, incident communication, post-mortems |
@@ -106,6 +107,7 @@ Load only the files needed for the current request.
 | references/aws-waf.md | Web ACLs, managed rules, rate limiting, Firewall Manager |
 | references/github-actions.md | Reusable workflows, OIDC, delivery controls |
 | references/composite-actions.md | Composite action scaffold, SHA pinning, secrets-as-inputs, actionlint |
+| references/zizmor.md | Zizmor audit catalogue, personas, `zizmor.yml` policy, exit-code gating, auto-fix, SARIF, pre-commit |
 | references/secrets.md | External Secrets Operator, Sealed Secrets, secrets strategy |
 | references/linkerd.md | mTLS, observability, traffic management, multi-cluster |
 | references/linux-networking.md | DNS, load balancing, VPC/VNet, kernel tuning, connectivity |
@@ -177,6 +179,7 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:aws` — CloudFront distributions, WAF web ACLs, Lambda@Edge, CloudFront Functions, Firewall Manager multi-account enforcement, and Terraform module generation with best practices
 - `/platform-skills:composite-actions` — generate a full composite action repo scaffold, review an existing action.yml, harden with SHA pinning and env isolation, or generate a test workflow
 - `/platform-skills:github-actions` — design reusable workflows and job graphs, review for OIDC/SHA pinning/token scoping, or debug failing CI workflows
+- `/platform-skills:zizmor` — audit workflows, composite actions, Dependabot and pre-commit configs with zizmor: interactive three-layer wizard routes intent → scope → trade-offs (including an explicit hash-pin vs ref-pin decision, SHA recommended), then scan, deep-audit, auto-fix, triage findings, generate `.github/zizmor.yml` policy, emit a SARIF or hard-fail CI gate, or add the pre-commit hook; complements actionlint (`/platform-skills:github-actions`) rather than replacing it
 - `/platform-skills:kubernetes` — generate cluster baseline scaffolds, diagnose 401/403 RBAC errors, harden Deployment specs, or debug crashloop/OOMKill/pending pods
 - `/platform-skills:azure` — Workload Identity and OIDC federation, resource tagging with Azure Policy, AKS provisioning, RBAC scoping, and production-readiness review
 - `/platform-skills:openshift` — SCC diagnosis and minimum grants, Route TLS modes and 503 debug, OpenShift GitOps app delivery, and cluster upgrade validation
