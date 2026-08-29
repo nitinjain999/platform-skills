@@ -19,16 +19,76 @@ info() { echo "ℹ️  $1 (not generated for this repo)"; }
 echo "=== Agent setup verification ==="
 check "AGENTS.md present" "test -f AGENTS.md"
 
+# --- Roster ----------------------------------------------------------------
+# AGENTS.md is the source of truth; per-tool agent files are rendering targets
+# of its roster. Read the first column of the "## Agent roster" table so the
+# per-target checks below can assert one file PER AGENT — a bare
+# `ls .github/agents/*.agent.md` passes with a single surviving file and would
+# not notice the rest of a multi-agent roster being deleted.
+roster() {
+  awk '
+    /^##[[:space:]]+Agent roster/ { in_tbl = 1; next }
+    in_tbl && /^##[[:space:]]/    { exit }
+    in_tbl && /^\|/ {
+      if ($0 ~ /^\|[[:space:]]*:?-+/) next           # separator row
+      if (split($0, c, "|") < 2) next
+      role = c[2]
+      gsub(/`/, "", role)
+      gsub(/^[[:space:]]+|[[:space:]]+$/, "", role)
+      if (role == "" || tolower(role) == "agent") next   # header row
+      if (role !~ /^[A-Za-z0-9_-]+$/) next              # not a role slug
+      print role
+    }
+  ' AGENTS.md 2>/dev/null
+}
+
+ROSTER="$(roster)"
+if [ -n "$ROSTER" ]; then
+  echo "--- Roster from AGENTS.md: $(echo "$ROSTER" | tr '\n' ' ')---"
+else
+  echo "⚠️  Could not parse a '## Agent roster' table from AGENTS.md"
+  echo "    Falling back to presence-only checks — per-agent completeness NOT verified."
+fi
+
+# Per-target roster checks. Each asserts one file per roster entry when the
+# roster is known, and degrades to a presence check when it is not.
+check_roster_files() {
+  local label="$1" dir="$2" ext="$3"
+  if [ -n "$ROSTER" ]; then
+    local role
+    for role in $ROSTER; do
+      check "$label: $role" "test -f $dir/$role.$ext"
+    done
+  else
+    check "$label files present" "ls $dir/*.$ext"
+  fi
+}
+
+# --- Tool targets ----------------------------------------------------------
 # Read which tool targets were generated from .platform-skills/manifest
-# Valid tokens: copilot-vscode, copilot-cloud, copilot-app, cursor, codex, windsurf, vscode-mcp
+# Valid tokens: copilot-vscode, copilot-cloud, copilot-app, cursor, claude,
+# codex, windsurf, vscode-mcp.
 # One token per line; lines starting with # are comments.
+#
+# copilot-vscode and copilot-cloud verify the same path, so a manifest listing
+# both must not run — or count — the shared check twice. These flags are read
+# and written in the current shell: the loop below uses process substitution,
+# not a pipe, specifically so the body is not a subshell.
+COPILOT_CHECKED=0
 
 while read -r target; do
   case "$target" in
-    copilot-vscode|copilot-cloud) check "Copilot agent files" "ls .github/agents/*.agent.md" ;;
+    copilot-vscode|copilot-cloud)
+      if [ "$COPILOT_CHECKED" -eq 0 ]; then
+        COPILOT_CHECKED=1
+        check_roster_files "Copilot agent" ".github/agents" "agent.md"
+      fi
+      ;;
     copilot-app)  check "Copilot App setup"  "test -f .github/workflows/copilot-setup-steps.yml" ;;
-    cursor)       check "Cursor rules"        "test -d .cursor/rules && ls .cursor/rules/*.mdc" ;;
-    codex)        check "Codex config"        "test -f agents/openai.yaml" ;;
+    cursor)       check "Cursor rules dir"   "test -d .cursor/rules"
+                  check_roster_files "Cursor rule" ".cursor/rules" "mdc" ;;
+    claude)       check "CLAUDE.md Agent Context" "grep -q '## Agent Context' CLAUDE.md" ;;
+    codex)        check "Codex roster metadata" "test -f agents/openai.yaml" ;;
     windsurf)     check "Windsurf rules"      "test -f .windsurfrules" ;;
     vscode-mcp)   check "MCP wired (VS Code)" "grep -qrE '\"servers\"|mcpServers' .vscode/" ;;
   esac
@@ -53,7 +113,7 @@ for agent in .github/agents/*.agent.md .cursor/rules/*.mdc; do
     [ -z "$p" ] && continue
     test -f "$p" || { echo "⚠️  $agent references missing file: $p"; FAIL=$((FAIL+1)); }
   done < <(echo "$BACKTICK_REFS" \
-    | grep -oE '[a-zA-Z0-9_./-]*(/[a-zA-Z0-9_.@-]+)+\.(py|ts|go|tf|yaml|yml|json|md|sh|kt|kts|rs|cs|rb|php|tpl)' \
+    | grep -oE '[a-zA-Z0-9_./-]*(/[a-zA-Z0-9_.@-]+)+\.(py|ts|go|tf|hcl|yaml|yml|json|md|sh|kt|kts|rs|cs|rb|php|tpl)' \
     | grep -vE '<[a-zA-Z]')
   # Check directory paths (trailing slash; single segment like src/ is valid)
   while read -r d; do
