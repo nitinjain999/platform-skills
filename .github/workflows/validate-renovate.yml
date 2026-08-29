@@ -44,11 +44,16 @@ jobs:
   validate-coverage:
     name: Coverage Scan
     runs-on: ubuntu-latest
+    # Exposed so the summary job can distinguish "clean" from "warnings" —
+    # the step itself exits 0 either way, so needs.*.result cannot tell them apart.
+    outputs:
+      uncovered_count: ${{ steps.coverage.outputs.uncovered_count }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - name: Check manager coverage
+        id: coverage
         run: |
           UNCOVERED=0
 
@@ -69,7 +74,9 @@ jobs:
             fi
           }
 
-          if find .github/workflows -name "*.yml" 2>/dev/null | grep -q .; then
+          # Match both extensions — a repo using .yaml exclusively is still an
+          # Actions repo, and matching only *.yml reports a false SKIPPED.
+          if find .github/workflows \( -name "*.yml" -o -name "*.yaml" \) 2>/dev/null | grep -q .; then
             if grep -q '"github-actions"' renovate.json; then
               echo "✅ COVERED: GitHub Actions (github-actions)"
             else
@@ -88,13 +95,17 @@ jobs:
           check_coverage "Docker"         "Dockerfile"        "dockerfile"
           check_coverage "Rust"           "Cargo.toml"        "cargo"
 
-          if [ $UNCOVERED -gt 0 ]; then
+          if [ "$UNCOVERED" -gt 0 ]; then
             echo ""
             echo "⚠️  $UNCOVERED ecosystem(s) detected but not covered by Renovate"
             echo "Run /platform-skills:renovate generate to update your renovate.json"
           else
             echo "✅ All detected ecosystems are covered"
           fi
+
+          # Publish the count so the summary job can surface it. Coverage gaps are
+          # advisory — the step stays exit 0 so a gap never blocks the PR.
+          echo "uncovered_count=$UNCOVERED" >> "$GITHUB_OUTPUT"
 
   summary:
     name: Renovate Config Validation Summary
@@ -103,19 +114,38 @@ jobs:
     if: always()
     steps:
       - name: Post summary
+        env:
+          SCHEMA_RESULT: ${{ needs.validate-schema.result }}
+          CONFIG_RESULT: ${{ needs.validate-config.result }}
+          COVERAGE_RESULT: ${{ needs.validate-coverage.result }}
+          UNCOVERED_COUNT: ${{ needs.validate-coverage.outputs.uncovered_count }}
         run: |
-          cat << 'EOF' >> $GITHUB_STEP_SUMMARY
-          ## Renovate Config Validation
-          EOF
-          printf "| Check | Status |\n|-------|--------|\n" >> $GITHUB_STEP_SUMMARY
-          printf "| JSON Schema | %s |\n" "${{ needs.validate-schema.result == 'success' && '✅ Passed' || '❌ Failed' }}" >> $GITHUB_STEP_SUMMARY
-          printf "| Config Validator | %s |\n" "${{ needs.validate-config.result == 'success' && '✅ Passed' || '❌ Failed' }}" >> $GITHUB_STEP_SUMMARY
-          printf "| Coverage Scan | %s |\n" "${{ needs.validate-coverage.result == 'success' && '✅ Passed' || '⚠️ Warnings' }}" >> $GITHUB_STEP_SUMMARY
+          status() { [ "$1" = "success" ] && echo "✅ Passed" || echo "❌ Failed"; }
+
+          # A green validate-coverage job only means the scan ran. Read the count
+          # to tell "all ecosystems covered" apart from "gaps found but advisory".
+          if [ "$COVERAGE_RESULT" != "success" ]; then
+            COVERAGE_CELL="❌ Failed"
+          elif [ "${UNCOVERED_COUNT:-0}" -gt 0 ]; then
+            COVERAGE_CELL="⚠️ ${UNCOVERED_COUNT} uncovered — see Coverage Scan log"
+          else
+            COVERAGE_CELL="✅ Passed"
+          fi
+
+          {
+            echo "## Renovate Config Validation"
+            printf "| Check | Status |\n|-------|--------|\n"
+            printf "| JSON Schema | %s |\n" "$(status "$SCHEMA_RESULT")"
+            printf "| Config Validator | %s |\n" "$(status "$CONFIG_RESULT")"
+            printf "| Coverage Scan | %s |\n" "$COVERAGE_CELL"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Enforce required checks
+        env:
+          SCHEMA_RESULT: ${{ needs.validate-schema.result }}
+          CONFIG_RESULT: ${{ needs.validate-config.result }}
         run: |
-          if [[ "${{ needs.validate-schema.result }}" != "success" ]] || \
-             [[ "${{ needs.validate-config.result }}" != "success" ]]; then
+          if [ "$SCHEMA_RESULT" != "success" ] || [ "$CONFIG_RESULT" != "success" ]; then
             echo "❌ Required validation checks failed — see jobs above"
             exit 1
           fi
