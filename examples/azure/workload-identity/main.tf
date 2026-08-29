@@ -1,8 +1,12 @@
 terraform {
   required_providers {
     azurerm = {
+      # 5.0.0 is a floor, not a preference: azurerm_federated_identity_credential
+      # below uses user_assigned_identity_id, which replaced parent_id +
+      # resource_group_name in 5.0.0. There is no argument set that satisfies
+      # both 4.x and 5.x, so this cannot be widened back to >= 3.87.0.
       source  = "hashicorp/azurerm"
-      version = ">= 3.87.0"
+      version = ">= 5.0.0"
     }
   }
 }
@@ -51,13 +55,15 @@ resource "azurerm_user_assigned_identity" "workload" {
 }
 
 # Federated credential: trusts tokens issued for this namespace/serviceaccount pair.
+# azurerm 5.x: the identity is addressed by user_assigned_identity_id. parent_id
+# and resource_group_name were removed — the resource group is now implied by the
+# identity's own ID, so passing it separately is rejected, not ignored.
 resource "azurerm_federated_identity_credential" "this" {
-  name                = "${var.app_name}-federated"
-  resource_group_name = var.resource_group_name
-  parent_id           = azurerm_user_assigned_identity.workload.id
-  audience            = ["api://AzureADTokenExchange"]
-  issuer              = data.azurerm_kubernetes_cluster.this.oidc_issuer_url
-  subject             = "system:serviceaccount:${var.app_namespace}:${var.app_name}-sa"
+  name                      = "${var.app_name}-federated"
+  user_assigned_identity_id = azurerm_user_assigned_identity.workload.id
+  audience                  = ["api://AzureADTokenExchange"]
+  issuer                    = data.azurerm_kubernetes_cluster.this.oidc_issuer_url
+  subject                   = "system:serviceaccount:${var.app_namespace}:${var.app_name}-sa"
 }
 
 # Scope the role assignment to the specific resource, not a subscription.
