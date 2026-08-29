@@ -128,6 +128,7 @@ REQUIRED_REFERENCES=(
   references/setup-agents-template.md
   references/trivy.md
   references/zizmor.md
+  references/kingfisher.md
 )
 
 for ref in "${REQUIRED_REFERENCES[@]}"; do

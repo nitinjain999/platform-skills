@@ -23,6 +23,7 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:checkov](#platform-skillscheckov) | Checkov bootstrap, static + plan-level Terraform scanning, multi-cloud, fix mode |
 | [/platform-skills:trivy](#platform-skillstrivy) | Container image, fs, repo, SBOM, and cluster CVE scanning; three-layer wizard; Trivy Operator via Flux |
 | [/platform-skills:zizmor](#platform-skillszizmor) | GitHub Actions workflow security audit — template injection, unpinned uses, permissions; three-layer wizard; auto-fix, policy file, CI gate, pre-commit |
+| [/platform-skills:kingfisher](#platform-skillskingfisher) | Find, live-validate, map blast radius of, and revoke leaked secrets — repo, Git history, GitHub/GitLab/Bitbucket orgs, S3/GCS, Slack, Jira; baseline tracking, CI gate, pre-commit |
 | [/platform-skills:gitops](#platform-skillsgitops) | Flux CD / Argo CD — debug live cluster issues or audit a GitOps repo |
 | [/platform-skills:linkerd](#platform-skillslinkerd) | Linkerd mTLS, injection, policy, multi-cluster |
 | [/platform-skills:linux](#platform-skillslinux) | Linux, DNS, load balancing, VPC/VNet, networking |
@@ -268,6 +269,61 @@ Zizmor answers *"is this workflow safe?"*; actionlint answers *"is this workflow
 /platform-skills:zizmor these findings are too noisy — help me triage
 /platform-skills:zizmor set up a PR check that actually fails on medium+ findings
 /platform-skills:zizmor why is this run: block flagged as template-injection?
+```
+
+---
+
+## `/platform-skills:kingfisher`
+
+**What it does:** Finds, live-validates, maps the blast radius of, and revokes leaked secrets using [Kingfisher](https://github.com/mongodb/kingfisher) — across a local repo and Git history, or a GitHub/GitLab/Bitbucket/Gitea/Azure Repos/Hugging Face org, S3/GCS bucket, Docker image, Slack, Jira, Confluence, Microsoft Teams, or Postman workspace. A three-layer interactive wizard routes intent → scan target and invasiveness → explicit trade-offs (gate threshold, suppression method, alert payload contents), so the output is a validated, triaged verdict rather than a wall of candidate strings.
+
+Kingfisher answers *"is this secret still live, and what can it reach?"*; Trivy's `secrets` mode answers *"does this look like a secret?"* offline, bundled with a CVE scan. Run both — they are complementary depths, not alternatives.
+
+```
+/platform-skills:kingfisher
+/platform-skills:kingfisher scan .
+/platform-skills:kingfisher audit
+/platform-skills:kingfisher validate --rule github-pat "ghp_..."
+/platform-skills:kingfisher revoke
+/platform-skills:kingfisher baseline
+/platform-skills:kingfisher triage
+/platform-skills:kingfisher config
+/platform-skills:kingfisher ci
+/platform-skills:kingfisher precommit
+/platform-skills:kingfisher explain betterleaks.github-pat
+```
+
+**Modes:**
+
+| Mode | What it does |
+|------|-------------|
+| `scan` | Default local/repo run, live validation on — the everyday check |
+| `audit` | Deep sweep for a security review: low confidence, full history, blast-radius, all outcomes |
+| `validate` | Check whether one known secret string is still live — no scan |
+| `revoke` | Kill one known secret directly through its provider — destructive, confirm first |
+| `baseline` | Create or update a baseline so future scans report only new secrets |
+| `triage` | Walk existing findings one at a time → validate / revoke / rotate / accept-in-baseline / false-positive |
+| `config` | Generate or repair `kingfisher.yaml` |
+| `ci` | Emit a CI gate: hard-fail, SARIF alerts, or Docker-based |
+| `precommit` | Add the `kingfisher-auto` pre-commit hook (or Husky) and state the caveat |
+| `explain` | Explain a rule id, an exit code, or a validation outcome |
+
+**Guardrails it enforces:**
+
+- Never runs `revoke` without three-part confirmation: validated live, owner identified, replacement ready to redeploy — a wrong revoke is an outage, not a rollback.
+- Never runs blast-radius mapping, a platform-target scan, or a Slack/Jira/Confluence/Teams search without confirming authorization first — these authenticate against or pull from live systems.
+- Never treats an `assumed` (high-confidence, not network-checked) finding as confirmed-live.
+- Never gates a first-time CI rollout on exit code `200` (any candidate) without surfacing the fixture-noise trade-off — recommends `205` (confirmed-live only) plus a baseline instead.
+- Never suggests disabling a whole rule family to silence one fixture — uses a baseline entry or scoped `skip-word`/`skip-regex` instead.
+- Never enables `--alert-include-secret` without stating plainly that the literal secret value lands in the alert payload.
+
+**Example prompts:**
+```
+/platform-skills:kingfisher scan our Git history for leaked secrets
+/platform-skills:kingfisher is this AWS key still live, and what can it reach?
+/platform-skills:kingfisher set up a baseline so we only get paged on new secrets
+/platform-skills:kingfisher add a CI gate that fails on confirmed-live credentials
+/platform-skills:kingfisher revoke this GitHub token — rotation is already done
 ```
 
 ---

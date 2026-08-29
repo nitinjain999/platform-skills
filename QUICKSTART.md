@@ -127,5 +127,6 @@ Generate a production-ready Helm chart for a Node.js service with HPA and Networ
 | Scan Terraform for security issues | `/platform-skills:checkov` |
 | Scan container images for CVEs | `/platform-skills:trivy` |
 | Audit GitHub Actions workflows for security findings | `/platform-skills:zizmor` |
+| Find, validate, and revoke leaked secrets | `/platform-skills:kingfisher` |
 | Browse reference guides | [references/](references/) |
 | Copy working examples | [examples/](examples/) |

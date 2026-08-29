@@ -248,7 +248,7 @@ Reference: `references/supply-chain.md` → SLSA levels, slsa-github-generator
 
 ---
 
-Signing and SBOMs cover what the pipeline *produces*. They say nothing about the pipeline itself — an unpinned `uses:` or a `pull_request_target` checkout of untrusted code compromises the build before any artifact exists. To audit the workflows that run this supply chain, including `unpinned-uses` hash-pin policy enforcement, use `/platform-skills:zizmor`.
+Signing and SBOMs cover what the pipeline *produces*. They say nothing about the pipeline itself — an unpinned `uses:` or a `pull_request_target` checkout of untrusted code compromises the build before any artifact exists. To audit the workflows that run this supply chain, including `unpinned-uses` hash-pin policy enforcement, use `/platform-skills:zizmor`. They also say nothing about whether a credential leaked into the repo that produces this artifact in the first place — for that, live-validate and revoke with `/platform-skills:kingfisher`.
 
 ---
 

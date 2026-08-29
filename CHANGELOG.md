@@ -5,6 +5,17 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.39.0] - 2026-08-29
+
+Brings the count to 42 command workflows.
+
+### Added
+
+- **`/platform-skills:kingfisher`** — find, live-validate, map the blast radius of, and revoke leaked secrets using [Kingfisher](https://github.com/mongodb/kingfisher) (MongoDB). Covers a local repo and Git history, or a GitHub/GitLab/Bitbucket/Gitea/Azure Repos/Hugging Face org, S3/GCS bucket, Docker image, Slack, Jira, Confluence, Microsoft Teams, or Postman workspace. Interactive by default: a three-layer wizard routes intent → scan target and invasiveness → explicit trade-offs (CI gate threshold, suppression method, alert payload contents) before running anything. Modes: `scan`, `audit`, `validate`, `revoke`, `baseline`, `triage`, `config`, `ci`, `precommit`, `explain`
+- **`references/kingfisher.md`** — bootstrap across every install method; the full CLI surface (`scan`, `validate`, `revoke`, `config init`, `rules`, `view`) with verified flag syntax; the `betterleaks.*`/`veles.*` rule-namespace migration off Kingfisher's 1.x `kingfisher.*` IDs, including the compatibility-alias warning and its planned removal; validation-outcome semantics (`verified_active` vs `assumed` vs everything else) and why that distinction is the whole point of the tool; version-2 repository-aware baseline format and its update/pruning rules; the full `kingfisher.yaml` schema and CLI-flag/env-var/config precedence; diff-focused CI scanning (`--since-commit`, `--branch`, `--branch-root-commit`); a table of every platform-target subcommand with its auth env var; exit codes (`0`/`200`/`205`); SSRF protection and TLS modes; alert webhook payload shapes; pre-commit and Husky wiring; CI templates for a hard-fail gate, SARIF upload, and Docker — explicit that no official `mongodb/kingfisher-action` exists
+- **Explicit safety gates encoded in the command** — `revoke` requires three-part confirmation (validated live, owner identified, replacement ready) with no exception path; blast-radius mapping and any platform-target/SaaS-content scan (Slack, Jira, Confluence, Teams) require confirming authorization first, every time; a first-time CI rollout is steered toward gating on exit code `205` (confirmed-live) plus a baseline rather than `200` (any candidate), so an established repo's pre-existing test fixtures and documented example keys don't fail every PR on day one
+- **Ownership boundary against `/platform-skills:trivy`'s `secrets` mode, `/platform-skills:zizmor`, and `/platform-skills:secrets`** made explicit in all four commands: Trivy is a fast offline pattern check bundled with a CVE scan; Kingfisher live-validates, maps blast radius, and revokes; zizmor audits workflow-level `secrets:` context usage, not file contents; `/platform-skills:secrets` covers storing/rotating secrets already inside the cluster, not secrets that already leaked elsewhere
+
 ## [1.38.1] - 2026-08-29
 
 Republishes the v1.38.0 content. No skill or command content changed; v1.38.0 shipped a tree that was one commit short of its own tag.
