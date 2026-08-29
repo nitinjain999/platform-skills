@@ -88,9 +88,9 @@ uvx kingfisher-bin --help           # one-shot, no install
 ### Docker
 
 ```bash
-docker run --rm ghcr.io/mongodb/kingfisher:latest --version
+docker run --rm ghcr.io/mongodb/kingfisher:2.0.0 --version
 
-docker run --rm -v "$PWD":/src ghcr.io/mongodb/kingfisher:latest scan /src
+docker run --rm -v "$PWD":/src ghcr.io/mongodb/kingfisher:2.0.0 scan /src
 ```
 
 **Pin the tag.** `:latest` moves under you — a scan that passed yesterday can behave differently today because the rule catalogue or validator set changed. Pin to a released version tag (`ghcr.io/mongodb/kingfisher:2.0.0`) for reproducible CI, the same reason zizmor's `unpinned-images` audit flags `:latest` container references.
@@ -592,6 +592,9 @@ jobs:
   kingfisher:
     name: Scan for leaked secrets
     runs-on: ubuntu-latest
+    permissions:
+      # Private repos only — public repos do not need this.
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -604,10 +607,13 @@ jobs:
           curl --silent --location --fail \
             https://raw.githubusercontent.com/mongodb/kingfisher/main/scripts/install-kingfisher.sh | \
             bash -s -- --tag v2.0.0
+          # install-kingfisher.sh places the binary in ~/.local/bin by default.
+          # $GITHUB_PATH is the runner-safe way to make it available to later
+          # steps — safer than exporting PATH by hand, which silently breaks
+          # if the install location ever changes.
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Scan PR diff for secrets
-        env:
-          PATH: "${{ github.workspace }}/../.local/bin:${{ env.PATH }}"
         run: |
           set +e
           kingfisher scan . \
@@ -617,13 +623,13 @@ jobs:
           set -e
           case "$rc" in
             0)   echo "✅ no findings" ;;
-            200) echo "⚠️  candidate findings, none confirmed live"; exit 1 ;;
+            200) echo "⚠️  candidate findings, none confirmed live — not failing by default on a first rollout; see baseline/triage guidance below. Change this line to 'exit 1' for a stricter gate once a baseline absorbs the existing backlog" ;;
             205) echo "❌ live credential found in this diff"; exit 1 ;;
             *)   echo "❌ kingfisher failed (exit $rc)"; exit 1 ;;
           esac
 ```
 
-Adjust the install step's `PATH` export to match wherever `install-kingfisher.sh` actually places the binary in your runner image, and pin `--tag` to a specific released version so the gate doesn't silently change behavior on an upstream release.
+Pin `--tag` to a specific released version so the gate doesn't silently change behavior on an upstream release. If `install-kingfisher.sh` ever changes its install directory, update the `$GITHUB_PATH` line to match — check by running the script locally, don't guess.
 
 ### Option B — SARIF upload, findings as code-scanning alerts
 
