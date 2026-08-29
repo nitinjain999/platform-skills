@@ -5,6 +5,19 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.38.1] - 2026-08-29
+
+Republishes the v1.38.0 content. No skill or command content changed; v1.38.0 shipped a tree that was one commit short of its own tag.
+
+### Fixed
+
+- **v1.38.0 installed the pre-fix Azure Workload Identity example.** `marketplace.json` `source.sha` selects the tree installers download, and v1.38.0 pinned `ad1950c` while the `v1.38.0` tag was `bd2e06c`. The excluded commit was the azurerm 5.x migration, so anyone who installed v1.38.0 got `examples/azure/workload-identity/main.tf` with `parent_id` + `resource_group_name` under `azurerm >= 3.87.0`. That constraint is open-ended, so `terraform init` resolves azurerm 5.x, where both arguments were replaced by `user_assigned_identity_id` — the example failed `terraform validate` as shipped. The root cause was structural, not a slip: `bd2e06c` repointed `source.sha` at its own parent *in the same commit* that carried the content fix, so the pin could never include it. `ad1950c` and `27d938e` did the same thing, meaning the newest commit's content was excluded from every one of those releases
+- **The release gate could not catch this.** Its `source.sha` check hard-failed only on unreachability, then warned when the pin was more than 1 commit behind the tag. A pin exactly 1 commit behind was assumed to be the sha-bump commit, so a lone *content* commit passed silently. The distance heuristic is now replaced by a hard check on the diff: every path other than `.claude-plugin/marketplace.json` that differs between `source.sha` and the tagged commit is content the release does not ship, and the job fails and lists those paths
+
+### Changed
+
+- **A sha-bump commit must now touch nothing but `.claude-plugin/marketplace.json`.** Land content first, merge it, then bump `source.sha` to that merge commit in a marketplace.json-only PR, then tag. The release gate enforces this
+
 ## [1.38.0] - 2026-08-29
 
 Brings the count to 41 command workflows.
