@@ -1,0 +1,67 @@
+name: Terraform Drift
+
+# The PR gate's Terraform job is path-gated on changed *.tf, so it reports
+# "skipping" on any pull request that touches no Terraform. The release gate
+# sweeps every directory unconditionally. That asymmetry means a provider major
+# release can break a shipped example with no repository change at all, and
+# nothing reports it until a tag is pushed — which is how azurerm 5.0.0 blocked
+# the v1.38.0 release.
+#
+# This runs the same sweep on a schedule so that class of break surfaces within
+# a week instead of at the next release. It is detection, not prevention: the
+# prevention is `~> N.0` constraints in the examples themselves. Directories that
+# declare no required_providers block cannot be pinned, so this is their only
+# cover.
+#
+# A failing scheduled run emails the repository owner, so no write permission or
+# issue-filing step is needed here.
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # Mondays, 06:00 UTC
+  workflow_dispatch:
+
+# Deny by default; the single job grants only what it needs.
+permissions: {}
+
+concurrency:
+  group: terraform-drift
+  cancel-in-progress: false
+
+jobs:
+  sweep:
+    name: Validate all Terraform directories
+    runs-on: ubuntu-latest
+    # Scheduled workflows run on forks too, where this is just wasted minutes.
+    if: github.repository == 'nitinjain999/platform-skills'
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          # Nothing here talks to git after checkout, so leaving the token in
+          # .git/config would only widen what a compromised provider plugin
+          # could reach.
+          persist-credentials: false
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e  # v4.0.1
+        with:
+          terraform_version: 1.16.0
+
+      - name: Validate all Terraform directories
+        # Same script the PR gate and the release gate run.
+        run: bash tests/validate-terraform.sh
+
+      - name: Explain a failure
+        if: failure()
+        run: |
+          echo "A Terraform directory stopped validating without any change to this repository."
+          echo ""
+          echo "The usual cause is a provider major release reached by a '>=' constraint."
+          echo "Check the failing directory's required_providers block and pin it to '~> N.0'"
+          echo "against the major it actually supports, then migrate any renamed arguments."
+          echo ""
+          echo "Confirm a provider's real argument set before editing:"
+          echo "  terraform providers schema -json | jq '.provider_schemas[].resource_schemas.<name>.block.attributes'"

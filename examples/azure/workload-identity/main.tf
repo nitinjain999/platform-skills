@@ -1,12 +1,14 @@
 terraform {
   required_providers {
     azurerm = {
-      # 5.0.0 is a floor, not a preference: azurerm_federated_identity_credential
-      # below uses user_assigned_identity_id, which replaced parent_id +
-      # resource_group_name in 5.0.0. There is no argument set that satisfies
-      # both 4.x and 5.x, so this cannot be widened back to >= 3.87.0.
+      # Pinned to the 5.x major, both ends deliberate.
+      # Floor: azurerm_federated_identity_credential below uses
+      # user_assigned_identity_id, which replaced parent_id +
+      # resource_group_name in 5.0.0. No argument set satisfies both 4.x and 5.x.
+      # Ceiling: a ">=" constraint let 5.0.0 arrive on its own and break this
+      # file with no commit, which is only caught by the release gate.
       source  = "hashicorp/azurerm"
-      version = ">= 5.0.0"
+      version = "~> 5.0"
     }
   }
 }

@@ -5,6 +5,22 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **The duplicated CI gates are now single scripts** — `tests/scan-secrets.sh` and `tests/validate-terraform.sh`, called by both `validate.yml` and `release.yml`. Four inline `run:` blocks became one call each. This closes the failure mode that blocked v1.38.0 three times over: the release gate is a second copy of the PR gate, it only executes when a tag is pushed, so any divergence is invisible until the most expensive possible moment. Both copies had already diverged in two ways at once. The secret scan's exclusion lists differed, which failed the release on false positives. And the Terraform sweep differed in what it checked at all: the PR gate ran `terraform fmt -check -recursive`, the release gate never did, so formatting was enforced on the way in but not on the way out. The scripts resolve the repository root themselves and are runnable directly, so the same gate can be run before pushing rather than discovered in CI
+- **`tests/scan-secrets.sh` scans tracked files rather than walking the working tree** — the inline `grep -r .` was equivalent in CI, where the scan runs immediately after a fresh checkout, but locally it also read gitignored build output and buried the result in minified `website/build` JavaScript. Enumerating from `git ls-files` makes a local run mean something, and "is there a credential in what we committed" is the more honest question. The one consequence is that a brand-new file needs `git add` before a local run sees it; CI is unaffected
+- **Example provider constraints pinned to a major** — 16 constraints across 15 example files moved from `>= N` to `~> N.0` (`aws` to `~> 6.0`, `azurerm` to `~> 5.0`, `tls` to `~> 4.0`, the DORA AMP example to `~> 6.28`). A `>=` constraint in a copy-paste example silently opts into every future major, which is how `azurerm 5.0.0` broke `examples/azure/workload-identity` with no commit to this repository. The repo already taught this exact lesson in `examples/pr-review/upgrade/terraform-loose-constraints.tf` while doing the opposite in 15 real examples. That demo file is deliberately left loose, since its `>= 3.0` is the anti-pattern being illustrated. Each pin targets the major that is currently validated green, so nothing changes today and the next major arrives as a Renovate pull request that runs the Terraform gate instead of as a broken release
+
+### Added
+
+- **`.github/workflows/terraform-drift.yml`** — runs the shared Terraform sweep weekly (Mondays 06:00 UTC) plus on demand. `validate.yml`'s Terraform job is path-gated on changed `*.tf`, so it reports `skipping` on any pull request touching no Terraform, while `release.yml` sweeps every directory unconditionally. That asymmetry is what let a provider major break a shipped example with nothing to review. Pinning constraints prevents it where a `required_providers` block exists; this catches it for the directories that declare none, within a week rather than at the next tag. `permissions: {}` at workflow level with `contents: read` on the single job, `persist-credentials: false` on checkout, and a `failure()` step that names the likely cause and the command to confirm a provider's real argument set
+
+### Fixed
+
+- **The Terraform sweep validated third-party module sources** — the `find` in both workflows had no `.terraform/` exclusion, so once a directory using a registry module had been initialised, downloaded module code under `.terraform/modules/` was picked up as if it were part of this repository. That put two directories of someone else's Terraform inside a gate that blocks releases here. Now excluded, taking the sweep from 24 directories to the 22 that are actually ours
+
 ## [1.38.1] - 2026-08-29
 
 Republishes the v1.38.0 content. No skill or command content changed; v1.38.0 shipped a tree that was one commit short of its own tag.
