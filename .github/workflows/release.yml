@@ -338,14 +338,14 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Validate marketplace.json source.sha is a recent ancestor of tagged commit
+      - name: Validate marketplace.json source.sha ships the tagged content
         run: |
           TAG_COMMIT=$(git rev-parse HEAD)
           STORED_SHA=$(jq -r '.plugins[0].source.sha' .claude-plugin/marketplace.json)
 
-          # Exact equality is impossible: the SHA-update PR merge always creates one
-          # new commit on top of the stored SHA. Check reachability instead — the stored
-          # SHA must be an ancestor of the tagged commit (i.e. it is reachable from it).
+          # source.sha, not the tag, selects the tree installers download. Exact
+          # equality is impossible — the sha-bump commit cannot contain its own hash —
+          # so the stored SHA must at least be reachable from the tagged commit.
           if ! git merge-base --is-ancestor "$STORED_SHA" "$TAG_COMMIT"; then
             echo "❌ marketplace.json source.sha is not reachable from the tagged commit"
             echo "  stored: ${STORED_SHA}"
@@ -355,13 +355,30 @@ jobs:
             exit 1
           fi
 
-          # Warn if the SHA is more than 1 commit behind — that suggests a stale update.
-          DISTANCE=$(git rev-list --count "${STORED_SHA}..${TAG_COMMIT}")
-          if [ "$DISTANCE" -gt 1 ]; then
-            echo "⚠️  source.sha is ${DISTANCE} commits behind the tag — consider updating it."
+          # Reachability alone is not enough: anything that differs between the stored
+          # SHA and the tag is content the release does not ship. A sha-bump commit can
+          # only ever touch marketplace.json, so every other path here is a leak.
+          #
+          # This replaces a "warn if more than 1 commit behind" heuristic that could not
+          # tell a metadata commit from a content commit. v1.38.0 sat exactly 1 commit
+          # behind and shipped the pre-azurerm-5 azure example, warning-free, because
+          # the fix commit repointed source.sha at its own parent.
+          EXCLUDED=$(git diff --name-only "$STORED_SHA" "$TAG_COMMIT" -- . ':(exclude).claude-plugin/marketplace.json')
+          if [ -n "$EXCLUDED" ]; then
+            echo "❌ source.sha excludes content that is present in the tag:"
+            while IFS= read -r excluded_path; do
+              echo "  ${excluded_path}"
+            done <<< "$EXCLUDED"
+            echo ""
+            echo "  stored: ${STORED_SHA}"
+            echo "  tagged: ${TAG_COMMIT}"
+            echo ""
+            echo "Land content first and merge it, then bump source.sha to that merge"
+            echo "commit in a PR that touches only .claude-plugin/marketplace.json, then tag."
+            exit 1
           fi
 
-          echo "✅ source.sha ${STORED_SHA} is reachable from tagged commit ${TAG_COMMIT}"
+          echo "✅ source.sha ${STORED_SHA} ships the tagged content"
 
       - name: Extract changelog for this version
         id: changelog
