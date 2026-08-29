@@ -195,10 +195,11 @@ Every finding below carries a `Confidence` value — exactly one of three:
 | GitHub Actions workflow | `actionlint` | `actionlint <file>` | Yes, if installed |
 | GitHub Actions workflow (security) | `zizmor` | `zizmor --strict-collection --offline <file>` — `--offline` so preflight never needs a token; note the four online audits skipped | Yes, if installed |
 | Shell script | `shellcheck` | `shellcheck <file>` | Yes, if installed |
+| Committed secret / credential | `kingfisher` | Not run automatically — needs Git history or org-wide context beyond one file, stays a Step 7 handoff to `/platform-skills:kingfisher` | No |
 
 If a tool isn't installed, skip execution, label affected findings `Static review`, and note once per file type: `<tool> not found — findings for this file are Static review only`.
 
-**Hard rule:** never claim `terraform`, `kubectl`, `helm`, `checkov`, `trivy`, `actionlint`, `zizmor`, or `shellcheck` was run unless it was actually executed in this session and its output was inspected. If a tool isn't installed or a check requires access the model doesn't have, say so and mark the finding `Static review` or `Not verified` — never `Tool verified`.
+**Hard rule:** never claim `terraform`, `kubectl`, `helm`, `checkov`, `trivy`, `actionlint`, `zizmor`, `kingfisher`, or `shellcheck` was run unless it was actually executed in this session and its output was inspected. If a tool isn't installed or a check requires access the model doesn't have, say so and mark the finding `Static review` or `Not verified` — never `Tool verified`.
 
 ---
 
@@ -410,6 +411,7 @@ If a tool isn't installed, skip execution, label affected findings `Static revie
 | Helm chart scaffold or upgrade diff | `/platform-skills:helmchart` |
 | Container image CVE scan | `/platform-skills:trivy` |
 | GitHub Actions workflow security audit, `zizmor.yml` policy, or CI gate | `/platform-skills:zizmor` |
+| Leaked secret: live validation, blast radius, or revocation | `/platform-skills:kingfisher` |
 | Flux reconciliation issue | `/platform-skills:gitops` |
 | Deeper KEDA ScaledObject design or debug | `/platform-skills:keda` |
 | PR diff across many changed files | `/platform-skills:pr-review` |

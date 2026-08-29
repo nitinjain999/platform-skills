@@ -401,7 +401,7 @@ kubectl exec -n app-team deploy/<name> -- \
 
 **Triggers:** audit, find plain secrets, SA token, kubernetes.io/service-account-token, secrets health, hygiene
 
-This mode covers Kubernetes-side audit only. For filesystem and Git history scanning for leaked secrets → `/platform-skills:trivy` (`trivy fs --scanners secret` or `trivy repo --scanners secret`).
+This mode covers Kubernetes-side audit only. For filesystem and Git history scanning for leaked secrets → `/platform-skills:trivy` (fast, offline pattern check) or `/platform-skills:kingfisher` (adds live validation against the provider, blast-radius mapping, and revocation — reach for this when the question is "is it still live" rather than "does it match a pattern").
 
 ### Find workloads using legacy SA token secrets
 
@@ -430,13 +430,16 @@ kubectl get externalsecrets -A \
 ### Check for plain secrets committed to Git
 
 ```bash
-# Trivy handles this — hand off explicitly
+# Trivy handles a fast, offline first pass — hand off explicitly
 # trivy repo --scanners secret <repo-url>
 # or for a local clone:
 # trivy fs --scanners secret .
+
+# Kingfisher adds live validation, blast-radius mapping, and revocation
+# kingfisher scan <repo-url-or-path>
 ```
 
-For a Git history and filesystem scan → `/platform-skills:trivy`
+For a Git history and filesystem scan → `/platform-skills:trivy`. For live validation of what's found, or revocation of a confirmed-live credential → `/platform-skills:kingfisher`
 
 ### Check SecretStore health
 

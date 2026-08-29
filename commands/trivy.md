@@ -19,7 +19,8 @@ Read `references/trivy.md` before responding. It contains all mode logic, bootst
 | "Will this manifest pass admission?" | `/platform-skills:kyverno apply` |
 | "How do I sign my image / generate an SBOM?" | `/platform-skills:supply-chain` |
 | "Is this image safe to ship?" | **this command** |
-| "Are there secrets in this repo?" | **this command** |
+| "Are there secrets in this repo?" (fast, offline pattern match) | **this command** |
+| "Is that secret still live? What can it reach? Revoke it." | `/platform-skills:kingfisher` |
 | "What CVEs are running in my cluster?" | **this command** (`k8s` / Operator) |
 
 ---
@@ -226,3 +227,4 @@ Never ask about: output format (default table for CLI, sarif for CI), or whether
 - `/platform-skills:kyverno` — Kubernetes admission policy; `kyverno apply` for manifest posture scanning
 - `/platform-skills:supply-chain` — image signing (Cosign), SBOM generation and attestation (Syft), SLSA provenance
 - `/platform-skills:runtime-security` — Falco syscall-level threat detection (complements CVE scanning)
+- `/platform-skills:kingfisher` — live validation, blast-radius mapping, and revocation for anything this command's `secrets` mode flags as a pattern match; also covers platform-wide scanning (GitHub org, S3, Slack, Jira) this command does not

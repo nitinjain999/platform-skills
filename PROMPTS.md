@@ -115,6 +115,10 @@ Review this supply chain pipeline for Cosign signing, SBOM generation, provenanc
 ```
 
 ```text
+/platform-skills:kingfisher scan this repo's Git history for leaked secrets. Tell me which findings are confirmed live vs. just candidates, and set up a baseline so future PRs only fail on new ones.
+```
+
+```text
 Review these Kyverno or OPA policies for audit-first rollout, false positive risk, test coverage, exception handling, and promotion to enforcement.
 ```
 
