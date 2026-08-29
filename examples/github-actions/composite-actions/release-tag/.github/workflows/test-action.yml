@@ -24,8 +24,11 @@ jobs:
   test-wrong-branch-skip:
     runs-on: ubuntu-latest
     if: github.ref_name != 'main'    # only runs on non-main branches
+    # release_branch is main while this job only runs off main, so the action
+    # sets SKIP_RELEASE, is_new_release comes back false, and the tag and
+    # release steps are skipped. Nothing here pushes.
     permissions:
-      contents: write    # the action creates and pushes a git tag
+      contents: read     # checkout and local `git tag -l` only
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:

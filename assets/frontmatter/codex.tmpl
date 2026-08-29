@@ -5,10 +5,13 @@
 # working directory). It has no repo-level agent roster and no activation prefix.
 #
 # This file exists so setup-agents itself has a machine-readable record of the
-# roster and the per-agent model choices: scripts/verify-agents.sh reads it for
-# roster checks, and upgrade mode reads it to re-surface model selections.
-# Deleting it costs you those two features and nothing else — Codex behaviour is
-# unaffected either way.
+# roster and the per-agent model choices: scripts/verify-agents.sh asserts it is
+# present when the manifest carries the `codex` token, and upgrade mode reads it
+# to re-surface model selections. Roster completeness is checked against the
+# `## Agent roster` table in AGENTS.md, not against this file — nothing parses
+# the entries below.
+# Deleting it fails that presence check and loses the model-selection recall.
+# Codex behaviour is unaffected either way.
 interface:
   display_name: "__DISPLAY_NAME__"
   short_description: "__SHORT_DESCRIPTION__"
