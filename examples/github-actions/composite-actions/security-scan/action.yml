@@ -177,8 +177,12 @@ runs:
           echo "::warning::HIGH vulnerability: $line"
         done || true
 
-        # Store exit code for evaluation step
-        echo "TRIVY_EXIT_CODE=$TRIVY_EXIT" >> "$GITHUB_ENV"
+        # Store exit code for the evaluation step as a step output, not in
+        # GITHUB_ENV. GITHUB_ENV entries land in every later step's process
+        # environment, so a newline in a written value can inject variables
+        # like LD_PRELOAD or NODE_OPTIONS and reach code execution. Step
+        # outputs carry no such reach.
+        echo "trivy_exit_code=$TRIVY_EXIT" >> "$GITHUB_OUTPUT"
         echo "::endgroup::"
 
     # ── 5. Evaluate and decide pass/fail ─────────────────────────────────────
@@ -188,6 +192,7 @@ runs:
       env:
         FAIL_ON_FINDINGS: ${{ inputs.fail_on_findings }}
         VULN_COUNT: ${{ steps.scan.outputs.vuln_count }}
+        TRIVY_EXIT_CODE: ${{ steps.scan.outputs.trivy_exit_code }}
       run: |
         if [[ "$FAIL_ON_FINDINGS" == "true" && "$TRIVY_EXIT_CODE" != "0" ]]; then
           echo "result=fail" >> "$GITHUB_OUTPUT"

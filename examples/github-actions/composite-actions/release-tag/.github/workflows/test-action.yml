@@ -14,13 +14,18 @@ on:
 #       -P ubuntu-latest=catthehacker/ubuntu:act-22.04 \
 #       --secret GITHUB_TOKEN=$GITHUB_TOKEN
 
+# With no permissions block at all, the job token inherits the repository
+# default, which on many repos is still read/write across every scope. Deny by
+# default and let each job grant what it needs.
+permissions: {}
+
 jobs:
   # Test 1 — wrong branch → skips gracefully (is_new_release=false)
   test-wrong-branch-skip:
     runs-on: ubuntu-latest
     if: github.ref_name != 'main'    # only runs on non-main branches
     permissions:
-      contents: write
+      contents: write    # the action creates and pushes a git tag
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -42,6 +47,8 @@ jobs:
   # Test 2 — missing github_token fails validation
   test-missing-token:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read     # checkout only; this test never reaches the tag push
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - name: Run with empty token — expect failure
@@ -60,7 +67,7 @@ jobs:
   test-auto-detect-outputs:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write    # the action creates and pushes a git tag
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:

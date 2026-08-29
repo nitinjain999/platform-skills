@@ -15,9 +15,12 @@ on:
 #   act -W .github/workflows/test-action.yml \
 #       -P ubuntu-latest=catthehacker/ubuntu:act-22.04
 
+# Workflow level grants only what every job needs. id-token: write is granted per
+# job, on the three jobs that actually reach the OIDC exchange — a workflow level
+# grant would hand a signed identity token to every other job too, and any
+# third-party step in those jobs could trade it for cloud credentials.
 permissions:
   contents: read
-  id-token: write   # required for OIDC credential exchange
 
 jobs:
   # Test 1 — missing cloud_provider fails input validation
@@ -136,6 +139,9 @@ jobs:
   # Test 6 — AWS/EKS inputs pass validation; action fails at OIDC exchange in CI
   test-aws-input-validation-passes:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # this job reaches the OIDC credential exchange
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - name: All EKS inputs valid — will fail at OIDC step without real AWS trust
@@ -158,6 +164,9 @@ jobs:
   # Test 7 — Azure/AKS inputs pass validation; action fails at OIDC exchange in CI
   test-azure-input-validation-passes:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # this job reaches the OIDC credential exchange
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - name: All AKS inputs valid — will fail at OIDC step without real Azure federated credential
@@ -230,6 +239,9 @@ jobs:
   # Test 10 — GKE/WIF inputs pass validation; action fails at OIDC exchange in CI
   test-gke-input-validation-passes:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write   # this job reaches the OIDC credential exchange
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       - name: All GKE inputs valid — will fail at OIDC step without real WIF trust

@@ -93,12 +93,16 @@ runs:
       env:
         REGISTRY: ${{ inputs.registry }}
         IMAGE_NAME: ${{ inputs.image_name }}
-      run: |
         # github.repository_owner is lowercased automatically by GitHub
-        OWNER="${{ github.repository_owner }}"
-        URI="${REGISTRY}/${OWNER}/${IMAGE_NAME}:${{ steps.compute_tag.outputs.tag }}"
+        OWNER: ${{ github.repository_owner }}
+        IMAGE_TAG: ${{ steps.compute_tag.outputs.tag }}
+      run: |
+        URI="${REGISTRY}/${OWNER}/${IMAGE_NAME}:${IMAGE_TAG}"
+        # Publish as a step output only. Writing to GITHUB_ENV would let a newline
+        # in the tag inject arbitrary variables into every later step's
+        # environment (LD_PRELOAD, NODE_OPTIONS), which is remote code execution.
+        # Consumers read steps.compute_uri.outputs.uri instead.
         echo "uri=$URI" >> "$GITHUB_OUTPUT"
-        echo "IMAGE_URI=$URI" >> "$GITHUB_ENV"
 
     # ── 4. Set up buildx ─────────────────────────────────────────────────────
     - name: Set up QEMU
@@ -147,9 +151,17 @@ runs:
     - name: Write job summary
       if: always()
       shell: bash
+      # One env: block per step. A second one silently overwrites the first,
+      # and every ${{ }} used by the script belongs here rather than inline —
+      # expressions are substituted before bash parses the line.
       env:
         PUSH_ENABLED: ${{ inputs.push }}
         DIGEST: ${{ steps.push.outputs.digest }}
+        IMAGE_URI: ${{ steps.compute_uri.outputs.uri }}
+        IMAGE_TAG: ${{ steps.compute_tag.outputs.tag }}
+        PLATFORMS: ${{ inputs.platforms }}
+        ACTOR: ${{ github.actor }}
+        WORKFLOW_NAME: ${{ github.workflow }}
       run: |
         echo "::group::Job summary"
         {
@@ -157,13 +169,13 @@ runs:
           echo ""
           echo "| Field | Value |"
           echo "|---|---|"
-          echo "| Image URI | \`$IMAGE_URI\` |"
-          echo "| Tag | \`${{ steps.compute_tag.outputs.tag }}\` |"
-          echo "| Platforms | \`${{ inputs.platforms }}\` |"
+          echo "| Image URI | \`${IMAGE_URI}\` |"
+          echo "| Tag | \`${IMAGE_TAG}\` |"
+          echo "| Platforms | \`${PLATFORMS}\` |"
           echo "| Digest | \`${DIGEST:-n/a}\` |"
           echo "| Pushed | ${PUSH_ENABLED} |"
-          echo "| Actor | ${{ github.actor }} |"
-          echo "| Workflow | ${{ github.workflow }} |"
+          echo "| Actor | ${ACTOR} |"
+          echo "| Workflow | ${WORKFLOW_NAME} |"
         } >> "$GITHUB_STEP_SUMMARY"
         echo "::endgroup::"
 

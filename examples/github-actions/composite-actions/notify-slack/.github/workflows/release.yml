@@ -42,11 +42,15 @@ jobs:
       # Update the floating major version tag (e.g. v1 → latest v1.x.x)
       - name: Update floating major version tag
         shell: bash
+        env:
+          # Never expand github.ref_name straight into the shell — a tag name is
+          # attacker-controllable and ${{ }} is substituted before bash parses it.
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          MAJOR=$(echo "${{ github.ref_name }}" | cut -d. -f1)
+          MAJOR="${REF_NAME%%.*}"
           git tag -f "$MAJOR"
           git push origin "$MAJOR" --force
-          echo "::notice::Updated $MAJOR → ${{ github.ref_name }}"
+          echo "::notice::Updated $MAJOR → ${REF_NAME}"
 
       # Create the GitHub release with auto-generated notes
       - name: Create GitHub release
