@@ -93,7 +93,7 @@ scan_repository() {
 # separator + a long literal value) that does not self-match.
 scan_agentic_sources() {
   local sources found
-  sources=$(git ls-files -- '.github/workflows/*.md' || true)
+  sources=$(git ls-files -- '.github/workflows/**/*.md' || true)
 
   if [ -z "$sources" ]; then
     echo "ℹ️  No agentic workflow sources found"
