@@ -158,7 +158,7 @@ There is **no repo-level YAML roster** and **no `$`-prefix activation**. Do not 
 
 This file is **not** read by Codex. It is setup-agents' own machine-readable record of the roster and the per-agent model choices, consumed by:
 
-- `scripts/verify-agents.sh` — roster completeness checks
+- `scripts/verify-agents.sh` — a **presence check only** (`test -f agents/openai.yaml`) when the manifest carries the `codex` token. It does not parse this file. Roster completeness comes from the `## Agent roster` table in `AGENTS.md`, so deleting or corrupting `openai.yaml` fails one presence check and weakens no per-agent completeness check
 - `upgrade` mode — re-surfacing the model selections from the previous run
 
 State that in the file's header comment (the asset template already does) so nobody mistakes it for Codex config. Generate it when the `codex` manifest token is present; a repo that skips it loses those two features and nothing else.

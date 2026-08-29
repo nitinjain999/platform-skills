@@ -11,6 +11,13 @@ name: Zizmor
 # Output goes three places: a single sticky comment on the pull request, the
 # Security > Code scanning tab (category `zizmor`), and the job summary.
 #
+# Two jobs, deliberately. `audit` runs the third-party action and holds no
+# write scope beyond the Security tab; it hands the rendered report to
+# `comment` as an artifact. `comment` holds the only `pull-requests: write`
+# token in this workflow and runs no third-party code except
+# actions/github-script. A compromised zizmor-action therefore cannot reach
+# PR write access.
+#
 # This check BLOCKS on high-severity findings and reports everything else —
 # see ZIZMOR_FAIL_ON below.
 
@@ -71,7 +78,10 @@ jobs:
     permissions:
       contents: read # check out the definitions being audited
       security-events: write # upload the SARIF to Security > Code scanning
-      pull-requests: write # post the findings comment on the PR
+    outputs:
+      # Set by the report step. The comment job keys off this rather than
+      # job status, because the gate step fails this job on purpose.
+      report-ready: ${{ steps.report.outputs.report-ready }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
@@ -100,9 +110,21 @@ jobs:
           # (11-14), so this step succeeds even with high-severity findings.
           # The gate is therefore explicit, in the last step of this job.
           advanced-security: true
-          # Exit non-zero if zizmor collected nothing, so "0 findings" can
-          # never quietly mean "0 files audited". The action exposes no
-          # --strict-collection input, so this is the available guard.
+          # Exit non-zero if zizmor collected *nothing*. That is the whole
+          # guarantee — it says nothing about a partial collection. Without
+          # --strict-collection a file with a syntax or schema error is
+          # skipped with a warning while the rest are audited, and this input
+          # cannot change that: the action exposes no --strict-collection
+          # input, zizmor has no env var for the flag, and `rules` is the only
+          # top-level key its config file accepts (all three verified against
+          # zizmor 1.29.0 / zizmor-action v0.6.2).
+          #
+          # The syntax half of that gap is covered by another required check:
+          # validate.yml's validate-yaml job parses every .yml/.yaml in the
+          # repo with yq. What remains is a file that is valid YAML but
+          # violates the Actions schema. Closing that needs a direct
+          # `zizmor --strict-collection` run, i.e. a second full audit on
+          # every PR, which is not worth it at this repo's size.
           fail-on-no-inputs: true
 
       - name: Build findings report
@@ -222,50 +244,17 @@ jobs:
             echo "report-file=${report}"
             echo "findings-file=${findings}"
             echo "total=${total}"
+            echo "report-ready=true"
           } >> "${GITHUB_OUTPUT}"
 
-      - name: Comment findings on the pull request
-        # Forked PRs get a read-only token, so the comment would 403. The
-        # audit and the annotations still run for them.
-        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork == false
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9.0.0
-        env:
-          REPORT_FILE: ${{ steps.report.outputs.report-file }}
+      - name: Upload the report for the comment job
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7.0.1
         with:
-          script: |
-            const fs = require('fs');
-            const marker = '<!-- zizmor-report -->';
-            const body = fs.readFileSync(process.env.REPORT_FILE, 'utf8');
-
-            // paginate() — listComments returns only 30 results without it,
-            // so a busy PR would never match the marker and would accumulate
-            // a new comment on every push.
-            const comments = await github.paginate(github.rest.issues.listComments, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              per_page: 100,
-            });
-
-            const existing = comments.find(
-              (c) => c.user.type === 'Bot' && c.body && c.body.includes(marker),
-            );
-
-            if (existing) {
-              await github.rest.issues.updateComment({
-                ...context.repo,
-                comment_id: existing.id,
-                body,
-              });
-              core.info(`Updated zizmor comment: ${existing.html_url}`);
-            } else {
-              const { data } = await github.rest.issues.createComment({
-                ...context.repo,
-                issue_number: context.issue.number,
-                body,
-              });
-              core.info(`Created zizmor comment: ${data.html_url}`);
-            }
+          name: zizmor-report
+          path: ${{ steps.report.outputs.report-file }}
+          if-no-files-found: error
+          # Only the next job reads it.
+          retention-days: 1
 
       - name: Gate on severity
         env:
@@ -297,3 +286,84 @@ jobs:
           fi
 
           echo "No zizmor findings at or above '${ZIZMOR_FAIL_ON}' severity."
+
+  comment:
+    name: Comment findings on the pull request
+    runs-on: ubuntu-latest
+    needs: audit
+    # `!cancelled()` rather than `success()`: the gate step fails `audit`
+    # exactly when there is something worth commenting about.
+    #
+    # Two actors get a read-only GITHUB_TOKEN and would 403 here. Forked PRs,
+    # and Dependabot-triggered runs — whose head repository is *not* a fork,
+    # so the fork check alone does not catch them. 49699333 is the immutable
+    # user id of dependabot[bot]; the id rather than the login, because a
+    # login can be renamed. The audit, the SARIF upload, and the gate all
+    # still run for both.
+    if: >-
+      !cancelled()
+      && github.event_name == 'pull_request'
+      && needs.audit.outputs.report-ready == 'true'
+      && github.event.pull_request.head.repo.fork == false
+      && github.actor_id != '49699333'
+    permissions:
+      pull-requests: write # the only PR-write token in this workflow
+    steps:
+      - name: Download the report
+        # Same-run artifacts need no extra scope; `actions: read` is only for
+        # cross-run or cross-repo downloads.
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c  # v8.0.1
+        with:
+          name: zizmor-report
+          path: ${{ runner.temp }}/zizmor
+
+      - name: Upsert the sticky comment
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9.0.0
+        env:
+          REPORT_FILE: ${{ runner.temp }}/zizmor/zizmor-report.md
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- zizmor-report -->';
+            const body = fs.readFileSync(process.env.REPORT_FILE, 'utf8');
+
+            // paginate() — listComments returns only 30 results without it,
+            // so a busy PR would never match the marker and would accumulate
+            // a new comment on every push.
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              per_page: 100,
+            });
+
+            const existing = comments.find(
+              (c) => c.user.type === 'Bot' && c.body && c.body.includes(marker),
+            );
+
+            try {
+              if (existing) {
+                await github.rest.issues.updateComment({
+                  ...context.repo,
+                  comment_id: existing.id,
+                  body,
+                });
+                core.info(`Updated zizmor comment: ${existing.html_url}`);
+              } else {
+                const { data } = await github.rest.issues.createComment({
+                  ...context.repo,
+                  issue_number: context.issue.number,
+                  body,
+                });
+                core.info(`Created zizmor comment: ${data.html_url}`);
+              }
+            } catch (error) {
+              // Any other read-only-token case the conditions above miss.
+              // The findings are already in the job summary and the Security
+              // tab, so a missing comment is a warning, not a failure.
+              if (error.status === 403) {
+                core.warning('No permission to comment on this PR (403) — see the job summary and the Security tab.');
+                return;
+              }
+              throw error;
+            }

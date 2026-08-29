@@ -964,6 +964,19 @@ Parse that and you own the threshold, in one place, without a second audit.
 
 The same SARIF drives a PR comment. Group by severity and by path prefix so the comment says something a reviewer can act on, cap the table, and leave the long tail in the Security tab. Use `github.paginate` when looking for your own previous comment — `listComments` returns 30 by default, so on a busy PR the marker is never found and you post a fresh comment on every push.
 
+**Publish that comment from a second job, not from the audit job.** Job-level permissions apply to every step in the job, so a `pull-requests: write` grant next to `uses: zizmorcore/zizmor-action` hands PR write access to a third-party action and to `actions/checkout` alongside it. Split it: the audit job keeps `contents: read` and `security-events: write`, uploads the rendered report as an artifact, and owns the gate; a `needs:`-dependent job holds `pull-requests: write` and runs nothing but `download-artifact` and `github-script`. Two conditions belong on that second job, because both actors get a read-only token and would 403:
+
+```yaml
+    if: >-
+      !cancelled()
+      && github.event_name == 'pull_request'
+      && needs.audit.outputs.report-ready == 'true'
+      && github.event.pull_request.head.repo.fork == false
+      && github.actor_id != '49699333'   # dependabot[bot], by immutable id
+```
+
+`!cancelled()` rather than `success()` — the gate fails the audit job exactly when there is something worth commenting about. And the Dependabot case needs stating on its own: a Dependabot PR's head repository is **not** a fork, so the fork check does not catch it, yet its `GITHUB_TOKEN` is read-only and `createComment` returns 403. Match on the actor id, not the login, since a login can be renamed.
+
 **Rolling this out on a repository that has never run zizmor.** Do not start blocking. A first run on an established repo typically returns tens to hundreds of findings, most of them `artipacked` and `template-injection`; a gate that fails every PR from day one gets routed around, not fixed. Ship it advisory, with one knob:
 
 ```yaml

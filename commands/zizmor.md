@@ -351,11 +351,14 @@ Before asking anything, classify the free-text request:
 | "CI", "PR check", "GitHub Actions gate", "SARIF", "security tab", "block merges" | `ci` |
 | "pre-commit", "before commit", "local hook", "prek" | `precommit` |
 | "what does X mean", "why is this flagged", "CKV-style id", any bare audit id | `explain` |
+| "audit my dependabot.yml", "is my Dependabot config safe", `dependabot-execution`, `dependabot-cooldown`, "cooldown" | `scan` with `--collect=dependabot` |
 | "syntax error", "actionlint", "shellcheck", "invalid workflow" | → `/platform-skills:github-actions` |
 | "action.yml inputs", "composite action design" | → `/platform-skills:composite-actions` |
 | "terraform", "helm", "kubernetes manifest", "dockerfile misconfig" | → `/platform-skills:checkov` |
 | "CVE", "image scan", "vulnerable dependency" | → `/platform-skills:trivy` |
-| "keep pins updated", "renovate", "dependabot config" | → `/platform-skills:renovate` |
+| "keep pins updated", "renovate", "bump my pins", "update schedule", "grouping rules" | → `/platform-skills:renovate` |
+
+A bare mention of Dependabot is not a handoff signal. Split on intent, not on the tool name: **update management** (schedules, grouping, ignore rules, which ecosystems to track) belongs to `/platform-skills:renovate`; **security auditing of the config itself** stays here, because zizmor owns `dependabot-execution` (`insecure-external-code-execution`) and `dependabot-cooldown`. "Set up Dependabot for npm" → renovate. "Is this `dependabot.yml` safe" → `scan`.
 
 ### Never do these
 
@@ -372,7 +375,7 @@ Before asking anything, classify the free-text request:
 
 - **Ask the pinning policy explicitly** — hash-pin (SHA) or ref-pin (semver tag) — and recommend hash-pin, before reporting `unpinned-uses` findings or writing a config. Never infer it from what the repo happens to do today.
 - Report the **operating mode, persona, and config file** alongside every result.
-- Add `--strict-collection` to every invocation, so "0 findings" cannot mean "0 files audited".
+- Add `--strict-collection` to every **CLI** invocation, so "0 findings" cannot mean "0 files audited". It has no equivalent in `zizmorcore/zizmor-action` — no input, no env var, and `rules` is the only top-level key the config file accepts. So when generating an action-based workflow (CI Options A and D), never claim strict parse coverage: state that a file with a syntax or schema error is skipped with a warning while the rest are audited, that `fail-on-no-inputs: true` only catches an *empty* collection, and offer Option B if the distinction matters.
 - Pair any hash-pinning work with a Renovate or Dependabot handoff — pins that are never updated rot into `stale-action-refs` and unpatched advisories.
 - After writing or fixing anything, run the audit again and report what remains.
 
