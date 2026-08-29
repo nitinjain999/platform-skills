@@ -39,7 +39,12 @@ jobs:
 
       - name: Ensure tagged commit is on main
         run: |
-          git fetch origin main --depth=1
+          # No --depth here. The checkout above uses fetch-depth: 0, so the
+          # repository is complete, but a shallow fetch of main grafts a new
+          # boundary at main's tip with no parent history — and then
+          # merge-base --is-ancestor has no path to walk unless the tag IS
+          # main's tip. That made every release from a non-tip commit fail.
+          git fetch origin main
           TAG_COMMIT=$(git rev-parse HEAD)
           MAIN_COMMIT=$(git rev-parse origin/main)
 
