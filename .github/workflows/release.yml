@@ -144,71 +144,10 @@ jobs:
           fi
 
       - name: Validate no secrets in code
-        run: |
-          # Check for common secret patterns
-          # This exclusion list is duplicated in validate.yml ("Check for
-          # secrets in code"). Keep the two byte-identical — they have drifted
-          # before and it fails this gate, not that one.
-          # Exclude: GitHub Actions variables, terraform backend config,
-          #   examples/ (templates — sensitive values always use var.xxx),
-          #   validate.yml and release.yml (both carry these regex patterns, and
-          #     the patterns self-match, so each file must exclude both),
-          #   *.lock.yml (gh-aw generated workflows — machine-generated mega-lines
-          #     self-match, e.g. keyserver.ubuntu.com + imageTag=sha256:...; their
-          #     source .md is covered by the next step, so no coverage is lost)
-          POTENTIAL_SECRETS=$(grep -rE '(password|secret|key|token|apikey).*=.*["\x27][^"\x27]{8,}["\x27]' \
-             --exclude-dir=.git \
-             --exclude-dir=node_modules \
-             --exclude-dir=examples \
-             --exclude="*.md" \
-             --exclude="CHANGELOG.md" \
-             --exclude="QUALITY_ASSURANCE.md" \
-             --exclude="*.lock.yml" \
-             --exclude="release.yml" \
-             --exclude="validate.yml" . | \
-             grep -v 'matrix\.' | \
-             grep -v 'vars\.' | \
-             grep -v 'secrets\.' | \
-             grep -v 'backend-config=' | \
-             grep -v 'token.actions.githubusercontent.com' || true)
-
-          if [ -n "$POTENTIAL_SECRETS" ]; then
-            echo "⚠️  Potential secrets found in code:"
-            echo "$POTENTIAL_SECRETS"
-            echo "Review above matches before release"
-            exit 1
-          fi
-          echo "✅ No obvious secrets detected"
-
-      - name: Validate no secrets in agentic workflow sources
-        run: |
-          # The scan above excludes *.md (prose) and *.lock.yml (generated),
-          # which together would leave gh-aw workflow sources with no
-          # credential coverage at release time even though they are
-          # executable CI with secrets access. Tighter pattern (keyword +
-          # separator + a long literal value) so it does not self-match.
-          AW_SOURCES=$(find .github/workflows -name "*.md" 2>/dev/null || true)
-
-          if [ -z "$AW_SOURCES" ]; then
-            echo "ℹ️  No agentic workflow sources found"
-            exit 0
-          fi
-
-          FOUND=$(grep -HnE '(password|secret|key|token|apikey)[[:space:]]*[:=][[:space:]]*["]?[A-Za-z0-9/+_-]{16,}' \
-             $AW_SOURCES | \
-             grep -v 'secrets\.' | \
-             grep -v 'vars\.' | \
-             grep -v 'github\.token' || true)
-
-          if [ -n "$FOUND" ]; then
-            echo "❌ Potential hard-coded credential in agentic workflow source:"
-            echo "$FOUND"
-            echo ""
-            echo "Reference secrets as \${{ secrets.NAME }} instead of inlining values."
-            exit 1
-          fi
-
-          echo "✅ No hard-coded credentials in agentic workflow sources"
+        # Shared with validate.yml via tests/scan-secrets.sh. This step used to be
+        # an inline copy that drifted out of step with the PR gate and blocked a
+        # release on two false positives.
+        run: bash tests/scan-secrets.sh
 
   quality-checks:
     name: Quality Checks
@@ -305,26 +244,10 @@ jobs:
           terraform_version: "1.16.0"
 
       - name: Validate Terraform files (if present)
-        run: |
-          if find . -type f -name "*.tf" ! -path "./.git/*" ! -path "./examples/demo/*" | grep -q .; then
-            ERRORS=0
-            for dir in $(find . -type f -name "*.tf" ! -path "./.git/*" ! -path "./examples/demo/*" -exec dirname {} \; | sort -u); do
-              echo "Validating Terraform in: $dir"
-              if ! (cd "$dir" && terraform init -backend=false -input=false && terraform validate); then
-                echo "❌ Terraform validation failed in $dir"
-                ERRORS=$((ERRORS + 1))
-              fi
-            done
-
-            if [ $ERRORS -gt 0 ]; then
-              echo "❌ Found $ERRORS Terraform validation errors"
-              exit 1
-            fi
-
-            echo "✅ Terraform files validated"
-          else
-            echo "ℹ️  No Terraform files found"
-          fi
+        # Shared with validate.yml via tests/validate-terraform.sh, so the release
+        # gate runs exactly the checks the PR gate ran. Previously this copy was
+        # missing the fmt check that validate.yml performed.
+        run: bash tests/validate-terraform.sh
 
   create-release:
     name: Create GitHub Release

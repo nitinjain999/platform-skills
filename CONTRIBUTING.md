@@ -241,6 +241,12 @@ Follow this checklist when adding a net-new domain (e.g. a new command + referen
 - [ ] `bash tests/handbook-consistency.sh` — all checks pass
 - [ ] `bash tests/release-consistency.sh` — all checks pass
 - [ ] `bash tests/validate-ci.sh` — all checks pass
+- [ ] `bash tests/scan-secrets.sh` — all checks pass (stage new files first; it scans tracked files)
+- [ ] `bash tests/validate-terraform.sh` — only if you touched `*.tf`; takes a few minutes
+
+The last two are the exact scripts `validate.yml` and `release.yml` run, so a local
+pass means those gates will pass. Run them from anywhere — they resolve the repo
+root themselves.
 
 ### 8. Wiki (post-merge)
 
