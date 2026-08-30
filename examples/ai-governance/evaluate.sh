@@ -36,6 +36,9 @@ json_string() {
   local s="$1"
   s="${s//\\/\\\\}"
   s="${s//\"/\\\"}"
+  s="${s//$'\n'/\\n}"
+  s="${s//$'\t'/\\t}"
+  s="${s//$'\r'/\\r}"
   printf '"%s"' "$s"
 }
 
@@ -43,6 +46,7 @@ emit_decision() {
   local decision="$1"
   local reason="${2:-}"
 
+  # MODE=ci always uses Copilot envelope; hook mode selects envelope by PLATFORM
   if [[ "$MODE" == "ci" || "$PLATFORM" == "copilot" ]]; then
     if [[ "$decision" == "deny" ]]; then
       printf '{"permissionDecision":"deny","permissionDecisionReason":%s}\n' "$(json_string "$reason")"
