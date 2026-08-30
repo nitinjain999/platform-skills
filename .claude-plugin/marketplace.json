@@ -7,7 +7,7 @@
   "plugins": [
     {
       "name": "platform-skills",
-      "version": "1.39.0",
+      "version": "1.40.0",
       "description": "Production-grade platform engineering handbook for Claude, Codex, and Cursor. 43 slash-command workflows: Kubernetes (baseline, RBAC, workload, debug), GitHub Actions (design, security, review, debug), Azure (Workload Identity, AKS, tagging, RBAC), OpenShift (SCC, Routes, GitOps, upgrades), Secrets (ESO, Sealed Secrets, rotation, audit), Helm, Terraform, Flux CD, Argo CD, AWS, Kyverno, OPA, KEDA, Karpenter, supply chain security, Falco, chaos engineering, DORA metrics, Datadog, Dynatrace, Linkerd, AWS MCP, Renovate, Checkov, Trivy, Zizmor workflow auditing, Kingfisher secret scanning and revocation, and multi-agent scaffolding. Every answer includes blast radius, validation steps, and rollback plan.",
       "author": {
         "name": "Nitin Jain"
