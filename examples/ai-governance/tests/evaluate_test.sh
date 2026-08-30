@@ -168,7 +168,7 @@ require_disclosure: true
 YAML
   POLICY_FILE="$tmp/policy.yaml"
   local out rc
-  out="$(PATH="/usr/bin:/bin" load_policy 2>/dev/null)"
+  out="$(PATH="" load_policy 2>/dev/null)"
   rc=$?
   assert_eq "missing yq denies, exit 2" "2" "$rc"
   assert_eq "missing yq reason specific" "true" \
