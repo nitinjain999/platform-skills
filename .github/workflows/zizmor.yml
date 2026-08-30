@@ -32,6 +32,7 @@ on:
       - '.github/zizmor.yml'
       - '.pre-commit-config.yaml'
       - 'examples/github-actions/**'
+      - 'examples/ai-governance/**'
   push:
     branches:
       - main
@@ -42,6 +43,7 @@ on:
       - '.github/zizmor.yml'
       - '.pre-commit-config.yaml'
       - 'examples/github-actions/**'
+      - 'examples/ai-governance/**'
   workflow_dispatch:
 
 concurrency:
