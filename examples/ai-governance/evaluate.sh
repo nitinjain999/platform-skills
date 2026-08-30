@@ -97,3 +97,17 @@ load_policy() {
     [[ -n "$line" ]] && DENIED_COMMANDS+=("$line")
   done < <(yq eval '.denied_commands[]' "$POLICY_FILE" 2>/dev/null || true)
 }
+
+match_protected_path() {
+  local target="$1"
+  local pattern
+  for pattern in "${PROTECTED_PATHS[@]}"; do
+    case "$target" in
+      $pattern)
+        echo "$pattern"
+        return 0
+        ;;
+    esac
+  done
+  return 1
+}

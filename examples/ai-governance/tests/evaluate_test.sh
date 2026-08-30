@@ -172,5 +172,32 @@ YAML
 test_load_policy_missing_yq
 test_load_policy_valid
 
+test_match_protected_path_hit() {
+  PROTECTED_PATHS=(".github/workflows/**" ".ai-governance.yaml" ".ai-governance/**")
+  local matched
+  matched="$(match_protected_path ".github/workflows/release.yml")"
+  assert_eq "workflows glob matches" ".github/workflows/**" "$matched"
+}
+
+test_match_protected_path_governance_asset() {
+  PROTECTED_PATHS=(".ai-governance.yaml" ".ai-governance/**")
+  local matched
+  matched="$(match_protected_path ".ai-governance/evaluate.sh")"
+  assert_eq "governance asset glob matches" ".ai-governance/**" "$matched"
+}
+
+test_match_protected_path_miss() {
+  PROTECTED_PATHS=(".github/workflows/**")
+  if match_protected_path "src/app.py" >/dev/null; then
+    FAIL=$((FAIL+1)); echo "FAIL: unrelated path should not match"
+  else
+    PASS=$((PASS+1))
+  fi
+}
+
+test_match_protected_path_hit
+test_match_protected_path_governance_asset
+test_match_protected_path_miss
+
 echo "PASS=$PASS FAIL=$FAIL"
 [[ $FAIL -eq 0 ]]
