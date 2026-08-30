@@ -171,3 +171,50 @@ decide() {
       ;;
   esac
 }
+
+run_hook_mode() {
+  local stdin_json
+  stdin_json="$(cat)"
+
+  local tool_name op target
+  if [[ "$PLATFORM" == "claude" ]]; then
+    tool_name="$(echo "$stdin_json" | jq -r '.tool_name // empty')"
+  else
+    tool_name="$(echo "$stdin_json" | jq -r '.toolName // .tool_name // empty')"
+  fi
+
+  local path command
+  path="$(echo "$stdin_json" | jq -r '.toolArgs.path // .toolArgs.file_path // .tool_input.path // .tool_input.file_path // empty')"
+  command="$(echo "$stdin_json" | jq -r '.toolArgs.command // .tool_input.command // empty')"
+
+  if [[ -n "$command" ]]; then
+    local matched
+    if matched="$(match_denied_command "$command")"; then
+      decide "true" "$matched" "$command"
+    else
+      decide "false" "" "$command"
+    fi
+  elif [[ -n "$path" ]]; then
+    local matched
+    if matched="$(match_protected_path "$path")"; then
+      decide "true" "protected_paths: $matched ($path)" "$path"
+    else
+      decide "false" "" "$path"
+    fi
+  else
+    emit_decision "allow"
+  fi
+}
+
+main() {
+  load_policy
+  case "$MODE" in
+    hook) run_hook_mode ;;
+    ci) run_ci_mode ;;  # implemented in Task 7
+    *) usage ;;
+  esac
+}
+
+if [[ "$SOURCE_ONLY" -eq 0 ]]; then
+  main "$@"
+fi

@@ -302,5 +302,46 @@ test_decide_audit_tier_allows_and_logs() {
 test_decide_block_tier_denies
 test_decide_audit_tier_allows_and_logs
 
+test_hook_mode_copilot_camelcase_edit_deny() {
+  ENFORCEMENT="block"
+  PROTECTED_PATHS=(".github/workflows/**")
+  local tmp; tmp="$(mktemp -d)"; cd "$tmp"
+  local out
+  out="$(echo '{"toolName":"edit","toolArgs":{"path":".github/workflows/release.yml"}}' | run_hook_mode 2>/dev/null)"
+  cd - >/dev/null; rm -rf "$tmp"
+  assert_eq "copilot camelCase edit denied" \
+    '{"permissionDecision":"deny","permissionDecisionReason":"protected_paths: .github/workflows/** (.github/workflows/release.yml)"}' \
+    "$out"
+}
+
+test_hook_mode_claude_bash_deny() {
+  ENFORCEMENT="block"
+  DENIED_COMMANDS=("rm -rf")
+  PLATFORM="claude"
+  local tmp; tmp="$(mktemp -d)"; cd "$tmp"
+  local out
+  out="$(echo '{"tool_name":"Bash","tool_input":{"command":"rm -rf /tmp/x"}}' | run_hook_mode 2>/dev/null)"
+  cd - >/dev/null; rm -rf "$tmp"
+  assert_eq "claude bash denied" \
+    '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"rm -rf"}}' \
+    "$out"
+}
+
+test_hook_mode_allow_when_no_match() {
+  ENFORCEMENT="block"
+  PROTECTED_PATHS=(".github/workflows/**")
+  DENIED_COMMANDS=()
+  PLATFORM="copilot"
+  local tmp; tmp="$(mktemp -d)"; cd "$tmp"
+  local out
+  out="$(echo '{"toolName":"edit","toolArgs":{"path":"src/app.py"}}' | run_hook_mode 2>/dev/null)"
+  cd - >/dev/null; rm -rf "$tmp"
+  assert_eq "unrelated edit allowed" '{"permissionDecision":"allow"}' "$out"
+}
+
+test_hook_mode_copilot_camelcase_edit_deny
+test_hook_mode_claude_bash_deny
+test_hook_mode_allow_when_no_match
+
 echo "PASS=$PASS FAIL=$FAIL"
 [[ $FAIL -eq 0 ]]
