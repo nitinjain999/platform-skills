@@ -205,12 +205,14 @@ run_ci_mode() {
     changed_paths+=("$path")
   done
 
-  local path matched
-  for path in "${changed_paths[@]}"; do
-    if matched="$(match_protected_path "$path")"; then
-      decide "true" "protected_paths: $matched ($path)" "$path"
-    fi
-  done
+  if [[ ${#changed_paths[@]} -gt 0 ]]; then
+    local path matched
+    for path in "${changed_paths[@]}"; do
+      if matched="$(match_protected_path "$path")"; then
+        decide "true" "protected_paths: $matched ($path)" "$path"
+      fi
+    done
+  fi
 
   local file_count=${#changed_paths[@]}
   if [[ "$MAX_DIFF_FILES" -gt 0 && "$file_count" -gt "$MAX_DIFF_FILES" ]]; then

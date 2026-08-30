@@ -417,5 +417,17 @@ test_ci_mode_aggregate_not_per_file() {
 
 test_ci_mode_aggregate_not_per_file
 
+test_ci_mode_empty_stdin() {
+  ENFORCEMENT="block"
+  PROTECTED_PATHS=(".github/workflows/**")
+  MAX_DIFF_FILES=25
+  REQUIRE_DISCLOSURE="false"
+  local out
+  out="$(printf "" | run_ci_mode 2>/dev/null)"
+  assert_eq "ci mode allows on empty stdin (no changed files)" '{"permissionDecision":"allow"}' "$out"
+}
+
+test_ci_mode_empty_stdin
+
 echo "PASS=$PASS FAIL=$FAIL"
 [[ $FAIL -eq 0 ]]
