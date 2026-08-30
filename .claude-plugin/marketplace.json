@@ -183,7 +183,13 @@
         "leaked-secrets",
         "credential-validation",
         "blast-radius-mapping",
-        "credential-revocation"
+        "credential-revocation",
+        "ai-governance",
+        "ai-agent-policy",
+        "copilot-hooks",
+        "claude-code-hooks",
+        "pretooluse",
+        "protected-paths"
       ],
       "source": {
         "source": "url",

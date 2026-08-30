@@ -24,6 +24,7 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:trivy](#platform-skillstrivy) | Container image, fs, repo, SBOM, and cluster CVE scanning; three-layer wizard; Trivy Operator via Flux |
 | [/platform-skills:zizmor](#platform-skillszizmor) | GitHub Actions workflow security audit — template injection, unpinned uses, permissions; three-layer wizard; auto-fix, policy file, CI gate, pre-commit |
 | [/platform-skills:kingfisher](#platform-skillskingfisher) | Find, live-validate, map blast radius of, and revoke leaked secrets — repo, Git history, GitHub/GitLab/Bitbucket orgs, S3/GCS, Slack, Jira; baseline tracking, CI gate, pre-commit |
+| [/platform-skills:ai-governance](#platform-skillsai-governance) | Policy gate for AI coding agents — Copilot and Claude Code session hooks that deny protected-path edits and dangerous commands, plus a merge-time backstop; dry-run, fleet audit, plain-English explain |
 | [/platform-skills:gitops](#platform-skillsgitops) | Flux CD / Argo CD — debug live cluster issues or audit a GitOps repo |
 | [/platform-skills:linkerd](#platform-skillslinkerd) | Linkerd mTLS, injection, policy, multi-cluster |
 | [/platform-skills:linux](#platform-skillslinux) | Linux, DNS, load balancing, VPC/VNet, networking |
@@ -324,6 +325,52 @@ Kingfisher answers *"is this secret still live, and what can it reach?"*; Trivy'
 /platform-skills:kingfisher set up a baseline so we only get paged on new secrets
 /platform-skills:kingfisher add a CI gate that fails on confirmed-live credentials
 /platform-skills:kingfisher revoke this GitHub token — rotation is already done
+```
+
+---
+
+## `/platform-skills:ai-governance`
+
+**What it does:** Scaffolds and enforces a policy gate for AI coding agents (GitHub Copilot, Claude Code) operating on a repo. Two layers, one shared bash evaluator: a real-time `preToolUse` session hook that denies an edit to a protected path or a dangerous shell command *before* it executes, and a merge-time GitHub Actions check that catches anything bypassing the hook — a different tool, a manual push, or an edit to the governance files themselves. The merge-time check gets its trust from *which copy* of the evaluator runs: the base branch's, fetched via `git show`, never the PR's own.
+
+Policy lives in `.ai-governance.yaml` (`protected_paths`, `denied_commands`, `max_diff_files`, `require_disclosure`) with three enforcement tiers — `audit`, `warn`, `block` — so a team ratchets up once it trusts the false-positive rate rather than starting on a hard block that gets uninstalled on day one.
+
+`/platform-skills:setup-agents` scaffolds what AI tools *are*; this command scaffolds what they are *allowed to do*. `/platform-skills:opa` is infra policy-as-code against manifests; this is agent-behavior policy against tool calls and diffs. Two different engines — do not conflate them.
+
+```
+/platform-skills:ai-governance
+/platform-skills:ai-governance generate
+/platform-skills:ai-governance check .github/workflows/release.yml
+/platform-skills:ai-governance check --diff main...HEAD
+/platform-skills:ai-governance audit
+/platform-skills:ai-governance explain .ai-governance.yaml
+```
+
+**Modes:**
+
+| Mode | What it does |
+|------|-------------|
+| `generate` | Scaffold `.ai-governance.yaml`, the evaluator, Copilot/Claude session hooks, and the merge-time check |
+| `check` | Dry-run the evaluator against a path, a command string, or a diff range — no live agent session, no audit-log writes |
+| `audit` | Scan repos in an org via `gh api` for policy presence, enforcement tier, and hook drift — zero infrastructure |
+| `explain` | Plain-English translation of an existing `.ai-governance.yaml`, including what a developer actually sees at the active tier |
+
+**Guardrails it enforces:**
+
+- Never overwrites `.claude/settings.json` — always reads, merges the hook entries into the existing matcher-group structure, and writes back, so pre-existing hooks and settings survive.
+- Never uses an HTTP-based hook — those are fail-open on network error, which silently disables enforcement under packet loss. The evaluator is always a local `command`-type script.
+- Never defaults to `enforcement: block` — `audit` is the default, `block` is an explicit opt-in after the team has run `audit` long enough to trust it.
+- Never claims unconditional fail-closed enforcement: a Copilot hook timeout and a Claude Code crash/timeout both default to *allow*. The merge-time check exists specifically to catch what leaks through that gap.
+- Never logs denials via `postToolUse` — a denied call never runs, so nothing "completed"; the audit line is written synchronously inside the `preToolUse` invocation that decided.
+- Never treats `denied_commands` as a security boundary — matching is word-tokenized prefix matching, a deterrent against unintentional dangerous commands, with the known bypasses documented and pinned by tests.
+
+**Example prompts:**
+```
+/platform-skills:ai-governance stop AI agents from editing our workflow files
+/platform-skills:ai-governance we're rolling this out org-wide — start in audit mode
+/platform-skills:ai-governance which repos in our org have adopted this, and at what tier?
+/platform-skills:ai-governance would this policy have blocked yesterday's PR?
+/platform-skills:ai-governance why did the Claude Code hook not fire on that edit?
 ```
 
 ---

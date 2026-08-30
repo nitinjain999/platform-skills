@@ -109,6 +109,7 @@ Load only the files needed for the current request.
 | references/composite-actions.md | Composite action scaffold, SHA pinning, secrets-as-inputs, actionlint |
 | references/zizmor.md | Zizmor audit catalogue, personas, `zizmor.yml` policy, exit-code gating, auto-fix, SARIF, pre-commit |
 | references/kingfisher.md | Kingfisher bootstrap, scan/validate/revoke, baseline, `kingfisher.yaml`, platform targets, CI gate, pre-commit |
+| references/ai-governance.md | Policy schema, verified Copilot/Claude hook protocol, trusted-verifier self-disable design, denied_commands scoping |
 | references/secrets.md | External Secrets Operator, Sealed Secrets, secrets strategy |
 | references/linkerd.md | mTLS, observability, traffic management, multi-cluster |
 | references/linux-networking.md | DNS, load balancing, VPC/VNet, kernel tuning, connectivity |
@@ -188,4 +189,5 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:secrets` — design ESO vs Sealed Secrets strategy, scaffold SecretStore/ExternalSecret, seal and rotate secrets, run rotation runbooks, and audit Kubernetes-side secrets hygiene
 - `/platform-skills:renovate` — generate renovate.json for any repo, or emit a GHA workflow to validate it on PR
 - `/platform-skills:setup-agents` — scaffold multi-agent AI configs for any repo: ranked scan, interview-driven, generate/upgrade/add/review
+- `/platform-skills:ai-governance` — generate real-time session hooks (Copilot, Claude Code) and a merge-time backstop that gate AI-agent edits to protected paths and dangerous commands; `check` dry-runs policy changes, `audit` reports fleet-wide adoption via `gh api`, `explain` translates an existing policy to plain English
 - Working Flux CD examples: examples/fluxcd/
