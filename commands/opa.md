@@ -9,6 +9,8 @@ custom_edit_url: null
 
 Write, test, validate, explain, and debug OPA Rego policies with Conftest.
 
+> **AI-agent behavior, not infra policy:** to gate what an AI coding agent (Copilot, Claude Code) can edit or run in a repo, use `/platform-skills:ai-governance` — a different policy engine for a different input shape (tool calls and diffs, not Terraform/Kubernetes manifests).
+
 ---
 
 ## Interactive Wizard (fires when no arguments are provided)

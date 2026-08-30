@@ -9,6 +9,8 @@ custom_edit_url: null
 
 Scaffold a multi-agent AI configuration for any repo — any language, any framework.
 
+> **Policy, not config:** to control what these tools are *allowed to do* once configured (protected paths, dangerous commands, a merge-time backstop), use `/platform-skills:ai-governance`.
+
 Reference index: `references/setup-agents.md` — read this first. It routes to mode-specific files.
 
 ## Modes
