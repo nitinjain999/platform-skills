@@ -152,3 +152,53 @@ printf '%s\0' ".github/workflows/release.yml" | .ai-governance/evaluate.sh --mod
 # Under enforcement: block → {"permissionDecision":"deny","permissionDecisionReason":"..."}, exit 2
 # Under enforcement: audit → {"permissionDecision":"allow"}, plus a would_deny line in .ai-governance/audit.log
 ```
+
+## Mode: check
+
+Dry-run the evaluator against a path, a command string, or a diff range, without a live agent session.
+
+Steps:
+
+1. Accept a path (file edit test), a command string (bash test), or a diff range (`check --diff main...HEAD`).
+2. Run the platform-neutral decision path — never render a Copilot/Claude envelope for this mode, since a platform engineer tuning policy needs the rule that fired, not a vendor transport format:
+   ```bash
+   # File edit test
+   echo '{"toolName":"edit","toolArgs":{"path":"<path>"}}' | .ai-governance/evaluate.sh --mode=hook --platform=copilot
+
+   # Diff range test
+   git diff -z --name-only main...HEAD | .ai-governance/evaluate.sh --mode=ci
+   ```
+3. Report each decision with the matching rule (which `protected_paths` glob or `denied_commands` entry fired), so the policy can be tuned before rollout.
+
+## Mode: audit
+
+Scan repos in an org for policy presence, enforcement tier, and hook/policy drift — no infrastructure required.
+
+Steps:
+
+1. Accept an org or list of repos (`gh api` via existing auth, same pattern as `triage.md`'s comment-fetching).
+2. For each repo: check for `.ai-governance.yaml` presence, current `enforcement` tier, and whether the generated hook files match what the current policy would generate (hash comparison, not full regeneration):
+   ```bash
+   gh api "orgs/<org>/repos" --paginate --jq '.[].full_name' | while read -r repo; do
+     policy="$(gh api "repos/$repo/contents/.ai-governance.yaml" --jq '.content' 2>/dev/null | base64 -d 2>/dev/null)"
+     if [[ -z "$policy" ]]; then
+       echo "$repo: not adopted"
+     else
+       tier="$(echo "$policy" | yq eval '.enforcement' -)"
+       echo "$repo: enforcement=$tier"
+     fi
+   done
+   ```
+3. Report: adoption rate, tier breakdown, and any repo where hooks are stale relative to its own policy file.
+
+This is the fleet-visibility value normally associated with durable audit ingestion (Phase 4), delivered here via `gh api` with zero infrastructure — it degrades in reach, not in kind, without it.
+
+## Mode: explain
+
+Translate an existing `.ai-governance.yaml` into plain English — same shape as `opa.md`'s `explain` mode.
+
+Steps:
+
+1. Read the policy file.
+2. Describe in plain language: what paths are protected and why they matter, what commands are denied and their risk, what enforcement tier is active and what a developer will actually see when a rule fires under that tier, and whether `require_disclosure` is active.
+3. If `enforcement: audit`, explicitly say so: "no rule currently blocks anything — violations are logged only."
