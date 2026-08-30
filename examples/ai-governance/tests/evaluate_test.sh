@@ -123,5 +123,40 @@ test_json_string_escapes() {
 
 test_json_string_escapes
 
+test_load_policy_missing_yq() {
+  PLATFORM="copilot"
+  POLICY_FILE="/nonexistent.yaml"
+  local out rc
+  out="$(PATH="/usr/bin:/bin" load_policy 2>/dev/null)"
+  rc=$?
+  assert_eq "missing policy file denies, exit 2" "2" "$rc"
+  assert_eq "missing policy file reason present" "true" \
+    "$(echo "$out" | grep -q "policy_load_failed" && echo true || echo false)"
+}
+
+test_load_policy_valid() {
+  PLATFORM="copilot"
+  local tmp
+  tmp="$(mktemp -d)"
+  cat > "$tmp/policy.yaml" << 'YAML'
+version: 1
+source: local
+enforcement: block
+protected_paths:
+  - "secrets/**"
+denied_commands:
+  - "rm -rf"
+max_diff_files: 25
+require_disclosure: true
+YAML
+  POLICY_FILE="$tmp/policy.yaml"
+  load_policy
+  assert_eq "valid policy loads enforcement=block" "block" "$ENFORCEMENT"
+  rm -rf "$tmp"
+}
+
+test_load_policy_missing_yq
+test_load_policy_valid
+
 echo "PASS=$PASS FAIL=$FAIL"
 [[ $FAIL -eq 0 ]]
