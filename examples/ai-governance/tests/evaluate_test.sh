@@ -195,9 +195,17 @@ test_match_protected_path_miss() {
   fi
 }
 
+test_match_protected_path_nested() {
+  PROTECTED_PATHS=(".ai-governance/**")
+  local matched
+  matched="$(match_protected_path ".ai-governance/policies/nested/deep/file.yaml")"
+  assert_eq "recursive glob matches multiple path segments" ".ai-governance/**" "$matched"
+}
+
 test_match_protected_path_hit
 test_match_protected_path_governance_asset
 test_match_protected_path_miss
+test_match_protected_path_nested
 
 echo "PASS=$PASS FAIL=$FAIL"
 [[ $FAIL -eq 0 ]]
