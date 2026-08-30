@@ -339,9 +339,25 @@ test_hook_mode_allow_when_no_match() {
   assert_eq "unrelated edit allowed" '{"permissionDecision":"allow"}' "$out"
 }
 
+test_hook_mode_no_path_no_command() {
+  PLATFORM="copilot"
+  local out
+  out="$(echo '{"toolName":"read"}' | run_hook_mode 2>/dev/null)"
+  assert_eq "no path/command falls through to allow" '{"permissionDecision":"allow"}' "$out"
+}
+
+test_source_only_suppresses_main_with_other_flags() {
+  local out
+  out="$(echo '{"toolName":"edit","toolArgs":{"path":".github/workflows/x.yml"}}' | \
+    bash "$EVAL" --source-only --mode=hook --platform=copilot 2>/dev/null)"
+  assert_eq "source-only suppresses main even with mode/platform present" "" "$out"
+}
+
 test_hook_mode_copilot_camelcase_edit_deny
 test_hook_mode_claude_bash_deny
 test_hook_mode_allow_when_no_match
+test_hook_mode_no_path_no_command
+test_source_only_suppresses_main_with_other_flags
 
 echo "PASS=$PASS FAIL=$FAIL"
 [[ $FAIL -eq 0 ]]

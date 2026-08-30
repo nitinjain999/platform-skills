@@ -176,13 +176,6 @@ run_hook_mode() {
   local stdin_json
   stdin_json="$(cat)"
 
-  local tool_name op target
-  if [[ "$PLATFORM" == "claude" ]]; then
-    tool_name="$(echo "$stdin_json" | jq -r '.tool_name // empty')"
-  else
-    tool_name="$(echo "$stdin_json" | jq -r '.toolName // .tool_name // empty')"
-  fi
-
   local path command
   path="$(echo "$stdin_json" | jq -r '.toolArgs.path // .toolArgs.file_path // .tool_input.path // .tool_input.file_path // empty')"
   command="$(echo "$stdin_json" | jq -r '.toolArgs.command // .tool_input.command // empty')"
