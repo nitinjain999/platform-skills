@@ -5,6 +5,19 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+Adds the `/platform-skills:ai-governance` command (43 total) — Phase 1 of a policy gate for AI coding agents, with zero infrastructure dependency.
+
+### Added
+
+- **`/platform-skills:ai-governance`** — scaffold and enforce a policy gate for AI coding agents (GitHub Copilot, Claude Code) operating on a repo. Two layers over one shared bash evaluator: a real-time `preToolUse` session hook that denies an edit to a protected path or a dangerous shell command before it executes, and a merge-time GitHub Actions check that catches whatever bypasses the hook — a different tool, a manual push, or an edit to the governance files themselves. Modes: `generate`, `check`, `audit`, `explain`
+- **`references/ai-governance.md`** — the `.ai-governance.yaml` schema (`protected_paths`, `denied_commands`, `max_diff_files`, `require_disclosure`); the Copilot and Claude Code hook protocols verified against both vendors' docs, including each platform's fail-open cases and why the merge-time check is not redundant with the hook; the trusted-verifier design (the CI check runs the *base branch's* copy of the evaluator and policy, so a PR cannot weaken the rule meant to catch it); `denied_commands` word-tokenized prefix matching scoped explicitly as a deterrent rather than a security boundary; synchronous audit logging and why `postToolUse` structurally cannot log a denial
+- **`examples/ai-governance/`** — the evaluator (`evaluate.sh`, bash 3.2 compatible: portable `case`-glob matching, no `globstar`), a 108-assertion test suite wired into `tests/handbook-consistency.sh`, a sample policy, Copilot `preToolUse`/`postToolUse` hook configs, a Claude Code `.claude/settings.json` snippet in the correct three-level matcher-group shape, and the merge-time workflow with the base-branch fetch
+- **Three enforcement tiers** — `audit` (log only), `warn` (log plus a PR comment listing violations), `block` (deny for real). Default is `audit`: a global rollout that starts as a hard block gets uninstalled on day one. Self-disable — a diff touching both a governance asset and another protected path — denies regardless of tier, so a team onboarding under `audit` cannot have its own governance config quietly disabled
+- **`protected_paths` gates writes, not reads** — the evaluator inspects the tool name and payload, so a `Read` against a protected path is allowed while `Edit`/`Write`/`MultiEdit` against the same path is denied. Blocking reads is what makes `block` tier get uninstalled. An edit payload (`new_string`, `content`, `edits`) counts as write intent whatever the tool is called, and an unrecognised tool name fails closed
+- **A platform-neutral dry-run renderer** (`--platform=none`) behind `check` mode — prints `{"decision":…,"rule":…,"reason":…}` instead of a Copilot or Claude envelope, and writes nothing to `.ai-governance/audit.log`, so tuning a policy never leaves fake entries in the real audit trail. Audit lines carry a short, stable rule code (`protected_paths`, `denied_commands`, `max_diff_files`, `require_disclosure`, `self_disable`) in its own field, with the human-readable specifics in the next field, so log aggregation never parses prose
+
 ## [1.39.0] - 2026-08-29
 
 Adds the `/platform-skills:kingfisher` command (42 total) and closes the CI-gate duplication and loose provider-constraint gaps behind the three consecutive broken v1.38.0 release attempts.

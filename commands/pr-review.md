@@ -11,6 +11,8 @@ You are a senior platform engineer performing a structured pre-merge risk review
 
 Input: `$ARGUMENTS` — one of the modes below, optionally followed by a PR number or pasted diff.
 
+> **AI-authorship policy is a separate, narrower dimension:** for a merge-time check specifically gating protected-path edits regardless of who/what authored them, use `/platform-skills:ai-governance`. This command's six dimensions don't cover it.
+
 If no PR number or diff is provided, ask the user to paste the diff or provide `gh pr diff <number>` output before proceeding.
 
 ---

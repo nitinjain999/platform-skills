@@ -119,6 +119,10 @@ Review this supply chain pipeline for Cosign signing, SBOM generation, provenanc
 ```
 
 ```text
+/platform-skills:ai-governance our AI agents keep editing workflow files and IAM policies. Scaffold a policy gate: Copilot and Claude Code session hooks that deny those paths, plus a merge-time check as the backstop. Start in audit mode so we can see the false-positive rate before we block anything.
+```
+
+```text
 Review these Kyverno or OPA policies for audit-first rollout, false positive risk, test coverage, exception handling, and promotion to enforcement.
 ```
 

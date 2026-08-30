@@ -89,7 +89,13 @@
     "leaked-secrets",
     "credential-validation",
     "blast-radius-mapping",
-    "credential-revocation"
+    "credential-revocation",
+    "ai-governance",
+    "ai-agent-policy",
+    "copilot-hooks",
+    "claude-code-hooks",
+    "pretooluse",
+    "protected-paths"
   ],
   "skills": [
     "./skills/platform-skills"
@@ -136,6 +142,7 @@
     "./commands/openshift.md",
     "./commands/secrets.md",
     "./commands/zizmor.md",
-    "./commands/kingfisher.md"
+    "./commands/kingfisher.md",
+    "./commands/ai-governance.md"
   ]
 }

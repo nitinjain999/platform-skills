@@ -1,0 +1,24 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".ai-governance/evaluate.sh --mode=hook --platform=claude --event=PreToolUse"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".ai-governance/evaluate.sh --mode=hook --platform=claude --event=PostToolUse"
+          }
+        ]
+      }
+    ]
+  }
+}

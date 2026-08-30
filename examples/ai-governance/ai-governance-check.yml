@@ -1,0 +1,125 @@
+name: AI Governance Check
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  ai-governance:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Needed only by the warn-tier comment step below. If your organisation
+      # would rather not hand a write-scoped token to the job that runs the
+      # evaluator, split the comment into a second job that consumes an
+      # artifact — the pattern this repository uses in .github/workflows/zizmor.yml.
+      pull-requests: write
+    env:
+      # github.base_ref is attacker-influenced on a fork PR. Bind it to an env
+      # var once and reference it as "$BASE_REF" in every shell block below;
+      # never interpolate ${{ }} directly into a run: script.
+      BASE_REF: ${{ github.base_ref }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          # The trusted-verifier design needs the base branch's history, so the
+          # full clone is deliberate.
+          fetch-depth: 0
+          # Nothing here pushes; do not leave the token in .git/config.
+          persist-credentials: false
+
+      - name: Install yq
+        env:
+          YQ_VERSION: v4.53.6
+          YQ_SHA256: c5f056448f973ae7d39b5401949648a78f2dc1947d6a8eb65be60d5c504b9385
+        run: |
+          # Installed unconditionally rather than behind a `command -v yq`
+          # guard: a governance gate must not silently change behaviour when
+          # the runner image happens to ship a different yq major.
+          curl -fsSL -o /tmp/yq \
+            "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
+          echo "${YQ_SHA256}  /tmp/yq" | sha256sum -c -
+          sudo install -m 0755 /tmp/yq /usr/local/bin/yq
+
+      - name: Fetch the trusted (base-branch) evaluator and policy
+        run: |
+          git show "origin/${BASE_REF}:.ai-governance/evaluate.sh" > /tmp/trusted-evaluate.sh
+          git show "origin/${BASE_REF}:.ai-governance.yaml" > /tmp/trusted-policy.yaml
+          chmod +x /tmp/trusted-evaluate.sh
+
+      - name: Run the governance check against this PR's diff
+        id: check
+        run: |
+          # A PR could force-add a pre-populated .ai-governance/audit.log
+          # (normally gitignored) to smuggle fabricated lines into the
+          # warn-tier comment below. Remove it before the evaluator runs so
+          # every line that ends up in the file was written by this
+          # invocation, not checked out from the PR's own tree.
+          rm -f .ai-governance/audit.log
+
+          # The evaluator exits 2 only when the policy's tier says to block.
+          # Capture the code rather than letting `set -e` end the job here, so
+          # the warn-tier comment below still runs, then fail at the end.
+          rc=0
+          git diff -z --name-only "origin/${BASE_REF}...HEAD" \
+            | /tmp/trusted-evaluate.sh --mode=ci \
+                --policy=/tmp/trusted-policy.yaml \
+                --base-ref="origin/${BASE_REF}" || rc=$?
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+
+      - name: Collect warn-tier violations
+        id: violations
+        run: |
+          # Under `warn` the evaluator allows the PR (rc=0) and records each
+          # violation as a `would_deny_warn` audit line. Under `audit` the
+          # outcome is `would_deny` and nothing is posted. Under `block` the
+          # previous step already produced rc=2 and this list stays empty.
+          : > /tmp/violations.md
+          if [[ -f .ai-governance/audit.log ]]; then
+            awk -F'\t' '$3 == "would_deny_warn" {
+              printf "- `%s` — %s (target: `%s`)\n", $4, $5, $6
+            }' .ai-governance/audit.log > /tmp/violations.md
+          fi
+          if [[ -s /tmp/violations.md ]]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Comment the warn-tier violations on the pull request
+        # A fork PR gets a read-only GITHUB_TOKEN whatever `permissions:` says,
+        # and Dependabot (actor id 49699333) runs with a read-only token too, so
+        # both are skipped rather than left to fail the job.
+        if: >-
+          steps.violations.outputs.found == 'true'
+          && github.event.pull_request.head.repo.fork == false
+          && github.actor_id != '49699333'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          {
+            echo "### AI governance: \`warn\` tier"
+            echo
+            echo "This pull request trips the following rules. Nothing is blocked at this tier — the list is here so the policy can be tuned before it moves to \`block\`."
+            echo
+            cat /tmp/violations.md
+            echo
+            echo "Policy: \`.ai-governance.yaml\` on \`$BASE_REF\`. Rule codes are documented in \`references/ai-governance.md\`."
+          } > /tmp/comment.md
+          # --edit-last keeps one rolling comment instead of a new one per push.
+          # It edits the last comment by *this actor*, so a repository running
+          # several commenting workflows wants a marker-based upsert instead.
+          gh pr comment "$PR_NUMBER" --body-file /tmp/comment.md \
+            --edit-last --create-if-none
+
+      - name: Fail if the policy blocked this pull request
+        if: steps.check.outputs.rc != '0'
+        env:
+          RC: ${{ steps.check.outputs.rc }}
+        run: |
+          echo "::error::ai-governance denied this pull request (evaluator exit $RC). See the step log above for the rules that fired."
+          exit 1
