@@ -26,6 +26,16 @@ assert_eq() {
 # shellcheck source=../evaluate.sh
 source "$EVAL" --source-only
 
+# Fail loudly here, once, with a clear message — rather than letting the
+# suite die silently and unexplained inside test_load_policy_valid, whose
+# unsubshelled `load_policy` call needs yq's exit-2 path to stay reserved
+# for the dedicated missing-yq test, not for an environment that's simply
+# missing the dependency every other test in this file already assumes.
+if ! command -v yq >/dev/null 2>&1; then
+  echo "FATAL: yq is required to run this test suite (see references/ai-governance.md)." >&2
+  exit 1
+fi
+
 test_copilot_deny_envelope() {
   PLATFORM="copilot"
   local out

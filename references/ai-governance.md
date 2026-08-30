@@ -40,7 +40,7 @@ The asset list is hardcoded in `evaluate.sh` (`GOVERNANCE_ASSETS`), not read fro
 
 **Claude Code** (`code.claude.com/docs/en/hooks`): stdin carries `tool_name`/`tool_input`. Output: decision nested under `hookSpecificOutput: {hookEventName, permissionDecision, permissionDecisionReason}`. Exit code 2 always blocks, even overriding a JSON `"allow"`. A valid JSON `deny` body at exit 0 is also honored — the JSON decides, not just the exit code. Exit 1, a crash, a missing executable, malformed JSON, or a timeout all default to **allow**.
 
-Net effect: this design is fail-closed for cases it controls (the evaluator's own logic), and explicitly fail-open on infrastructure failure. The merge-time check exists specifically to catch what leaks through that gap — it is not redundant with the hook.
+Net effect: the two failure surfaces point in opposite directions, deliberately. The **hook transport** (Copilot/Claude Code itself) is fail-open on a timeout or crash — a stalled or dead hook lets the call proceed. The **evaluator**, once it actually runs, is fail-closed on its own dependency/policy failures — a missing `yq` or invalid YAML hits `policy_load_failed` and exits 2, not allow. The merge-time check exists to catch what leaks through the transport's fail-open gap; it is not redundant with the hook.
 
 ### Registration schema (settings.json) is not the same as the I/O protocol
 

@@ -53,6 +53,13 @@ jobs:
       - name: Run the governance check against this PR's diff
         id: check
         run: |
+          # A PR could force-add a pre-populated .ai-governance/audit.log
+          # (normally gitignored) to smuggle fabricated lines into the
+          # warn-tier comment below. Remove it before the evaluator runs so
+          # every line that ends up in the file was written by this
+          # invocation, not checked out from the PR's own tree.
+          rm -f .ai-governance/audit.log
+
           # The evaluator exits 2 only when the policy's tier says to block.
           # Capture the code rather than letting `set -e` end the job here, so
           # the warn-tier comment below still runs, then fail at the end.
