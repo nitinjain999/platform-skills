@@ -140,3 +140,34 @@ match_denied_command() {
   done
   return 1
 }
+
+AUDIT_LOG=".ai-governance/audit.log"
+
+log_audit() {
+  local outcome="$1" rule="$2" target="$3"
+  mkdir -p "$(dirname "$AUDIT_LOG")"
+  printf '%s\t%s\t%s\t%s\t%s\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$MODE" "$outcome" "$rule" "$target" >> "$AUDIT_LOG"
+  chmod 600 "$AUDIT_LOG" 2>/dev/null || true
+}
+
+decide() {
+  local rule_fired="$1"
+  local rule_id="$2"
+  local target="$3"
+
+  if [[ "$rule_fired" != "true" ]]; then
+    emit_decision "allow"
+  fi
+
+  case "$ENFORCEMENT" in
+    block)
+      log_audit "deny" "$rule_id" "$target"
+      emit_decision "deny" "$rule_id"
+      ;;
+    *)
+      log_audit "would_deny" "$rule_id" "$target"
+      emit_decision "allow"
+      ;;
+  esac
+}

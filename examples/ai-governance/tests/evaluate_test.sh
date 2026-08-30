@@ -268,5 +268,39 @@ test_match_denied_command_empty_array() {
 
 test_match_denied_command_empty_array
 
+test_decide_block_tier_denies() {
+  ENFORCEMENT="block"
+  PLATFORM="copilot"
+  local tmp; tmp="$(mktemp -d)"
+  cd "$tmp"
+  local out rc
+  out="$(decide "true" "protected_paths: secrets/** test" "secrets/config.yaml" 2>/dev/null)"
+  rc=$?
+  cd - >/dev/null
+  assert_eq "block tier: exit 2" "2" "$rc"
+  assert_eq "block tier: deny envelope" \
+    '{"permissionDecision":"deny","permissionDecisionReason":"protected_paths: secrets/** test"}' \
+    "$out"
+  rm -rf "$tmp"
+}
+
+test_decide_audit_tier_allows_and_logs() {
+  ENFORCEMENT="audit"
+  PLATFORM="copilot"
+  local tmp; tmp="$(mktemp -d)"
+  cd "$tmp"
+  local out
+  out="$(decide "true" "protected_paths: secrets/** test" "secrets/config.yaml" 2>/dev/null)"
+  local logged
+  logged="$(cat .ai-governance/audit.log 2>/dev/null | grep -c "would_deny" || true)"
+  cd - >/dev/null
+  assert_eq "audit tier: allow envelope" '{"permissionDecision":"allow"}' "$out"
+  assert_eq "audit tier: would_deny logged" "1" "$logged"
+  rm -rf "$tmp"
+}
+
+test_decide_block_tier_denies
+test_decide_audit_tier_allows_and_logs
+
 echo "PASS=$PASS FAIL=$FAIL"
 [[ $FAIL -eq 0 ]]
