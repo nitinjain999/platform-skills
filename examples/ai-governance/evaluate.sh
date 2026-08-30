@@ -199,6 +199,34 @@ run_hook_mode() {
   fi
 }
 
+run_ci_mode() {
+  local -a changed_paths=()
+  while IFS= read -r -d '' path; do
+    changed_paths+=("$path")
+  done
+
+  local path matched
+  for path in "${changed_paths[@]}"; do
+    if matched="$(match_protected_path "$path")"; then
+      decide "true" "protected_paths: $matched ($path)" "$path"
+    fi
+  done
+
+  local file_count=${#changed_paths[@]}
+  if [[ "$MAX_DIFF_FILES" -gt 0 && "$file_count" -gt "$MAX_DIFF_FILES" ]]; then
+    decide "true" "max_diff_files: $file_count > $MAX_DIFF_FILES" "$file_count files"
+  fi
+
+  if [[ "$REQUIRE_DISCLOSURE" == "true" && -n "$BASE_REF" ]]; then
+    if ! git log "${BASE_REF}..HEAD" --format=%B 2>/dev/null \
+        | grep -qiE 'co-authored-by:.*(copilot|claude)|ai-generated|ai-assisted'; then
+      decide "true" "require_disclosure: no AI-attribution trailer found" "commit range"
+    fi
+  fi
+
+  decide "false" "" ""
+}
+
 main() {
   load_policy
   case "$MODE" in

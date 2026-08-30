@@ -359,5 +359,63 @@ test_hook_mode_allow_when_no_match
 test_hook_mode_no_path_no_command
 test_source_only_suppresses_main_with_other_flags
 
+test_ci_mode_protected_path_denies() {
+  ENFORCEMENT="block"
+  PROTECTED_PATHS=(".github/workflows/**")
+  MAX_DIFF_FILES=0
+  REQUIRE_DISCLOSURE="false"
+  local out rc
+  out="$(printf '%s\0' ".github/workflows/release.yml" "src/app.py" | run_ci_mode 2>/dev/null)"
+  rc=$?
+  assert_eq "ci mode protected path: exit 2" "2" "$rc"
+  assert_eq "ci mode protected path: deny reason" "true" \
+    "$(echo "$out" | grep -q "protected_paths" && echo true || echo false)"
+}
+
+test_ci_mode_max_diff_files() {
+  ENFORCEMENT="block"
+  PROTECTED_PATHS=()
+  MAX_DIFF_FILES=2
+  REQUIRE_DISCLOSURE="false"
+  local out rc paths=""
+  paths="a.txt\0b.txt\0c.txt\0"
+  out="$(printf "$paths" | run_ci_mode 2>/dev/null)"
+  rc=$?
+  assert_eq "ci mode max_diff_files: exit 2" "2" "$rc"
+  assert_eq "ci mode max_diff_files: reason" "true" \
+    "$(echo "$out" | grep -q "max_diff_files" && echo true || echo false)"
+}
+
+test_ci_mode_allow_when_clean() {
+  ENFORCEMENT="block"
+  PROTECTED_PATHS=(".github/workflows/**")
+  MAX_DIFF_FILES=25
+  REQUIRE_DISCLOSURE="false"
+  local out
+  out="$(printf '%s\0' "src/app.py" | run_ci_mode 2>/dev/null)"
+  assert_eq "ci mode allow when nothing matches" '{"permissionDecision":"allow"}' "$out"
+}
+
+test_ci_mode_protected_path_denies
+test_ci_mode_max_diff_files
+test_ci_mode_allow_when_clean
+
+test_ci_mode_aggregate_not_per_file() {
+  # A single invocation with 3 files and max_diff_files=2 must deny on the
+  # aggregate count even though ci_mode is called exactly once, not 3 times.
+  ENFORCEMENT="block"
+  PROTECTED_PATHS=()
+  MAX_DIFF_FILES=2
+  REQUIRE_DISCLOSURE="false"
+  local call_count=0
+  # Sanity: confirm run_ci_mode reads the whole stdin stream in one call
+  local out
+  out="$(printf '%s\0%s\0%s\0' "a.txt" "b.txt" "c.txt" | run_ci_mode 2>/dev/null)"
+  assert_eq "aggregate max_diff_files fires from one invocation" "true" \
+    "$(echo "$out" | grep -q "max_diff_files: 3 > 2" && echo true || echo false)"
+}
+
+test_ci_mode_aggregate_not_per_file
+
 echo "PASS=$PASS FAIL=$FAIL"
 [[ $FAIL -eq 0 ]]
