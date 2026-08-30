@@ -123,6 +123,10 @@ match_protected_path() {
   [[ ${#PROTECTED_PATHS[@]} -eq 0 ]] && return 1
   local pattern
   for pattern in "${PROTECTED_PATHS[@]}"; do
+    # Unquoted on purpose: the unquoted expansion IS the glob mechanism. This is
+    # what makes `.github/workflows/**` a pattern rather than a literal filename,
+    # and it works on bash 3.2 where `globstar`/`extglob` are unavailable.
+    # shellcheck disable=SC2254
     case "$target" in
       $pattern)
         echo "$pattern"
@@ -149,6 +153,8 @@ match_governance_asset() {
   local target="$1"
   local pattern
   for pattern in "${GOVERNANCE_ASSETS[@]}"; do
+    # Unquoted on purpose — same glob-via-`case` mechanism as match_protected_path.
+    # shellcheck disable=SC2254
     case "$target" in
       $pattern)
         echo "$pattern"

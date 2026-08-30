@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+# Several tests set policy globals (PROTECTED_PATHS, DENIED_COMMANDS,
+# MAX_DIFF_FILES, REQUIRE_DISCLOSURE, POLICY_FILE) that are read by the
+# functions sourced from evaluate.sh. shellcheck cannot see through the
+# dynamic `source` below, so it reports them as unused.
+# shellcheck disable=SC2034
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -18,6 +23,7 @@ assert_eq() {
   fi
 }
 
+# shellcheck source=../evaluate.sh
 source "$EVAL" --source-only
 
 test_copilot_deny_envelope() {
@@ -385,11 +391,11 @@ test_decide_block_tier_denies() {
   ENFORCEMENT="block"
   PLATFORM="copilot"
   local tmp; tmp="$(mktemp -d)"
-  cd "$tmp"
+  cd "$tmp" || return 1
   local out rc
   out="$(decide "true" "protected_paths" "secrets/** (secrets/config.yaml)" "secrets/config.yaml" 2>/dev/null)"
   rc=$?
-  cd - >/dev/null
+  cd - >/dev/null || return 1
   assert_eq "block tier: exit 2" "2" "$rc"
   assert_eq "block tier: deny envelope" \
     '{"permissionDecision":"deny","permissionDecisionReason":"protected_paths: secrets/** (secrets/config.yaml)"}' \
@@ -401,14 +407,14 @@ test_decide_audit_tier_allows_and_logs() {
   ENFORCEMENT="audit"
   PLATFORM="copilot"
   local tmp; tmp="$(mktemp -d)"
-  cd "$tmp"
+  cd "$tmp" || return 1
   local out
   out="$(decide "true" "protected_paths" "secrets/** (secrets/config.yaml)" "secrets/config.yaml" 2>/dev/null)"
   local logged outcome_field rule_field
   logged="$(grep -c "would_deny" .ai-governance/audit.log 2>/dev/null || true)"
   outcome_field="$(awk -F'\t' 'NR==1{print $3}' .ai-governance/audit.log 2>/dev/null)"
   rule_field="$(awk -F'\t' 'NR==1{print $4}' .ai-governance/audit.log 2>/dev/null)"
-  cd - >/dev/null
+  cd - >/dev/null || return 1
   assert_eq "audit tier: allow envelope" '{"permissionDecision":"allow"}' "$out"
   assert_eq "audit tier: would_deny logged" "1" "$logged"
   assert_eq "audit tier: outcome field is exactly would_deny" "would_deny" "$outcome_field"
@@ -421,13 +427,13 @@ test_decide_force_deny_overrides_tier() {
   ENFORCEMENT="audit"
   PLATFORM="copilot"
   local tmp; tmp="$(mktemp -d)"
-  cd "$tmp"
+  cd "$tmp" || return 1
   local out rc outcome_field
   out="$(decide "true" "self_disable" ".ai-governance.yaml changed alongside iam/policy.json" \
     ".ai-governance.yaml" "self_disable" 2>/dev/null)"
   rc=$?
   outcome_field="$(awk -F'\t' 'NR==1{print $3}' .ai-governance/audit.log 2>/dev/null)"
-  cd - >/dev/null
+  cd - >/dev/null || return 1
   assert_eq "force_deny under audit tier: exit 2" "2" "$rc"
   assert_eq "force_deny under audit tier: real deny logged" "deny" "$outcome_field"
   assert_eq "force_deny under audit tier: deny envelope" "true" \
@@ -443,10 +449,10 @@ test_hook_mode_copilot_camelcase_edit_deny() {
   ENFORCEMENT="block"
   PROTECTED_PATHS=(".github/workflows/**")
   PLATFORM="copilot"
-  local tmp; tmp="$(mktemp -d)"; cd "$tmp"
+  local tmp; tmp="$(mktemp -d)"; cd "$tmp" || return 1
   local out
   out="$(echo '{"toolName":"edit","toolArgs":{"path":".github/workflows/release.yml"}}' | run_hook_mode 2>/dev/null)"
-  cd - >/dev/null; rm -rf "$tmp"
+  cd - >/dev/null || return 1; rm -rf "$tmp"
   assert_eq "copilot camelCase edit denied" \
     '{"permissionDecision":"deny","permissionDecisionReason":"protected_paths: .github/workflows/** (.github/workflows/release.yml)"}' \
     "$out"
@@ -456,10 +462,10 @@ test_hook_mode_claude_bash_deny() {
   ENFORCEMENT="block"
   DENIED_COMMANDS=("rm -rf")
   PLATFORM="claude"
-  local tmp; tmp="$(mktemp -d)"; cd "$tmp"
+  local tmp; tmp="$(mktemp -d)"; cd "$tmp" || return 1
   local out
   out="$(echo '{"tool_name":"Bash","tool_input":{"command":"rm -rf /tmp/x"}}' | run_hook_mode 2>/dev/null)"
-  cd - >/dev/null; rm -rf "$tmp"
+  cd - >/dev/null || return 1; rm -rf "$tmp"
   assert_eq "claude bash denied" \
     '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"denied_commands: rm -rf"}}' \
     "$out"
@@ -470,10 +476,10 @@ test_hook_mode_allow_when_no_match() {
   PROTECTED_PATHS=(".github/workflows/**")
   DENIED_COMMANDS=()
   PLATFORM="copilot"
-  local tmp; tmp="$(mktemp -d)"; cd "$tmp"
+  local tmp; tmp="$(mktemp -d)"; cd "$tmp" || return 1
   local out
   out="$(echo '{"toolName":"edit","toolArgs":{"path":"src/app.py"}}' | run_hook_mode 2>/dev/null)"
-  cd - >/dev/null; rm -rf "$tmp"
+  cd - >/dev/null || return 1; rm -rf "$tmp"
   assert_eq "unrelated edit allowed" '{"permissionDecision":"allow"}' "$out"
 }
 
@@ -498,11 +504,11 @@ test_hook_mode_read_of_protected_path_allows() {
   PROTECTED_PATHS=(".github/workflows/**")
   DENIED_COMMANDS=()
   PLATFORM="copilot"
-  local tmp; tmp="$(mktemp -d)"; cd "$tmp"
+  local tmp; tmp="$(mktemp -d)"; cd "$tmp" || return 1
   local out log_written
   out="$(echo '{"toolName":"read","toolArgs":{"path":".github/workflows/release.yml"}}' | run_hook_mode 2>/dev/null)"
   log_written="$([[ -e .ai-governance/audit.log ]] && echo true || echo false)"
-  cd - >/dev/null; rm -rf "$tmp"
+  cd - >/dev/null || return 1; rm -rf "$tmp"
   assert_eq "copilot read of a protected path is allowed under block tier" \
     '{"permissionDecision":"allow"}' "$out"
   assert_eq "an allowed read writes no audit line" "false" "$log_written"
@@ -513,10 +519,10 @@ test_hook_mode_claude_read_tool_allows() {
   PROTECTED_PATHS=(".github/workflows/**")
   DENIED_COMMANDS=()
   PLATFORM="claude"
-  local tmp; tmp="$(mktemp -d)"; cd "$tmp"
+  local tmp; tmp="$(mktemp -d)"; cd "$tmp" || return 1
   local out
   out="$(echo '{"tool_name":"Read","tool_input":{"file_path":".github/workflows/release.yml"}}' | run_hook_mode 2>/dev/null)"
-  cd - >/dev/null; rm -rf "$tmp"
+  cd - >/dev/null || return 1; rm -rf "$tmp"
   assert_eq "claude Read of a protected path is allowed under block tier" \
     '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow"}}' "$out"
 }
@@ -527,10 +533,10 @@ test_hook_mode_write_of_protected_path_denies() {
   PROTECTED_PATHS=(".github/workflows/**")
   DENIED_COMMANDS=()
   PLATFORM="claude"
-  local tmp; tmp="$(mktemp -d)"; cd "$tmp"
+  local tmp; tmp="$(mktemp -d)"; cd "$tmp" || return 1
   local out
   out="$(echo '{"tool_name":"Write","tool_input":{"file_path":".github/workflows/release.yml","content":"x"}}' | run_hook_mode 2>/dev/null)"
-  cd - >/dev/null; rm -rf "$tmp"
+  cd - >/dev/null || return 1; rm -rf "$tmp"
   assert_eq "claude Write of the same protected path is denied" \
     '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"protected_paths: .github/workflows/** (.github/workflows/release.yml)"}}' \
     "$out"
@@ -542,10 +548,10 @@ test_hook_mode_edit_payload_beats_unknown_tool_name() {
   PROTECTED_PATHS=(".github/workflows/**")
   DENIED_COMMANDS=()
   PLATFORM="copilot"
-  local tmp; tmp="$(mktemp -d)"; cd "$tmp"
+  local tmp; tmp="$(mktemp -d)"; cd "$tmp" || return 1
   local out
   out="$(echo '{"tool_name":"SomeFuturePatcher","tool_input":{"file_path":".github/workflows/release.yml","old_string":"a","new_string":"b"}}' | run_hook_mode 2>/dev/null)"
-  cd - >/dev/null; rm -rf "$tmp"
+  cd - >/dev/null || return 1; rm -rf "$tmp"
   assert_eq "an edit payload is denied regardless of tool name" \
     '{"permissionDecision":"deny","permissionDecisionReason":"protected_paths: .github/workflows/** (.github/workflows/release.yml)"}' \
     "$out"
@@ -558,10 +564,10 @@ test_hook_mode_denied_command_unaffected_by_write_intent_gate() {
   PROTECTED_PATHS=()
   DENIED_COMMANDS=("rm -rf")
   PLATFORM="copilot"
-  local tmp; tmp="$(mktemp -d)"; cd "$tmp"
+  local tmp; tmp="$(mktemp -d)"; cd "$tmp" || return 1
   local out
   out="$(echo '{"toolName":"read","toolArgs":{"command":"rm -rf /tmp/x"}}' | run_hook_mode 2>/dev/null)"
-  cd - >/dev/null; rm -rf "$tmp"
+  cd - >/dev/null || return 1; rm -rf "$tmp"
   assert_eq "denied_commands still fires for a read-named command tool" \
     '{"permissionDecision":"deny","permissionDecisionReason":"denied_commands: rm -rf"}' \
     "$out"
@@ -576,12 +582,12 @@ test_post_event_logs_completion_only() {
   PLATFORM="claude"
   local saved_event="$EVENT" saved_mode="$MODE"
   EVENT="PostToolUse"; MODE="hook"
-  local tmp; tmp="$(mktemp -d)"; cd "$tmp"
+  local tmp; tmp="$(mktemp -d)"; cd "$tmp" || return 1
   local out rc log
   out="$(echo '{"tool_name":"Bash","tool_input":{"command":"rm -rf /tmp/x"}}' | run_post_hook_mode 2>/dev/null)"
   rc=$?
   log="$(cat .ai-governance/audit.log 2>/dev/null)"
-  cd - >/dev/null; rm -rf "$tmp"
+  cd - >/dev/null || return 1; rm -rf "$tmp"
   EVENT="$saved_event"; MODE="$saved_mode"
   assert_eq "post event emits no decision body" "" "$out"
   assert_eq "post event exits 0" "0" "$rc"
@@ -602,12 +608,12 @@ test_check_mode_hook_writes_no_audit_log() {
   DENIED_COMMANDS=()
   local saved_mode="$MODE"
   PLATFORM="none"; MODE="hook"
-  local tmp; tmp="$(mktemp -d)"; cd "$tmp"
+  local tmp; tmp="$(mktemp -d)"; cd "$tmp" || return 1
   local out rc log_written
   out="$(echo '{"toolName":"edit","toolArgs":{"path":".github/workflows/release.yml"}}' | run_hook_mode 2>/dev/null)"
   rc=$?
   log_written="$([[ -e .ai-governance/audit.log ]] && echo true || echo false)"
-  cd - >/dev/null; rm -rf "$tmp"
+  cd - >/dev/null || return 1; rm -rf "$tmp"
   PLATFORM="copilot"; MODE="$saved_mode"
   assert_eq "check mode renders a neutral decision" \
     '{"decision":"deny","rule":"protected_paths","reason":"protected_paths: .github/workflows/** (.github/workflows/release.yml)"}' \
@@ -638,11 +644,11 @@ test_ci_mode_protected_path_denies() {
   MAX_DIFF_FILES=0
   REQUIRE_DISCLOSURE="false"
   PLATFORM="copilot"
-  local tmp; tmp="$(mktemp -d)"; cd "$tmp"
+  local tmp; tmp="$(mktemp -d)"; cd "$tmp" || return 1
   local out rc
   out="$(printf '%s\0' ".github/workflows/release.yml" "src/app.py" | run_ci_mode 2>/dev/null)"
   rc=$?
-  cd - >/dev/null; rm -rf "$tmp"
+  cd - >/dev/null || return 1; rm -rf "$tmp"
   assert_eq "ci mode protected path: exit 2" "2" "$rc"
   assert_eq "ci mode protected path: deny reason" "true" \
     "$(echo "$out" | grep -q "protected_paths" && echo true || echo false)"
@@ -654,11 +660,11 @@ test_ci_mode_max_diff_files() {
   MAX_DIFF_FILES=2
   REQUIRE_DISCLOSURE="false"
   PLATFORM="copilot"
-  local tmp; tmp="$(mktemp -d)"; cd "$tmp"
+  local tmp; tmp="$(mktemp -d)"; cd "$tmp" || return 1
   local out rc
   out="$(printf '%s\0' "a.txt" "b.txt" "c.txt" | run_ci_mode 2>/dev/null)"
   rc=$?
-  cd - >/dev/null; rm -rf "$tmp"
+  cd - >/dev/null || return 1; rm -rf "$tmp"
   assert_eq "ci mode max_diff_files: exit 2" "2" "$rc"
   assert_eq "ci mode max_diff_files: reason" "true" \
     "$(echo "$out" | grep -q "max_diff_files" && echo true || echo false)"
@@ -670,10 +676,10 @@ test_ci_mode_allow_when_clean() {
   MAX_DIFF_FILES=25
   REQUIRE_DISCLOSURE="false"
   PLATFORM="copilot"
-  local tmp; tmp="$(mktemp -d)"; cd "$tmp"
+  local tmp; tmp="$(mktemp -d)"; cd "$tmp" || return 1
   local out
   out="$(printf '%s\0' "src/app.py" | run_ci_mode 2>/dev/null)"
-  cd - >/dev/null; rm -rf "$tmp"
+  cd - >/dev/null || return 1; rm -rf "$tmp"
   assert_eq "ci mode allow when nothing matches" '{"permissionDecision":"allow"}' "$out"
 }
 
@@ -689,10 +695,10 @@ test_ci_mode_aggregate_not_per_file() {
   MAX_DIFF_FILES=2
   REQUIRE_DISCLOSURE="false"
   PLATFORM="copilot"
-  local tmp; tmp="$(mktemp -d)"; cd "$tmp"
+  local tmp; tmp="$(mktemp -d)"; cd "$tmp" || return 1
   local out
   out="$(printf '%s\0%s\0%s\0' "a.txt" "b.txt" "c.txt" | run_ci_mode 2>/dev/null)"
-  cd - >/dev/null; rm -rf "$tmp"
+  cd - >/dev/null || return 1; rm -rf "$tmp"
   assert_eq "aggregate max_diff_files fires from one invocation" "true" \
     "$(echo "$out" | grep -q "max_diff_files: 3 > 2" && echo true || echo false)"
 }
@@ -708,13 +714,13 @@ test_ci_mode_reports_every_violation() {
   MAX_DIFF_FILES=2
   REQUIRE_DISCLOSURE="false"
   PLATFORM="copilot"
-  local tmp; tmp="$(mktemp -d)"; cd "$tmp"
+  local tmp; tmp="$(mktemp -d)"; cd "$tmp" || return 1
   local out rc log
   out="$(printf '%s\0' ".github/workflows/a.yml" ".github/workflows/b.yml" "src/app.py" \
     | run_ci_mode 2>/dev/null)"
   rc=$?
   log="$(cat .ai-governance/audit.log 2>/dev/null)"
-  cd - >/dev/null; rm -rf "$tmp"
+  cd - >/dev/null || return 1; rm -rf "$tmp"
   assert_eq "multi-violation: exit 2" "2" "$rc"
   assert_eq "multi-violation: first protected path reported" "true" \
     "$(echo "$out" | grep -q "a.yml" && echo true || echo false)"
@@ -737,12 +743,12 @@ test_ci_mode_self_disable_denies_under_audit() {
   MAX_DIFF_FILES=0
   REQUIRE_DISCLOSURE="false"
   PLATFORM="copilot"
-  local tmp; tmp="$(mktemp -d)"; cd "$tmp"
+  local tmp; tmp="$(mktemp -d)"; cd "$tmp" || return 1
   local out rc log
   out="$(printf '%s\0' ".ai-governance.yaml" ".github/workflows/release.yml" | run_ci_mode 2>/dev/null)"
   rc=$?
   log="$(cat .ai-governance/audit.log 2>/dev/null)"
-  cd - >/dev/null; rm -rf "$tmp"
+  cd - >/dev/null || return 1; rm -rf "$tmp"
   assert_eq "self-disable under audit tier: exit 2" "2" "$rc"
   assert_eq "self-disable under audit tier: self_disable in reason" "true" \
     "$(echo "$out" | grep -q "self_disable" && echo true || echo false)"
@@ -758,11 +764,11 @@ test_ci_mode_governance_asset_alone_follows_tier() {
   MAX_DIFF_FILES=0
   REQUIRE_DISCLOSURE="false"
   PLATFORM="copilot"
-  local tmp; tmp="$(mktemp -d)"; cd "$tmp"
+  local tmp; tmp="$(mktemp -d)"; cd "$tmp" || return 1
   local out log
   out="$(printf '%s\0' ".ai-governance.yaml" | run_ci_mode 2>/dev/null)"
   log="$(cat .ai-governance/audit.log 2>/dev/null)"
-  cd - >/dev/null; rm -rf "$tmp"
+  cd - >/dev/null || return 1; rm -rf "$tmp"
   assert_eq "governance asset alone under audit is allowed" \
     '{"permissionDecision":"allow"}' "$out"
   assert_eq "governance asset alone logs would_deny" "would_deny" \
@@ -781,7 +787,7 @@ test_ci_mode_warn_tier_is_distinct_from_audit() {
   MAX_DIFF_FILES=0
   REQUIRE_DISCLOSURE="false"
   PLATFORM="copilot"
-  local tmp; tmp="$(mktemp -d)"; cd "$tmp"
+  local tmp; tmp="$(mktemp -d)"; cd "$tmp" || return 1
   local warn_out warn_rc warn_field audit_field
   ENFORCEMENT="warn"
   warn_out="$(printf '%s\0' ".github/workflows/release.yml" | run_ci_mode 2>/dev/null)"
@@ -791,7 +797,7 @@ test_ci_mode_warn_tier_is_distinct_from_audit() {
   ENFORCEMENT="audit"
   printf '%s\0' ".github/workflows/release.yml" | run_ci_mode >/dev/null 2>&1
   audit_field="$(awk -F'\t' 'NR==1{print $3}' .ai-governance/audit.log 2>/dev/null)"
-  cd - >/dev/null; rm -rf "$tmp"
+  cd - >/dev/null || return 1; rm -rf "$tmp"
   assert_eq "warn tier allows the PR through" '{"permissionDecision":"allow"}' "$warn_out"
   assert_eq "warn tier exits 0" "0" "$warn_rc"
   assert_eq "warn tier outcome is would_deny_warn" "would_deny_warn" "$warn_field"
@@ -808,12 +814,12 @@ test_ci_mode_dry_run_writes_no_audit_log() {
   REQUIRE_DISCLOSURE="false"
   local saved_mode="$MODE"
   PLATFORM="none"; MODE="ci"
-  local tmp; tmp="$(mktemp -d)"; cd "$tmp"
+  local tmp; tmp="$(mktemp -d)"; cd "$tmp" || return 1
   local out rc log_written
   out="$(printf '%s\0' ".github/workflows/release.yml" | run_ci_mode 2>/dev/null)"
   rc=$?
   log_written="$([[ -e .ai-governance/audit.log ]] && echo true || echo false)"
-  cd - >/dev/null; rm -rf "$tmp"
+  cd - >/dev/null || return 1; rm -rf "$tmp"
   PLATFORM="copilot"; MODE="$saved_mode"
   assert_eq "ci dry run renders a neutral decision" \
     '{"decision":"deny","rule":"protected_paths","reason":"protected_paths: .github/workflows/** (.github/workflows/release.yml)"}' \
@@ -830,11 +836,11 @@ test_ci_mode_dry_run_multiple_rule_codes() {
   REQUIRE_DISCLOSURE="false"
   local saved_mode="$MODE"
   PLATFORM="none"; MODE="ci"
-  local tmp; tmp="$(mktemp -d)"; cd "$tmp"
+  local tmp; tmp="$(mktemp -d)"; cd "$tmp" || return 1
   local out rule
   out="$(printf '%s\0' ".github/workflows/a.yml" ".github/workflows/b.yml" "src/app.py" \
     | run_ci_mode 2>/dev/null)"
-  cd - >/dev/null; rm -rf "$tmp"
+  cd - >/dev/null || return 1; rm -rf "$tmp"
   PLATFORM="copilot"; MODE="$saved_mode"
   rule="$(printf '%s' "$out" | sed -n 's/.*"rule":"\([^"]*\)".*/\1/p')"
   assert_eq "neutral rule field dedupes and joins codes" "protected_paths,max_diff_files" "$rule"
@@ -849,10 +855,10 @@ test_ci_mode_empty_stdin() {
   MAX_DIFF_FILES=25
   REQUIRE_DISCLOSURE="false"
   PLATFORM="copilot"
-  local tmp; tmp="$(mktemp -d)"; cd "$tmp"
+  local tmp; tmp="$(mktemp -d)"; cd "$tmp" || return 1
   local out
   out="$(printf "" | run_ci_mode 2>/dev/null)"
-  cd - >/dev/null; rm -rf "$tmp"
+  cd - >/dev/null || return 1; rm -rf "$tmp"
   assert_eq "ci mode allows on empty stdin (no changed files)" '{"permissionDecision":"allow"}' "$out"
 }
 
