@@ -207,5 +207,66 @@ test_match_protected_path_governance_asset
 test_match_protected_path_miss
 test_match_protected_path_nested
 
+test_match_protected_path_empty_array() {
+  PROTECTED_PATHS=()
+  if match_protected_path "src/app.py" >/dev/null; then
+    FAIL=$((FAIL+1)); echo "FAIL: empty PROTECTED_PATHS should not match"
+  else
+    PASS=$((PASS+1))
+  fi
+}
+
+test_match_protected_path_empty_array
+
+test_match_denied_command_hit() {
+  DENIED_COMMANDS=("terraform apply" "rm -rf")
+  local matched
+  matched="$(match_denied_command "terraform apply -auto-approve")"
+  assert_eq "terraform apply prefix matches" "terraform apply" "$matched"
+}
+
+test_match_denied_command_different_flag_position() {
+  DENIED_COMMANDS=("terraform apply")
+  if match_denied_command "terraform -chdir=x apply" >/dev/null; then
+    FAIL=$((FAIL+1)); echo "FAIL: terraform -chdir=x apply must NOT match (documented non-coverage)"
+  else
+    PASS=$((PASS+1))
+  fi
+}
+
+test_match_denied_command_split_flags_bypass() {
+  DENIED_COMMANDS=("rm -rf")
+  if match_denied_command "rm -r -f" >/dev/null; then
+    FAIL=$((FAIL+1)); echo "FAIL: rm -r -f must NOT match rm -rf (documented non-coverage — different tokens)"
+  else
+    PASS=$((PASS+1))
+  fi
+}
+
+test_match_denied_command_wrapper_name_bypass() {
+  DENIED_COMMANDS=("terraform apply")
+  if match_denied_command "terraform_apply_wrapper" >/dev/null; then
+    FAIL=$((FAIL+1)); echo "FAIL: terraform_apply_wrapper must NOT match (different token entirely)"
+  else
+    PASS=$((PASS+1))
+  fi
+}
+
+test_match_denied_command_hit
+test_match_denied_command_different_flag_position
+test_match_denied_command_split_flags_bypass
+test_match_denied_command_wrapper_name_bypass
+
+test_match_denied_command_empty_array() {
+  DENIED_COMMANDS=()
+  if match_denied_command "rm -rf" >/dev/null; then
+    FAIL=$((FAIL+1)); echo "FAIL: empty DENIED_COMMANDS should not match"
+  else
+    PASS=$((PASS+1))
+  fi
+}
+
+test_match_denied_command_empty_array
+
 echo "PASS=$PASS FAIL=$FAIL"
 [[ $FAIL -eq 0 ]]

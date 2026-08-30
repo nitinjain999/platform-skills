@@ -100,6 +100,7 @@ load_policy() {
 
 match_protected_path() {
   local target="$1"
+  [[ ${#PROTECTED_PATHS[@]} -eq 0 ]] && return 1
   local pattern
   for pattern in "${PROTECTED_PATHS[@]}"; do
     case "$target" in
@@ -108,6 +109,34 @@ match_protected_path() {
         return 0
         ;;
     esac
+  done
+  return 1
+}
+
+# match_denied_command: word-tokenized prefix matching against DENIED_COMMANDS
+# Non-guarantee: does not catch variations like "rm -r -f" matching "rm -rf" (different token sequences)
+# or "terraform -chdir=x apply" matching "terraform apply" (different token order).
+match_denied_command() {
+  local cmd="$1"
+  [[ ${#DENIED_COMMANDS[@]} -eq 0 ]] && return 1
+  local -a cmd_tokens
+  read -ra cmd_tokens <<< "$cmd"
+  local entry
+  for entry in "${DENIED_COMMANDS[@]}"; do
+    local -a entry_tokens
+    read -ra entry_tokens <<< "$entry"
+    (( ${#entry_tokens[@]} == 0 )) && continue
+    local i matched=1
+    for ((i = 0; i < ${#entry_tokens[@]}; i++)); do
+      if [[ "${cmd_tokens[i]:-}" != "${entry_tokens[i]}" ]]; then
+        matched=0
+        break
+      fi
+    done
+    if [[ $matched -eq 1 ]]; then
+      echo "$entry"
+      return 0
+    fi
   done
   return 1
 }
