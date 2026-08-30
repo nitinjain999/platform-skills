@@ -207,6 +207,35 @@ YAML
   rm -rf "$tmp"
 }
 
+test_load_policy_rejects_scalar_protected_paths() {
+  # protected_paths as a scalar is syntactically valid YAML. Without the type
+  # check, `.protected_paths[]` errors, `|| true` swallows it, and
+  # PROTECTED_PATHS silently ends up empty — matching nothing instead of
+  # failing closed. This must deny at load time, not degrade to "no rules".
+  PLATFORM="copilot"
+  local tmp
+  tmp="$(mktemp -d)"
+  cat > "$tmp/policy.yaml" << 'YAML'
+version: 1
+source: local
+enforcement: block
+protected_paths: "secrets/**"
+denied_commands: []
+max_diff_files: 25
+require_disclosure: false
+YAML
+  POLICY_FILE="$tmp/policy.yaml"
+  local out rc
+  out="$(load_policy 2>/dev/null)"
+  rc=$?
+  assert_eq "scalar protected_paths denies, exit 2" "2" "$rc"
+  assert_eq "scalar protected_paths reason specific" "true" \
+    "$(echo "$out" | grep -q "policy_load_failed: .protected_paths must be a list" && echo true || echo false)"
+  rm -rf "$tmp"
+}
+
+test_load_policy_rejects_scalar_protected_paths
+
 test_load_policy_missing_yq
 test_load_policy_valid
 
@@ -239,6 +268,24 @@ test_match_protected_path_nested() {
   matched="$(match_protected_path ".ai-governance/policies/nested/deep/file.yaml")"
   assert_eq "recursive glob matches multiple path segments" ".ai-governance/**" "$matched"
 }
+
+test_match_protected_path_leading_double_star_root() {
+  # `**/secrets/**` as a case pattern is `*/secrets/*` — it demands a literal
+  # `/` before "secrets", so a root-level `secrets/token.yaml` (no parent
+  # directory) does not match on its own, even though the shipped default
+  # policy pack uses exactly this pattern to mean "at any depth including
+  # root". Both the root and nested cases must match the same stored pattern.
+  PROTECTED_PATHS=("**/secrets/**" "**/*.tfstate")
+  local matched
+  matched="$(match_protected_path "secrets/token.yaml")"
+  assert_eq "root-level secrets/ matches **/secrets/**" "**/secrets/**" "$matched"
+  matched="$(match_protected_path "a/secrets/token.yaml")"
+  assert_eq "nested secrets/ still matches **/secrets/**" "**/secrets/**" "$matched"
+  matched="$(match_protected_path "terraform.tfstate")"
+  assert_eq "root-level .tfstate matches **/*.tfstate" "**/*.tfstate" "$matched"
+}
+
+test_match_protected_path_leading_double_star_root
 
 test_match_protected_path_hit
 test_match_protected_path_governance_asset
@@ -873,6 +920,31 @@ test_ci_mode_empty_stdin() {
 }
 
 test_ci_mode_empty_stdin
+
+test_ci_mode_require_disclosure_without_base_ref_denies() {
+  # require_disclosure: true with no --base-ref used to be silently skipped
+  # (no commit range to inspect, so the rule just never fired). A required
+  # control must not disappear because an optional flag was left off — this
+  # must itself be a violation, not a pass-through.
+  ENFORCEMENT="block"
+  PROTECTED_PATHS=()
+  MAX_DIFF_FILES=0
+  REQUIRE_DISCLOSURE="true"
+  local saved_base_ref="$BASE_REF"
+  BASE_REF=""
+  PLATFORM="copilot"
+  local tmp; tmp="$(mktemp -d)"; cd "$tmp" || return 1
+  local out rc
+  out="$(printf '%s\0' "src/app.py" | run_ci_mode 2>/dev/null)"
+  rc=$?
+  cd - >/dev/null || return 1; rm -rf "$tmp"
+  BASE_REF="$saved_base_ref"
+  assert_eq "require_disclosure without base-ref denies, exit 2" "2" "$rc"
+  assert_eq "reason names the missing base-ref" "true" \
+    "$(echo "$out" | grep -q "require_disclosure" && echo true || echo false)"
+}
+
+test_ci_mode_require_disclosure_without_base_ref_denies
 
 echo "PASS=$PASS FAIL=$FAIL"
 [[ $FAIL -eq 0 ]]

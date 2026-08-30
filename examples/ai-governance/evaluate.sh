@@ -105,6 +105,21 @@ load_policy() {
   if ! yq eval '.' "$POLICY_FILE" >/dev/null 2>&1; then
     emit_decision "deny" "policy_load_failed: invalid YAML in $POLICY_FILE" "policy_load_failed"
   fi
+  # Syntax-valid YAML can still be the wrong shape (`protected_paths: "x"`
+  # instead of a list). `.protected_paths[]` on a scalar errors, the `2>/dev/null
+  # || true` below swallows that error to keep a genuinely-empty/absent list
+  # working, and the two look identical from the loop's side: PROTECTED_PATHS
+  # ends up empty either way. An empty PROTECTED_PATHS means match_protected_path
+  # denies nothing — so a type mistake here silently disables every protected
+  # path instead of failing closed. Reject the wrong type before that happens.
+  local field field_type
+  for field in protected_paths denied_commands; do
+    field_type="$(yq eval ".${field} | type" "$POLICY_FILE" 2>/dev/null)"
+    case "$field_type" in
+      '!!seq' | '!!null' | '') ;;
+      *) emit_decision "deny" "policy_load_failed: .${field} must be a list, got ${field_type}" "policy_load_failed" ;;
+    esac
+  done
   ENFORCEMENT="$(yq eval '.enforcement // "audit"' "$POLICY_FILE")"
   MAX_DIFF_FILES="$(yq eval '.max_diff_files // 0' "$POLICY_FILE")"
   REQUIRE_DISCLOSURE="$(yq eval '.require_disclosure // false' "$POLICY_FILE")"
@@ -122,6 +137,7 @@ match_protected_path() {
   local target="$1"
   [[ ${#PROTECTED_PATHS[@]} -eq 0 ]] && return 1
   local pattern
+  local root_pattern
   for pattern in "${PROTECTED_PATHS[@]}"; do
     # Unquoted on purpose: the unquoted expansion IS the glob mechanism. This is
     # what makes `.github/workflows/**` a pattern rather than a literal filename,
@@ -133,6 +149,21 @@ match_protected_path() {
         return 0
         ;;
     esac
+    # `**` here is just two `*` characters, not bash's globstar — a leading
+    # `**/` still demands a literal `/` before the rest of the pattern, so
+    # `**/secrets/**` silently misses a root-level `secrets/token` even though
+    # a human author intends "at any depth, including the root." Also try the
+    # pattern with that prefix stripped, so the root case matches too.
+    if [[ "$pattern" == '**/'* ]]; then
+      root_pattern="${pattern#\*\*/}"
+      # shellcheck disable=SC2254
+      case "$target" in
+        $root_pattern)
+          echo "$pattern"
+          return 0
+          ;;
+      esac
+    fi
   done
   return 1
 }
@@ -398,8 +429,15 @@ run_ci_mode() {
     v_targets+=("$file_count files")
   fi
 
-  if [[ "$REQUIRE_DISCLOSURE" == "true" && -n "$BASE_REF" ]]; then
-    if ! git log "${BASE_REF}..HEAD" --format=%B 2>/dev/null \
+  if [[ "$REQUIRE_DISCLOSURE" == "true" ]]; then
+    if [[ -z "$BASE_REF" ]]; then
+      # A required control must not disappear because an optional flag was
+      # left off. Without --base-ref there is no commit range to inspect, so
+      # this is a violation in its own right, not a reason to skip the rule.
+      v_codes+=("require_disclosure")
+      v_details+=("require_disclosure is enabled but --base-ref was not given, so the commit range could not be checked")
+      v_targets+=("(no base-ref)")
+    elif ! git log "${BASE_REF}..HEAD" --format=%B 2>/dev/null \
         | grep -qiE 'co-authored-by:.*(copilot|claude)|ai-generated|ai-assisted'; then
       v_codes+=("require_disclosure")
       v_details+=("no AI-attribution trailer found in ${BASE_REF}..HEAD")

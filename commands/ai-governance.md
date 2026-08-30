@@ -154,12 +154,16 @@ Steps:
 
 7. Write `.github/workflows/ai-governance-check.yml` (copy from `examples/ai-governance/ai-governance-check.yml`) — this fetches the **base branch's** copy of the evaluator and policy before running, not the PR's own copy (see references/ai-governance.md's "Trusted verifier" section for why).
 
+   **Bootstrap ordering — state this explicitly, don't let the user find out from a failing check:** the workflow's `git show origin/<base>:.ai-governance/evaluate.sh` has nothing to read until a copy of the evaluator and policy already exists *on the base branch*. The very first PR that runs `generate` is, by definition, the PR that would create those files — so if that same PR also enables the required check, the check fails on its own PR before anything is on `main` to fetch. Sequence it in two stages:
+   1. Land `.ai-governance.yaml`, `.ai-governance/evaluate.sh`, the hook configs, and the workflow file in a normal PR, merged **without** the check marked as required yet — it will run (and may fail-open on the `git show`, which is fine for this one merge) but nothing blocks on it.
+   2. Only after that PR is on the base branch, do step 9's branch-protection change, making the check required from that point on. Every PR after this one has a real base-branch copy to fetch.
+
 8. Add `.ai-governance/audit.log` to `.gitignore` — it can contain command text and file paths that may carry secrets, and must never be committed:
    ```bash
    grep -qxF '.ai-governance/audit.log' .gitignore 2>/dev/null || echo '.ai-governance/audit.log' >> .gitignore
    ```
 
-9. Print the exact branch-protection step (Settings → Branches → the target branch's ruleset → require the `ai-governance` check) and the exact CODEOWNERS lines to add:
+9. Print the exact branch-protection step (Settings → Branches → the target branch's ruleset → require the `ai-governance` check) and the exact CODEOWNERS lines to add — and print it as a **follow-up step to run after the bootstrap PR above has merged**, not alongside this PR:
    ```
    .ai-governance.yaml           @your-org/platform-team
    .ai-governance/               @your-org/platform-team
@@ -199,16 +203,20 @@ Steps:
      | .ai-governance/evaluate.sh --mode=hook --platform=none
    # → {"decision":"deny","rule":"denied_commands","reason":"denied_commands: terraform apply"}
 
-   # Diff range test — every rule evaluated in one pass, codes joined and deduped
+   # Diff range test — every rule evaluated in one pass, codes joined and deduped.
+   # --base-ref is required here, not optional: without it, `require_disclosure`
+   # has no commit range to inspect and is itself a violation (see point 4 below),
+   # not a silently-skipped rule.
    git diff -z --name-only main...HEAD \
-     | .ai-governance/evaluate.sh --mode=ci --platform=none
+     | .ai-governance/evaluate.sh --mode=ci --platform=none --base-ref=main
    # → {"decision":"deny","rule":"protected_paths,max_diff_files","reason":"protected_paths: iam/** (iam/policy.json); max_diff_files: 31 > 25"}
    ```
    Exit code is `0` for allow and `2` for deny, so this is scriptable.
 3. Report each decision with the matching rule (which `protected_paths` glob or `denied_commands` entry fired), so the policy can be tuned before rollout.
-4. Two things to say out loud when reporting, because they change what the result means:
+4. Three things to say out loud when reporting, because they change what the result means:
    - A `deny` here is what the rules say, **not** what the current tier does. `--platform=none` reports the tier-resolved decision, so under `enforcement: audit` or `warn` a matching rule renders as `allow` — run `check` against a copy of the policy with `enforcement: block` to see the rule set on its own.
    - `protected_paths` only fires on write intent. A `Read` against a protected path is allowed by design, so testing with a read-shaped payload will always come back `allow`.
+   - If `require_disclosure: true` and `--base-ref` is omitted from a `--mode=ci` invocation, that is itself a `require_disclosure` finding — not a rule that silently didn't run. Always pass `--base-ref` when disclosure enforcement is on.
 
 ## Mode: audit
 
