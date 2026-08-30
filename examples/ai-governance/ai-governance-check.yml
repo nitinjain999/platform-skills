@@ -1,0 +1,39 @@
+name: AI Governance Check
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  ai-governance:
+    runs-on: ubuntu-latest
+    steps:
+      # Pin this to a full commit SHA before use, per this plugin's own
+      # actions-pinning convention (references/github-actions.md).
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install yq
+        run: |
+          if ! command -v yq >/dev/null 2>&1; then
+            sudo wget -qO /usr/local/bin/yq \
+              https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+            sudo chmod +x /usr/local/bin/yq
+          fi
+
+      - name: Fetch the trusted (base-branch) evaluator and policy
+        run: |
+          git show "origin/${{ github.base_ref }}:.ai-governance/evaluate.sh" > /tmp/trusted-evaluate.sh
+          git show "origin/${{ github.base_ref }}:.ai-governance.yaml" > /tmp/trusted-policy.yaml
+          chmod +x /tmp/trusted-evaluate.sh
+
+      - name: Run the governance check against this PR's diff
+        run: |
+          git diff -z --name-only "origin/${{ github.base_ref }}...HEAD" | \
+            /tmp/trusted-evaluate.sh --mode=ci \
+              --policy=/tmp/trusted-policy.yaml \
+              --base-ref="origin/${{ github.base_ref }}"

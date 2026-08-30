@@ -1,0 +1,19 @@
+version: 1
+source: local          # "gateway" becomes valid once Phase 3 ships
+enforcement: audit     # audit | warn | block
+protected_paths:
+  - ".github/workflows/**"
+  - ".github/hooks/**"
+  - ".claude/settings.json"
+  - ".ai-governance.yaml"
+  - ".ai-governance/**"
+  - "**/secrets/**"
+  - "**/*.tfstate"
+  - "iam/**"
+denied_commands:
+  - "rm -rf"
+  - "terraform apply"
+  - "kubectl delete"
+  - "git push --force"
+max_diff_files: 25
+require_disclosure: true

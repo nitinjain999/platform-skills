@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "hooks": {
+    "preToolUse": [
+      {"type": "command", "bash": ".ai-governance/evaluate.sh --mode=hook --platform=copilot --event=preToolUse", "timeoutSec": 10}
+    ]
+  }
+}
