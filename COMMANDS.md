@@ -402,7 +402,7 @@ Covers eight modes: `inspect` detects installed clients and reports versions, ag
 | `setup` | Install core script, write `.token-optimizer.yaml` with 18 config keys, copy agent templates to chosen scope, register PreToolUse hooks, create state directories |
 | `doctor` | Four-state report: delegation verified/unverified, resolved worker model, redirection on/off/unsupported, read limit. Never one green line |
 | `explain` | Dry-run size classification for a file path or JSON payload, show which rule fires and effective mode |
-| `benchmark` | Run fixture suites in isolated arms (baseline, advisor, delegator, builtin) with declared cache state, append JSONL |
+| `benchmark` | Run fixture suites in isolated arms (baseline, concise, delegated, native) with declared cache state, append JSONL |
 | `report` | Aggregate decision log into summary table with measured/estimated/unavailable visually distinct |
 | `disable` | Set `enabled: false` in config, deactivate owned routing-instruction blocks by marker |
 | `remove` | Delete only assets with ownership marker AND matching shipped content hash, print edited assets for review |
