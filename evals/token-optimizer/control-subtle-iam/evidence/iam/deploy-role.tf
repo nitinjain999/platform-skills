@@ -22,9 +22,9 @@ data "aws_iam_policy_document" "artifacts" {
   }
 
   statement {
-    sid       = "ListForDeploy"
-    effect    = "Allow"
-    actions   = ["s3:ListBucket"]
+    sid     = "ListForDeploy"
+    effect  = "Allow"
+    actions = ["s3:ListBucket"]
     # BEFORE state - the diff widens this from bucket ARN to "*"
     resources = [aws_s3_bucket.artifacts.arn]
   }
