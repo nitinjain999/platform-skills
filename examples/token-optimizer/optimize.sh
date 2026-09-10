@@ -581,11 +581,13 @@ run_hook_mode() {
       classify_size "$target" 0 0 >/dev/null
       if [[ "$CLASS_RESULT" == "oversized" ]]; then
         cumulative_add "$REQ_LINES" "$REQ_BYTES"
-        log_line "would_redirect" "shell_full_read" "$P_COMMAND" "$target"
+        local eff; eff="$(effective_mode)"
+        [[ "$eff" == "audit" || "$eff" == "redirect" ]] && log_line "would_redirect" "shell_full_read" "$P_COMMAND" "$target"
         return 0
       fi
     fi
-    log_line "audit" "shell_unparsed" "$P_COMMAND" "-"
+    local eff; eff="$(effective_mode)"
+    [[ "$eff" == "audit" || "$eff" == "redirect" ]] && log_line "audit" "shell_unparsed" "$P_COMMAND" "-"
     return 0
   fi
 

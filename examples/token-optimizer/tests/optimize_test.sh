@@ -199,6 +199,39 @@ for token in "complete|partial|blocked" "hash them yourself" "delegations for th
   case "$reason" in *"$token"*) ok "redirect reason carries '$token'" ;; *) no "redirect reason carries '$token'" "present" "absent" ;; esac
 done
 
+echo "=== advisory mode is silent on both read and shell paths ==="
+cfg advisory.yaml <<'Y'
+version: 1
+mode: advisory
+max_lines: 350
+max_bytes: 32768
+log: /dev/null
+state_dir: .token-optimizer/state
+Y
+adv_read_out="$(hook "$BIG" claude advisory.yaml)"
+eq "advisory mode: Read emits nothing" "" "$adv_read_out"
+SHELLBIG_ADV="{\"tool_name\":\"bash\",\"toolArgs\":{\"command\":\"cat $W/large.tf\"},\"session_id\":\"S-ADV\"}"
+adv_shell_out="$(hook "$SHELLBIG_ADV" claude advisory.yaml)"
+eq "advisory mode: shell emits nothing" "" "$adv_shell_out"
+# audit mode should still log, so check via a real log file
+cfg audit_log.yaml <<Y
+version: 1
+mode: audit
+max_lines: 350
+max_bytes: 32768
+log: $W/audit.log
+state_dir: .token-optimizer/state
+Y
+: > "$W/audit.log"
+hookrc "$BIG" claude audit_log.yaml >/dev/null
+count_audit_read="$(wc -l < "$W/audit.log" 2>/dev/null | tr -d ' ')"
+eq "audit mode: Read logs one line" "1" "$count_audit_read"
+: > "$W/audit.log"
+SHELLBIG_AUD="{\"tool_name\":\"bash\",\"toolArgs\":{\"command\":\"cat $W/large.tf\"},\"session_id\":\"S-AUD\"}"
+hookrc "$SHELLBIG_AUD" claude audit_log.yaml >/dev/null
+count_audit_shell="$(wc -l < "$W/audit.log" 2>/dev/null | tr -d ' ')"
+eq "audit mode: shell logs one line" "1" "$count_audit_shell"
+
 echo
 echo "PASS: $PASS   FAIL: $FAIL"
 [[ "$FAIL" -eq 0 ]] || exit 1

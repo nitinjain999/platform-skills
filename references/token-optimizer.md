@@ -73,22 +73,24 @@ Three questions determine whether a client can reach `redirect` mode:
 
 Questions 1 and 2 cannot be automated. They require reading vendor docs, probing API shapes, and running a fixture in a live session where a human reads the transcript to confirm the parent received the worker's path list. The version-invalidation rule: any client update that touches hooks, agent APIs, or payload shapes invalidates all three answers and requires re-verification.
 
-## The five modes
+## The four modes
 
 | Mode | Behavior |
 |------|----------|
 | `off` | No classification at all. Short-circuits before reading the payload. |
-| `advisory` | Classification runs, cumulative counter updates, delegation instructions carried in audit log, but no hook decisions. Logs `would_redirect` for oversized reads. |
-| `audit` | Same as `advisory`, plus logs `would_redirect` for oversized reads. Default. |
+| `advisory` | Classification runs and cumulative counter updates, but no per-read decision is logged and nothing is emitted. Use this to measure cumulative discovery patterns without logging individual opportunities. |
+| `audit` | Classification runs, cumulative counter updates, and oversized reads are logged as `would_redirect`. Denies nothing. Default. |
 | `redirect` | Denies oversized reads with a reason naming the worker and carrying the seven-part contract, worker budgets, and the file path. Exit 2. |
 
 `enabled: false` short-circuits before any other check, so `enabled: false` plus `mode: redirect` still emits nothing and exits 0.
 
 ### What a developer sees under each mode
 
-**`off` and `advisory`**: nothing interrupts. Reads proceed normally. The log (if reviewed) shows what could have been delegated.
+**`off`**: nothing interrupts, nothing is logged, no classification runs. The core short-circuits before the payload is even parsed.
 
-**`audit`**: still nothing interrupts. The log accumulates `would_redirect` lines showing redirection opportunities. Use this to measure workload patterns before switching enforcement on.
+**`advisory`**: nothing interrupts. Reads proceed normally. The log shows only cumulative threshold crossings (`cumulative_exceeded`), never individual per-read opportunities. Use this to measure session-wide discovery cost without the noise of every single read.
+
+**`audit`**: nothing interrupts. The log accumulates `would_redirect` lines showing individual redirection opportunities, plus cumulative threshold crossings. Use this to measure workload patterns before switching enforcement on.
 
 **`redirect`**: a large-file read is denied with a message like:
 
@@ -102,12 +104,13 @@ Platform capability CAPS the configured mode. A repo that shares one config acro
 
 | Platform | Config says `off` | Config says `advisory` | Config says `audit` | Config says `redirect` |
 |---|---|---|---|---|
-| Claude Code (probe passed) | off | advisory | audit | redirect |
-| Claude Code (probe not run) | off | advisory | audit | audit |
+| Claude Code | off | advisory | audit | redirect |
 | Copilot CLI | off | advisory | audit | **audit** |
 | VS Code | off | advisory | audit | **audit** |
 
 Copilot CLI is capped at `audit` even when the config says `redirect` because the documented `preToolUse` payload carries no per-call worker identity, so the reader cannot be reliably exempted. VS Code is capped for the same reason plus delegation unverified.
+
+**Probe status is reported by `doctor` and not enforced by the core.** Running delegation-probe verification on the hot path of every tool call, for a cost feature, is the wrong trade. Bounded recovery already handles a delegation that does not work: the first oversized read is denied once, and if the model cannot actually delegate, the second attempt on that file proceeds. The core trusts that you ran `doctor` before switching to `redirect` mode.
 
 Run `optimize.sh --mode=explain` to see the effective mode and the cap reason, if any:
 
