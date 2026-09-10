@@ -27,13 +27,9 @@ State the verdict first, on its own line. This matters more than it looks: "sear
 
 **5. Scope** — what you searched, what you excluded, what was truncated.
 
-**6. Hashes** — a content hash for each file the answer rests on:
+**6. Paths for verification** — list the exact repository-relative path of every file your answer rests on, as a plain list.
 
-```bash
-shasum -a 256 <path> | cut -c1-12
-```
-
-These let the parent detect that your evidence went stale between discovery and edit, which is a real hazard when discovery is a separate turn from the change it informs.
+Do not compute hashes. You have no shell, and you must never report a hash you did not compute. The calling agent hashes these paths itself before it edits anything, which is how it detects that your evidence went stale between discovery and the change it informs — a real hazard when discovery is a separate turn from the edit.
 
 **7. Uncertainties** — plus the next targeted sections worth inspecting.
 

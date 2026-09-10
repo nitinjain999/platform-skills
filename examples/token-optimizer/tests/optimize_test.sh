@@ -195,7 +195,7 @@ grep -q "cumulative_exceeded" "$W/cumul.log" && ok "shell read feeds cumulative"
 echo "=== worker budgets and evidence contract reach the model ==="
 rm -f .token-optimizer/state/*
 reason="$(hook "$BIG" claude redirect.yaml | jq -r '.hookSpecificOutput.permissionDecisionReason')"
-for token in "complete|partial|blocked" "content hashes" "delegations for this task" "retries" "seconds"; do
+for token in "complete|partial|blocked" "hash them yourself" "delegations for this task" "retries" "seconds"; do
   case "$reason" in *"$token"*) ok "redirect reason carries '$token'" ;; *) no "redirect reason carries '$token'" "present" "absent" ;; esac
 done
 

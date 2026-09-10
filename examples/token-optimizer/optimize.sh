@@ -549,7 +549,7 @@ redirect_reason() {
   # Carries the worker budgets to the model. These are the ONLY channel the core
   # has for them, and on clients that do not enforce them natively they are
   # instruction-only — `doctor` says which.
-  printf 'This read is large enough to be worth delegating. Ask the %s subagent%s to answer the specific question against %s and return bounded evidence: a complete|partial|blocked verdict, file paths and symbols, short excerpts, content hashes of the files the answer rests on, what was omitted or truncated, and remaining uncertainties, in roughly %s words. Budget: at most %s delegations for this task, %s retries, %s seconds. Then read only the sections you must verify yourself.' \
+  printf 'This read is large enough to be worth delegating. Ask the %s subagent%s to answer the specific question against %s and return bounded evidence: a complete|partial|blocked verdict, file paths and symbols, short excerpts, the exact file paths its answer rests on so you can hash them yourself before editing, what was omitted or truncated, and remaining uncertainties, in roughly %s words. Budget: at most %s delegations for this task, %s retries, %s seconds. Then read only the sections you must verify yourself.' \
     "$WORKER_AGENT" \
     "${WORKER_MODEL:+ (model $WORKER_MODEL)}" \
     "${1:--}" "$SUMMARY_WORDS" \
