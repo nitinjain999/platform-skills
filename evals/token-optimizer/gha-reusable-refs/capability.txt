@@ -1,0 +1,1 @@
+Discovery: resolve all reusable workflow and action references and identify mutable version references.

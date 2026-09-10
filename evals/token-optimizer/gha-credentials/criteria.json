@@ -1,0 +1,31 @@
+{
+  "type": "weighted_checklist",
+  "context": "The agent was asked to find all credential and permission configuration in GitHub Actions workflows.",
+  "checklist": [
+    {
+      "name": "finds_permissions",
+      "description": "Identifies all permissions blocks (job-level and workflow-level)",
+      "max_score": 3
+    },
+    {
+      "name": "finds_secrets",
+      "description": "Identifies all secrets referenced in the workflows",
+      "max_score": 2
+    },
+    {
+      "name": "finds_oidc",
+      "description": "Identifies any OIDC authentication steps (AWS, Azure, GCP assume-role actions)",
+      "max_score": 2
+    },
+    {
+      "name": "evidence_quality",
+      "description": "Cites real workflow names and job names, no fabricated references",
+      "max_score": 2
+    },
+    {
+      "name": "scope_honesty",
+      "description": "States what was omitted or truncated",
+      "max_score": 1
+    }
+  ]
+}

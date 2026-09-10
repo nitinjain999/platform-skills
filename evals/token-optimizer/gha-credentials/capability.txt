@@ -1,0 +1,1 @@
+Discovery: locate all credential and permission configuration in GitHub Actions workflows.

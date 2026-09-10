@@ -1,0 +1,1 @@
+Scanner results: deduplicate findings across multiple packages, prioritize by severity and fix availability, and recommend remediation order.

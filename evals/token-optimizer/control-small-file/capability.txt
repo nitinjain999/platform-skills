@@ -1,0 +1,1 @@
+Token optimizer negative control: a small configuration file must be read directly, with no delegation to a worker agent.

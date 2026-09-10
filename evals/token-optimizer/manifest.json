@@ -1,0 +1,57 @@
+{
+  "version": 1,
+  "arms": [
+    {"id": "baseline", "description": "Current plugin behaviour, no optimizer"},
+    {"id": "concise", "description": "Concise instructions plus targeted search, no worker delegation"},
+    {"id": "delegated", "description": "Concise instructions plus cheap-worker delegation"},
+    {"id": "native", "description": "The client's own built-in discovery or exploration agent, where one exists. Beating an unoptimized baseline is a low bar that concise instructions alone may clear; this arm answers whether the feature beats what the client already does for free."}
+  ],
+  "runs_per_arm": 3,
+  "randomize_order": true,
+  "cache_states": ["cold", "warm", "unknown"],
+  "cache_state_policy": "Declared by the harness, never inferred. Cold compares only against cold and warm only against warm. When the harness cannot establish it, record 'unknown' and exclude that run from cache-sensitive comparisons rather than guessing. Randomised order distributes cache error, it does not remove it.",
+  "workspace_isolation": {
+    "rule": "The harness constructs a scratch workspace per run containing only the fixture's evidence/ directory plus task.md. criteria.json, capability.txt, manifest.json, and every other fixture are outside it. Passing only task.md as a prompt is NOT isolation — an agent that can read the repository can read the answer key.",
+    "workspace_contains": ["task.md", "evidence/**"],
+    "workspace_excludes": ["criteria.json", "capability.txt", "manifest.json", "../**"]
+  },
+  "acceptance_goals": {
+    "note": "Goals for a pilot, not measured results. Nothing in this repository has been benchmarked.",
+    "median_total_cost_reduction_pct": 25,
+    "eligible_tasks": "large-discovery only",
+    "max_latency_regression_pct_small_tasks": 20,
+    "correctness_regression": "no OBSERVED regression across the runs performed; three runs per arm cannot establish absence of a regression, so any published result states the run count next to the claim",
+    "critical_seeded_findings_lost": 0
+  },
+  "cost_model": {
+    "note": "Fields are mutually exclusive per actor per billing unit, each counted exactly once. Retries are NOT a cost field: a retry produces its own token counts inside the actor that retried, so adding retries again double-counts. retries is an integer for diagnosis only.",
+    "actor_cost": "sum over billing units of (tokens * rate for that unit at pricing_date)",
+    "total_cost": "parent cost + worker cost + external_service_charges",
+    "reduction": "1 - optimized total / baseline total, only when baseline > 0"
+  },
+  "record_fields": [
+    "client", "client_version", "plugin_version", "task_id", "arm", "run_index",
+    "cache_state", "repo_commit", "dirty_file_hashes",
+    "parent_model_requested", "parent_model_resolved",
+    "worker_model_requested", "worker_model_resolved",
+    "model_verification_source", "model_fallback_reason",
+    "elapsed_seconds", "delegation_count", "retries",
+    "parent_input_tokens", "parent_cache_write_tokens", "parent_cache_read_tokens", "parent_output_tokens",
+    "worker_input_tokens", "worker_cache_write_tokens", "worker_cache_read_tokens", "worker_output_tokens",
+    "external_service_charges", "pricing_date", "evidence_verdict", "evidence_score", "outcome"
+  ],
+  "tasks": [
+    {"id": "tf-iam-assumptions", "family": "terraform-discovery", "eligible": true},
+    {"id": "tf-state-backends", "family": "terraform-discovery", "eligible": true},
+    {"id": "tf-provider-versions", "family": "terraform-discovery", "eligible": true},
+    {"id": "helm-values-precedence", "family": "helm-gitops", "eligible": true},
+    {"id": "helm-image-tags", "family": "helm-gitops", "eligible": true},
+    {"id": "gitops-kustomize-deps", "family": "helm-gitops", "eligible": true},
+    {"id": "gha-credentials", "family": "github-actions", "eligible": true},
+    {"id": "gha-reusable-refs", "family": "github-actions", "eligible": true},
+    {"id": "nav-config-flow", "family": "source-navigation", "eligible": true},
+    {"id": "scan-findings-dedupe", "family": "scanner-results", "eligible": true},
+    {"id": "control-small-file", "family": "small-task-control", "eligible": false},
+    {"id": "control-subtle-iam", "family": "difficult-reasoning-control", "eligible": false}
+  ]
+}

@@ -1,0 +1,1 @@
+Discovery: map all Terraform provider version constraints and identify version conflicts across modules.

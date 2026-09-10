@@ -1,0 +1,10 @@
+--- a/iam/deploy-role.tf
++++ b/iam/deploy-role.tf
+@@
+   statement {
+     sid       = "ListForDeploy"
+     effect    = "Allow"
+     actions   = ["s3:ListBucket"]
+-    resources = [aws_s3_bucket.artifacts.arn]
++    resources = ["*"]
+   }

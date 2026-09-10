@@ -1,0 +1,36 @@
+{
+  "type": "weighted_checklist",
+  "context": "The agent was asked to trace configuration flow across three layers: Terraform infrastructure, Flux platform services, and application manifests.",
+  "checklist": [
+    {
+      "name": "identifies_vpc_config",
+      "description": "Correctly identifies VPC and subnet configuration from Terraform outputs or variables",
+      "max_score": 2
+    },
+    {
+      "name": "finds_ingress_kustomization",
+      "description": "Identifies which Kustomization deploys the ingress controller (ingress-nginx)",
+      "max_score": 2
+    },
+    {
+      "name": "finds_app_namespace",
+      "description": "Reports the namespace where applications are deployed",
+      "max_score": 2
+    },
+    {
+      "name": "traces_ingress_connection",
+      "description": "Explains how the application ingress connects to the platform ingress controller (via IngressClass or annotation)",
+      "max_score": 2
+    },
+    {
+      "name": "scope_honesty",
+      "description": "States what was omitted or truncated",
+      "max_score": 1
+    },
+    {
+      "name": "verdict",
+      "description": "Reports complete, partial, or blocked",
+      "max_score": 1
+    }
+  ]
+}

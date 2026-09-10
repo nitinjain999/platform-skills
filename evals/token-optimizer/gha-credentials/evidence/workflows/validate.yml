@@ -1,0 +1,472 @@
+name: Validate
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '**.md'
+      - '**.yml'
+      - '**.yaml'
+      - '**.tf'
+      - '**.json'
+      - '**.sh'
+      - '.github/workflows/**'
+      - '**go.mod'
+      - '**go.sum'
+      - '**requirements*.txt'
+      - '**Pipfile'
+      - '**Pipfile.lock'
+      - '**pyproject.toml'
+      - '**poetry.lock'
+  push:
+    branches:
+      - main
+    paths:
+      - '**.md'
+      - '**.yml'
+      - '**.yaml'
+      - '**.tf'
+      - '**.json'
+      - '**.sh'
+      - '.github/workflows/**'
+      - '**go.mod'
+      - '**go.sum'
+      - '**requirements*.txt'
+      - '**Pipfile'
+      - '**Pipfile.lock'
+      - '**pyproject.toml'
+      - '**poetry.lock'
+
+concurrency:
+  group: validate-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+# contents: read is all any job here needs — every one of them only checks out and
+# inspects files. pull-requests: write was granted but never used, and this
+# workflow runs on pull_request, so it handed a comment/label-write token to jobs
+# that npm-install and download third-party linters.
+permissions:
+  contents: read
+
+jobs:
+  detect-changes:
+    name: Detect Changed File Types
+    runs-on: ubuntu-latest
+    outputs:
+      markdown: ${{ steps.filter.outputs.markdown }}
+      yaml: ${{ steps.filter.outputs.yaml }}
+      terraform: ${{ steps.filter.outputs.terraform }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 2
+      - id: filter
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            BASE="$PR_BASE_SHA"
+          else
+            BASE="$PUSH_BEFORE_SHA"
+          fi
+          # Fall back to HEAD~1 when base SHA is all-zeros (force-push or first push),
+          # or when it isn't present in this shallow clone (e.g. a multi-commit merge
+          # pushes more commits than fetch-depth covers) — verify the object exists
+          # before trusting it, rather than only checking for the all-zeros sentinel.
+          if [[ -z "$BASE" || "$BASE" == "0000000000000000000000000000000000000000" ]] \
+             || ! git cat-file -e "$BASE" 2>/dev/null; then
+            BASE=$(git rev-parse HEAD~1 2>/dev/null || git rev-parse HEAD)
+          fi
+          CHANGED=$(git diff --name-only "$BASE" HEAD)
+          has_md=$(echo "$CHANGED"   | grep -qE '\.md$'         && echo true || echo false)
+          has_yaml=$(echo "$CHANGED" | grep -qE '\.(yml|yaml)$' && echo true || echo false)
+          has_tf=$(echo "$CHANGED"   | grep -qE '\.tf$'         && echo true || echo false)
+          echo "markdown=$has_md"  >> "$GITHUB_OUTPUT"
+          echo "yaml=$has_yaml"    >> "$GITHUB_OUTPUT"
+          echo "terraform=$has_tf" >> "$GITHUB_OUTPUT"
+
+  validate-structure:
+    name: Validate Repository Structure
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Check required files
+        run: |
+          REQUIRED_FILES=(
+            "SKILL.md"
+            "install.sh"
+            "agents/openai.yaml"
+            ".cursorrules"
+            ".cursor/rules/platform-skills.mdc"
+            "PROMPTS.md"
+            "README.md"
+            "LICENSE"
+            "CHANGELOG.md"
+            "CONTRIBUTING.md"
+            ".github/ISSUE_TEMPLATE/agent_editor_support.md"
+            ".github/ISSUE_TEMPLATE/domain_guide_request.md"
+            ".github/ISSUE_TEMPLATE/example_contribution.md"
+            "CLAUDE.md"
+            ".claude-plugin/marketplace.json"
+            ".gitignore"
+          )
+
+          MISSING=0
+          for file in "${REQUIRED_FILES[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "❌ Missing required file: $file"
+              MISSING=1
+            else
+              echo "✅ Found: $file"
+            fi
+          done
+
+          if [ $MISSING -eq 1 ]; then
+            exit 1
+          fi
+
+          echo "✅ All required files present"
+
+      - name: Validate marketplace.json
+        run: |
+          # Check JSON is valid
+          if ! jq empty .claude-plugin/marketplace.json 2>/dev/null; then
+            echo "❌ Invalid JSON in marketplace.json"
+            exit 1
+          fi
+
+          # Validate current catalog-style schema
+          jq -e '
+            (.name | type == "string" and length > 0) and
+            (.owner.name | type == "string" and length > 0) and
+            (.plugins | type == "array" and length > 0) and
+            (.plugins[0].name | type == "string" and length > 0) and
+            (.plugins[0].version | type == "string" and length > 0) and
+            (.plugins[0].description | type == "string" and length > 0) and
+            (.plugins[0].author.name | type == "string" and length > 0) and
+            (.plugins[0].license | type == "string" and length > 0) and
+            (.plugins[0].source.url | type == "string" and length > 0) and
+            (.plugins[0].homepage | type == "string" and length > 0)
+          ' .claude-plugin/marketplace.json > /dev/null || {
+            echo "❌ marketplace.json is missing required catalog fields"
+            exit 1
+          }
+
+          # Validate description length separately for an actionable error message
+          DESC_LEN=$(jq -r '.plugins[0].description | length' .claude-plugin/marketplace.json)
+          if [ "$DESC_LEN" -gt 1024 ]; then
+            echo "❌ marketplace.json plugins[0].description is ${DESC_LEN} chars (limit: 1024)"
+            echo "Trim the description to 1024 characters or fewer before releasing."
+            exit 1
+          fi
+
+          ROOT_NAME=$(jq -r '.name' .claude-plugin/marketplace.json)
+          PLUGIN_NAME=$(jq -r '.plugins[0].name' .claude-plugin/marketplace.json)
+          if [ "$ROOT_NAME" != "$PLUGIN_NAME" ]; then
+            echo "❌ Top-level name and plugins[0].name must match"
+            echo "Top-level name: $ROOT_NAME"
+            echo "Plugin name: $PLUGIN_NAME"
+            exit 1
+          fi
+
+          # Validate version format
+          VERSION=$(jq -r '.plugins[0].version' .claude-plugin/marketplace.json)
+          if ! [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid version format: $VERSION"
+            echo "Must be semver: MAJOR.MINOR.PATCH"
+            exit 1
+          fi
+
+          echo "✅ marketplace.json is valid"
+          echo "Version: $VERSION"
+
+      - name: Check SKILL.md frontmatter
+        run: |
+          # Check if SKILL.md starts with frontmatter
+          if head -n 1 SKILL.md | grep -q "^---$"; then
+            echo "✅ SKILL.md has frontmatter"
+
+            # Extract and validate frontmatter
+            FRONTMATTER=$(sed -n '/^---$/,/^---$/p' SKILL.md)
+
+            if echo "$FRONTMATTER" | grep -q "^name:"; then
+              echo "  ✅ Has 'name' field"
+            else
+              echo "  ⚠️  Missing 'name' field in frontmatter"
+            fi
+
+            if echo "$FRONTMATTER" | grep -q "^description:"; then
+              echo "  ✅ Has 'description' field"
+            else
+              echo "  ⚠️  Missing 'description' field in frontmatter"
+            fi
+          else
+            echo "⚠️  SKILL.md missing frontmatter"
+            echo "Consider adding YAML frontmatter for better skill activation"
+          fi
+
+      - name: Run handbook consistency checks
+        run: |
+          bash tests/handbook-consistency.sh
+
+  validate-markdown:
+    name: Validate Markdown
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.markdown == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Install markdownlint
+        run: |
+          npm install -g markdownlint-cli
+
+      - name: Lint markdown files
+        run: |
+          # Create markdownlint config
+          cat > .markdownlint.json << 'EOF'
+          {
+            "default": true,
+            "MD013": false,
+            "MD033": false,
+            "MD041": false
+          }
+          EOF
+
+          # Run markdownlint
+          markdownlint '**/*.md' --ignore node_modules || {
+            echo "⚠️  Markdown linting found issues (non-blocking)"
+          }
+
+      - name: Check for broken links
+        run: |
+          # Simple check for obviously broken markdown links
+          for file in $(find . -type f -name "*.md" ! -path "./.git/*"); do
+            # Check for empty link text
+            if grep -q '\[\](.*]' "$file"; then
+              echo "⚠️  Empty link text in: $file"
+            fi
+
+            # Check for malformed links
+            if grep -q '\[.*\]([^)]*)$' "$file"; then
+              echo "⚠️  Potentially malformed link in: $file"
+            fi
+          done
+
+          echo "✅ Markdown link check complete"
+
+  validate-yaml:
+    name: Validate YAML Files
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.yaml == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Validate all YAML files
+        run: |
+          # Exclude Helm template directories — Go template syntax ({{ }}) is not valid YAML
+          YAML_FILES=$(find . -type f \( -name "*.yml" -o -name "*.yaml" \) \
+            ! -path "./.git/*" \
+            ! -path "./examples/helm/*/templates/*")
+
+          if [ -z "$YAML_FILES" ]; then
+            echo "ℹ️  No YAML files found"
+            exit 0
+          fi
+
+          ERRORS=0
+          while IFS= read -r file; do
+            echo "Validating: $file"
+            if ! yq eval '.' "$file" > /dev/null 2>&1; then
+              echo "❌ Invalid YAML: $file"
+              ERRORS=$((ERRORS + 1))
+            fi
+          done <<< "$YAML_FILES"
+
+          if [ $ERRORS -gt 0 ]; then
+            echo "❌ Found $ERRORS YAML validation errors"
+            exit 1
+          fi
+
+          echo "✅ All YAML files valid"
+
+      - name: Validate Kubernetes manifests in examples (if present)
+        run: |
+          K8S_FILES=$(find . -type f \( -name "*.yml" -o -name "*.yaml" \) \
+            \( \
+              -path "./examples/flux/*" -o \
+              -path "./examples/argocd/*" -o \
+              -path "./examples/kubernetes/*" -o \
+              -path "./examples/openshift/*" \
+            \) \
+            ! -path "./.git/*")
+
+          if [ -z "$K8S_FILES" ]; then
+            echo "ℹ️  No Kubernetes manifests found"
+            exit 0
+          fi
+
+          # Install kubeconform
+          wget https://github.com/yannh/kubeconform/releases/download/v0.6.4/kubeconform-linux-amd64.tar.gz
+          tar xzf kubeconform-linux-amd64.tar.gz
+          sudo mv kubeconform /usr/local/bin/
+
+          ERRORS=0
+          while IFS= read -r file; do
+            echo "Validating Kubernetes manifest: $file"
+            # -skip Route: OpenShift Route CRD has no entry in yannh/kubernetes-json-schema;
+            # kubeconform returns a 429 rate-limit error (not 404) which -ignore-missing-schemas does not catch.
+            if ! kubeconform -summary -output text -ignore-missing-schemas -skip Route "$file"; then
+              echo "❌ Kubeconform validation failed: $file"
+              ERRORS=$((ERRORS + 1))
+            fi
+          done <<< "$K8S_FILES"
+
+          if [ $ERRORS -gt 0 ]; then
+            echo "❌ Found $ERRORS Kubernetes manifest validation errors"
+            exit 1
+          fi
+
+          echo "✅ Kubernetes manifest validation complete"
+
+  validate-terraform:
+    name: Validate Terraform
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.terraform == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e  # v4.0.1
+        with:
+          terraform_version: 1.16.1
+
+      - name: Find and validate Terraform directories
+        # Shared with release.yml and terraform-drift.yml.
+        run: bash tests/validate-terraform.sh
+
+  validate-security:
+    name: Security Checks
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Check for secrets in code
+        # Both the repository-wide heuristic scan and the tighter agentic-source
+        # scan live in tests/scan-secrets.sh. release.yml calls the same script,
+        # so the two gates cannot drift apart again.
+        run: bash tests/scan-secrets.sh
+
+      - name: Check for GitHub Actions security
+        run: |
+          REPO_WORKFLOWS=$(find .github/workflows -type f \
+            \( -name "*.yml" -o -name "*.yaml" \) 2>/dev/null)
+          EXAMPLE_WORKFLOWS=$(find examples/github-actions -type f \
+            \( -name "*.yml" -o -name "*.yaml" \) 2>/dev/null)
+
+          if [ -n "$REPO_WORKFLOWS" ]; then
+            REPO_FLOATING=$(grep -HE "uses:.*@[vV][0-9]+(\.[0-9]+)?([[:space:]]|$)" $REPO_WORKFLOWS || true)
+            if [ -n "$REPO_FLOATING" ]; then
+              echo "❌ Repository workflows must use immutable references:"
+              echo "$REPO_FLOATING"
+              echo ""
+              echo "Use a commit SHA or an exact release tag like @v4.0.0"
+              exit 1
+            fi
+
+            REPO_DANGEROUS=$(grep -HE "^[[:space:]]*pull_request_target:" $REPO_WORKFLOWS || true)
+            if [ -n "$REPO_DANGEROUS" ]; then
+              echo "❌ Repository workflows must not use pull_request_target without explicit review:"
+              echo "$REPO_DANGEROUS"
+              exit 1
+            fi
+          fi
+
+          if [ -n "$EXAMPLE_WORKFLOWS" ]; then
+            EXAMPLE_FLOATING=$(grep -HE "uses:.*@[vV][0-9]+(\.[0-9]+)?([[:space:]]|$)" $EXAMPLE_WORKFLOWS || true)
+            if [ -n "$EXAMPLE_FLOATING" ]; then
+              echo "⚠️  Example workflows still contain floating action tags:"
+              echo "$EXAMPLE_FLOATING"
+              echo ""
+              echo "Prefer SHAs or exact release tags in published examples as well"
+            fi
+
+            EXAMPLE_DANGEROUS=$(grep -HE "^[[:space:]]*pull_request_target:" $EXAMPLE_WORKFLOWS || true)
+            if [ -n "$EXAMPLE_DANGEROUS" ]; then
+              echo "⚠️  Example workflows contain pull_request_target:"
+              echo "$EXAMPLE_DANGEROUS"
+              echo ""
+              echo "Document the risk clearly if this pattern is intentionally shown"
+            fi
+          fi
+
+          echo "✅ GitHub Actions security check complete"
+
+  validate-skill-structure:
+    name: Skill Structure Checks
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Run skill structure validation
+        run: bash tests/validate-skill.sh
+
+      - name: Run helmcheck validation
+        run: bash tests/validate-helmcheck.sh
+
+  summary:
+    name: Validation Summary
+    runs-on: ubuntu-latest
+    needs: [detect-changes, validate-structure, validate-markdown, validate-yaml, validate-terraform, validate-security, validate-skill-structure]
+    if: always()
+    steps:
+      - name: Generate summary
+        run: |
+          pass_or_skip() { [[ "$1" == "success" || "$1" == "skipped" ]] && echo "✅ Passed" || echo "❌ Failed"; }
+          cat << EOF >> $GITHUB_STEP_SUMMARY
+          ## Validation Results
+
+          | Check | Status |
+          |-------|--------|
+          | Repository Structure | $(pass_or_skip "${{ needs.validate-structure.result }}") |
+          | Markdown Validation  | $(pass_or_skip "${{ needs.validate-markdown.result }}") |
+          | YAML Validation      | $(pass_or_skip "${{ needs.validate-yaml.result }}") |
+          | Terraform Validation | $(pass_or_skip "${{ needs.validate-terraform.result }}") |
+          | Security Checks      | $(pass_or_skip "${{ needs.validate-security.result }}") |
+          | Skill Structure      | $(pass_or_skip "${{ needs.validate-skill-structure.result }}") |
+
+          EOF
+
+      - name: Check overall status
+        run: |
+          fail() { [[ "$1" != "success" && "$1" != "skipped" ]]; }
+          if fail "${{ needs.validate-structure.result }}" || \
+             fail "${{ needs.validate-markdown.result }}"  || \
+             fail "${{ needs.validate-yaml.result }}"      || \
+             fail "${{ needs.validate-terraform.result }}" || \
+             fail "${{ needs.validate-security.result }}"  || \
+             fail "${{ needs.validate-skill-structure.result }}"; then
+            echo "❌ Some validation checks failed"
+            exit 1
+          fi
+          echo "✅ All validation checks passed"

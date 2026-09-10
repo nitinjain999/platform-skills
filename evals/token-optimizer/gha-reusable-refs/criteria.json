@@ -1,0 +1,31 @@
+{
+  "type": "weighted_checklist",
+  "context": "The agent was asked to find all reusable workflow and action references and flag mutable references.",
+  "checklist": [
+    {
+      "name": "finds_all_actions",
+      "description": "Identifies all uses: blocks in the workflows",
+      "max_score": 3
+    },
+    {
+      "name": "extracts_versions",
+      "description": "Correctly extracts the version (tag, SHA, or branch) for each action",
+      "max_score": 2
+    },
+    {
+      "name": "flags_mutable_refs",
+      "description": "Identifies branch references or tag references (not SHA-pinned) and flags them as risky",
+      "max_score": 2
+    },
+    {
+      "name": "evidence_quality",
+      "description": "Cites real workflow and step names, no invented references",
+      "max_score": 2
+    },
+    {
+      "name": "verdict",
+      "description": "Reports complete, partial, or blocked",
+      "max_score": 1
+    }
+  ]
+}

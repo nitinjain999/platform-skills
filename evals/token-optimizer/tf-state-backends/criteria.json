@@ -1,0 +1,31 @@
+{
+  "type": "weighted_checklist",
+  "context": "The agent was asked to find all Terraform backend configurations, including backend type, state keys, and storage locations.",
+  "checklist": [
+    {
+      "name": "finds_all_backends",
+      "description": "Locates all terraform backend blocks in versions.tf or main.tf files",
+      "max_score": 3
+    },
+    {
+      "name": "extracts_backend_details",
+      "description": "Reports backend type, bucket/storage account, and state key for each backend found",
+      "max_score": 3
+    },
+    {
+      "name": "notes_locking",
+      "description": "Reports any locking configuration (DynamoDB table, lease, etc.) or states none is configured",
+      "max_score": 2
+    },
+    {
+      "name": "scope_honesty",
+      "description": "States what was omitted or truncated, if anything",
+      "max_score": 1
+    },
+    {
+      "name": "verdict",
+      "description": "Reports complete, partial, or blocked",
+      "max_score": 1
+    }
+  ]
+}

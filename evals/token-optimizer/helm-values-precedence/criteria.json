@@ -1,0 +1,36 @@
+{
+  "type": "weighted_checklist",
+  "context": "The agent was asked to trace how Helm values merge across chart defaults, base values, and environment overlays.",
+  "checklist": [
+    {
+      "name": "finds_chart_defaults",
+      "description": "Correctly identifies the default replicaCount and image.tag from the chart's values.yaml",
+      "max_score": 2
+    },
+    {
+      "name": "finds_staging_values",
+      "description": "Correctly reports the staging values from HelmRelease or values ConfigMap",
+      "max_score": 2
+    },
+    {
+      "name": "finds_production_values",
+      "description": "Correctly reports the production values from HelmRelease or values ConfigMap",
+      "max_score": 2
+    },
+    {
+      "name": "explains_precedence",
+      "description": "Explains how overlays merge or override base values, and which takes precedence",
+      "max_score": 2
+    },
+    {
+      "name": "evidence_quality",
+      "description": "Cites real file paths and sections, no invented values",
+      "max_score": 1
+    },
+    {
+      "name": "verdict",
+      "description": "Reports complete, partial, or blocked",
+      "max_score": 1
+    }
+  ]
+}

@@ -1,0 +1,75 @@
+{
+  "SchemaVersion": 2,
+  "ArtifactName": "platform-api:v1.2.3",
+  "ArtifactType": "container_image",
+  "Results": [
+    {
+      "Target": "platform-api:v1.2.3 (alpine 3.18.0)",
+      "Class": "os-pkgs",
+      "Type": "alpine",
+      "Vulnerabilities": [
+        {
+          "VulnerabilityID": "CVE-2024-1234",
+          "PkgName": "libssl3",
+          "InstalledVersion": "3.1.0-r1",
+          "FixedVersion": "3.1.0-r4",
+          "Severity": "HIGH",
+          "Title": "OpenSSL buffer overflow in certificate parsing",
+          "Description": "A buffer overflow vulnerability in OpenSSL certificate parsing allows remote code execution."
+        },
+        {
+          "VulnerabilityID": "CVE-2024-1234",
+          "PkgName": "libcrypto3",
+          "InstalledVersion": "3.1.0-r1",
+          "FixedVersion": "3.1.0-r4",
+          "Severity": "HIGH",
+          "Title": "OpenSSL buffer overflow in certificate parsing",
+          "Description": "A buffer overflow vulnerability in OpenSSL certificate parsing allows remote code execution."
+        },
+        {
+          "VulnerabilityID": "CVE-2024-5678",
+          "PkgName": "busybox",
+          "InstalledVersion": "1.36.0-r0",
+          "FixedVersion": "1.36.1-r0",
+          "Severity": "MEDIUM",
+          "Title": "BusyBox command injection",
+          "Description": "Command injection in BusyBox ash shell parameter expansion."
+        },
+        {
+          "VulnerabilityID": "CVE-2024-9012",
+          "PkgName": "curl",
+          "InstalledVersion": "8.1.0-r0",
+          "FixedVersion": "",
+          "Severity": "LOW",
+          "Title": "curl information disclosure",
+          "Description": "Minor information disclosure in verbose mode."
+        }
+      ]
+    },
+    {
+      "Target": "app/requirements.txt",
+      "Class": "lang-pkgs",
+      "Type": "pip",
+      "Vulnerabilities": [
+        {
+          "VulnerabilityID": "CVE-2024-3456",
+          "PkgName": "requests",
+          "InstalledVersion": "2.28.0",
+          "FixedVersion": "2.31.0",
+          "Severity": "HIGH",
+          "Title": "requests SSRF via redirect",
+          "Description": "Server-side request forgery via unvalidated redirect."
+        },
+        {
+          "VulnerabilityID": "CVE-2024-7890",
+          "PkgName": "django",
+          "InstalledVersion": "4.1.0",
+          "FixedVersion": "4.2.8",
+          "Severity": "CRITICAL",
+          "Title": "Django SQL injection",
+          "Description": "SQL injection in QuerySet.values() and values_list()."
+        }
+      ]
+    }
+  ]
+}
