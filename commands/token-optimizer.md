@@ -59,12 +59,12 @@ Steps:
    code --version 2>/dev/null | head -n1 || echo "vscode: not installed"
    ```
 
-2. Check for existing agent definitions across all client-specific directories:
-   - Claude Code: `.claude/agents/`
-   - Copilot CLI: `.github/agents/`, `~/.copilot/agents/`
-   - VS Code: workspace agents in `.vscode/agents/` if present
+2. Check for existing agent definitions in all locations where clients read them:
+   - `.github/agents/` — repository-scoped agents, shared by Copilot CLI and VS Code
+   - `~/.copilot/agents/` — user-scoped Copilot CLI agents
+   - `.claude/agents/` and `~/.claude/agents/` — repository- and user-scoped Claude Code agents
 
-   List any agent whose name contains `reader`, `bulk`, `worker`, or matches the default `platform-bulk-reader`.
+   List any agent whose name contains `reader`, `bulk`, `worker`, or matches the default `platform-bulk-reader`. Report the agent names found; do not attribute agents in `.github/agents/` to one client from the path alone.
 
 3. Check for existing hooks across **all three** Copilot surfaces (not just one):
    - `.github/hooks/*.json` (repository scope, project-managed)
@@ -498,9 +498,9 @@ Steps:
 2. Scan for assets with the ownership marker `# OWNERSHIP MARKER: platform-skills token-optimizer v1.41.0`. Candidates:
    - `.token-optimizer.yaml`
    - `.token-optimizer/optimize.sh`
-   - `.claude/agents/platform-bulk-reader.md`
-   - `.github/agents/platform-bulk-reader.agent.md`
-   - `.vscode/agents/platform-bulk-reader.mdc`
+   - `.claude/agents/platform-bulk-reader.md` and `~/.claude/agents/platform-bulk-reader.md`
+   - `.github/agents/platform-bulk-reader.agent.md` and `.github/agents/platform-coordinator.agent.md` (Copilot CLI and VS Code)
+   - `~/.copilot/agents/platform-bulk-reader.agent.md` and `~/.copilot/agents/platform-coordinator.agent.md` (user-scoped)
    - Hook entries in `.claude/settings.json`, `.github/hooks/*.json`, `~/.copilot/config.json`
 
 3. For each asset:
