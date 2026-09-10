@@ -1,0 +1,72 @@
+# Sample .token-optimizer.yaml — copy to the repo root and edit.
+# Schema version 1. The core refuses to interpret a newer version with this
+# version's key meanings, and degrades to defaults instead.
+version: 1
+
+# Master switch. `false` short-circuits the core before any classification.
+# This is what `disable` sets. Note: `mode: advisory` is NOT off — it still
+# carries routing instructions telling the model to delegate.
+enabled: true
+
+# off | advisory | audit | redirect
+#   off       no classification at all
+#   advisory  delegation instructions only, no hook decisions
+#   audit     logs oversized-read opportunities, denies nothing (default)
+#   redirect  denies an oversized read with a reason naming the worker
+#
+# Platform CAPS this. copilot and vscode are forced to audit even if you write
+# redirect here, because redirection is unsupported on copilot (no per-call
+# worker identity in the documented payload) and delegation is unverified on
+# both. Run `explain` to see the effective mode and why.
+mode: audit
+
+worker_agent: platform-bulk-reader
+
+# Verified valid on Copilot CLI 1.0.59: claude-haiku-4.5, gpt-5-mini, gpt-5.4-mini.
+# On Claude Code use `haiku` or a concrete model id your provider exposes.
+# On Bedrock the resolved id must be enabled in your account and region.
+# This is a REQUEST. `doctor` reports the model that actually resolved, plus the
+# verification source and any fallback reason. If resolution cannot be observed,
+# no cheaper-routing claim is made — an unverified worker may be on the
+# expensive model, in which case delegation costs more than it saves.
+worker_model: claude-haiku-4.5
+
+# Absolute gates, applied to EVERY read, ranged or not.
+# Starting hypotheses from the design, not measured optima.
+max_lines: 350
+max_bytes: 32768
+
+# Percent of a file a range may cover before it is REPORTED as a whole-file
+# read. Reporting only — it can never turn an over-limit request into a pass.
+max_range_ratio: 80
+
+# An omitted read limit means the client's default, not the whole file.
+# 0 means "unknown, treat an omitted limit as whole-file". The core fills in
+# 2000 automatically on Claude Code, whose Read defaults to 2000 lines.
+default_read_limit: 0
+
+# Instruction-level request to the worker, not an enforceable cap.
+summary_words: 600
+
+# Advisory signal for many-small-reads discovery. Never denies: a session is
+# not a task boundary, so denying the fortieth read of a long session because
+# of the previous thirty-nine would be wrong.
+cumulative_lines: 8000
+cumulative_bytes: 524288
+
+# Instruction-only where the client does not enforce them natively.
+# `doctor` reports which. An unenforced budget that reads as enforced is how a
+# cost feature becomes a cost problem.
+max_delegations_per_task: 3
+max_worker_retries: 1
+max_worker_seconds: 120
+
+# Claude Code only. Copilot CLI's documented payload carries no per-call worker
+# identity, so it cannot exempt reliably and ships audit-only.
+exempt_agent_types:
+  - platform-bulk-reader
+
+# Neither path is created by the core. `setup` creates them; until then the core
+# writes nothing, so running it in an unconfigured repo leaves no files behind.
+log: .token-optimizer/decisions.log
+state_dir: .token-optimizer/state
