@@ -28,7 +28,12 @@
       "max_score": 1
     },
     {
-      "name": "verdict",
+      "name": "evidence_quality",
+      "description": "Cites real file paths from the provided evidence, no fabricated references",
+      "max_score": 1
+    },
+    {
+      "name": "reports_verdict",
       "description": "Reports complete, partial, or blocked",
       "max_score": 1
     }

@@ -23,7 +23,12 @@
       "max_score": 1
     },
     {
-      "name": "verdict",
+      "name": "scope_honesty",
+      "description": "States what was omitted or truncated",
+      "max_score": 1
+    },
+    {
+      "name": "reports_verdict",
       "description": "Reports complete, partial, or blocked and explains why",
       "max_score": 1
     }

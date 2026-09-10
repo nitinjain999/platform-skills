@@ -26,6 +26,16 @@
       "name": "scope_honesty",
       "description": "States what was omitted or truncated",
       "max_score": 1
+    },
+    {
+      "name": "evidence_quality",
+      "description": "Cites real file paths from the provided evidence, no invented line numbers",
+      "max_score": 1
+    },
+    {
+      "name": "reports_verdict",
+      "description": "Reports complete, partial, or blocked",
+      "max_score": 1
     }
   ]
 }
