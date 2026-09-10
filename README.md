@@ -3,9 +3,9 @@
 > A production-grade field handbook for platform, DevOps, SRE, and cloud engineers covering Kubernetes, Flux CD, Terraform, GitHub Actions, AWS, OPA/Rego, KEDA, Karpenter, supply chain security, Falco, observability, and more. Use it on GitHub, as a local reference, or with Claude, Codex, Cursor, and Copilot for interactive guidance with blast radius, validation steps, and rollback plans built in.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-v1.39.0-0e1117)](CHANGELOG.md)
-[![Domains](https://img.shields.io/badge/Domains-41-4c8eda)](references/)
-[![Commands](https://img.shields.io/badge/Commands-43-e87c2b)](commands/)
+[![Version](https://img.shields.io/badge/Version-v1.41.0-0e1117)](CHANGELOG.md)
+[![Domains](https://img.shields.io/badge/Domains-63-4c8eda)](references/)
+[![Commands](https://img.shields.io/badge/Commands-44-e87c2b)](commands/)
 [![Examples](https://img.shields.io/badge/Examples-28-6f42c1)](examples/)
 [![Editors](https://img.shields.io/badge/Editors-VSCode%20%7C%20Cursor%20%7C%20Copilot-2ea44f)](EDITOR_INTEGRATIONS.md)
 [![GitHub Stars](https://img.shields.io/github/stars/nitinjain999/platform-skills?style=flat&label=Stars&color=0e1117)](https://github.com/nitinjain999/platform-skills/stargazers)
@@ -131,6 +131,7 @@ All layers work independently. Agent integrations are optional.
 | 🐈 Zizmor | [references/zizmor.md](references/zizmor.md) | Workflow and action security audit: template injection, credential persistence, unpinned `uses:`, over-broad permissions, impostor commits; personas, `zizmor.yml` policy, exit-code gating, auto-fix, SARIF — `/platform-skills:zizmor` |
 | 🦅 Kingfisher | [references/kingfisher.md](references/kingfisher.md) | Find, live-validate, map blast radius of, and revoke leaked secrets across repos, Git history, GitHub/GitLab/Bitbucket orgs, S3/GCS, Docker images, Slack, Jira, Confluence, Teams; baseline tracking, `kingfisher.yaml` policy, CI gate, pre-commit — `/platform-skills:kingfisher` |
 | 🛡️ AI Governance | [references/ai-governance.md](references/ai-governance.md) | Policy gate for AI coding agents: verified Copilot/Claude Code hook protocol, `protected_paths`/`denied_commands` schema, enforcement tiers, trusted base-branch merge-time verifier, audit logging — `/platform-skills:ai-governance` |
+| 💰 Token Optimizer | [references/token-optimizer.md](references/token-optimizer.md) | Route broad repository discovery to a cheaper worker model via native subagents; config schema, verified client capability matrix, size classification, fail-open rationale, measurement — `/platform-skills:token-optimizer` |
 | 🗺️ Platform model | [references/platform-operating-model.md](references/platform-operating-model.md) | Ownership boundaries, promotion flows, cross-tool design |
 | 🔐 Secrets | [references/secrets.md](references/secrets.md) | External Secrets Operator, Sealed Secrets, provider setup, troubleshooting — `/platform-skills:secrets` |
 | <img src="https://cdn.simpleicons.org/linkerd/2BEDA7" width="16" height="16" alt="Linkerd"> Linkerd | [references/linkerd.md](references/linkerd.md) | mTLS, proxy injection, AuthorizationPolicy, observability, multi-cluster |
@@ -346,7 +347,7 @@ platform-skills/
 
 ## Roadmap
 
-**Current release: v1.39.0** — 43 commands, 41 domain reference guides, 50+ wiki pages.
+**Current release: v1.41.0** — 44 commands, 63 domain reference guides, 50+ wiki pages.
 
 Full version history is in [CHANGELOG.md](CHANGELOG.md).
 
