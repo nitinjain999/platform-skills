@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".token-optimizer/optimize.sh --mode=hook --platform=claude"
+          }
+        ]
+      }
+    ]
+  }
+}
