@@ -115,7 +115,7 @@ Steps:
 
 2. All assets install to the repository scope: `.token-optimizer/`, `.token-optimizer.yaml`, `.claude/settings.json` or `.github/hooks/`. The optimizer's config and hook are repository-scoped. Agent templates can be installed at user scope (`~/.claude/agents/`, `~/.copilot/agents/`), but the core and its config remain repository-relative.
 
-3. Confirm the worker model. Verified valid on Copilot CLI 1.0.59: `claude-haiku-4.5`, `gpt-5-mini`, `gpt-5.4-mini`. On Claude Code use `haiku` or a concrete model id your provider exposes. On Copilot CLI the coordinator uses a model determined by the agent definition; on Claude Code no explicit coordinator model is set.
+3. Confirm the worker model. Verified valid on Copilot CLI 1.0.59: `claude-haiku-4.5`, `gpt-5-mini`, `gpt-5.4-mini`. On Claude Code use `haiku` or a concrete model id your provider exposes. Only the VS Code coordinator pins a model (`claude-sonnet-4.6`); the Copilot CLI coordinator sets none and inherits the session's, and Claude Code ships no coordinator at all.
 
 4. Confirm the routing mode: `audit` or `redirect`.
    - **audit**: logs oversized-read opportunities, denies nothing (default, recommended for a first install)
@@ -159,7 +159,7 @@ Steps:
    mkdir -p .token-optimizer/state
    ```
 
-8. Copy the client's agent templates to the right directory for the chosen scope:
+8. Copy the client's agent templates. The optimizer's own config, state directory and hook command are repository-scoped, but agent definitions can additionally be installed user-wide, so both destinations are listed where a client supports them:
    - **Claude Code** (repository): copy `examples/token-optimizer/claude/platform-bulk-reader.md` to `.claude/agents/platform-bulk-reader.md`
    - **Claude Code** (user): copy to `~/.claude/agents/platform-bulk-reader.md`
    - **Copilot CLI** (repository): copy both `examples/token-optimizer/copilot-cli/platform-bulk-reader.agent.md` and `examples/token-optimizer/copilot-cli/platform-coordinator.agent.md` to `.github/agents/`
@@ -210,7 +210,7 @@ Steps:
 
    b. Repository `settings.json` `hooks` key (if present) — merge using `jq`.
 
-   c. User `~/.copilot/config.json` `hooks` key (if user scope chosen) — merge using `jq`.
+   c. User `~/.copilot/config.json` `hooks` key (only if the user wants the optimizer active across all their repositories, and only alongside a repository-scoped install in each) — merge using `jq`.
 
    **For VS Code**, note that agent-scoped hooks are a preview feature gated on `chat.useCustomAgentHooks`. If that setting is not enabled, the hooks will not fire. Report this as a post-setup instruction.
 
@@ -376,7 +376,7 @@ Orchestrate isolated fixture runs across four arms, compare token usage. Three r
 
 Steps:
 
-1. Confirm which fixture suite to run: `all`, `terraform`, `helm`, `actions`, or `controls`.
+1. Confirm which fixture suite to run. Offer `all` plus the manifest's actual family ids, derived rather than hardcoded: `jq -r '[.tasks[].family] | unique | .[]' evals/token-optimizer/manifest.json` yields `difficult-reasoning-control`, `github-actions`, `helm-gitops`, `scanner-results`, `small-task-control`, `source-navigation`, `terraform-discovery`.
 
 2. Read `evals/token-optimizer/manifest.json` to retrieve:
    - Arms: `baseline`, `concise`, `delegated`, `native`
@@ -419,7 +419,7 @@ Steps:
 8. These benchmarks require provider credentials, coordinator and worker sessions, and controlled task selection. They do NOT run by default in this repository. State this explicitly when reporting results: no savings figure is published in v1.41.0.
 
 **Validation:**
-Check that the JSONL output includes all expected fields and that `total_tokens` equals the sum of all token fields (input + output + cache_creation for both coordinator and worker where present) for each row.
+Check that every row carries the manifest's `record_fields` and no others. Verify with `jq -r '.record_fields[]' evals/token-optimizer/manifest.json` and compare against the keys actually written. There is no `total_tokens` field: cost is derived per actor from the four billing-unit fields (`*_input_tokens`, `*_cache_write_tokens`, `*_cache_read_tokens`, `*_output_tokens`), and `retries` is diagnostic only and never added to a cost total.
 
 ## Mode: report
 
@@ -447,9 +447,9 @@ Steps:
    - Median total tokens per arm
    - Cache state breakdown (cold | warm | unknown)
    - Retries and failures
-   - Both formulas:
-     - `total_tokens = input_tokens + output_tokens + cache_creation_tokens` (per actor)
-     - `task_total = sum(each actor's total_tokens)` (per task)
+   - Both formulas, from the manifest's `cost_model`:
+     - `actor_cost = sum over billing units of (tokens x rate for that unit at pricing_date)`, where an actor is `parent` or `worker` and the units are `input_tokens`, `cache_write_tokens`, `cache_read_tokens`, `output_tokens`
+     - `total_cost = parent cost + worker cost + external_service_charges`
 
 5. **Refuse to compute a percentage when the baseline is zero.** If the baseline arm has zero measured tokens (e.g., no runs or all unavailable), report the absolute numbers only and state:
    ```
@@ -506,7 +506,7 @@ yq eval '.enabled' .token-optimizer.yaml
 
 ## Mode: remove
 
-Remove only assets carrying the ownership marker and matching the shipped content hash. Print any edited asset for review rather than deleting it.
+Remove assets carrying the ownership marker. The marker is authoritative: `setup` injects it, so no shipped-file hash can ever match a generated asset, and gating deletion on a hash match would make uninstall silently inert. A marked asset whose content differs from what `setup` would generate is still removed, and reported as locally modified. An asset with no marker is never touched, only listed for manual review.
 
 Steps:
 

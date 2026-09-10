@@ -11,7 +11,7 @@ enabled: true          # false short-circuits before any classification; default
 mode: audit            # off | advisory | audit | redirect; default: audit
 
 worker_agent: platform-bulk-reader
-worker_model: claude-haiku-4.5   # request only — verified on Copilot CLI 1.0.59: claude-haiku-4.5, gpt-5-mini, gpt-5.4-mini; coordinator uses claude-sonnet-4.6
+worker_model: claude-haiku-4.5   # request only — verified on Copilot CLI 1.0.59: claude-haiku-4.5, gpt-5-mini, gpt-5.4-mini; only the VS Code coordinator pins a model, claude-sonnet-4.6
 
 max_lines: 350         # absolute gate on every read, ranged or not
 max_bytes: 32768       # absolute gate on every read, ranged or not
