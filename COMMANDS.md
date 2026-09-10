@@ -25,7 +25,7 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:zizmor](#platform-skillszizmor) | GitHub Actions workflow security audit — template injection, unpinned uses, permissions; three-layer wizard; auto-fix, policy file, CI gate, pre-commit |
 | [/platform-skills:kingfisher](#platform-skillskingfisher) | Find, live-validate, map blast radius of, and revoke leaked secrets — repo, Git history, GitHub/GitLab/Bitbucket orgs, S3/GCS, Slack, Jira; baseline tracking, CI gate, pre-commit |
 | [/platform-skills:ai-governance](#platform-skillsai-governance) | Policy gate for AI coding agents — Copilot and Claude Code session hooks that deny protected-path edits and dangerous commands, plus a merge-time backstop; dry-run, fleet audit, plain-English explain |
-| [/platform-skills:token-optimizer](#platform-skillstoken-optimizer) | Route broad repository discovery to a cheaper worker model via native subagents — `inspect`, `setup`, `doctor`, `explain`, `benchmark`, `report` |
+| [/platform-skills:token-optimizer](#platform-skillstoken-optimizer) | Route broad repository discovery to a cheaper worker model via native subagents — `inspect`, `setup`, `doctor`, `explain`, `benchmark`, `report`, `disable`, `remove` |
 | [/platform-skills:gitops](#platform-skillsgitops) | Flux CD / Argo CD — debug live cluster issues or audit a GitOps repo |
 | [/platform-skills:linkerd](#platform-skillslinkerd) | Linkerd mTLS, injection, policy, multi-cluster |
 | [/platform-skills:linux](#platform-skillslinux) | Linux, DNS, load balancing, VPC/VNet, networking |
@@ -380,7 +380,7 @@ Policy lives in `.ai-governance.yaml` (`protected_paths`, `denied_commands`, `ma
 
 **What it does:** Routes broad repository discovery to a cheaper worker model via subagent delegation where the client supports it. Classifies requested read size (line count and byte count against absolute gates) and emits pass, audit log entry, or denial.
 
-Covers eight modes: `inspect` detects installed clients and reports versions, agents, and hooks; `setup` installs the core script, writes `.token-optimizer.yaml`, registers PreToolUse hooks, and creates state directories; `doctor` reports four separate states (delegation, model, redirection, read limit) and never collapses them; `explain` dry-runs classification for a file path or JSON payload; `benchmark` and `report` measure cost; `disable` and `remove` reverse the config.
+Covers eight modes: `inspect` detects installed clients and reports versions, agents, and hooks; `setup` installs the core script, writes `.token-optimizer.yaml`, registers PreToolUse hooks, and creates state directories; `doctor` reports four separate states (delegation, model, redirection, read limit) and never collapses them; `explain` dry-runs classification for a file path or JSON payload; `benchmark` records and aggregates what the client exposes, and `report` aggregates the decision log (reconciliation is against the provider's billing); `disable` and `remove` reverse the config.
 
 ```
 /platform-skills:token-optimizer

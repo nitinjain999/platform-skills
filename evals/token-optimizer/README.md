@@ -24,3 +24,7 @@ Every record declares `cold`, `warm`, or `unknown`, established by the harness r
 ## Controls decide whether the feature is worth having
 
 `control-small-file` must **not** delegate. `control-subtle-iam` must read primary evidence rather than trusting a summary — and its summary is deliberately accurate about a statement the diff never touches, which is the realistic failure: a plausible summary about the wrong thing.
+
+## Fixture evidence must never contain provider binaries or other build output
+
+The manifest's isolation rule copies `evidence/**` per run, so `.terraform/`, `node_modules/`, or any other large build artifact would be copied multiple times per arm, wasting disk and time.

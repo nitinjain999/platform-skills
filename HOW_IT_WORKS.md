@@ -97,7 +97,7 @@ Slash commands are predefined Claude workflows. In Codex or Cursor, ask for the 
 | `/platform-skills:zizmor` | You want to audit GitHub Actions workflows for template injection, unpinned `uses:`, or over-broad permissions — then auto-fix, triage, write a `zizmor.yml` policy, or add a CI gate |
 | `/platform-skills:kingfisher` | You want to find a leaked secret, confirm it's still live, map what it can reach, or revoke it — in a repo, Git history, a GitHub org, S3, Slack, or Jira |
 | `/platform-skills:ai-governance` | You want to stop AI coding agents (Copilot, Claude Code) from editing protected paths or running dangerous commands — session hooks plus a merge-time backstop, dry-run a policy change, or report org-wide adoption |
-| `/platform-skills:token-optimizer` | You want to route broad repository discovery to a cheaper worker model using each client's native subagents — detect clients, write configs, verify delegation, measure savings |
+| `/platform-skills:token-optimizer` | You want to route broad repository discovery to a cheaper worker model using each client's native subagents — detect clients, write configs, report delegation and redirection state per client, and run your own cost benchmark |
 | `/platform-skills:debug` | You have a platform symptom and want structured diagnosis |
 | `/platform-skills:gitops debug` | Flux or Argo CD live cluster issue — structured 5-workflow debug |
 | `/platform-skills:gitops audit` | Audit a Flux CD GitOps repo — 6-phase analysis, Critical/Warning/Info report |

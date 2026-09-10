@@ -78,7 +78,7 @@ Questions 1 and 2 cannot be automated. They require reading vendor docs, probing
 | Mode | Behavior |
 |------|----------|
 | `off` | No classification at all. Short-circuits before reading the payload. |
-| `advisory` | Classification runs and cumulative counter updates, but no per-read decision is logged and nothing is emitted. Use this to measure cumulative discovery patterns without logging individual opportunities. |
+| `advisory` | Classification runs and cumulative counter updates, but the payload is still read and parsed first, so a malformed payload can still produce a single degradation line. No per-read decision is logged and nothing is emitted on success. Use this to measure cumulative discovery patterns without logging individual opportunities. |
 | `audit` | Classification runs, cumulative counter updates, and oversized reads are logged as `would_redirect`. Denies nothing. Default. |
 | `redirect` | Denies oversized reads with a reason naming the worker and carrying the seven-part contract, worker budgets, and the file path. Exit 2. |
 
@@ -86,7 +86,7 @@ Questions 1 and 2 cannot be automated. They require reading vendor docs, probing
 
 ### What a developer sees under each mode
 
-**`off`**: nothing interrupts, nothing is logged, no classification runs. The core short-circuits before the payload is even parsed.
+**`off`**: nothing interrupts, no classification runs, and no per-read decision is logged. The payload is still read and parsed, so a malformed payload can still write a single `degraded / optimizer_unavailable / payload parse failed` line to the log. An "off" optimizer is not silent on invalid input.
 
 **`advisory`**: nothing interrupts. Reads proceed normally. The log shows only cumulative threshold crossings (`cumulative_exceeded`), never individual per-read opportunities. Use this to measure session-wide discovery cost without the noise of every single read.
 
@@ -201,7 +201,7 @@ The state key is a hash of `session_id` plus the absolute file path. `session_id
 
 Without a session identity, state cannot be scoped. A shared bucket would let one session inherit another's exemption: Session A hits the large file and is denied, Session B opens the same repo an hour later and passes on the first read because the state file already exists. That would be wrong.
 
-An empty session ID means "no state possible". The core logs nothing and passes immediately, because it cannot bound the recovery.
+An empty session ID means "no state possible". The core logs `recovery_unavailable / state_write_failed` and passes immediately, because it cannot bound the recovery.
 
 ### Keyed on session + absolute path
 
@@ -266,9 +266,9 @@ The log line tells you the session's discovery cost is high. What to do about it
 The benchmark harness (not included in this document) defines four mutually exclusive arms:
 
 1. **Baseline** — no delegation, no read interception
-2. **Advisor** — `mode: advisory`, instructions only
-3. **Delegator** — `mode: redirect`, actual worker dispatch
-4. **Built-in discovery agent** — the client's own native discovery agent, if any
+2. **Concise** — `mode: advisory`, instructions only
+3. **Delegated** — `mode: redirect`, actual worker dispatch
+4. **Native** — the client's own built-in discovery agent, where one exists
 
 Usage fields are **mutually exclusive per actor per billing unit**. Total task cost sums across all actors. An actor is the coordinator or a worker; a billing unit is one model invocation at one provider. Same model, different context window state (e.g., before and after cache warming) counts as one actor.
 
@@ -304,9 +304,9 @@ This means BYOK is a **whole-session option only**. Routing all agents to the ch
 
 **vs `/platform-skills:ai-governance`**: governance is "what tools are allowed to do" (protected paths, denied commands, disclosure). Token optimizer is "route some reads to a cheaper model". Governance blocks or logs violations; the optimizer delegates and logs opportunities. They compose: a worker exempted from size classification is still governed on write intent.
 
-**vs `/platform-skills:setup-agents`**: setup-agents scaffolds the tool roster and multi-agent capability probe. Token-optimizer is one consumer of that capability: it needs verified delegation to redirect, and setup-agents is what verifies delegation works. Different concerns, same probe infrastructure.
+**vs `/platform-skills:setup-agents`**: `/platform-skills:setup-agents` scaffolds which AI tools a repo uses and what their agent rosters contain. This command adds one worker to an existing roster and decides which model does the reading. Neither verifies the other's behaviour, and they share no probe infrastructure: delegation verification for this feature lives in `examples/token-optimizer/claude/probe/run-probe.sh`, which a human runs against a live session.
 
-**vs `/platform-skills:self-improve`**: self-improve runs behavioural tests and promotes corrections to session memory. Token-optimizer's 55-test suite (`tests/optimize_test.sh`) is an input to self-improve when the optimizer's behavior changes. Different concerns, same test-driven approach.
+**vs `/platform-skills:self-improve`**: self-improve runs behavioural tests and promotes corrections to session memory. Token-optimizer's 59-test suite (`examples/token-optimizer/tests/optimize_test.sh`) is an input to self-improve when the optimizer's behavior changes. Different concerns, same test-driven approach.
 
 ## Roadmap
 

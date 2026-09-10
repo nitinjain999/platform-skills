@@ -33,10 +33,10 @@ Enter 1-8 or mode name:
 ```
 
 **Q2 — Context** (after mode selected, one at a time):
-- **setup**: `Which client? (claude / copilot-cli / vscode)` then `Scope? (repository / user)` then `Worker model? (claude-haiku-4.5 / gpt-5-mini / gpt-5.4-mini / claude-sonnet-4.6)` then `Routing mode? (audit / redirect — audit recommended for a first install)`
+- **setup**: `Which client? (claude / copilot-cli / vscode)` then `Worker model? (claude-haiku-4.5 / gpt-5-mini / gpt-5.4-mini)` then `Routing mode? (audit / redirect — audit recommended for a first install)`
 - **explain**: `Give me a file path, or a JSON payload to classify:`
-- **benchmark**: `Which fixture suite? (all / terraform / helm / actions / controls)`
-- **report**: `Path to the decision log (default: .token-optimizer/decisions.log):`
+- **benchmark**: `Which fixture suite?` then offer `all` plus every family from `jq -r '[.tasks[].family] | unique | .[]' evals/token-optimizer/manifest.json`
+- **report**: no question — reads the log path from the config's `log:` key
 - **disable** / **remove**: `Which client's configuration?`
 
 For `setup` on `copilot-cli`, do not offer `redirect`. It is unsupported and the core caps it to audit. Say so rather than accepting the choice and silently downgrading it.
@@ -107,17 +107,15 @@ yq/jq:        both|yq only|jq only|neither
 
 ## Mode: setup
 
-Install the optimizer: copy assets, write config, register hooks, add ownership markers.
+Install the optimizer: copy assets, write config, register hooks, add ownership markers. The optimizer installs per repository because its config, state directory and hook command are all resolved relative to the repository root.
 
 Steps:
 
 1. Confirm the target client from the wizard answer (claude / copilot-cli / vscode).
 
-2. Confirm the scope: repository or user.
-   - **repository**: assets and hooks go into the project directory (`.token-optimizer/`, `.claude/settings.json`, `.github/hooks/`)
-   - **user**: assets and hooks go into the global config directory (`~/.token-optimizer/`, `~/.claude/settings.json`, `~/.copilot/config.json`)
+2. All assets install to the repository scope: `.token-optimizer/`, `.token-optimizer.yaml`, `.claude/settings.json` or `.github/hooks/`. The optimizer's config and hook are repository-scoped. Agent templates can be installed at user scope (`~/.claude/agents/`, `~/.copilot/agents/`), but the core and its config remain repository-relative.
 
-3. Confirm the worker model. Verified valid on Copilot CLI 1.0.59: `claude-haiku-4.5`, `gpt-5-mini`, `gpt-5.4-mini`. On Claude Code use `haiku` or a concrete model id your provider exposes. The coordinator uses `claude-sonnet-4.6`.
+3. Confirm the worker model. Verified valid on Copilot CLI 1.0.59: `claude-haiku-4.5`, `gpt-5-mini`, `gpt-5.4-mini`. On Claude Code use `haiku` or a concrete model id your provider exposes. On Copilot CLI the coordinator uses a model determined by the agent definition; on Claude Code no explicit coordinator model is set.
 
 4. Confirm the routing mode: `audit` or `redirect`.
    - **audit**: logs oversized-read opportunities, denies nothing (default, recommended for a first install)
@@ -193,16 +191,21 @@ Steps:
    a. Repository `.github/hooks/preToolUse.json`:
    ```bash
    mkdir -p .github/hooks
-   cat >.github/hooks/preToolUse.json <<'EOF'
-   {
-     "version": 1,
-     "hooks": {
-       "preToolUse": [
-         {"type": "command", "bash": ".token-optimizer/optimize.sh --mode=hook --platform=copilot", "timeoutSec": 10}
-       ]
-     }
-   }
-   EOF
+   [[ -f .github/hooks/preToolUse.json ]] || echo '{}' > .github/hooks/preToolUse.json
+
+   jq --arg cmd '.token-optimizer/optimize.sh --mode=hook --platform=copilot' '
+     def has_hook($arr; $cmd):
+       $arr | map(select(.bash == $cmd or .command == $cmd)) | length > 0;
+     
+     . as $root |
+     if ($root.hooks.preToolUse // [] | length) == 0
+     then {version: 1, hooks: {preToolUse: [{"type": "command", "bash": $cmd, "timeoutSec": 5}]}}
+     elif has_hook($root.hooks.preToolUse; $cmd)
+     then $root
+     else $root | .hooks.preToolUse = ((.hooks.preToolUse // []) + [{"type": "command", "bash": $cmd, "timeoutSec": 5}])
+     end
+   ' .github/hooks/preToolUse.json > .github/hooks/preToolUse.json.tmp \
+     && mv .github/hooks/preToolUse.json.tmp .github/hooks/preToolUse.json
    ```
 
    b. Repository `settings.json` `hooks` key (if present) — merge using `jq`.
@@ -217,10 +220,13 @@ Steps:
     ```
     This is what `remove` uses to identify assets safe to delete.
 
-11. Add `.token-optimizer/` to `.gitignore` if not already present:
+11. Add runtime state to `.gitignore`, but explicitly do not ignore the script itself (the committed hook invokes it):
     ```bash
-    grep -qxF '.token-optimizer/' .gitignore 2>/dev/null || echo '.token-optimizer/' >> .gitignore
+    grep -qxF '.token-optimizer/decisions.log' .gitignore 2>/dev/null || echo '.token-optimizer/decisions.log' >> .gitignore
+    grep -qxF '.token-optimizer/state/' .gitignore 2>/dev/null || echo '.token-optimizer/state/' >> .gitignore
+    grep -qxF '!.token-optimizer/optimize.sh' .gitignore 2>/dev/null || echo '!.token-optimizer/optimize.sh' >> .gitignore
     ```
+    The script is committed deliberately because the committed hook invokes it.
 
 12. Print a reviewable diff summary:
     ```bash
@@ -255,7 +261,7 @@ Steps:
 
    ```bash
    # On Claude Code
-   installed_version="$(claude --version 2>/dev/null | awk '{print $NF}')"
+   installed_version="$(claude --version 2>/dev/null | head -1)"
    fixture_path="examples/token-optimizer/claude/probe/fixture.json"
    if [[ -r "$fixture_path" ]]; then
      verified="$(jq -r '.delegation_verified' "$fixture_path")"
@@ -283,9 +289,14 @@ Steps:
    worker model resolved:    claude-haiku-4.5 (source: config)
    ```
 
-3. **read redirection active** — check the effective mode and platform caps:
+3. **read redirection active** — check the effective mode and platform caps, passing the actual client being inspected:
    ```bash
-   .token-optimizer/optimize.sh --mode=explain --path=/dev/null | grep "^effective mode:"
+   # For Claude Code
+   .token-optimizer/optimize.sh --mode=explain --platform=claude --path=/dev/null | grep "^effective mode:"
+   # For Copilot CLI
+   .token-optimizer/optimize.sh --mode=explain --platform=copilot --path=/dev/null | grep "^effective mode:"
+   # For VS Code
+   .token-optimizer/optimize.sh --mode=explain --platform=vscode --path=/dev/null | grep "^effective mode:"
    ```
    Report:
    - `yes` — config says `redirect` and the platform supports it
@@ -324,13 +335,13 @@ Steps:
 
 1. Accept a file path via `--path=`, or read a JSON payload from stdin.
 
-2. Shell out to `optimize.sh --mode=explain` and pass the input:
+2. Shell out to `optimize.sh --mode=explain` and pass the input. Use `--platform=none` only where a deliberately vendor-neutral rule line is wanted; otherwise pass the actual client (`--platform=claude|copilot|vscode`) to see its effective mode and platform caps:
    ```bash
    # File path
-   .token-optimizer/optimize.sh --mode=explain --platform=none --path=<path>
+   .token-optimizer/optimize.sh --mode=explain --platform=claude --path=<path>
 
    # JSON payload
-   echo '<payload>' | .token-optimizer/optimize.sh --mode=explain --platform=none
+   echo '<payload>' | .token-optimizer/optimize.sh --mode=explain --platform=claude
    ```
 
 3. Print the output, which includes:
@@ -368,16 +379,16 @@ Steps:
 1. Confirm which fixture suite to run: `all`, `terraform`, `helm`, `actions`, or `controls`.
 
 2. Read `evals/token-optimizer/manifest.json` to retrieve:
-   - Arms: `baseline`, `advisor`, `delegator`, `builtin`
+   - Arms: `baseline`, `concise`, `delegated`, `native`
    - Task list (filtered by suite if not `all`)
    - Run count (default 3)
    - Record fields
 
 3. For each task in the selected suite, run four mutually exclusive arms in randomized order:
    - **Baseline** — no delegation, no read interception (optimizer disabled)
-   - **Advisor** — `mode: advisory`, instructions only
-   - **Delegator** — `mode: redirect`, actual worker dispatch
-   - **Built-in discovery agent** — the client's own native discovery agent, if any
+   - **Concise** — `mode: advisory`, instructions only
+   - **Delegated** — `mode: redirect`, actual worker dispatch
+   - **Native** — the client's own built-in discovery agent, where one exists
 
 4. For each run, construct an isolated scratch workspace containing ONLY:
    - The fixture's `task.md` (the agent's instructions)
@@ -387,15 +398,21 @@ Steps:
 5. Declare `cache_state` explicitly as `cold`, `warm`, or `unknown` rather than inferring it. A run immediately after session start is `cold`. A run after a previous task has warmed the cache is `warm`. If cache state cannot be established, write `unknown`.
 
 6. After each run completes, append one JSONL record with these fields:
-   - `arm` (baseline | advisor | delegator | builtin)
-   - `task` (fixture name)
-   - `cache_state` (cold | warm | unknown)
-   - `coordinator_input_tokens`, `coordinator_output_tokens`, `coordinator_cache_creation_tokens`, `coordinator_cache_read_tokens`
-   - `worker_input_tokens`, `worker_output_tokens`, `worker_cache_creation_tokens`, `worker_cache_read_tokens` (all zero for baseline/builtin, populated only for delegator)
-   - `total_tokens` (sum across all actors: coordinator + worker)
+   - `client`, `client_version`, `plugin_version`
+   - `task_id` (fixture name)
+   - `arm` (baseline | concise | delegated | native)
+   - `run_index`, `cache_state` (cold | warm | unknown)
+   - `repo_commit`, `dirty_file_hashes`
+   - `parent_model_requested`, `parent_model_resolved`
+   - `worker_model_requested`, `worker_model_resolved`
+   - `model_verification_source`, `model_fallback_reason`
    - `elapsed_seconds` (wall-clock time from task start to completion)
-   - `retries` (count of worker retries, if observable)
-   - `failure` (true | false, whether the task completed successfully)
+   - `delegation_count`, `retries` (count of worker retries, if observable)
+   - `parent_input_tokens`, `parent_cache_write_tokens`, `parent_cache_read_tokens`, `parent_output_tokens`
+   - `worker_input_tokens`, `worker_cache_write_tokens`, `worker_cache_read_tokens`, `worker_output_tokens` (all zero for baseline/native, populated only for delegated)
+   - `external_service_charges`, `pricing_date`
+   - `evidence_verdict`, `evidence_score`
+   - `outcome` (whether the task completed successfully)
 
 7. **Never fabricate a token count.** When a client exposes no usage figure, write `"unavailable"` (string) in that field, not an estimate or zero. When cache state cannot be established, write `"unknown"` rather than guessing.
 
@@ -406,11 +423,11 @@ Check that the JSONL output includes all expected fields and that `total_tokens`
 
 ## Mode: report
 
-Aggregate the decision log into a summary table. Keep measured, estimated, and unavailable visually distinct.
+Aggregate the decision log into a summary table. Keep measured, estimated, and unavailable visually distinct. Reads whatever `log:` the config names.
 
 Steps:
 
-1. Confirm the path to the decision log (default: `.token-optimizer/decisions.log`).
+1. Read the log path from `.token-optimizer.yaml` `log:` key (default: `.token-optimizer/decisions.log`).
 
 2. Shell out to `optimize.sh --mode=report`:
    ```bash
@@ -501,13 +518,16 @@ Steps:
    - `.claude/agents/platform-bulk-reader.md` and `~/.claude/agents/platform-bulk-reader.md`
    - `.github/agents/platform-bulk-reader.agent.md` and `.github/agents/platform-coordinator.agent.md` (Copilot CLI and VS Code)
    - `~/.copilot/agents/platform-bulk-reader.agent.md` and `~/.copilot/agents/platform-coordinator.agent.md` (user-scoped)
-   - Hook entries in `.claude/settings.json`, `.github/hooks/*.json`, `~/.copilot/config.json`
+   - Hook entries in `.claude/settings.json`, `.github/hooks/*.json`, repository root `settings.json` `hooks` key, `~/.copilot/config.json`
 
-3. For each asset:
-   - Compute its content hash (e.g., `sha256sum`)
-   - Compare against the shipped hash (stored in a lookup table or computed from `examples/token-optimizer/`)
-   - If the hash matches AND the ownership marker is present: delete
-   - If the hash differs OR the ownership marker is missing: print the file path and say "edited, review before removing"
+3. For each asset carrying the ownership marker:
+   - Remove it immediately
+   - If the asset's content differs from what `setup` would generate (compare against `examples/token-optimizer/`), report it as "removed (locally modified)"
+   - The ownership marker is authoritative because `setup` injects it, so no shipped-file hash can match a generated asset
+   
+   For assets with no ownership marker:
+   - Never touch them
+   - List them for manual review
 
 4. For hook entries in JSON files, remove the specific hook command that matches `.token-optimizer/optimize.sh`, not the entire hooks array. Other features' hooks must remain intact.
 

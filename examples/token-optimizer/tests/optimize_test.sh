@@ -8,7 +8,7 @@ ok(){ PASS=$((PASS+1)); printf 'ok   %s\n' "$1"; }
 no(){ FAIL=$((FAIL+1)); printf 'FAIL %s\n     expected=[%s] actual=[%s]\n' "$1" "$2" "$3"; }
 eq(){ [[ "$2" == "$3" ]] && ok "$1" || no "$1" "$2" "$3"; }
 
-W="$(mktemp -d)"; trap 'rm -rf "$W"' EXIT
+W="$(mktemp -d)"; CLEANUP_DIRS="$W"; trap 'rm -rf $CLEANUP_DIRS' EXIT
 cd "$W"
 mkdir -p .token-optimizer/state
 awk 'BEGIN{for(i=1;i<=40;i++) print "line " i}'     > small.tf
@@ -157,7 +157,7 @@ WRITE="{\"tool_name\":\"Edit\",\"tool_input\":{\"file_path\":\"$W/large.tf\",\"n
 eq "write not our concern"   "0" "$(hookrc "$WRITE" claude redirect.yaml)"
 eq "missing config never denies" "0" "$(printf '%s' "$BIG" | bash "$OPT" --mode=hook --platform=claude --config=/nope.yaml >/dev/null 2>&1; echo $?)"
 # repo-root pollution
-CLEAN="$(mktemp -d)"; ( cd "$CLEAN"; printf '%s' "$BIG" | bash "$OPT" --mode=hook --platform=claude --config=/nope.yaml >/dev/null 2>&1 )
+CLEAN="$(mktemp -d)"; CLEANUP_DIRS="$CLEANUP_DIRS $CLEAN"; ( cd "$CLEAN"; printf '%s' "$BIG" | bash "$OPT" --mode=hook --platform=claude --config=/nope.yaml >/dev/null 2>&1 )
 eq "unconfigured dir left untouched" "0" "$(find "$CLEAN" -mindepth 1 | wc -l | tr -d ' ')"
 
 echo "=== classify_size globals survive the call (the subshell bug) ==="

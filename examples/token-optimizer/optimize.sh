@@ -693,7 +693,7 @@ main() {
   case "$MODE" in
     hook) run_hook_mode ;;
     classify) classify_size "$CLI_PATH" "$CLI_OFFSET" "$CLI_LIMIT" ;;
-    explain) PLATFORM="${PLATFORM}"; run_explain_mode ;;
+    explain) run_explain_mode ;;
     report) run_report_mode ;;
     *) usage ;;
   esac
