@@ -71,7 +71,7 @@ Steps:
    - `settings.json` `hooks` key in the repository root (repository scope, alternative location)
    - `~/.copilot/config.json` `hooks` key (user scope, global)
 
-   For Claude Code, check `.claude/settings.json` for matcher groups on `PreToolUse` and `PostToolUse` events.
+   For Claude Code, check `.claude/settings.json` for matcher groups on `PreToolUse` events.
 
    Report any hook whose command string contains `optimize.sh` or `token-optimizer`.
 
@@ -162,56 +162,43 @@ Steps:
    ```
 
 8. Copy the client's agent templates to the right directory for the chosen scope:
-   - **Claude Code** (repository): copy `examples/token-optimizer/claude/AGENT.md` to `.claude/agents/platform-bulk-reader.md`
+   - **Claude Code** (repository): copy `examples/token-optimizer/claude/platform-bulk-reader.md` to `.claude/agents/platform-bulk-reader.md`
    - **Claude Code** (user): copy to `~/.claude/agents/platform-bulk-reader.md`
-   - **Copilot CLI** (repository): copy `examples/token-optimizer/copilot/.agent.md` to `.github/agents/platform-bulk-reader.agent.md`
-   - **Copilot CLI** (user): copy to `~/.copilot/agents/platform-bulk-reader.agent.md`
-   - **VS Code** (repository): copy `examples/token-optimizer/vscode/AGENT.mdc` to `.vscode/agents/platform-bulk-reader.mdc`
+   - **Copilot CLI** (repository): copy both `examples/token-optimizer/copilot-cli/platform-bulk-reader.agent.md` and `examples/token-optimizer/copilot-cli/platform-coordinator.agent.md` to `.github/agents/`
+   - **Copilot CLI** (user): copy both to `~/.copilot/agents/`
+   - **VS Code** (repository): copy both `examples/token-optimizer/vscode/platform-bulk-reader.agent.md` and `examples/token-optimizer/vscode/platform-coordinator.agent.md` to `.github/agents/`
 
-9. Register the hook by **appending**, never overwriting. Existing hooks for other features (e.g., `ai-governance`) must remain intact.
+9. Register the PreToolUse hook by **appending**, never overwriting. Existing hooks for other features (e.g., `ai-governance`) must remain intact.
 
    **For Claude Code**, use the three-level matcher-group structure and the `jq` idiom from `commands/ai-governance.md:142-151`:
    ```bash
-   PRE_CMD='.token-optimizer/optimize.sh --mode=hook --platform=claude --event=PreToolUse'
-   POST_CMD='.token-optimizer/optimize.sh --mode=hook --platform=claude --event=PostToolUse'
+   PRE_CMD='.token-optimizer/optimize.sh --mode=hook --platform=claude'
 
    mkdir -p .claude
    [[ -f .claude/settings.json ]] || echo '{}' > .claude/settings.json
 
-   jq --arg pre "$PRE_CMD" --arg post "$POST_CMD" '
+   jq --arg pre "$PRE_CMD" '
      def add_group($event; $cmd):
        if [ (.hooks[$event] // [])[] | (.hooks // [])[]? | select(.command == $cmd) ] | length > 0
        then .
        else .hooks[$event] = ((.hooks[$event] // []) + [{"hooks": [{"type": "command", "command": $cmd}]}])
        end;
-     add_group("PreToolUse"; $pre) | add_group("PostToolUse"; $post)
+     add_group("PreToolUse"; $pre)
    ' .claude/settings.json > .claude/settings.json.tmp \
      && mv .claude/settings.json.tmp .claude/settings.json
    ```
 
    **For Copilot CLI**, register on **all three** surfaces. Check each for existing entries and append only where missing:
 
-   a. Repository `.github/hooks/` (separate files per event):
+   a. Repository `.github/hooks/preToolUse.json`:
    ```bash
    mkdir -p .github/hooks
-   # preToolUse.json
    cat >.github/hooks/preToolUse.json <<'EOF'
    {
      "version": 1,
      "hooks": {
        "preToolUse": [
-         {"type": "command", "bash": ".token-optimizer/optimize.sh --mode=hook --platform=copilot --event=preToolUse", "timeoutSec": 10}
-       ]
-     }
-   }
-   EOF
-   # postToolUse.json
-   cat >.github/hooks/postToolUse.json <<'EOF'
-   {
-     "version": 1,
-     "hooks": {
-       "postToolUse": [
-         {"type": "command", "bash": ".token-optimizer/optimize.sh --mode=hook --platform=copilot --event=postToolUse", "timeoutSec": 10}
+         {"type": "command", "bash": ".token-optimizer/optimize.sh --mode=hook --platform=copilot", "timeoutSec": 10}
        ]
      }
    }
@@ -374,41 +361,48 @@ The dry run writes no log and no state. Verify by checking that `.token-optimize
 
 ## Mode: benchmark
 
-Run a fixture suite in isolated runs and compare. Four arms, three runs, randomized order, declared cache state, appending JSONL.
+Orchestrate isolated fixture runs across four arms, compare token usage. Three runs per task, randomized order, declared cache state, appending JSONL.
 
 Steps:
 
 1. Confirm which fixture suite to run: `all`, `terraform`, `helm`, `actions`, or `controls`.
 
-2. The benchmark harness is in `evals/token-optimizer/` (per Task 8's isolation rules). Run it:
-   ```bash
-   cd evals/token-optimizer
-   ./run-benchmark.sh --suite=<suite> --runs=3 --randomize
-   ```
+2. Read `evals/token-optimizer/manifest.json` to retrieve:
+   - Arms: `baseline`, `advisor`, `delegator`, `builtin`
+   - Task list (filtered by suite if not `all`)
+   - Run count (default 3)
+   - Record fields
 
-3. The harness runs four mutually exclusive arms:
-   - **Baseline** — no delegation, no read interception
+3. For each task in the selected suite, run four mutually exclusive arms in randomized order:
+   - **Baseline** — no delegation, no read interception (optimizer disabled)
    - **Advisor** — `mode: advisory`, instructions only
    - **Delegator** — `mode: redirect`, actual worker dispatch
    - **Built-in discovery agent** — the client's own native discovery agent, if any
 
-4. For each run, the harness appends one JSONL line with fields:
+4. For each run, construct an isolated scratch workspace containing ONLY:
+   - The fixture's `task.md` (the agent's instructions)
+   - The fixture's `evidence/` directory (files the agent must read)
+   - Do NOT include `criteria.json` — it must not be readable by the agent under test
+
+5. Declare `cache_state` explicitly as `cold`, `warm`, or `unknown` rather than inferring it. A run immediately after session start is `cold`. A run after a previous task has warmed the cache is `warm`. If cache state cannot be established, write `unknown`.
+
+6. After each run completes, append one JSONL record with these fields:
    - `arm` (baseline | advisor | delegator | builtin)
    - `task` (fixture name)
    - `cache_state` (cold | warm | unknown)
    - `coordinator_input_tokens`, `coordinator_output_tokens`, `coordinator_cache_creation_tokens`, `coordinator_cache_read_tokens`
-   - `worker_input_tokens`, `worker_output_tokens`, `worker_cache_creation_tokens`, `worker_cache_read_tokens`
-   - `total_tokens` (sum across all actors)
-   - `elapsed_seconds`
-   - `retries` (count)
-   - `failure` (true | false)
+   - `worker_input_tokens`, `worker_output_tokens`, `worker_cache_creation_tokens`, `worker_cache_read_tokens` (all zero for baseline/builtin, populated only for delegator)
+   - `total_tokens` (sum across all actors: coordinator + worker)
+   - `elapsed_seconds` (wall-clock time from task start to completion)
+   - `retries` (count of worker retries, if observable)
+   - `failure` (true | false, whether the task completed successfully)
 
-5. **Never fabricate a token count.** When a client exposes no usage figure, write `unavailable` in that field, not an estimate. When cache state cannot be established, write `unknown` rather than guessing.
+7. **Never fabricate a token count.** When a client exposes no usage figure, write `"unavailable"` (string) in that field, not an estimate or zero. When cache state cannot be established, write `"unknown"` rather than guessing.
 
-6. The harness does NOT run by default in this repository because it requires provider credentials, coordinator and worker sessions, and controlled task selection. State this explicitly when reporting results.
+8. These benchmarks require provider credentials, coordinator and worker sessions, and controlled task selection. They do NOT run by default in this repository. State this explicitly when reporting results: no savings figure is published in v1.41.0.
 
 **Validation:**
-Check that the JSONL output includes all expected fields and that `total_tokens` equals `coordinator_input_tokens + coordinator_output_tokens + coordinator_cache_creation_tokens + worker_input_tokens + worker_output_tokens + worker_cache_creation_tokens` for each row.
+Check that the JSONL output includes all expected fields and that `total_tokens` equals the sum of all token fields (input + output + cache_creation for both coordinator and worker where present) for each row.
 
 ## Mode: report
 
