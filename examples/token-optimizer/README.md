@@ -52,13 +52,20 @@ cd examples/token-optimizer
 bash optimize.sh --mode=classify --path=../../references/aws-waf.md --config=token-optimizer.yaml
 # -> oversized
 
-# See exactly why, and what the decision would be
-bash optimize.sh --mode=explain --platform=claude \
-  --path=../../references/aws-waf.md --config=token-optimizer.yaml
+# Watch the platform cap take effect. The sample config ships mode: audit, and
+# the cap only bites when a config asks for redirect — so use a throwaway one
+# that does. Same request, two clients, different effective mode.
+printf 'version: 1\nmode: redirect\nlog: /dev/null\n' > /tmp/to-redirect.yaml
 
-# Watch the platform cap take effect: same config, different client
+bash optimize.sh --mode=explain --platform=claude \
+  --path=../../references/aws-waf.md --config=/tmp/to-redirect.yaml | grep 'effective mode'
+# -> effective mode:       redirect
+
 bash optimize.sh --mode=explain --platform=copilot \
-  --path=../../references/aws-waf.md --config=token-optimizer.yaml
+  --path=../../references/aws-waf.md --config=/tmp/to-redirect.yaml | grep 'effective mode'
+# -> effective mode:       audit  [capped to audit: redirection unsupported on copilot (no per-call worker identity in the documented payload)]
+
+rm -f /tmp/to-redirect.yaml
 
 # Run the behavioural suite
 bash tests/optimize_test.sh
