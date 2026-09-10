@@ -91,9 +91,10 @@ eq "no state dir: never denies (no deadlock)" "0" "$(hookrc "$BIG" claude nostat
 eq "no state dir: repeat also 0"              "0" "$(hookrc "$BIG" claude nostate.yaml)"
 # No session id at all -> cannot scope state -> must not deny
 NOSESS="{\"tool_name\":\"Read\",\"tool_input\":{\"file_path\":\"$W/large.tf\"}}"
-( unset TOKEN_OPTIMIZER_SESSION CLAUDE_SESSION_ID COPILOT_SESSION_ID
-  rc="$(printf '%s' "$NOSESS" | bash "$OPT" --mode=hook --platform=claude --config="$W/redirect.yaml" >/dev/null 2>&1; echo $?)"
-  [[ "$rc" == "0" ]] && echo "ok   no session id: never denies" || echo "FAIL no session id: got rc=$rc want 0" )
+nosess_rc="$( unset TOKEN_OPTIMIZER_SESSION CLAUDE_SESSION_ID COPILOT_SESSION_ID
+  printf '%s' "$NOSESS" | bash "$OPT" --mode=hook --platform=claude --config="$W/redirect.yaml" >/dev/null 2>&1
+  echo $? )"
+eq "no session id: never denies" "0" "$nosess_rc"
 
 echo "=== P1 #3: platform caps the mode ==="
 rm -f .token-optimizer/state/*
