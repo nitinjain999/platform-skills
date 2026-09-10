@@ -49,7 +49,7 @@ Probed 2026-09-10. These versions change frequently and must be re-probed agains
 | Copilot CLI | 1.0.59 | **Unverified** | No | Documented `preToolUse` payload carries no per-call worker identity |
 | Copilot in VS Code | 1.137.0 | **Unverified** | Conditional | Agent-scoped hooks preview, gated on `chat.useCustomAgentHooks` |
 
-Claude Code is the only client where redirection is architecturally possible. Even there, `doctor` reports `delegation verified: no` until you run `claude/probe/run-probe.sh` on your own machine. The shipped fixture is deliberately un-run because it requires a live session and a human reading a transcript.
+Claude Code is the only client where redirection is architecturally possible. Even there, `doctor` reports `delegation verified: no` until you run `.token-optimizer/probe/run-probe.sh` on your own machine. The shipped fixture is deliberately un-run because it requires a live session and a human reading a transcript.
 
 ### The `/fleet` vs `/agent` finding
 
@@ -80,7 +80,7 @@ Questions 1 and 2 cannot be automated. They require reading vendor docs, probing
 | `off` | No classification at all. Short-circuits before reading the payload. |
 | `advisory` | Classification runs and cumulative counter updates, but the payload is still read and parsed first, so a malformed payload can still produce a single degradation line. No per-read decision is logged and nothing is emitted on success. Use this to measure cumulative discovery patterns without logging individual opportunities. |
 | `audit` | Classification runs, cumulative counter updates, and oversized reads are logged as `would_redirect`. Denies nothing. Default. |
-| `redirect` | Denies oversized reads with a reason naming the worker and carrying the seven-part contract, worker budgets, and the file path. Exit 2. |
+| `redirect` | Denies oversized reads with a JSON deny envelope carrying the reason, worker name, seven-part contract, worker budgets, and file path. Real platforms (claude, copilot, vscode) exit 0; platform=none exits 2 (scriptable dry-run signal). Shell reads are audit-only on every client and in every mode. |
 
 `enabled: false` short-circuits before any other check, so `enabled: false` plus `mode: redirect` still emits nothing and exits 0.
 
@@ -177,6 +177,8 @@ An earlier draft used total line count where requested line count was correct, a
 **What is not recognised**: a pipe, `rg`, `awk`, a Python one-liner, or any other construct that can also print an entire file. These are deliberately not claimed as recognised. Unrecognised syntax is logged as `shell_unparsed`, which is an audit finding, not proof of safety.
 
 **This is not a data boundary.** Shell-read detection is a cost heuristic. A developer with push access who wants to read a file via an unrecognised command can do so. The session logs the attempt as `shell_unparsed`, but the read proceeds. This is the correct behavior for a cost feature.
+
+**Shell reads are audit-only in every mode.** Recognised oversized shell reads are logged as `would_redirect` even under `mode: redirect`. They never emit a deny envelope and never exit non-zero. Pattern matching is too weak to safely deny: `cat large-file` in the command string does not prove the whole file was read. Denying on a pattern match would block commands that may not have read the whole file at all.
 
 ## Bounded recovery
 
@@ -304,7 +306,7 @@ This means BYOK is a **whole-session option only**. Routing all agents to the ch
 
 **vs `/platform-skills:ai-governance`**: governance is "what tools are allowed to do" (protected paths, denied commands, disclosure). Token optimizer is "route some reads to a cheaper model". Governance blocks or logs violations; the optimizer delegates and logs opportunities. They compose: a worker exempted from size classification is still governed on write intent.
 
-**vs `/platform-skills:setup-agents`**: `/platform-skills:setup-agents` scaffolds which AI tools a repo uses and what their agent rosters contain. This command adds one worker to an existing roster and decides which model does the reading. Neither verifies the other's behaviour, and they share no probe infrastructure: delegation verification for this feature lives in `examples/token-optimizer/claude/probe/run-probe.sh`, which a human runs against a live session.
+**vs `/platform-skills:setup-agents`**: `/platform-skills:setup-agents` scaffolds which AI tools a repo uses and what their agent rosters contain. This command adds one worker to an existing roster and decides which model does the reading. Neither verifies the other's behaviour, and they share no probe infrastructure: delegation verification for this feature is copied into `.token-optimizer/probe/run-probe.sh` during setup, and a human runs it against a live session.
 
 **vs `/platform-skills:self-improve`**: self-improve runs behavioural tests and promotes corrections to session memory. Token-optimizer's 59-test suite (`examples/token-optimizer/tests/optimize_test.sh`) is an input to self-improve when the optimizer's behavior changes. Different concerns, same test-driven approach.
 

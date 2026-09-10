@@ -130,7 +130,30 @@ Steps:
    chmod +x .token-optimizer/optimize.sh
    ```
 
-6. Write `.token-optimizer.yaml` with the chosen settings. Default to `mode: audit` unless the operator explicitly chose `redirect` and the client supports it:
+6. Write `.token-optimizer.yaml` with the chosen settings. Default to `mode: audit` unless the operator explicitly chose `redirect` and the client supports it.
+
+   **Before writing `mode: redirect` for Claude Code**, check the probe fixture:
+   ```bash
+   # For Claude Code only
+   if [[ "$client" == "claude" && "$chosen_mode" == "redirect" ]]; then
+     installed_version="$(claude --version 2>/dev/null | head -1)"
+     fixture_path=".token-optimizer/probe/fixture.json"
+     if [[ -r "$fixture_path" ]]; then
+       verified="$(jq -r '.delegation_verified' "$fixture_path" 2>/dev/null)"
+       fixture_client_version="$(jq -r '.client_version' "$fixture_path" 2>/dev/null)"
+       if [[ "$verified" != "true" || "$fixture_client_version" != "$installed_version" ]]; then
+         echo "Delegation unverified — setting mode: audit instead of redirect."
+         echo "Run .token-optimizer/probe/run-probe.sh to verify delegation, then re-run setup."
+         chosen_mode="audit"
+       fi
+     else
+       echo "Probe fixture not found — setting mode: audit instead of redirect."
+       echo "Run .token-optimizer/probe/run-probe.sh to verify delegation, then re-run setup."
+       chosen_mode="audit"
+     fi
+   fi
+   ```
+   If the probe is unverified or the client version mismatches, write `mode: audit` and tell the user why, naming the command to run.
    ```yaml
    # OWNERSHIP MARKER: platform-skills token-optimizer v1.41.0
    version: 1
@@ -159,12 +182,14 @@ Steps:
    mkdir -p .token-optimizer/state
    ```
 
-8. Copy the client's agent templates. The optimizer's own config, state directory and hook command are repository-scoped, but agent definitions can additionally be installed user-wide, so both destinations are listed where a client supports them:
-   - **Claude Code** (repository): copy `examples/token-optimizer/claude/platform-bulk-reader.md` to `.claude/agents/platform-bulk-reader.md`
-   - **Claude Code** (user): copy to `~/.claude/agents/platform-bulk-reader.md`
-   - **Copilot CLI** (repository): copy both `examples/token-optimizer/copilot-cli/platform-bulk-reader.agent.md` and `examples/token-optimizer/copilot-cli/platform-coordinator.agent.md` to `.github/agents/`
-   - **Copilot CLI** (user): copy both to `~/.copilot/agents/`
-   - **VS Code** (repository): copy both `examples/token-optimizer/vscode/platform-bulk-reader.agent.md` and `examples/token-optimizer/vscode/platform-coordinator.agent.md` to `.github/agents/`
+8. **Copy the delegation probe** into `.token-optimizer/probe/` so `doctor` can read a repository-local fixture:
+   ```bash
+   mkdir -p .token-optimizer/probe
+   cp examples/token-optimizer/claude/probe/run-probe.sh .token-optimizer/probe/run-probe.sh
+   cp examples/token-optimizer/claude/probe/fixture.json .token-optimizer/probe/fixture.json
+   chmod +x .token-optimizer/probe/run-probe.sh
+   ```
+   The probe script resolves its output path relative to its own location, so running `.token-optimizer/probe/run-probe.sh` updates `.token-optimizer/probe/fixture.json`.
 
 9. Register the PreToolUse hook by **appending**, never overwriting. Existing hooks for other features (e.g., `ai-governance`) must remain intact.
 
@@ -199,13 +224,14 @@ Steps:
      
      . as $root |
      if ($root.hooks.preToolUse // [] | length) == 0
-     then {version: 1, hooks: {preToolUse: [{"type": "command", "bash": $cmd, "timeoutSec": 5}]}}
+     then $root | .version = ($root.version // 1) | .hooks.preToolUse = [{"type": "command", "bash": $cmd, "timeoutSec": 5}]
      elif has_hook($root.hooks.preToolUse; $cmd)
      then $root
      else $root | .hooks.preToolUse = ((.hooks.preToolUse // []) + [{"type": "command", "bash": $cmd, "timeoutSec": 5}])
      end
    ' .github/hooks/preToolUse.json > .github/hooks/preToolUse.json.tmp \
-     && mv .github/hooks/preToolUse.json.tmp .github/hooks/preToolUse.json
+     && mv .github/hooks/preToolUse.json.tmp .github/hooks/preToolUse.json \
+     || rm -f .github/hooks/preToolUse.json.tmp
    ```
 
    b. Repository `settings.json` `hooks` key (if present) — merge using `jq`.
@@ -214,27 +240,35 @@ Steps:
 
    **For VS Code**, note that agent-scoped hooks are a preview feature gated on `chat.useCustomAgentHooks`. If that setting is not enabled, the hooks will not fire. Report this as a post-setup instruction.
 
-10. Add an ownership marker to every generated asset (YAML, JSON, agent templates) as a comment or frontmatter field:
+10. Copy the client's agent templates. The optimizer's own config, state directory and hook command are repository-scoped, but agent definitions can additionally be installed user-wide, so both destinations are listed where a client supports them:
+   - **Claude Code** (repository): copy `examples/token-optimizer/claude/platform-bulk-reader.md` to `.claude/agents/platform-bulk-reader.md`
+   - **Claude Code** (user): copy to `~/.claude/agents/platform-bulk-reader.md`
+   - **Copilot CLI** (repository): copy both `examples/token-optimizer/copilot-cli/platform-bulk-reader.agent.md` and `examples/token-optimizer/copilot-cli/platform-coordinator.agent.md` to `.github/agents/`
+   - **Copilot CLI** (user): copy both to `~/.copilot/agents/`
+   - **VS Code** (repository): copy both `examples/token-optimizer/vscode/platform-bulk-reader.agent.md` and `examples/token-optimizer/vscode/platform-coordinator.agent.md` to `.github/agents/`
+
+11. Add an ownership marker to every generated asset (YAML, JSON, agent templates) as a comment or frontmatter field:
     ```
     # OWNERSHIP MARKER: platform-skills token-optimizer v1.41.0
     ```
     This is what `remove` uses to identify assets safe to delete.
 
-11. Add runtime state to `.gitignore`, but explicitly do not ignore the script itself (the committed hook invokes it):
+12. Add runtime state to `.gitignore`, but explicitly do not ignore the script itself (the committed hook invokes it):
     ```bash
     grep -qxF '.token-optimizer/decisions.log' .gitignore 2>/dev/null || echo '.token-optimizer/decisions.log' >> .gitignore
     grep -qxF '.token-optimizer/state/' .gitignore 2>/dev/null || echo '.token-optimizer/state/' >> .gitignore
+    grep -qxF '.token-optimizer/probe/' .gitignore 2>/dev/null || echo '.token-optimizer/probe/' >> .gitignore
     grep -qxF '!.token-optimizer/optimize.sh' .gitignore 2>/dev/null || echo '!.token-optimizer/optimize.sh' >> .gitignore
     ```
-    The script is committed deliberately because the committed hook invokes it.
+    The script is committed deliberately because the committed hook invokes it. The probe directory is gitignored because `doctor` runs it locally.
 
-12. Print a reviewable diff summary:
+13. Print a reviewable diff summary:
     ```bash
     git status --short
     git diff --stat
     ```
 
-13. State explicitly that Copilot CLI is audit-only regardless of the configured mode, if the client is `copilot-cli`.
+14. State explicitly that Copilot CLI is audit-only regardless of the configured mode, if the client is `copilot-cli`.
 
 **Validation:**
 ```bash
@@ -250,7 +284,7 @@ Check delegation, model, redirection, and read limit separately. Report four sta
 
 Steps:
 
-1. **delegation verified** — read `examples/token-optimizer/claude/probe/fixture.json` and require ALL of:
+1. **delegation verified** — read `.token-optimizer/probe/fixture.json` and require ALL of:
    - `delegation_verified == true`
    - `client_version` matches the installed `claude --version`
    - `probe_version` matches the version `doctor` expects (currently `1`)
@@ -262,7 +296,7 @@ Steps:
    ```bash
    # On Claude Code
    installed_version="$(claude --version 2>/dev/null | head -1)"
-   fixture_path="examples/token-optimizer/claude/probe/fixture.json"
+   fixture_path=".token-optimizer/probe/fixture.json"
    if [[ -r "$fixture_path" ]]; then
      verified="$(jq -r '.delegation_verified' "$fixture_path")"
      fixture_client_version="$(jq -r '.client_version' "$fixture_path")"
@@ -409,7 +443,7 @@ Steps:
    - `elapsed_seconds` (wall-clock time from task start to completion)
    - `delegation_count`, `retries` (count of worker retries, if observable)
    - `parent_input_tokens`, `parent_cache_write_tokens`, `parent_cache_read_tokens`, `parent_output_tokens`
-   - `worker_input_tokens`, `worker_cache_write_tokens`, `worker_cache_read_tokens`, `worker_output_tokens` (all zero for baseline/native, populated only for delegated)
+   - `worker_input_tokens`, `worker_cache_write_tokens`, `worker_cache_read_tokens`, `worker_output_tokens` (zero only for baseline/concise where no worker ran; for native, record measured usage if exposed or "unavailable" if not)
    - `external_service_charges`, `pricing_date`
    - `evidence_verdict`, `evidence_score`
    - `outcome` (whether the task completed successfully)
@@ -515,6 +549,7 @@ Steps:
 2. Scan for assets with the ownership marker `# OWNERSHIP MARKER: platform-skills token-optimizer v1.41.0`. Candidates:
    - `.token-optimizer.yaml`
    - `.token-optimizer/optimize.sh`
+   - `.token-optimizer/probe/run-probe.sh` and `.token-optimizer/probe/fixture.json`
    - `.claude/agents/platform-bulk-reader.md` and `~/.claude/agents/platform-bulk-reader.md`
    - `.github/agents/platform-bulk-reader.agent.md` and `.github/agents/platform-coordinator.agent.md` (Copilot CLI and VS Code)
    - `~/.copilot/agents/platform-bulk-reader.agent.md` and `~/.copilot/agents/platform-coordinator.agent.md` (user-scoped)
@@ -533,9 +568,9 @@ Steps:
 
 5. **Leave `.token-optimizer/decisions.log` in place unless explicitly asked.** It contains audit history that may be needed for review or compliance. State this when reporting what was removed.
 
-6. Remove the `.token-optimizer/state/` directory after confirming no other feature uses it.
+6. Remove the `.token-optimizer/state/` and `.token-optimizer/probe/` directories after confirming no other feature uses them.
 
-7. Remove `.token-optimizer/` from `.gitignore` if it was added by `setup`.
+7. Remove `.token-optimizer/` entries from `.gitignore` if they were added by `setup`.
 
 **Validation:**
 ```bash

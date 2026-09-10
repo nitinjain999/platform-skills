@@ -69,14 +69,22 @@ WORKER="{\"tool_name\":\"Read\",\"tool_input\":{\"file_path\":\"$W/large.tf\"},\
 echo "=== P1 #1: enabled:false actually disables ==="
 eq "enabled:false exits 0"        "0"  "$(hookrc "$BIG" claude disabled.yaml)"
 eq "enabled:false emits nothing"  ""   "$(hook   "$BIG" claude disabled.yaml)"
-eq "control: enabled absent denies" "2" "$(hookrc "$BIG" claude redirect.yaml)"
+out="$(hook "$BIG" claude redirect.yaml)"
+eq "control: enabled absent denies" "0" "$(printf '%s' "$out" | jq empty >/dev/null 2>&1; echo $?)"
+printf '%s' "$out" | jq -e '.hookSpecificOutput.permissionDecision == "deny"' >/dev/null && ok "control: redirect emits JSON deny" || no "control: redirect emits JSON deny" "present" "absent"
 
 echo "=== P1 #2: bounded recovery, per session, requires persistence ==="
 rm -f .token-optimizer/state/*
-eq "session A attempt 1 denies"   "2"  "$(hookrc "$BIG" claude redirect.yaml)"
+out1="$(hook "$BIG" claude redirect.yaml)"
+eq "session A attempt 1 denies"   "0"  "$(hookrc "$BIG" claude redirect.yaml)"
+printf '%s' "$out1" | jq -e '.hookSpecificOutput.permissionDecision == "deny"' >/dev/null && ok "session A attempt 1 emits deny" || no "session A attempt 1 emits deny" "present" "absent"
 eq "session A attempt 2 proceeds" "0"  "$(hookrc "$BIG" claude redirect.yaml)"
+out2="$(hook "$BIG" claude redirect.yaml)"
+eq "session A attempt 2 emits nothing" "" "$out2"
 eq "session A attempt 3 proceeds" "0"  "$(hookrc "$BIG" claude redirect.yaml)"
-eq "session B still gets its own first denial" "2" "$(hookrc "$BIG_B" claude redirect.yaml)"
+out3="$(hook "$BIG_B" claude redirect.yaml)"
+eq "session B still gets its own first denial" "0" "$(hookrc "$BIG_B" claude redirect.yaml)"
+printf '%s' "$out3" | jq -e '.hookSpecificOutput.permissionDecision == "deny"' >/dev/null && ok "session B first attempt emits deny" || no "session B first attempt emits deny" "present" "absent"
 eq "session B second proceeds"    "0"  "$(hookrc "$BIG_B" claude redirect.yaml)"
 # No state dir -> cannot bound -> must not deny at all
 cfg nostate.yaml <<Y
@@ -102,7 +110,9 @@ eq "copilot never redirects"          "0"  "$(hookrc "$BIG" copilot redirect.yam
 eq "copilot emits nothing"            ""   "$(hook   "$BIG" copilot redirect.yaml)"
 eq "vscode never redirects"           "0"  "$(hookrc "$BIG" vscode  redirect.yaml)"
 rm -f .token-optimizer/state/*
-eq "claude still redirects"           "2"  "$(hookrc "$BIG" claude  redirect.yaml)"
+out_claude="$(hook "$BIG" claude redirect.yaml)"
+eq "claude exits 0"                   "0"  "$(hookrc "$BIG" claude redirect.yaml)"
+printf '%s' "$out_claude" | jq -e '.hookSpecificOutput.permissionDecision == "deny"' >/dev/null && ok "claude emits deny envelope" || no "claude emits deny envelope" "present" "absent"
 
 echo "=== P2 #4: classify args, defaults, unterminated line ==="
 eq "classify 40-line window of 1000 passes" "pass" \
@@ -213,6 +223,15 @@ eq "advisory mode: Read emits nothing" "" "$adv_read_out"
 SHELLBIG_ADV="{\"tool_name\":\"bash\",\"toolArgs\":{\"command\":\"cat $W/large.tf\"},\"session_id\":\"S-ADV\"}"
 adv_shell_out="$(hook "$SHELLBIG_ADV" claude advisory.yaml)"
 eq "advisory mode: shell emits nothing" "" "$adv_shell_out"
+
+echo "=== json_escape handles newline in path ==="
+rm -f .token-optimizer/state/*
+mkdir -p "$W/bad"$'\n'"dir"
+echo "line 1" > "$W/bad"$'\n'"dir/file.txt"
+for i in {2..1000}; do echo "line $i"; done >> "$W/bad"$'\n'"dir/file.txt"
+NEWLINE_PATH="{\"tool_name\":\"Read\",\"tool_input\":{\"file_path\":\"$W/bad"$'\n'"dir/file.txt\"},\"session_id\":\"S-NL\"}"
+nl_out="$(hook "$NEWLINE_PATH" claude redirect.yaml)"
+printf '%s' "$nl_out" | jq empty >/dev/null 2>&1 && ok "newline in path produces valid JSON" || no "newline in path produces valid JSON" "valid" "invalid"
 # audit mode should still log, so check via a real log file
 cfg audit_log.yaml <<Y
 version: 1

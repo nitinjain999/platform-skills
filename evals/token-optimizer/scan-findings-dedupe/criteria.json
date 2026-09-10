@@ -9,7 +9,7 @@
     },
     {
       "name": "counts_distinct_cves",
-      "description": "Reports the correct count of distinct CVEs (4 distinct CVEs across all findings)",
+      "description": "Reports the correct count of distinct CVEs (5 distinct CVEs across all findings)",
       "max_score": 2
     },
     {

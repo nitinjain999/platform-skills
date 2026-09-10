@@ -64,7 +64,9 @@ Modes:
             the decision that would be made. Writes no log and no state.
   report    Aggregate the decision log into a summary table.
 
-Exit codes: 0 = pass or audit (nothing emitted), 2 = redirect.
+Exit codes:
+  0 = pass, audit, or redirect (real platforms emit JSON deny and exit 0)
+  2 = redirect on --platform=none (scriptable dry-run signal)
 EOF
 }
 
@@ -472,13 +474,14 @@ record_redirect_attempt() {
   # exists to prevent.
   [[ "$PLATFORM" == "none" ]] && return 1   # dry run persists nothing
   [[ -d "$STATE_DIR" ]] || return 1
-  local key f tmp n
+  local key f
   key="$(state_key "$1")" || return 1
   f="$STATE_DIR/$key"
-  n="$(redirect_attempts "$1")"
-  tmp="${f}.tmp.$$"
-  printf '%s' "$(( n + 1 ))" >"$tmp" 2>/dev/null || return 1
-  mv -f "$tmp" "$f" 2>/dev/null || { rm -f "$tmp" 2>/dev/null; return 1; }
+  # Atomic claim: noclobber makes `>` fail if another concurrent hook call
+  # already created this file, so exactly one caller can claim the denial.
+  # A read-then-write would let two callers both observe zero and both deny.
+  ( set -C; : > "$f" ) 2>/dev/null || return 1
+  printf '1' > "$f" 2>/dev/null || true
   return 0
 }
 
@@ -525,22 +528,34 @@ resolve_decision() {
 }
 
 json_escape() {
-  printf '%s' "${1:-}" | sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/	/\\t/g'
+  local s="${1:-}"
+  s="${s//\\/\\\\}"
+  s="${s//\"/\\\"}"
+  s="${s//$'\n'/\\n}"
+  s="${s//$'\t'/\\t}"
+  s="${s//$'\r'/\\r}"
+  printf '%s' "$s"
 }
 
 emit_redirect() {
+  # Emits the JSON deny envelope and returns the exit code to use.
+  # Real platforms (claude, copilot, vscode) exit 0 with a JSON deny — the JSON
+  # decides, not the exit code. platform=none exits 2 (scriptable dry-run signal).
   local reason esc
   reason="${1:-oversized read}"
   esc="$(json_escape "$reason")"
   case "$PLATFORM" in
     claude)
       printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"%s"}}\n' "$esc"
+      return 0
       ;;
     copilot|vscode)
       printf '{"permissionDecision":"deny","permissionDecisionReason":"%s"}\n' "$esc"
+      return 0
       ;;
     *)
       printf '{"decision":"redirect","rule":"full_file_read","reason":"%s"}\n' "$esc"
+      return 2
       ;;
   esac
 }
@@ -615,7 +630,7 @@ run_hook_mode() {
       reason="$(redirect_reason "$P_PATH")"
       log_line "redirect" "full_file_read" "$P_TOOL" "$P_PATH"
       emit_redirect "$reason"
-      exit 2
+      exit $?
       ;;
     audit)
       log_line "would_redirect" "full_file_read" "${P_TOOL}${P_AGENT_ID:+ agent=$P_AGENT_ID}" "$P_PATH"
