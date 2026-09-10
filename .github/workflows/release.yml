@@ -183,7 +183,7 @@ jobs:
           # Validate all YAML files
           YAML_FILES=$(find . -type f \( -name "*.yml" -o -name "*.yaml" \) \
             ! -path "./.git/*" \
-            ! -path "./examples/helm/*/templates/*")
+            ! -path "*/templates/*")
 
           if [ -n "$YAML_FILES" ]; then
             while IFS= read -r file; do
