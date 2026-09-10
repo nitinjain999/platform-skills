@@ -29,16 +29,40 @@ bash "$SCRIPT" --help >/dev/null
 echo "PASS: --help works"
 
 echo "--- Test 5: every documented platform renders valid JSON on redirect ---"
+# emit_redirect RETURNS the exit code the caller should use: 0 for real clients,
+# where the JSON deny decides, and 2 for --platform=none, the scriptable dry-run
+# signal. Under `set -e` an unguarded command substitution would abort here on
+# the `none` case, so the return code is captured rather than allowed to
+# propagate, and asserted below.
 for platform in claude copilot vscode none; do
+  rc=0
   out="$(bash -c '
     source '"$SCRIPT"' --source-only
     PLATFORM="'"$platform"'"
     WORKER_AGENT="platform-bulk-reader"
     emit_redirect "test reason"
-  ')"
+  ')" || rc=$?
   printf '%s' "$out" | jq empty
-  echo "PASS: $platform renders valid JSON"
+  case "$platform" in
+    none) [ "$rc" -eq 2 ] || { echo "FAIL: $platform should signal 2, got $rc"; exit 1; } ;;
+    *)    [ "$rc" -eq 0 ] || { echo "FAIL: $platform should signal 0, got $rc"; exit 1; } ;;
+  esac
+  echo "PASS: $platform renders valid JSON and signals $rc"
 done
+
+echo "--- Test 5b: a payload-controlled newline in the path still yields valid JSON ---"
+out="$(bash -c '
+  source '"$SCRIPT"' --source-only
+  PLATFORM="claude"
+  WORKER_AGENT="platform-bulk-reader"
+  SUMMARY_WORDS=600
+  MAX_DELEGATIONS_PER_TASK=3
+  MAX_WORKER_RETRIES=1
+  MAX_WORKER_SECONDS=120
+  emit_redirect "$(printf "line1\nline2\twith\ttabs\rand\\\\backslash")"
+')" || true
+printf '%s' "$out" | jq empty
+echo "PASS: control characters in the reason are escaped"
 
 echo "--- Test 6: fails open with no config ---"
 rc=0
