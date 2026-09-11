@@ -63,25 +63,66 @@ echo "=== Docs site derives versions and counts rather than hardcoding ==="
 
 # Asserting the derivation, not a literal. Asserting a literal here would just
 # relocate the stale value into this file.
-if grep -q "require('../.claude-plugin/plugin.json')" website/docusaurus.config.js; then
-  pass "docusaurus.config.js derives the version from plugin.json"
+#
+# Checking only that a `require` of the manifest exists is too weak: someone
+# could keep the require and still write `pluginVersion: '1.41.0'`, passing the
+# check while reintroducing the drift. So assert the ASSIGNMENTS reference the
+# loaded values, and separately reject a quoted literal in either field.
+
+if grep -qE "pluginVersion:[[:space:]]*[A-Za-z_][A-Za-z0-9_]*\.version" website/docusaurus.config.js; then
+  pass "docusaurus.config.js assigns pluginVersion from the loaded manifest"
 else
-  fail "docusaurus.config.js must derive the version from .claude-plugin/plugin.json"
+  fail "docusaurus.config.js must assign pluginVersion from the required plugin.json, not a literal"
+fi
+
+if grep -qE "pluginVersion:[[:space:]]*['\"]" website/docusaurus.config.js; then
+  fail "docusaurus.config.js assigns pluginVersion a quoted literal — derive it from plugin.json"
+else
+  pass "pluginVersion is not a quoted literal"
+fi
+
+if grep -qE "commandCount:[[:space:]]*['\"]?[0-9]" website/docusaurus.config.js; then
+  fail "docusaurus.config.js assigns commandCount a literal — derive it by reading commands/"
+else
+  pass "commandCount is not a literal"
 fi
 
 if grep -q "readdirSync" website/docusaurus.config.js; then
-  pass "docusaurus.config.js derives the command count from commands/"
+  pass "docusaurus.config.js derives the command count by reading commands/"
 else
   fail "docusaurus.config.js must derive the command count by reading commands/"
 fi
 
-if grep -qE '>v1\.[0-9]+\.[0-9]+|^\s*v1\.[0-9]+\.[0-9]+' website/src/pages/index.tsx; then
+# Strongest available check: evaluate the config and compare against the real
+# sources. Requires website/node_modules, since the config pulls in
+# prism-react-renderer, so it is a bonus locally rather than the primary gate —
+# the static assertions above are what run everywhere.
+if command -v node >/dev/null 2>&1 && [ -d website/node_modules ]; then
+  want_version="$(node -e "process.stdout.write(require('./.claude-plugin/plugin.json').version)")"
+  want_count="$(find commands -maxdepth 1 -name '*.md' | wc -l | tr -d ' ')"
+  got="$(cd website && node -e "
+    const c = require('./docusaurus.config.js');
+    process.stdout.write(c.customFields.pluginVersion + '|' + c.customFields.commandCount);
+  " 2>/dev/null)" || got="EVAL_FAILED"
+  if [ "$got" = "${want_version}|${want_count}" ]; then
+    pass "evaluated config matches the sources exactly (version ${want_version}, count ${want_count})"
+  else
+    fail "evaluated config gave '${got}', expected '${want_version}|${want_count}'"
+  fi
+else
+  echo "  SKIP: evaluated-config check needs node and website/node_modules (static checks above still ran)"
+fi
+
+# POSIX character classes throughout: \s is a GNU/PCRE extension, not POSIX ERE,
+# so a grep without that extension would silently fail to match an indented
+# literal and the guard would pass while the regression shipped.
+if grep -qE '>v1\.[0-9]+\.[0-9]+|^[[:space:]]*v1\.[0-9]+\.[0-9]+' website/src/pages/index.tsx; then
   fail "website/src/pages/index.tsx hardcodes a version — read siteConfig.customFields.pluginVersion"
 else
   pass "index.tsx does not hardcode a version"
 fi
 
-if grep -qE '[0-9]+ commands\.' website/src/pages/index.tsx; then
+if grep -qE '[0-9]+[[:space:]]+commands\.' website/src/pages/index.tsx; then
   fail "website/src/pages/index.tsx hardcodes a command count — read siteConfig.customFields.commandCount"
 else
   pass "index.tsx does not hardcode a command count"

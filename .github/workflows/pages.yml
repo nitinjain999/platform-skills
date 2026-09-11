@@ -10,6 +10,12 @@ on:
       - 'examples/**'
       - 'README.md'
       - 'CHANGELOG.md'
+      # The site derives its displayed version from this manifest, so a
+      # manifest-only bump must rebuild. Without it, a release that touches only
+      # .claude-plugin/ skips this workflow and the deployed homepage keeps
+      # showing the previous version — which is the drift the derivation was
+      # added to stop.
+      - '.claude-plugin/**'
   workflow_dispatch:
 
 # Deny by default; each job grants only what it needs. Granting pages: write and
