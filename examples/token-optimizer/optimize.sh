@@ -51,6 +51,14 @@ P_COMMAND=""
 P_AGENT_TYPE=""
 P_AGENT_ID=""
 P_SESSION=""
+P_OUTPUT_MODE=""
+P_HEAD_LIMIT=0
+# Context expansion is part of the requested size. head_limit bounds the number
+# of MATCHES, not emitted lines, so 100 matches with -C 10 can emit ~2100 lines
+# and used to sail through a 350-line gate as "100".
+P_CTX_BEFORE=0
+P_CTX_AFTER=0
+P_MULTILINE="false"
 
 usage() {
   cat <<'EOF'
@@ -253,6 +261,8 @@ normalize_payload() {
   local raw="${1:-}"
   P_TOOL=""; P_PATH=""; P_OFFSET=0; P_LIMIT=0
   P_COMMAND=""; P_AGENT_TYPE=""; P_AGENT_ID=""; P_SESSION=""
+  P_OUTPUT_MODE=""; P_HEAD_LIMIT=0
+  P_CTX_BEFORE=0; P_CTX_AFTER=0; P_MULTILINE="false"
 
   command -v jq >/dev/null 2>&1 || { degrade "jq not installed"; return 1; }
 
@@ -260,8 +270,26 @@ normalize_payload() {
   local item
   while IFS= read -r -d '' item; do f+=("$item"); done < <(
     printf '%s' "$raw" | jq -j '
-      def obj(g): (g | if type == "object" then . else {} end);
-      (obj(.tool_input) + obj(.toolArgs)) as $a
+      # A client may send tool arguments as an object OR as a JSON-encoded
+      # STRING. Coercing a string to {} silently discarded the path, so every
+      # read arrived unclassified and unlogged. Parse the string; if it is not
+      # valid JSON, report malformed rather than swallowing it.
+      def parsed(g):
+        g | if   type == "object" then {ok: true,  v: .}
+            elif type == "null"   then {ok: true,  v: {}}
+            elif type == "string" then
+              # Must decode to an OBJECT. `try {ok: true, v: fromjson}` accepted
+              # a scalar or an array, so toolArgs: "null" / "[]" / "42" decoded
+              # "successfully", collapsed to {}, and passed with an empty path and
+              # no degradation — the same silent hole as the unparsed string.
+              (try (fromjson | if type == "object" then {ok: true, v: .}
+                               else {ok: false, v: {}} end)
+               catch {ok: false, v: {}})
+            else {ok: false, v: {}} end;
+      parsed(.tool_input) as $ti
+      | parsed(.toolArgs) as $ta
+      | (($ti.v | if type == "object" then . else {} end)
+         + ($ta.v | if type == "object" then . else {} end)) as $a
       | [ (.tool_name // .toolName // "")
         , ($a.file_path // $a.path // $a.notebook_path // "")
         , (($a.offset // 0) | tostring)
@@ -270,21 +298,44 @@ normalize_payload() {
         , (.agent_type // .agentType // "")
         , (.agent_id // .agentId // "")
         , (.session_id // .sessionId // "")
+        , ($a.output_mode // "")
+        , (($a.head_limit // 0) | tostring)
+        # Context flags are named exactly "-A" / "-B" / "-C" in the tool schema,
+        # so they need bracket lookup. -C sets both sides when the one-sided
+        # flags are absent.
+        , ((($a["-B"] // $a["-C"]) // 0) | tostring)
+        , ((($a["-A"] // $a["-C"]) // 0) | tostring)
+        , (($a.multiline // false) | tostring)
+        , (if ($ti.ok and $ta.ok) then "ok" else "malformed" end)
         ] | map(. + "\u0000") | join("")
     ' 2>/dev/null
   )
 
-  # Exactly eight fields, or the parse failed. This also catches malformed JSON,
-  # where jq emits nothing at all.
-  if [[ "${#f[@]}" -ne 8 ]]; then
-    degrade "payload parse failed (${#f[@]} of 8 fields)"
+  # Exactly fourteen fields, or the parse failed. This also catches malformed
+  # JSON, where jq emits nothing at all.
+  if [[ "${#f[@]}" -ne 14 ]]; then
+    degrade "payload parse failed (${#f[@]} of 14 fields)"
     return 1
   fi
 
   P_TOOL="${f[0]}"; P_PATH="${f[1]}"; P_OFFSET="${f[2]}"; P_LIMIT="${f[3]}"
   P_COMMAND="${f[4]}"; P_AGENT_TYPE="${f[5]}"; P_AGENT_ID="${f[6]}"; P_SESSION="${f[7]}"
+  P_OUTPUT_MODE="${f[8]}"; P_HEAD_LIMIT="${f[9]}"
+  P_CTX_BEFORE="${f[10]}"; P_CTX_AFTER="${f[11]}"; P_MULTILINE="${f[12]}"
   is_uint "$P_OFFSET" || P_OFFSET=0
   is_uint "$P_LIMIT"  || P_LIMIT=0
+  is_uint "$P_HEAD_LIMIT" || P_HEAD_LIMIT=0
+  is_uint "$P_CTX_BEFORE" || P_CTX_BEFORE=0
+  is_uint "$P_CTX_AFTER"  || P_CTX_AFTER=0
+  [[ "$P_MULTILINE" == "true" ]] || P_MULTILINE="false"
+
+  # Malformed tool arguments must not pass as an empty read. Fail open as
+  # always, but say so, so an unclassifiable payload is visible in the log
+  # instead of looking like a small read.
+  if [[ "${f[13]}" != "ok" ]]; then
+    degrade "tool arguments were neither an object nor valid JSON"
+    return 1
+  fi
   return 0
 }
 
@@ -312,14 +363,63 @@ range_bytes() {
   printf '%s' "$(( n ))"
 }
 
-is_read_tool() {
+# Tools whose output IS the file's content, so the file's size predicts the
+# cost of the call.
+is_content_read_tool() {
   local name
   name="$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')"
   case "$name" in
-    read|view|cat|glob|grep|search|find|ls|list|notebookread|readfile|str_replace_editor_view)
-      return 0 ;;
+    read|view|cat|notebookread|readfile|str_replace_editor_view) return 0 ;;
     *) return 1 ;;
   esac
+}
+
+# Tools whose output is DERIVED from the file — a count, a list of paths, the
+# matching lines. The file's size says nothing about the size of that output.
+# Classifying these by file size denied a `Grep` with output_mode=count against a
+# 1000-line file, which returns a single number: a false positive that makes the
+# optimizer look broken and costs a delegation for nothing.
+is_search_tool() {
+  local name
+  name="$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')"
+  case "$name" in
+    grep|search|glob|find|ls|list|codebase|usages) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# A search is in scope only when the payload states a bound we can size. A
+# content-mode search with an explicit head_limit requests that many lines; a
+# count or a filenames-only search returns effectively nothing; an unbounded
+# content search cannot be predicted from the file at all.
+search_requested_lines() {
+  # search_requested_lines <output_mode> <head_limit> <before> <after> <multiline>
+  #   -> an upper bound on OUTPUT LINES, or return 1 when the request does not
+  #      bound its own output.
+  #
+  # Every number here comes from the REQUEST. The file is never opened: sizing a
+  # search from its source bytes is what made a `head_limit: 10` grep that
+  # returns 7 bytes look like a 40 KiB read.
+  local mode head before after multiline span bound
+  mode="$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')"
+  head="${2:-0}"; before="${3:-0}"; after="${4:-0}"; multiline="${5:-false}"
+  case "$mode" in
+    count|files_with_matches|files-with-matches) printf '0' ; return 0 ;;
+  esac
+  is_uint "$head" && [[ "$head" -gt 0 ]] || return 1
+  is_uint "$before" || before=0
+  is_uint "$after"  || after=0
+
+  # multiline lets ONE match span arbitrarily many lines, and nothing in the
+  # request caps that. Unsizable — say so rather than claim head_limit bounds it.
+  [[ "$multiline" == "true" ]] && return 1
+
+  # head_limit counts MATCHES. Each match emits at most 1 + before + after lines,
+  # and grep adds a `--` separator between non-contiguous groups.
+  span=$(( 1 + before + after ))
+  bound=$(( head * span ))
+  [[ "$span" -gt 1 ]] && bound=$(( bound + head ))
+  printf '%s' "$bound"
 }
 
 REQ_LINES=0
@@ -372,6 +472,24 @@ classify_size() {
   [[ "$REQ_BYTES" -gt "$MAX_BYTES" ]] && { CLASS_RESULT="oversized"; echo "oversized"; return 0; }
   CLASS_RESULT="pass"
   echo "pass"
+}
+
+# Classify by a REQUESTED LINE COUNT alone, with no reference to any file.
+# Search output is not a prefix of the source: a content search for a pattern on
+# the last line of a 40 KiB single-line file returns 7 bytes, while the first
+# `head_limit` source lines are the whole 40 KiB. Measuring source bytes to size
+# search output denied that search. Bytes are unknowable before the search runs,
+# so they are not guessed — REQ_BYTES stays 0 and only the line bound applies.
+classify_lines_only() {
+  # classify_lines_only <requested_lines>  ->  "pass" | "oversized"
+  local requested="${1:-0}"
+  REQ_LINES=0; REQ_BYTES=0; TOTAL_LINES=0
+  is_uint "$requested" || { CLASS_RESULT="pass"; echo "pass"; return 0; }
+  REQ_LINES="$requested"
+  if [[ "$REQ_LINES" -gt "$MAX_LINES" ]]; then
+    CLASS_RESULT="oversized"; echo "oversized"; return 0
+  fi
+  CLASS_RESULT="pass"; echo "pass"
 }
 
 is_whole_file_read() {
@@ -620,12 +738,64 @@ run_hook_mode() {
     return 0
   fi
 
-  is_read_tool "$P_TOOL" || return 0
-  [[ -n "$P_PATH" ]] || return 0
+  local eff_limit="$P_LIMIT" eff_offset="$P_OFFSET"
+  if is_content_read_tool "$P_TOOL"; then
+    # A content read reads ONE named file, so without a path there is nothing to
+    # size. This requirement belongs here and nowhere earlier.
+    [[ -n "$P_PATH" ]] || return 0
+    : # the file's size is the cost; classify it as given
+  elif is_search_tool "$P_TOOL"; then
+    # A search does NOT need a path. glob / list / codebase / usages routinely
+    # omit one, and a repository-wide grep does too. A blanket path requirement
+    # ABOVE this branch meant a pathless request with head_limit: 900 returned
+    # before the line gate and before the search_unsizable audit — it logged
+    # nothing at all, so the bypass was invisible. Searches key on their scope
+    # instead, so bounded recovery and the log always have a stable identifier.
+    local skey="${P_PATH:-search-scope:${P_TOOL}}"
+    # Size the SEARCH OUTPUT, never the underlying file.
+    local slines
+    if ! slines="$(search_requested_lines "$P_OUTPUT_MODE" "$P_HEAD_LIMIT" \
+                     "$P_CTX_BEFORE" "$P_CTX_AFTER" "$P_MULTILINE")"; then
+      # The request does not bound its own output (no head_limit, or multiline
+      # where one match spans arbitrarily many lines). Nothing honest to
+      # classify, so pass — but leave the reason in the log.
+      log_line "audit" "search_unsizable" \
+        "${P_TOOL} mode=${P_OUTPUT_MODE:-unset} multiline=${P_MULTILINE}" "$skey"
+      return 0
+    fi
+    if [[ "$slines" -eq 0 ]]; then
+      # count / files_with_matches: the result is a number or a path list.
+      return 0
+    fi
+    # slines is an upper bound on output lines derived purely from the request —
+    # head_limit expanded by any -A/-B/-C context. Never touches the source
+    # file; see classify_lines_only.
+    classify_lines_only "$slines" >/dev/null
+    class="$CLASS_RESULT"
+    cumulative_add "$REQ_LINES" "$REQ_BYTES"
+    decision="$(resolve_decision "$class")"
+    case "$decision" in
+      redirect)
+        if [[ "$(redirect_attempts "$skey")" -ge 1 ]]; then
+          log_line "redirect_exhausted" "recovery_bound" "$P_TOOL" "$skey"; return 0
+        fi
+        if ! record_redirect_attempt "$skey"; then
+          log_line "recovery_unavailable" "state_write_failed" "$P_TOOL" "$skey"; return 0
+        fi
+        log_line "redirect" "search_head_limit" "$P_TOOL" "$skey"
+        emit_redirect "$(redirect_reason "$skey")"
+        exit $?
+        ;;
+      audit) log_line "would_redirect" "search_head_limit" "$P_TOOL" "$skey"; return 0 ;;
+      *) return 0 ;;
+    esac
+  else
+    return 0
+  fi
 
   # Direct call, not $( ) — see classify_size's comment. REQ_LINES/REQ_BYTES
   # must survive for cumulative_add and the log.
-  classify_size "$P_PATH" "$P_OFFSET" "$P_LIMIT" >/dev/null
+  classify_size "$P_PATH" "$eff_offset" "$eff_limit" >/dev/null
   class="$CLASS_RESULT"
   cumulative_add "$REQ_LINES" "$REQ_BYTES"
   decision="$(resolve_decision "$class")"

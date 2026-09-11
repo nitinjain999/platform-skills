@@ -61,6 +61,8 @@ Claude Code is the only client where redirection is architecturally possible. Ev
 
 `handoffs` appears in the Copilot templates as a frontmatter field but is **not** confirmed to be a subagent dispatch. Presence of a field means the field parses, not that an execution model exists. No delegation primitive is verified as working on Copilot CLI or VS Code until a runtime fixture runs and a human confirms the answer-key path list appeared in the parent's context.
 
+Read "unverified" strictly: not demonstrated, not proven absent. GitHub documents an `agent` tool alias, and its absence from a particular CLI build's `--help` output is not evidence that delegation cannot work — tool availability has to be checked against the installed client version and the official documentation. `handoffs` does not settle it in the other direction either, since it does not demonstrate a separate worker context or a return to the parent. Both remain open, which is why no delegation or saving is claimed for these clients.
+
 ## The capability probe gate
 
 Three questions determine whether a client can reach `redirect` mode:
@@ -169,6 +171,32 @@ An earlier draft used total line count where requested line count was correct, a
 1. **Total lines > `max_lines` denied ranged reads that asked for 40 lines.** A 1000-line file would be classified oversized even when `--limit=40` explicitly requested a small window. The correct check is `requested_lines > max_lines`.
 
 2. **Estimated range bytes missed fat-line files.** A file with five 40 KiB lines has 200 KiB in the first five lines, but `total_bytes * (5 / total_lines)` reports a tiny number. The fix is `sed -n` plus `wc -c` on the actual range: measure, never estimate.
+
+## Search classification
+
+A search is sized by **what it will emit**, never by the file it scans. `classify_lines_only` compares the line bound alone and leaves `REQ_BYTES` at 0, because there is no honest way to derive matching-result bytes from unrelated source bytes.
+
+`search_requested_lines` derives that bound **purely from the request**. The file is never opened:
+
+| Request | Bound | Decision |
+|---|---|---|
+| `output_mode: count` or `files_with_matches` | 0 | pass — the result is a number or a path list |
+| `head_limit: N`, no context | `N` | gate on `N` |
+| `head_limit: N` with `-A a` / `-B b` / `-C c` | `N × (1 + b + a) + N` | gate on the expanded bound |
+| `multiline: true` | none | unsizable — pass and log `search_unsizable` |
+| no `head_limit` | none | unsizable — pass and log `search_unsizable` |
+
+`-C` sets both sides when the one-sided flags are absent. The trailing `+ N` covers the `--` separator grep emits between non-contiguous groups.
+
+**Why context expansion counts.** `head_limit` bounds the number of *matches*, not emitted lines. 100 matches with `-C 10` can emit roughly 2,100 lines, which passed a `max_lines: 350` gate classified as "100". Claiming the limit was enforced there was simply false.
+
+**Why unsizable means pass.** When the request does not bound its own output there is nothing to compare, so the call proceeds and the reason lands in the log. Guessing a bound would deny reads that return almost nothing — the failure mode below.
+
+### Two more holes, both from sizing searches wrong
+
+1. **Sizing search output from source bytes.** A file with 40,000 unrelated characters on line 1 and `needle` on line 2 returns 7 bytes for a `head_limit: 10` content search, but measuring the first 10 *source* lines reported 40,008 and denied it. Searches are now sized on the request's own line bound and never touch the file.
+
+2. **Requiring a path before classifying.** `glob`, `list`, `codebase` and `usages` routinely omit a path, and a repository-wide grep does too. A blanket path check ahead of the search branch meant a pathless `head_limit: 900` returned before both the line gate and the `search_unsizable` audit — it logged nothing at all, so the bypass was invisible. The path requirement now sits inside the content-read branch, where it belongs; searches key on a scope label so bounded recovery and the log always have a stable identifier.
 
 ## Shell detection limits
 

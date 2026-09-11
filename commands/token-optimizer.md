@@ -246,7 +246,15 @@ Steps:
 
    c. User `~/.copilot/config.json` `hooks` key (only if the user wants the optimizer active across all their repositories, and only alongside a repository-scoped install in each) — merge using `jq`.
 
-   **For VS Code**, note that agent-scoped hooks are a preview feature gated on `chat.useCustomAgentHooks`. If that setting is not enabled, the hooks will not fire. Report this as a post-setup instruction.
+   **For VS Code**, there is nothing to register, and setup must say that plainly rather than implying otherwise. The shipped VS Code templates are agent definitions only — neither carries a `hooks` field, and this command installs no hook file for VS Code. Telling a user to enable `chat.useCustomAgentHooks` while installing nothing for it to load leaves them believing audit logging is active when no hook exists to write it.
+
+   Report exactly this after a VS Code install:
+
+   > Installed: reader and coordinator agent definitions in `.github/agents/`. **No hook was installed**, so nothing is classified or logged on this client — the optimizer here is routing guidance only. Agent-scoped hooks are a preview feature gated on `chat.useCustomAgentHooks`; enabling that setting will not change anything until a hook exists to load. `doctor` will report `read redirection active: no (unsupported on this client)`, which is accurate rather than a misconfiguration.
+
+   Be precise about which kind of gap this is. **This feature does not implement a VS Code hook** — that is a limitation of this command, not a statement about the client. Do not claim VS Code cannot discover `.github/hooks/*.json`; that has not been verified either way here, and asserting it would be inventing a client limitation to explain a missing feature.
+
+   If you want classification on this repository, install the `copilot-cli` surface, which registers `.github/hooks/preToolUse.json` and is exercised by the shipped tests. Whether VS Code also loads that file is unverified; if it does, classification may work there as a side effect rather than by design. Before advertising VS Code support, validate the registration format against the installed build and confirm the adapter round-trips a real payload.
 
 10. Copy the client's agent templates. The optimizer's own config, state directory and hook command are repository-scoped, but agent definitions can additionally be installed user-wide, so both destinations are listed where a client supports them:
    - **Claude Code** (repository): copy `examples/token-optimizer/claude/platform-bulk-reader.md` to `.claude/agents/platform-bulk-reader.md`
@@ -255,11 +263,43 @@ Steps:
    - **Copilot CLI** (user): copy both to `~/.copilot/agents/`
    - **VS Code** (repository): copy both `examples/token-optimizer/vscode/platform-bulk-reader.agent.md` and `examples/token-optimizer/vscode/platform-coordinator.agent.md` to `.github/agents/`
 
+10b. **Wire the chosen worker model into the installed agent.** This has to run *after* step 10 — the file it rewrites does not exist until the template is copied. The shipped templates carry a fixed `model:` (`haiku` for Claude Code, `claude-haiku-4.5` for the Copilot CLI and VS Code readers). Copying them verbatim leaves the agent pinned to that value while `.token-optimizer.yaml` claims whatever the user picked — so a user who chose `gpt-5-mini` gets a reader still running `claude-haiku-4.5`, and on Copilot, where the mode is capped to audit, the redirect reason that would have carried the chosen model is never emitted either. Nothing else in setup corrects this.
+
+   After copying each agent template, rewrite its frontmatter `model:` to the selected value:
+   ```bash
+   # $AGENT_FILE is the INSTALLED copy, $WORKER_MODEL the value written to
+   # .token-optimizer.yaml. Only the first `model:` line, which is in frontmatter.
+   awk -v m="$WORKER_MODEL" '
+     BEGIN { done = 0 }
+     /^model:/ && !done { print "model: " m; done = 1; next }
+     { print }
+   ' "$AGENT_FILE" > "$AGENT_FILE.tmp" && mv "$AGENT_FILE.tmp" "$AGENT_FILE"
+   ```
+   Then confirm it took, and say what was set:
+   ```bash
+   awk '/^---$/{n++; next} n==1 && /^model:/{print; exit}' "$AGENT_FILE"
+   ```
+   Apply this to the reader on every client. Do **not** apply it to a coordinator: the Copilot CLI coordinator deliberately sets no `model:` and inherits the session's, and the VS Code coordinator pins `claude-sonnet-4.6` as the *decision* model, which is not the worker model the user chose.
+
 11. Add an ownership marker to every generated asset (YAML, JSON, agent templates) as a comment or frontmatter field:
     ```
     # OWNERSHIP MARKER: platform-skills token-optimizer v1.41.0
     ```
     This is what `remove` uses to identify assets safe to delete.
+
+11b. **Record what was installed.** Write `.token-optimizer/installed.sha256` as the very last step of setup — after the config is written, after the model rewrite in 10b, and after every ownership marker is injected. The manifest must hash each file **exactly as it now sits on disk**, or `remove` will read a mismatch for a file nobody touched and refuse to uninstall it.
+
+   ```bash
+   # Run LAST. Every path this setup installed, hashed as-written.
+   : > .token-optimizer/installed.sha256
+   for f in "${INSTALLED_ASSETS[@]}"; do
+     [ -f "$f" ] || continue
+     printf '%s  %s\n' "$(shasum -a 256 "$f" | cut -d' ' -f1)" "$f" \
+       >> .token-optimizer/installed.sha256
+   done
+   ```
+
+   `INSTALLED_ASSETS` is every file setup created or generated: `.token-optimizer.yaml`, `.token-optimizer/optimize.sh`, the probe script, and each installed agent definition. Do **not** list shared files that setup only *edited* — `.claude/settings.json`, `.github/hooks/preToolUse.json`, `settings.json`, `~/.copilot/config.json`. A whole-file hash of a shared file proves only that it has not changed since setup; it does not prove this command owns it, and deleting it would take another feature's hooks with it. Those are handled surgically in `remove`.
 
 12. Add runtime state to `.gitignore`, but explicitly do not ignore the script itself (the committed hook invokes it):
     ```bash
@@ -319,16 +359,23 @@ Steps:
    fi
    ```
 
-2. **worker model resolved** — read the config's `worker_model` and report what the client would resolve it to. On Claude Code, the agent definition's frontmatter `model:` field is the request, and the resolved model depends on the provider. On Copilot CLI, the requested model is directly in the config.
+2. **worker model** — report the **requested** and the **observed** model as two separate values, and never present a configuration value as a resolved one.
+
+   - **requested**: the config's `worker_model`, cross-checked against the installed agent's frontmatter `model:`. If those two disagree, say so — it means `setup` did not finish wiring the model, and the agent will run something other than what the config claims.
+   - **observed**: only from a recorded probe run. If no probe has run, print `observed: unverified (run .token-optimizer/probe/run-probe.sh)` and make no claim about what the worker actually used.
+
+   A requested model is not evidence. An invocation-time override, a cost-tier cap, or an `Auto` session can all resolve something else, so reporting the config value as "resolved" would assert exactly what has not been checked.
 
    When resolution cannot be observed from static files (e.g., Bedrock mapping is account-specific), print `unverified` and make **no** cheaper-routing claim:
    ```
-   worker model resolved:    unverified (Bedrock mapping is account-specific)
+   worker model requested:   haiku (config; frontmatter agrees)
+   worker model observed:    unverified (Bedrock resolution is account-specific and no probe run recorded)
    ```
 
    When resolution is known:
    ```
-   worker model resolved:    claude-haiku-4.5 (source: config)
+   worker model requested:   claude-haiku-4.5 (config; frontmatter agrees)
+   worker model observed:    unverified (no probe run recorded)
    ```
 
 3. **read redirection active** — check the effective mode and platform caps, passing the actual client being inspected:
@@ -359,12 +406,13 @@ Steps:
    - Whether `.token-optimizer/state/` exists (without it recovery cannot bound and the core will not redirect)
    - Whether `chat.useCustomAgentHooks` is set on VS Code (required for agent-scoped hooks)
    - Whether `disableAllHooks` is set in Copilot's config (if true, no hooks fire at all)
-   - Whether each worker budget is natively enforced or instruction-only (on Claude Code, agent-level `max_tokens`, `timeout`, and `max_iterations` are natively enforced; on other clients, budgets are instruction-only)
+   - Report `max_delegations_per_task`, `max_worker_retries` and `max_worker_seconds` as **instruction-only on every client**. They are carried to the worker in the redirect reason and nothing enforces them. Do not claim otherwise: `max_tokens`, `timeout` and `max_iterations` are not documented Claude subagent frontmatter fields, and the shipped worker sets no limit of any kind. If a client gains an enforceable control, name that control and report it separately from these three.
 
 **Validation:**
 ```
 delegation verified:      yes | no (runtime fixture required) | no (unsupported)
-worker model resolved:    <resolved> (source: <how>) | unverified
+worker model requested:   <config value> (config; frontmatter agrees | FRONTMATTER DISAGREES: <value>)
+worker model observed:    <observed> (probe <client_version>) | unverified (no probe run recorded)
 read redirection active:  yes | no (audit only) | no (unsupported on this client)
 default read limit:       <n> (measured) | <n> (assumed) | unknown
 ```
@@ -548,7 +596,18 @@ yq eval '.enabled' .token-optimizer.yaml
 
 ## Mode: remove
 
-Remove assets carrying the ownership marker. The marker is authoritative: `setup` injects it, so no shipped-file hash can ever match a generated asset, and gating deletion on a hash match would make uninstall silently inert. A marked asset whose content differs from what `setup` would generate is still removed, and reported as locally modified. An asset with no marker is never touched, only listed for manual review.
+Remove only assets this command installed and the user has not since edited.
+
+Two properties have to hold at once, and an earlier revision traded one away for the other. Gating deletion on a hash of the *shipped* file made uninstall inert, because `setup` injects an ownership marker and that changes the content. Dropping the hash entirely fixed uninstall but started deleting files the user had edited — losing their work to a command whose own wizard promises "owned, unmodified assets".
+
+Both hold if `setup` records the hash of what it actually **generated**, marker included. So:
+
+- `setup` writes a manifest at `.token-optimizer/installed.sha256`, one line per installed asset: the SHA-256 of the file **as written**, and its path.
+- `remove` recomputes each hash. Match means this command wrote it and nobody has touched it since — delete.
+- Mismatch means the user edited it. **Preserve it**, and report it as modified with its path so they can decide.
+- No marker and no manifest entry means it is not ours. Never touch it; list it for manual review.
+
+The marker proves ownership. It does not prove deletion is safe.
 
 Steps:
 
@@ -563,9 +622,20 @@ Steps:
    - `~/.copilot/agents/platform-bulk-reader.agent.md` and `~/.copilot/agents/platform-coordinator.agent.md` (user-scoped)
    - Hook entries in `.claude/settings.json`, `.github/hooks/*.json`, repository root `settings.json` `hooks` key, `~/.copilot/config.json`
 
+   For the **shared** files setup edited rather than created — `.claude/settings.json`, `.github/hooks/preToolUse.json`, the repository-root `settings.json` `hooks` key, `~/.copilot/config.json` — remove only this command's own entry with `jq`, matching on the command string. Never delete the file. It may hold `ai-governance`'s hooks or the user's own, and a whole-file hash cannot tell you otherwise.
+
+   This step only **lists**. It deletes nothing and it removes no directory. Directory cleanup is step 8, because it cannot run before every hash comparison below has finished.
+
 3. For each asset carrying the ownership marker:
-   - Remove it immediately
-   - If the asset's content differs from what `setup` would generate (compare against `examples/token-optimizer/`), report it as "removed (locally modified)"
+   Check before mutating. In this order, and never delete before the comparison:
+
+   1. Look up the asset's recorded hash in `.token-optimizer/installed.sha256`.
+   2. **No entry** — this command did not record installing it. Do not delete. Report `preserved (no manifest entry): <path>`.
+   3. **Entry found** — recompute the file's SHA-256 and compare.
+      - **Match**: this command wrote it and nobody has edited it since. Delete it.
+      - **Mismatch**: the user has edited it. **Do not delete.** Report `preserved (locally modified): <path>` and move on.
+
+   Deleting first and comparing afterwards is not a variant of this — it destroys the file the comparison exists to protect.
    - The ownership marker is authoritative because `setup` injects it, so no shipped-file hash can match a generated asset
    
    For assets with no ownership marker:
@@ -580,10 +650,36 @@ Steps:
 
 7. Remove `.token-optimizer/` entries from `.gitignore` if they were added by `setup`.
 
+8. **Last: drop the manifest, then the directories.** This is the final step for a reason. `.token-optimizer/installed.sha256` is the input to every comparison in step 3, so deleting it earlier would strip the evidence the later assets are judged against. Remove it only once no asset still needs to be checked, and only then attempt the directories:
+
+   ```bash
+   # rmdir, never rm -rf: a preserved locally-modified file must survive
+   # uninstall, and a recursive delete of the parent would take it with it.
+   rm -f .token-optimizer/installed.sha256
+   rmdir .token-optimizer/probe .token-optimizer/state .token-optimizer 2>/dev/null || true
+   ```
+
+   `rmdir` refusing is a normal outcome, not a failure — report the directory as retained and name what is still in it. Two cases are expected:
+   - `decisions.log` is preserved by default (step 5), so **a clean uninstall normally does keep `.token-optimizer/`**. Say so, rather than reporting it as leftover junk.
+   - Anything preserved in step 3 as `locally modified` or `no manifest entry` is still there by design.
+
+   Only report full removal when `rmdir` actually succeeded.
+
 **Validation:**
 ```bash
-[[ ! -f .token-optimizer.yaml ]] && echo "config: removed"
-[[ ! -f .token-optimizer/optimize.sh ]] && echo "core script: removed"
-[[ ! -d .token-optimizer/state ]] && echo "state directory: removed"
+[[ ! -f .token-optimizer.yaml ]]            && echo "config: removed"
+[[ ! -f .token-optimizer/optimize.sh ]]     && echo "core script: removed"
+[[ ! -d .token-optimizer/state ]]           && echo "state directory: removed"
+[[ ! -f .token-optimizer/installed.sha256 ]] && echo "manifest: removed"
+
+# .token-optimizer/ itself is EXPECTED to survive when decisions.log was kept.
+# Absence is not the success condition here — what remains must be explainable.
+if [[ -d .token-optimizer ]]; then
+  echo "retained .token-optimizer/, contents:"
+  find .token-optimizer -mindepth 1 | sed 's/^/  /'
+else
+  echo ".token-optimizer/: fully removed"
+fi
+
 git status --short
 ```

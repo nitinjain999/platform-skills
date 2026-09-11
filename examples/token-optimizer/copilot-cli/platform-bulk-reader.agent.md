@@ -62,3 +62,5 @@ regardless of what `.token-optimizer.yaml` says.
 Until a runtime fixture proves worker invocation, independent context, and a
 bounded return to the parent, treat this as routing guidance only and make no
 cost claim. Run `/platform-skills:token-optimizer doctor` for current status.
+
+**Unverified means not demonstrated — not proven absent.** GitHub documents an `agent` tool alias, and its absence from a given CLI build's `--help` output is not evidence that delegation is unavailable. Check tool availability against the installed client version and the official documentation before concluding anything. Equally, `handoffs` on its own does not demonstrate the opposite: it does not prove a separate worker context or a return to the parent. Neither reading is settled here, which is exactly why nothing claims working delegation or a saving until an authenticated runtime test shows both.
