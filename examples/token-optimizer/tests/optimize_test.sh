@@ -307,6 +307,48 @@ case "$big_hay" in *'"permissionDecision":"deny"'*) ok "head_limit above max_lin
 rm -f .token-optimizer/state/*
 hay_read="$(hook "{\"tool_name\":\"Read\",\"tool_input\":{\"file_path\":\"$W/hay.txt\"},\"session_id\":\"S-H\"}" claude redirect.yaml)"
 case "$hay_read" in *'"permissionDecision":"deny"'*) ok "a whole-file Read of the same file is denied on real bytes" ;; *) no "whole-file Read denied" "deny envelope" "$hay_read" ;; esac
+
+echo "=== a search without a path is still classified ==="
+# `[[ -n "$P_PATH" ]] || return 0` used to sit ABOVE the search branch. glob, list,
+# codebase and usages routinely omit a path, and a repo-wide grep does too, so a
+# pathless head_limit:900 returned before the line gate AND before the
+# search_unsizable audit — it logged nothing at all, making the bypass invisible.
+nopath() { printf '{"tool_name":"%s","tool_input":{"pattern":"x"%s},"session_id":"S-NP"}' "$1" "$2"; }
+rm -f .token-optimizer/state/*
+np_grep="$(hook "$(nopath Grep ',"output_mode":"content","head_limit":900')" claude redirect.yaml)"
+case "$np_grep" in *'"permissionDecision":"deny"'*) ok "pathless grep with head_limit=900 IS denied" ;; *) no "pathless grep denied" "deny envelope" "$np_grep" ;; esac
+rm -f .token-optimizer/state/*
+np_glob="$(hook "$(nopath Glob ',"head_limit":900')" claude redirect.yaml)"
+case "$np_glob" in *'"permissionDecision":"deny"'*) ok "pathless glob with head_limit=900 IS denied" ;; *) no "pathless glob denied" "deny envelope" "$np_glob" ;; esac
+rm -f .token-optimizer/state/*
+eq "pathless grep under max_lines is not denied" "" "$(hook "$(nopath Grep ',"output_mode":"content","head_limit":10')" claude redirect.yaml)"
+eq "pathless unbounded grep is not denied"       "" "$(hook "$(nopath Grep ',"output_mode":"content"')" claude redirect.yaml)"
+# a content read still needs a path — that requirement moved, it did not vanish
+eq "a Read with no path is still a no-op" "" "$(hook '{"tool_name":"Read","tool_input":{},"session_id":"S-NP"}' claude redirect.yaml)"
+
+echo "=== head_limit counts matches, so -A/-B/-C expansion counts too ==="
+# head_limit bounds MATCHES, not emitted lines. 100 matches with -C 10 can emit
+# ~2100 lines, which sailed through a max_lines:350 gate classified as "100".
+ctx() { printf '{"tool_name":"Grep","tool_input":{"path":"%s/large.tf","pattern":"line","output_mode":"content","head_limit":100%s},"session_id":"S-CTX"}' "$W" "$1"; }
+rm -f .token-optimizer/state/*
+eq "head_limit=100 with no context is not denied" "" "$(hook "$(ctx '')" claude redirect.yaml)"
+rm -f .token-optimizer/state/*
+ctx_c="$(hook "$(ctx ',"-C":10')" claude redirect.yaml)"
+case "$ctx_c" in *'"permissionDecision":"deny"'*) ok "head_limit=100 with -C 10 (bound 2200) IS denied" ;; *) no "-C 10 denied" "deny envelope" "$ctx_c" ;; esac
+rm -f .token-optimizer/state/*
+ctx_a="$(hook "$(ctx ',"-A":2')" claude redirect.yaml)"
+case "$ctx_a" in *'"permissionDecision":"deny"'*) ok "head_limit=100 with -A 2 (bound 400) IS denied" ;; *) no "-A 2 denied" "deny envelope" "$ctx_a" ;; esac
+# multiline lets ONE match span arbitrarily many lines and nothing in the request
+# caps that, so it is unsizable: pass and audit rather than claim a bound.
+rm -f .token-optimizer/state/*
+eq "multiline search is unsizable, so not denied" "" "$(hook "$(printf '{"tool_name":"Grep","tool_input":{"path":"%s/large.tf","pattern":"line","output_mode":"content","head_limit":10,"multiline":true},"session_id":"S-CTX"}' "$W")" claude redirect.yaml)"
+# the derivation is purely request-side: assert the arithmetic directly
+ctx_bound="$(bash -c 'source '"$OPT"' --source-only; search_requested_lines content 100 10 10 false')"
+eq "search_requested_lines expands 100 matches with -C 10 to 2200" "2200" "$ctx_bound"
+ctx_plain="$(bash -c 'source '"$OPT"' --source-only; search_requested_lines content 100 0 0 false')"
+eq "search_requested_lines leaves 100 matches with no context at 100" "100" "$ctx_plain"
+ml_rc="$(bash -c 'source '"$OPT"' --source-only; search_requested_lines content 10 0 0 true >/dev/null; echo $?')"
+eq "search_requested_lines reports multiline as unsizable" "1" "$ml_rc"
 # and the line-only classifier must never report source bytes
 lineonly="$(bash -c 'source '"$OPT"' --source-only; MAX_LINES=350; MAX_BYTES=32768
   classify_lines_only 10 >/dev/null; printf "%s|%s" "$REQ_LINES" "$REQ_BYTES"')"

@@ -287,7 +287,7 @@ Steps:
     ```
     This is what `remove` uses to identify assets safe to delete.
 
-11b. **Record what was installed.** Write `.token-optimizer/installed.sha256` as the very last step of setup — after the config is written, after the model rewrite in 8b, and after every ownership marker is injected. The manifest must hash each file **exactly as it now sits on disk**, or `remove` will read a mismatch for a file nobody touched and refuse to uninstall it.
+11b. **Record what was installed.** Write `.token-optimizer/installed.sha256` as the very last step of setup — after the config is written, after the model rewrite in 10b, and after every ownership marker is injected. The manifest must hash each file **exactly as it now sits on disk**, or `remove` will read a mismatch for a file nobody touched and refuse to uninstall it.
 
    ```bash
    # Run LAST. Every path this setup installed, hashed as-written.
@@ -617,22 +617,14 @@ Steps:
    - `.token-optimizer.yaml`
    - `.token-optimizer/optimize.sh`
    - `.token-optimizer/probe/run-probe.sh` and `.token-optimizer/probe/fixture.json`
-
-   For the **shared** files setup edited rather than created — `.claude/settings.json`, `.github/hooks/preToolUse.json`, the repository-root `settings.json` `hooks` key, `~/.copilot/config.json` — remove only this command's own entry with `jq`, matching on the command string. Never delete the file. It may hold `ai-governance`'s hooks or the user's own, and a whole-file hash cannot tell you otherwise.
-
-   Finally, remove `.token-optimizer/` **only if it is empty** after the steps above:
-
-   ```bash
-   # rmdir, never rm -rf: a preserved locally-modified file must survive
-   # uninstall, and a recursive delete of the parent would take it with it.
-   rmdir .token-optimizer/probe .token-optimizer/state .token-optimizer 2>/dev/null || true
-   ```
-
-   If `rmdir` refuses because something is still there, that is the intended outcome — report the directory as retained and name what is in it.
    - `.claude/agents/platform-bulk-reader.md` and `~/.claude/agents/platform-bulk-reader.md`
    - `.github/agents/platform-bulk-reader.agent.md` and `.github/agents/platform-coordinator.agent.md` (Copilot CLI and VS Code)
    - `~/.copilot/agents/platform-bulk-reader.agent.md` and `~/.copilot/agents/platform-coordinator.agent.md` (user-scoped)
    - Hook entries in `.claude/settings.json`, `.github/hooks/*.json`, repository root `settings.json` `hooks` key, `~/.copilot/config.json`
+
+   For the **shared** files setup edited rather than created — `.claude/settings.json`, `.github/hooks/preToolUse.json`, the repository-root `settings.json` `hooks` key, `~/.copilot/config.json` — remove only this command's own entry with `jq`, matching on the command string. Never delete the file. It may hold `ai-governance`'s hooks or the user's own, and a whole-file hash cannot tell you otherwise.
+
+   This step only **lists**. It deletes nothing and it removes no directory. Directory cleanup is step 8, because it cannot run before every hash comparison below has finished.
 
 3. For each asset carrying the ownership marker:
    Check before mutating. In this order, and never delete before the comparison:
@@ -658,10 +650,36 @@ Steps:
 
 7. Remove `.token-optimizer/` entries from `.gitignore` if they were added by `setup`.
 
+8. **Last: drop the manifest, then the directories.** This is the final step for a reason. `.token-optimizer/installed.sha256` is the input to every comparison in step 3, so deleting it earlier would strip the evidence the later assets are judged against. Remove it only once no asset still needs to be checked, and only then attempt the directories:
+
+   ```bash
+   # rmdir, never rm -rf: a preserved locally-modified file must survive
+   # uninstall, and a recursive delete of the parent would take it with it.
+   rm -f .token-optimizer/installed.sha256
+   rmdir .token-optimizer/probe .token-optimizer/state .token-optimizer 2>/dev/null || true
+   ```
+
+   `rmdir` refusing is a normal outcome, not a failure — report the directory as retained and name what is still in it. Two cases are expected:
+   - `decisions.log` is preserved by default (step 5), so **a clean uninstall normally does keep `.token-optimizer/`**. Say so, rather than reporting it as leftover junk.
+   - Anything preserved in step 3 as `locally modified` or `no manifest entry` is still there by design.
+
+   Only report full removal when `rmdir` actually succeeded.
+
 **Validation:**
 ```bash
-[[ ! -f .token-optimizer.yaml ]] && echo "config: removed"
-[[ ! -f .token-optimizer/optimize.sh ]] && echo "core script: removed"
-[[ ! -d .token-optimizer/state ]] && echo "state directory: removed"
+[[ ! -f .token-optimizer.yaml ]]            && echo "config: removed"
+[[ ! -f .token-optimizer/optimize.sh ]]     && echo "core script: removed"
+[[ ! -d .token-optimizer/state ]]           && echo "state directory: removed"
+[[ ! -f .token-optimizer/installed.sha256 ]] && echo "manifest: removed"
+
+# .token-optimizer/ itself is EXPECTED to survive when decisions.log was kept.
+# Absence is not the success condition here — what remains must be explainable.
+if [[ -d .token-optimizer ]]; then
+  echo "retained .token-optimizer/, contents:"
+  find .token-optimizer -mindepth 1 | sed 's/^/  /'
+else
+  echo ".token-optimizer/: fully removed"
+fi
+
 git status --short
 ```

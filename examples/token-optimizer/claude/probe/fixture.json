@@ -7,7 +7,8 @@
   "independent_context": null,
   "returned_to_parent": null,
   "delegation_verified": false,
-  "worker_model_requested": "haiku",
+  "worker_model_requested": null,
+  "worker_model_requested_source": null,
   "worker_model_resolved": null,
   "model_verification_source": null
 }
