@@ -270,7 +270,14 @@ normalize_payload() {
       def parsed(g):
         g | if   type == "object" then {ok: true,  v: .}
             elif type == "null"   then {ok: true,  v: {}}
-            elif type == "string" then (try {ok: true, v: fromjson} catch {ok: false, v: {}})
+            elif type == "string" then
+              # Must decode to an OBJECT. `try {ok: true, v: fromjson}` accepted
+              # a scalar or an array, so toolArgs: "null" / "[]" / "42" decoded
+              # "successfully", collapsed to {}, and passed with an empty path and
+              # no degradation — the same silent hole as the unparsed string.
+              (try (fromjson | if type == "object" then {ok: true, v: .}
+                               else {ok: false, v: {}} end)
+               catch {ok: false, v: {}})
             else {ok: false, v: {}} end;
       parsed(.tool_input) as $ti
       | parsed(.toolArgs) as $ta

@@ -312,6 +312,22 @@ lineonly="$(bash -c 'source '"$OPT"' --source-only; MAX_LINES=350; MAX_BYTES=327
   classify_lines_only 10 >/dev/null; printf "%s|%s" "$REQ_LINES" "$REQ_BYTES"')"
 eq "classify_lines_only reports no bytes at all" "10|0" "$lineonly"
 
+echo "=== string tool arguments must decode to an OBJECT, not any JSON value ==="
+# `try {ok:true, v:fromjson}` accepted a scalar or an array, so toolArgs "null",
+# "[]" or "42" decoded "successfully", collapsed to {}, and passed with an empty
+# path and no degradation — the same silent hole as an unparsed string.
+for bad in 'null' '[]' '42' '"just a string"'; do
+  d="$(bash -c 'source '"$OPT"' --source-only
+    DEGRADED=0
+    normalize_payload "{\"toolName\":\"view\",\"toolArgs\":\"'"$(printf '%s' "$bad" | sed 's/"/\\\\"/g')"'\"}" >/dev/null 2>&1
+    printf "%s" "$DEGRADED"')"
+  eq "toolArgs decoding to $bad degrades" "1" "$d"
+done
+okpath="$(bash -c 'source '"$OPT"' --source-only
+  normalize_payload "{\"toolName\":\"view\",\"toolArgs\":\"{\\\"path\\\":\\\"/x/a.tf\\\"}\"}"
+  printf "%s" "$P_PATH"')"
+eq "a JSON object string still yields its path" "/x/a.tf" "$okpath"
+
 echo
 echo "PASS: $PASS   FAIL: $FAIL"
 [[ "$FAIL" -eq 0 ]] || exit 1
