@@ -1,9 +1,24 @@
 // @ts-check
 
+// Every file in ../references must appear here. tests/website-coverage.sh fails
+// the build if one is missing: these sidebars are hand-enumerated and nothing
+// compared them against the directory, so kingfisher, ai-governance and
+// token-optimizer shipped without ever reaching the site.
+
 /** @type {import('@docusaurus/plugin-content-docs').SidebarsConfig} */
 const sidebars = {
   // ── References sidebar ────────────────────────────────────────────
   referencesSidebar: [
+    {
+      // Featured first, matching the commands sidebar: these two govern what an
+      // AI agent may do and what it costs to let it work.
+      type: 'category',
+      label: 'AI Agent Governance & Cost',
+      items: [
+        { type: 'doc', id: 'ai-governance' },
+        { type: 'doc', id: 'token-optimizer' },
+      ],
+    },
     {
       type: 'category',
       label: 'Kubernetes',
@@ -75,6 +90,7 @@ const sidebars = {
         { type: 'doc', id: 'zizmor' },
         { type: 'doc', id: 'linkerd' },
         { type: 'doc', id: 'secrets' },
+        { type: 'doc', id: 'kingfisher' },
       ],
     },
     {

@@ -188,10 +188,54 @@ const FEATURES = [
   },
 ];
 
-function FeatureStrip() {
+const GOVERNANCE_CAPABILITIES = [
+  {
+    name: '/platform-skills:ai-governance',
+    desc: 'Decides what an AI agent is allowed to do in your repo. Real-time session hooks for Copilot and Claude Code deny edits to protected paths and dangerous shell commands before they run. A merge-time check then re-runs the base branch\u2019s copy of the policy against the pull request\u2019s diff, so a PR cannot weaken the rule meant to catch it. Its scope is bounded and documented: it is a pull_request check, so a direct push to a branch it does not run on is not covered, and edits to the workflow file itself need CODEOWNERS review rather than the check. Three enforcement tiers so a rollout starts by logging, not blocking.',
+    link: '/platform-skills/commands/ai-governance',
+  },
+  {
+    name: '/platform-skills:token-optimizer',
+    desc: 'Decides which model does the reading. Broad repository discovery moves to a cheaper worker through each client’s native subagent, while the main agent keeps decisions and targeted verification. Ships a runnable benchmark rather than a savings claim, and reports delegation, worker model, redirection and read limit as four separate states, splitting the requested model from the observed one so nothing reads as proven when it is not.',
+    link: '/platform-skills/commands/token-optimizer',
+  },
+];
+
+function GovernanceSection() {
   return (
     <section className="feature-strip">
-      <h2 className="feature-strip__heading">41 commands. Every domain a platform team touches.</h2>
+      <h2 className="feature-strip__heading">
+        Govern what your agent does, and what it costs
+      </h2>
+      <p className="install-section__sub">
+        Two companion commands. One bounds an agent&apos;s authority, the other bounds its
+        spend. They register on the same hook event and their failure directions are
+        deliberately opposite: the governance evaluator fails closed once it runs, so a
+        broken policy denies rather than waving work through, while the cost optimizer
+        fails open so a broken config never blocks work. Neither can act if the
+        client&apos;s hook transport times out or crashes &mdash; that always fails open,
+        which is the gap the merge-time check exists to cover.
+      </p>
+      <div className="command-cards">
+        {GOVERNANCE_CAPABILITIES.map((c) => (
+          <div className="command-card" key={c.name}>
+            <div className="command-card__name">
+              <Link to={c.link}>{c.name}</Link>
+            </div>
+            <div className="command-card__desc">{c.desc}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function FeatureStrip() {
+  const {siteConfig} = useDocusaurusContext();
+  const commandCount = siteConfig.customFields?.commandCount as number;
+  return (
+    <section className="feature-strip">
+      <h2 className="feature-strip__heading">{commandCount} commands. Every domain a platform team touches.</h2>
       <div className="feature-grid">
         {FEATURES.map((f) => (
           <div className="feature-tile" key={f.title}>
@@ -276,6 +320,7 @@ export default function Home(): ReactNode {
         <Hero />
         <ProblemStatement />
         <StarScenarios />
+        <GovernanceSection />
         <FeatureStrip />
         <InstallSection />
       </main>

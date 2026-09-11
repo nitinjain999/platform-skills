@@ -8,6 +8,15 @@ const { themes: prismThemes } = require('prism-react-renderer');
 // here means the homepage cannot go stale again.
 const pluginManifest = require('../.claude-plugin/plugin.json');
 
+// Command count derived the same way and for the same reason: the homepage
+// advertised "41 commands" while the repo carried 44, because it was a literal
+// nobody updated on release.
+const fs = require('fs');
+const path = require('path');
+const commandCount = fs
+  .readdirSync(path.join(__dirname, '..', 'commands'))
+  .filter((f) => f.endsWith('.md')).length;
+
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'Platform Skills',
@@ -16,6 +25,7 @@ const config = {
 
   customFields: {
     pluginVersion: pluginManifest.version,
+    commandCount,
   },
 
   url: 'https://nitinjain999.github.io',

@@ -438,6 +438,7 @@ jobs:
       - name: Run helmcheck validation
         run: bash tests/validate-helmcheck.sh
 
+
   summary:
     name: Validation Summary
     runs-on: ubuntu-latest

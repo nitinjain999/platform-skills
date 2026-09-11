@@ -1,13 +1,32 @@
 // @ts-check
 
+// Every file in ../commands must appear here. tests/website-coverage.sh fails the
+// build if one is missing: the last three releases each shipped a command that
+// never reached the site (kingfisher in 1.39.0, ai-governance in 1.40.0,
+// token-optimizer in 1.41.0), because these sidebars are hand-enumerated and
+// nothing compared them against the directory.
+
 /** @type {import('@docusaurus/plugin-content-docs').SidebarsConfig} */
 const sidebars = {
   // ── Commands sidebar ───────────────────────────────────────────────
   commandsSidebar: [
     {
+      // Featured first: these two govern what an AI agent may do and what it
+      // costs to let it work. They are the newest capabilities and the reason
+      // most people arrive at this handbook.
+      type: 'category',
+      label: 'AI Agent Governance & Cost',
+      items: [
+        { type: 'doc', id: 'ai-governance' },
+        { type: 'doc', id: 'token-optimizer' },
+      ],
+    },
+    {
       type: 'category',
       label: 'Kubernetes',
       items: [
+        { type: 'doc', id: 'kubernetes' },
+        { type: 'doc', id: 'openshift' },
         { type: 'doc', id: 'helmchart' },
         { type: 'doc', id: 'keda' },
         { type: 'doc', id: 'karpenter' },
@@ -34,12 +53,14 @@ const sidebars = {
       items: [
         { type: 'doc', id: 'aws' },
         { type: 'doc', id: 'aws-profile' },
+        { type: 'doc', id: 'azure' },
       ],
     },
     {
       type: 'category',
       label: 'GitHub Actions & CI',
       items: [
+        { type: 'doc', id: 'github-actions' },
         { type: 'doc', id: 'composite-actions' },
         { type: 'doc', id: 'commit' },
         { type: 'doc', id: 'renovate' },
@@ -49,6 +70,8 @@ const sidebars = {
       type: 'category',
       label: 'Security',
       items: [
+        { type: 'doc', id: 'secrets' },
+        { type: 'doc', id: 'kingfisher' },
         { type: 'doc', id: 'kyverno' },
         { type: 'doc', id: 'opa' },
         { type: 'doc', id: 'supply-chain' },
