@@ -1,11 +1,22 @@
 // @ts-check
 const { themes: prismThemes } = require('prism-react-renderer');
 
+// Single source of truth for the version shown on the site. Derived from the
+// plugin manifest rather than hardcoded, because a hardcoded string in
+// src/pages/index.tsx sat at v1.38.0 through the 1.39.0, 1.40.0 and 1.41.0
+// releases — no release gate covered website/, so nothing caught it. Reading it
+// here means the homepage cannot go stale again.
+const pluginManifest = require('../.claude-plugin/plugin.json');
+
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'Platform Skills',
   tagline: 'A production-grade field handbook for platform engineers',
   favicon: 'img/favicon.ico',
+
+  customFields: {
+    pluginVersion: pluginManifest.version,
+  },
 
   url: 'https://nitinjain999.github.io',
   baseUrl: '/platform-skills/',
