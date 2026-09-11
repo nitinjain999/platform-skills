@@ -332,14 +332,23 @@ echo "=== Docs site ==="
 # Actually invoke it. A bare `pass` here reported "safe to tag" while website
 # coverage or derivation checks were failing — a fake green on the one gate that
 # is documented as the pre-tag check.
-if bash tests/website-coverage.sh > /tmp/website-coverage.$$.log 2>&1; then
+#
+# mktemp, not "/tmp/<name>.$$.log". A PID-derived name in a world-writable
+# directory is predictable, and `>` follows symlinks, so on a shared host someone
+# could pre-create that path pointing at a file the operator owns and have this
+# script truncate it — then feed arbitrary text into the release output that `sed`
+# echoes back. mktemp creates the file itself with O_EXCL and 0600.
+WEBSITE_LOG="$(mktemp "${TMPDIR:-/tmp}/website-coverage.XXXXXX")"
+# shellcheck disable=SC2064  # expand WEBSITE_LOG now: it must not change later
+trap "rm -f '$WEBSITE_LOG'" EXIT INT TERM
+if bash tests/website-coverage.sh > "$WEBSITE_LOG" 2>&1; then
   pass "tests/website-coverage.sh passed"
-  rm -f /tmp/website-coverage.$$.log
 else
   fail "tests/website-coverage.sh FAILED — output follows"
-  sed 's/^/    /' /tmp/website-coverage.$$.log
-  rm -f /tmp/website-coverage.$$.log
+  sed 's/^/    /' "$WEBSITE_LOG"
 fi
+rm -f "$WEBSITE_LOG"
+trap - EXIT INT TERM
 
 # ---------------------------------------------------------------------------
 echo ""
