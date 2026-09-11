@@ -199,6 +199,24 @@ Steps:
    ```
    The probe script resolves its output path relative to its own location, so running `.token-optimizer/probe/run-probe.sh` updates `.token-optimizer/probe/fixture.json`.
 
+8b. **Wire the chosen worker model into the installed agent.** The shipped templates carry a fixed `model:` (`haiku` for Claude Code, `claude-haiku-4.5` for the Copilot CLI and VS Code readers). Copying them verbatim leaves the agent pinned to that value while `.token-optimizer.yaml` claims whatever the user picked — so a user who chose `gpt-5-mini` gets a reader still running `claude-haiku-4.5`, and on Copilot, where the mode is capped to audit, the redirect reason that would have carried the chosen model is never emitted either. Nothing else in setup corrects this.
+
+   After copying each agent template, rewrite its frontmatter `model:` to the selected value:
+   ```bash
+   # $AGENT_FILE is the INSTALLED copy, $WORKER_MODEL the value written to
+   # .token-optimizer.yaml. Only the first `model:` line, which is in frontmatter.
+   awk -v m="$WORKER_MODEL" '
+     BEGIN { done = 0 }
+     /^model:/ && !done { print "model: " m; done = 1; next }
+     { print }
+   ' "$AGENT_FILE" > "$AGENT_FILE.tmp" && mv "$AGENT_FILE.tmp" "$AGENT_FILE"
+   ```
+   Then confirm it took, and say what was set:
+   ```bash
+   awk '/^---$/{n++; next} n==1 && /^model:/{print; exit}' "$AGENT_FILE"
+   ```
+   Apply this to the reader on every client. Do **not** apply it to a coordinator: the Copilot CLI coordinator deliberately sets no `model:` and inherits the session's, and the VS Code coordinator pins `claude-sonnet-4.6` as the *decision* model, which is not the worker model the user chose.
+
 9. Register the PreToolUse hook by **appending**, never overwriting. Existing hooks for other features (e.g., `ai-governance`) must remain intact.
 
    **For Claude Code**, use the three-level matcher-group structure and the `jq` idiom from `commands/ai-governance.md:142-151`:
@@ -246,7 +264,13 @@ Steps:
 
    c. User `~/.copilot/config.json` `hooks` key (only if the user wants the optimizer active across all their repositories, and only alongside a repository-scoped install in each) — merge using `jq`.
 
-   **For VS Code**, note that agent-scoped hooks are a preview feature gated on `chat.useCustomAgentHooks`. If that setting is not enabled, the hooks will not fire. Report this as a post-setup instruction.
+   **For VS Code**, there is nothing to register, and setup must say that plainly rather than implying otherwise. The shipped VS Code templates are agent definitions only — neither carries a `hooks` field, and this command installs no hook file for VS Code. Telling a user to enable `chat.useCustomAgentHooks` while installing nothing for it to load leaves them believing audit logging is active when no hook exists to write it.
+
+   Report exactly this after a VS Code install:
+
+   > Installed: reader and coordinator agent definitions in `.github/agents/`. **No hook was installed**, so nothing is classified or logged on this client — the optimizer here is routing guidance only. Agent-scoped hooks are a preview feature gated on `chat.useCustomAgentHooks`; enabling that setting will not change anything until a hook exists to load. `doctor` will report `read redirection active: no (unsupported on this client)`, which is accurate rather than a misconfiguration.
+
+   If you want classification on VS Code, install the repository-scoped Copilot surface instead — `.github/hooks/preToolUse.json` is read by Copilot CLI, and VS Code shares `.github/agents/` but not that hook path. Say which you did.
 
 10. Copy the client's agent templates. The optimizer's own config, state directory and hook command are repository-scoped, but agent definitions can additionally be installed user-wide, so both destinations are listed where a client supports them:
    - **Claude Code** (repository): copy `examples/token-optimizer/claude/platform-bulk-reader.md` to `.claude/agents/platform-bulk-reader.md`
@@ -319,7 +343,12 @@ Steps:
    fi
    ```
 
-2. **worker model resolved** — read the config's `worker_model` and report what the client would resolve it to. On Claude Code, the agent definition's frontmatter `model:` field is the request, and the resolved model depends on the provider. On Copilot CLI, the requested model is directly in the config.
+2. **worker model** — report the **requested** and the **observed** model as two separate values, and never present a configuration value as a resolved one.
+
+   - **requested**: the config's `worker_model`, cross-checked against the installed agent's frontmatter `model:`. If those two disagree, say so — it means `setup` did not finish wiring the model, and the agent will run something other than what the config claims.
+   - **observed**: only from a recorded probe run. If no probe has run, print `observed: unverified (run .token-optimizer/probe/run-probe.sh)` and make no claim about what the worker actually used.
+
+   A requested model is not evidence. An invocation-time override, a cost-tier cap, or an `Auto` session can all resolve something else, so reporting the config value as "resolved" would assert exactly what has not been checked.
 
    When resolution cannot be observed from static files (e.g., Bedrock mapping is account-specific), print `unverified` and make **no** cheaper-routing claim:
    ```
@@ -359,7 +388,7 @@ Steps:
    - Whether `.token-optimizer/state/` exists (without it recovery cannot bound and the core will not redirect)
    - Whether `chat.useCustomAgentHooks` is set on VS Code (required for agent-scoped hooks)
    - Whether `disableAllHooks` is set in Copilot's config (if true, no hooks fire at all)
-   - Whether each worker budget is natively enforced or instruction-only (on Claude Code, agent-level `max_tokens`, `timeout`, and `max_iterations` are natively enforced; on other clients, budgets are instruction-only)
+   - Report `max_delegations_per_task`, `max_worker_retries` and `max_worker_seconds` as **instruction-only on every client**. They are carried to the worker in the redirect reason and nothing enforces them. Do not claim otherwise: `max_tokens`, `timeout` and `max_iterations` are not documented Claude subagent frontmatter fields, and the shipped worker sets no limit of any kind. If a client gains an enforceable control, name that control and report it separately from these three.
 
 **Validation:**
 ```
@@ -548,7 +577,18 @@ yq eval '.enabled' .token-optimizer.yaml
 
 ## Mode: remove
 
-Remove assets carrying the ownership marker. The marker is authoritative: `setup` injects it, so no shipped-file hash can ever match a generated asset, and gating deletion on a hash match would make uninstall silently inert. A marked asset whose content differs from what `setup` would generate is still removed, and reported as locally modified. An asset with no marker is never touched, only listed for manual review.
+Remove only assets this command installed and the user has not since edited.
+
+Two properties have to hold at once, and an earlier revision traded one away for the other. Gating deletion on a hash of the *shipped* file made uninstall inert, because `setup` injects an ownership marker and that changes the content. Dropping the hash entirely fixed uninstall but started deleting files the user had edited — losing their work to a command whose own wizard promises "owned, unmodified assets".
+
+Both hold if `setup` records the hash of what it actually **generated**, marker included. So:
+
+- `setup` writes a manifest at `.token-optimizer/installed.sha256`, one line per installed asset: the SHA-256 of the file **as written**, and its path.
+- `remove` recomputes each hash. Match means this command wrote it and nobody has touched it since — delete.
+- Mismatch means the user edited it. **Preserve it**, and report it as modified with its path so they can decide.
+- No marker and no manifest entry means it is not ours. Never touch it; list it for manual review.
+
+The marker proves ownership. It does not prove deletion is safe.
 
 Steps:
 
@@ -565,7 +605,7 @@ Steps:
 
 3. For each asset carrying the ownership marker:
    - Remove it immediately
-   - If the asset's content differs from what `setup` would generate (compare against `examples/token-optimizer/`), report it as "removed (locally modified)"
+   - If the recomputed SHA-256 does not match the line in `.token-optimizer/installed.sha256`, the user has edited it: **do not delete it**. Report `preserved (locally modified): <path>` and continue with the rest.
    - The ownership marker is authoritative because `setup` injects it, so no shipped-file hash can match a generated asset
    
    For assets with no ownership marker:

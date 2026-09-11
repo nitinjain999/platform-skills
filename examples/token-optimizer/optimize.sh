@@ -51,6 +51,8 @@ P_COMMAND=""
 P_AGENT_TYPE=""
 P_AGENT_ID=""
 P_SESSION=""
+P_OUTPUT_MODE=""
+P_HEAD_LIMIT=0
 
 usage() {
   cat <<'EOF'
@@ -253,6 +255,7 @@ normalize_payload() {
   local raw="${1:-}"
   P_TOOL=""; P_PATH=""; P_OFFSET=0; P_LIMIT=0
   P_COMMAND=""; P_AGENT_TYPE=""; P_AGENT_ID=""; P_SESSION=""
+  P_OUTPUT_MODE=""; P_HEAD_LIMIT=0
 
   command -v jq >/dev/null 2>&1 || { degrade "jq not installed"; return 1; }
 
@@ -260,8 +263,19 @@ normalize_payload() {
   local item
   while IFS= read -r -d '' item; do f+=("$item"); done < <(
     printf '%s' "$raw" | jq -j '
-      def obj(g): (g | if type == "object" then . else {} end);
-      (obj(.tool_input) + obj(.toolArgs)) as $a
+      # A client may send tool arguments as an object OR as a JSON-encoded
+      # STRING. Coercing a string to {} silently discarded the path, so every
+      # read arrived unclassified and unlogged. Parse the string; if it is not
+      # valid JSON, report malformed rather than swallowing it.
+      def parsed(g):
+        g | if   type == "object" then {ok: true,  v: .}
+            elif type == "null"   then {ok: true,  v: {}}
+            elif type == "string" then (try {ok: true, v: fromjson} catch {ok: false, v: {}})
+            else {ok: false, v: {}} end;
+      parsed(.tool_input) as $ti
+      | parsed(.toolArgs) as $ta
+      | (($ti.v | if type == "object" then . else {} end)
+         + ($ta.v | if type == "object" then . else {} end)) as $a
       | [ (.tool_name // .toolName // "")
         , ($a.file_path // $a.path // $a.notebook_path // "")
         , (($a.offset // 0) | tostring)
@@ -270,21 +284,34 @@ normalize_payload() {
         , (.agent_type // .agentType // "")
         , (.agent_id // .agentId // "")
         , (.session_id // .sessionId // "")
+        , ($a.output_mode // "")
+        , (($a.head_limit // 0) | tostring)
+        , (if ($ti.ok and $ta.ok) then "ok" else "malformed" end)
         ] | map(. + "\u0000") | join("")
     ' 2>/dev/null
   )
 
   # Exactly eight fields, or the parse failed. This also catches malformed JSON,
   # where jq emits nothing at all.
-  if [[ "${#f[@]}" -ne 8 ]]; then
-    degrade "payload parse failed (${#f[@]} of 8 fields)"
+  if [[ "${#f[@]}" -ne 11 ]]; then
+    degrade "payload parse failed (${#f[@]} of 11 fields)"
     return 1
   fi
 
   P_TOOL="${f[0]}"; P_PATH="${f[1]}"; P_OFFSET="${f[2]}"; P_LIMIT="${f[3]}"
   P_COMMAND="${f[4]}"; P_AGENT_TYPE="${f[5]}"; P_AGENT_ID="${f[6]}"; P_SESSION="${f[7]}"
+  P_OUTPUT_MODE="${f[8]}"; P_HEAD_LIMIT="${f[9]}"
   is_uint "$P_OFFSET" || P_OFFSET=0
   is_uint "$P_LIMIT"  || P_LIMIT=0
+  is_uint "$P_HEAD_LIMIT" || P_HEAD_LIMIT=0
+
+  # Malformed tool arguments must not pass as an empty read. Fail open as
+  # always, but say so, so an unclassifiable payload is visible in the log
+  # instead of looking like a small read.
+  if [[ "${f[10]}" != "ok" ]]; then
+    degrade "tool arguments were neither an object nor valid JSON"
+    return 1
+  fi
   return 0
 }
 
@@ -312,14 +339,45 @@ range_bytes() {
   printf '%s' "$(( n ))"
 }
 
-is_read_tool() {
+# Tools whose output IS the file's content, so the file's size predicts the
+# cost of the call.
+is_content_read_tool() {
   local name
   name="$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')"
   case "$name" in
-    read|view|cat|glob|grep|search|find|ls|list|notebookread|readfile|str_replace_editor_view)
-      return 0 ;;
+    read|view|cat|notebookread|readfile|str_replace_editor_view) return 0 ;;
     *) return 1 ;;
   esac
+}
+
+# Tools whose output is DERIVED from the file — a count, a list of paths, the
+# matching lines. The file's size says nothing about the size of that output.
+# Classifying these by file size denied a `Grep` with output_mode=count against a
+# 1000-line file, which returns a single number: a false positive that makes the
+# optimizer look broken and costs a delegation for nothing.
+is_search_tool() {
+  local name
+  name="$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')"
+  case "$name" in
+    grep|search|glob|find|ls|list|codebase|usages) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# A search is in scope only when the payload states a bound we can size. A
+# content-mode search with an explicit head_limit requests that many lines; a
+# count or a filenames-only search returns effectively nothing; an unbounded
+# content search cannot be predicted from the file at all.
+search_requested_lines() {
+  # search_requested_lines <output_mode> <head_limit>  -> lines, or empty if unsizable
+  local mode head
+  mode="$(printf '%s' "${1:-}" | tr '[:upper:]' '[:lower:]')"
+  head="${2:-0}"
+  case "$mode" in
+    count|files_with_matches|files-with-matches) printf '0' ; return 0 ;;
+  esac
+  if is_uint "$head" && [[ "$head" -gt 0 ]]; then printf '%s' "$head"; return 0; fi
+  return 1
 }
 
 REQ_LINES=0
@@ -620,12 +678,33 @@ run_hook_mode() {
     return 0
   fi
 
-  is_read_tool "$P_TOOL" || return 0
   [[ -n "$P_PATH" ]] || return 0
+
+  local eff_limit="$P_LIMIT" eff_offset="$P_OFFSET"
+  if is_content_read_tool "$P_TOOL"; then
+    : # the file's size is the cost; classify it as given
+  elif is_search_tool "$P_TOOL"; then
+    # Size the SEARCH OUTPUT, never the underlying file.
+    local slines
+    if ! slines="$(search_requested_lines "$P_OUTPUT_MODE" "$P_HEAD_LIMIT")"; then
+      # Unbounded content search: its output cannot be derived from the file, so
+      # there is nothing honest to classify. Pass.
+      log_line "audit" "search_unsizable" "${P_TOOL} mode=${P_OUTPUT_MODE:-unset}" "$P_PATH"
+      return 0
+    fi
+    if [[ "$slines" -eq 0 ]]; then
+      # count / files_with_matches: the result is a number or a path list.
+      return 0
+    fi
+    eff_limit="$slines"
+    eff_offset=0
+  else
+    return 0
+  fi
 
   # Direct call, not $( ) — see classify_size's comment. REQ_LINES/REQ_BYTES
   # must survive for cumulative_add and the log.
-  classify_size "$P_PATH" "$P_OFFSET" "$P_LIMIT" >/dev/null
+  classify_size "$P_PATH" "$eff_offset" "$eff_limit" >/dev/null
   class="$CLASS_RESULT"
   cumulative_add "$REQ_LINES" "$REQ_BYTES"
   decision="$(resolve_decision "$class")"

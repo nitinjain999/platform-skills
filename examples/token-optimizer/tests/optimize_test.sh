@@ -264,6 +264,34 @@ cmd_out="$(bash -c 'source '"$OPT"' --source-only
   printf "%s" "$P_SESSION"')"
 eq "multiline shell command does not shift the session id" "S-CMD" "$cmd_out"
 
+echo "=== searches are sized by their output, never by the underlying file ==="
+# A Grep with output_mode=count against a 1000-line file returns one number.
+# Classifying it by file size denied it — a false positive that spends a
+# delegation on nothing and makes the optimizer look broken.
+grep_payload() { printf '{"tool_name":"Grep","tool_input":{"path":"%s/large.tf","pattern":"line"%s},"session_id":"S-G"}' "$W" "$1"; }
+rm -f .token-optimizer/state/*
+eq "grep output_mode=count is not denied"            "" "$(hook "$(grep_payload ',"output_mode":"count"')" claude redirect.yaml)"
+eq "grep files_with_matches is not denied"           "" "$(hook "$(grep_payload ',"output_mode":"files_with_matches"')" claude redirect.yaml)"
+eq "grep content with small head_limit is not denied" "" "$(hook "$(grep_payload ',"output_mode":"content","head_limit":10')" claude redirect.yaml)"
+eq "unbounded content grep is not denied"            "" "$(hook "$(grep_payload ',"output_mode":"content"')" claude redirect.yaml)"
+rm -f .token-optimizer/state/*
+big_grep="$(hook "$(grep_payload ',"output_mode":"content","head_limit":900')" claude redirect.yaml)"
+case "$big_grep" in *'"permissionDecision":"deny"'*) ok "grep content with head_limit above max_lines IS denied" ;; *) no "grep head_limit=900 denied" "deny envelope" "$big_grep" ;; esac
+# control: the same file read wholesale must still be denied
+rm -f .token-optimizer/state/*
+whole="$(hook "$BIG" claude redirect.yaml)"
+case "$whole" in *'"permissionDecision":"deny"'*) ok "control: a whole-file Read is still denied" ;; *) no "control: whole-file Read denied" "deny envelope" "$whole" ;; esac
+
+echo "=== tool arguments sent as a JSON string are parsed, not discarded ==="
+argstr="$(bash -c 'source '"$OPT"' --source-only
+  normalize_payload "{\"toolName\":\"view\",\"toolArgs\":\"{\\\"path\\\":\\\"/x/large.tf\\\"}\"}"
+  printf "%s" "$P_PATH"')"
+eq "JSON-string toolArgs yields the path" "/x/large.tf" "$argstr"
+malformed="$(bash -c 'source '"$OPT"' --source-only
+  DEGRADED=0; normalize_payload "{\"toolName\":\"view\",\"toolArgs\":\"cat main.tf\"}" >/dev/null 2>&1
+  printf "%s" "$DEGRADED"')"
+eq "non-JSON string toolArgs degrades rather than passing silently" "1" "$malformed"
+
 echo
 echo "PASS: $PASS   FAIL: $FAIL"
 [[ "$FAIL" -eq 0 ]] || exit 1
