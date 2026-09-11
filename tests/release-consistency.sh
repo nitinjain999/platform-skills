@@ -329,7 +329,17 @@ echo "=== Docs site ==="
 # every command and reference reaches the site. Keeping a second copy here is
 # how this repo's YAML and Terraform gates diverged between validate.yml and
 # release.yml; one gate, one home.
-pass "website checks delegated to tests/website-coverage.sh"
+# Actually invoke it. A bare `pass` here reported "safe to tag" while website
+# coverage or derivation checks were failing — a fake green on the one gate that
+# is documented as the pre-tag check.
+if bash tests/website-coverage.sh > /tmp/website-coverage.$$.log 2>&1; then
+  pass "tests/website-coverage.sh passed"
+  rm -f /tmp/website-coverage.$$.log
+else
+  fail "tests/website-coverage.sh FAILED — output follows"
+  sed 's/^/    /' /tmp/website-coverage.$$.log
+  rm -f /tmp/website-coverage.$$.log
+fi
 
 # ---------------------------------------------------------------------------
 echo ""

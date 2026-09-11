@@ -438,8 +438,6 @@ jobs:
       - name: Run helmcheck validation
         run: bash tests/validate-helmcheck.sh
 
-      - name: Run website coverage validation
-        run: bash tests/website-coverage.sh
 
   summary:
     name: Validation Summary

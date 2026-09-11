@@ -69,10 +69,20 @@ echo "=== Docs site derives versions and counts rather than hardcoding ==="
 # check while reintroducing the drift. So assert the ASSIGNMENTS reference the
 # loaded values, and separately reject a quoted literal in either field.
 
-if grep -qE "pluginVersion:[[:space:]]*[A-Za-z_][A-Za-z0-9_]*\.version" website/docusaurus.config.js; then
-  pass "docusaurus.config.js assigns pluginVersion from the loaded manifest"
+# Bind to the specific identifier, not "anything ending in .version". A dead
+# `pluginManifest` require plus `pluginVersion: hardcoded.version` satisfied the
+# looser pattern and still shipped a stale literal, and CI skips the
+# evaluated-config check, so nothing else would have caught it.
+if grep -qE "^[[:space:]]*const[[:space:]]+pluginManifest[[:space:]]*=[[:space:]]*require\('\.\./\.claude-plugin/plugin\.json'\)" website/docusaurus.config.js; then
+  pass "docusaurus.config.js binds the manifest require to pluginManifest"
 else
-  fail "docusaurus.config.js must assign pluginVersion from the required plugin.json, not a literal"
+  fail "docusaurus.config.js must assign require('../.claude-plugin/plugin.json') to pluginManifest"
+fi
+
+if grep -qE "pluginVersion:[[:space:]]*pluginManifest\.version[[:space:]]*,?" website/docusaurus.config.js; then
+  pass "customFields.pluginVersion is bound to pluginManifest.version"
+else
+  fail "customFields.pluginVersion must be exactly pluginManifest.version"
 fi
 
 if grep -qE "pluginVersion:[[:space:]]*['\"]" website/docusaurus.config.js; then
@@ -84,13 +94,19 @@ fi
 if grep -qE "commandCount:[[:space:]]*['\"]?[0-9]" website/docusaurus.config.js; then
   fail "docusaurus.config.js assigns commandCount a literal — derive it by reading commands/"
 else
-  pass "commandCount is not a literal"
+  pass "commandCount is not a literal in customFields"
 fi
 
-if grep -q "readdirSync" website/docusaurus.config.js; then
-  pass "docusaurus.config.js derives the command count by reading commands/"
+# Assert the INITIALIZER CHAIN, not just that a readdirSync exists somewhere.
+# `const commandCount = 44` alongside an unrelated readdirSync passed both of the
+# previous independent checks. Flatten newlines so the multi-line chain is one
+# statement, then require readdirSync and the commands directory to appear inside
+# commandCount's own initializer, before its terminating semicolon.
+if tr '\n' ' ' < website/docusaurus.config.js \
+  | grep -qE "const[[:space:]]+commandCount[[:space:]]*=[^;]*readdirSync[^;]*'commands'[^;]*;"; then
+  pass "commandCount's initializer reads the commands/ directory"
 else
-  fail "docusaurus.config.js must derive the command count by reading commands/"
+  fail "commandCount must be initialized by reading the commands/ directory, e.g. fs.readdirSync(path.join(__dirname, '..', 'commands'))"
 fi
 
 # Strongest available check: evaluate the config and compare against the real
