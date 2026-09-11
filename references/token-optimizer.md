@@ -61,6 +61,8 @@ Claude Code is the only client where redirection is architecturally possible. Ev
 
 `handoffs` appears in the Copilot templates as a frontmatter field but is **not** confirmed to be a subagent dispatch. Presence of a field means the field parses, not that an execution model exists. No delegation primitive is verified as working on Copilot CLI or VS Code until a runtime fixture runs and a human confirms the answer-key path list appeared in the parent's context.
 
+Read "unverified" strictly: not demonstrated, not proven absent. GitHub documents an `agent` tool alias, and its absence from a particular CLI build's `--help` output is not evidence that delegation cannot work — tool availability has to be checked against the installed client version and the official documentation. `handoffs` does not settle it in the other direction either, since it does not demonstrate a separate worker context or a return to the parent. Both remain open, which is why no delegation or saving is claimed for these clients.
+
 ## The capability probe gate
 
 Three questions determine whether a client can reach `redirect` mode:

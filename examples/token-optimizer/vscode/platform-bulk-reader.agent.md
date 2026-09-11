@@ -56,3 +56,5 @@ So this frontmatter is a request, not proof. Confirm the model that actually res
 ## Delegation status: unverified
 
 Delegation on this client is not confirmed by a runtime fixture. VS Code documents handoffs as user-selected agent transitions, which save no parent context. Treat this as routing guidance until `doctor` reports otherwise.
+
+**Unverified means not demonstrated — not proven absent.** GitHub documents an `agent` tool alias, and its absence from a given CLI build's `--help` output is not evidence that delegation is unavailable. Check tool availability against the installed client version and the official documentation before concluding anything. Equally, `handoffs` on its own does not demonstrate the opposite: it does not prove a separate worker context or a return to the parent. Neither reading is settled here, which is exactly why nothing claims working delegation or a saving until an authenticated runtime test shows both.

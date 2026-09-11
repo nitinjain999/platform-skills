@@ -432,6 +432,24 @@ classify_size() {
   echo "pass"
 }
 
+# Classify by a REQUESTED LINE COUNT alone, with no reference to any file.
+# Search output is not a prefix of the source: a content search for a pattern on
+# the last line of a 40 KiB single-line file returns 7 bytes, while the first
+# `head_limit` source lines are the whole 40 KiB. Measuring source bytes to size
+# search output denied that search. Bytes are unknowable before the search runs,
+# so they are not guessed — REQ_BYTES stays 0 and only the line bound applies.
+classify_lines_only() {
+  # classify_lines_only <requested_lines>  ->  "pass" | "oversized"
+  local requested="${1:-0}"
+  REQ_LINES=0; REQ_BYTES=0; TOTAL_LINES=0
+  is_uint "$requested" || { CLASS_RESULT="pass"; echo "pass"; return 0; }
+  REQ_LINES="$requested"
+  if [[ "$REQ_LINES" -gt "$MAX_LINES" ]]; then
+    CLASS_RESULT="oversized"; echo "oversized"; return 0
+  fi
+  CLASS_RESULT="pass"; echo "pass"
+}
+
 is_whole_file_read() {
   # Reporting only. Never affects the pass/fail outcome.
   local total="${1:-0}" requested="${2:-0}" ratio
@@ -696,8 +714,27 @@ run_hook_mode() {
       # count / files_with_matches: the result is a number or a path list.
       return 0
     fi
-    eff_limit="$slines"
-    eff_offset=0
+    # head_limit is an UPPER BOUND on output lines. Size it on that alone and
+    # never touch the source file — see classify_lines_only.
+    classify_lines_only "$slines" >/dev/null
+    class="$CLASS_RESULT"
+    cumulative_add "$REQ_LINES" "$REQ_BYTES"
+    decision="$(resolve_decision "$class")"
+    case "$decision" in
+      redirect)
+        if [[ "$(redirect_attempts "$P_PATH")" -ge 1 ]]; then
+          log_line "redirect_exhausted" "recovery_bound" "$P_TOOL" "$P_PATH"; return 0
+        fi
+        if ! record_redirect_attempt "$P_PATH"; then
+          log_line "recovery_unavailable" "state_write_failed" "$P_TOOL" "$P_PATH"; return 0
+        fi
+        log_line "redirect" "search_head_limit" "$P_TOOL" "$P_PATH"
+        emit_redirect "$(redirect_reason "$P_PATH")"
+        exit $?
+        ;;
+      audit) log_line "would_redirect" "search_head_limit" "$P_TOOL" "$P_PATH"; return 0 ;;
+      *) return 0 ;;
+    esac
   else
     return 0
   fi

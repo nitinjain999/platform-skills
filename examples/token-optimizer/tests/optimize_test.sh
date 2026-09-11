@@ -292,6 +292,26 @@ malformed="$(bash -c 'source '"$OPT"' --source-only
   printf "%s" "$DEGRADED"')"
 eq "non-JSON string toolArgs degrades rather than passing silently" "1" "$malformed"
 
+echo "=== search output is never sized from unrelated source bytes ==="
+# 40,000 unrelated characters on line 1, then `needle` on line 2. A content search
+# for needle with head_limit 10 returns 7 bytes, but sizing the first 10 SOURCE
+# lines measured 40,008 and denied it.
+{ awk 'BEGIN{s="";for(i=1;i<=40000;i++) s=s "x"; print s}'; echo "needle"; } > "$W/hay.txt"
+hay_payload() { printf '{"tool_name":"Grep","tool_input":{"path":"%s/hay.txt","pattern":"needle","output_mode":"content","head_limit":%s},"session_id":"S-H"}' "$W" "$1"; }
+rm -f .token-optimizer/state/*
+eq "small head_limit on a huge-line file is not denied" "" "$(hook "$(hay_payload 10)" claude redirect.yaml)"
+rm -f .token-optimizer/state/*
+big_hay="$(hook "$(hay_payload 900)" claude redirect.yaml)"
+case "$big_hay" in *'"permissionDecision":"deny"'*) ok "head_limit above max_lines is still denied" ;; *) no "head_limit=900 denied" "deny envelope" "$big_hay" ;; esac
+# the same file read wholesale IS large, and must still be denied on real bytes
+rm -f .token-optimizer/state/*
+hay_read="$(hook "{\"tool_name\":\"Read\",\"tool_input\":{\"file_path\":\"$W/hay.txt\"},\"session_id\":\"S-H\"}" claude redirect.yaml)"
+case "$hay_read" in *'"permissionDecision":"deny"'*) ok "a whole-file Read of the same file is denied on real bytes" ;; *) no "whole-file Read denied" "deny envelope" "$hay_read" ;; esac
+# and the line-only classifier must never report source bytes
+lineonly="$(bash -c 'source '"$OPT"' --source-only; MAX_LINES=350; MAX_BYTES=32768
+  classify_lines_only 10 >/dev/null; printf "%s|%s" "$REQ_LINES" "$REQ_BYTES"')"
+eq "classify_lines_only reports no bytes at all" "10|0" "$lineonly"
+
 echo
 echo "PASS: $PASS   FAIL: $FAIL"
 [[ "$FAIL" -eq 0 ]] || exit 1
