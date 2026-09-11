@@ -239,36 +239,50 @@ effective_mode_reason() {
 normalize_payload() {
   # Sets P_* globals. Returns 1 on parse failure so the caller sees it — an
   # echoing version captured with $( ) loses DEGRADED to the subshell.
-  local raw="${1:-}" out
+  #
+  # Fields are NUL-delimited and read through process substitution. A NUL byte
+  # cannot appear inside a JSON string, so payload content can never forge a
+  # field boundary. A NEWLINE can (as \n), which is why an earlier
+  # newline-delimited parse was exploitable: a file_path containing \n split
+  # across positional lines, shifting every later field — the offset landed in
+  # limit, the session id was lost, and the truncated path failed
+  # classification so an oversized read passed unchallenged.
+  #
+  # Command substitution must NOT be used to capture this: bash silently drops
+  # NUL bytes, so the delimiters would vanish before they could be read.
+  local raw="${1:-}"
   P_TOOL=""; P_PATH=""; P_OFFSET=0; P_LIMIT=0
   P_COMMAND=""; P_AGENT_TYPE=""; P_AGENT_ID=""; P_SESSION=""
 
   command -v jq >/dev/null 2>&1 || { degrade "jq not installed"; return 1; }
 
-  out="$(printf '%s' "$raw" | jq -r '
-    def obj(f): (f | if type == "object" then . else {} end);
-    (obj(.tool_input) + obj(.toolArgs)) as $a
-    | [ (.tool_name // .toolName // "")
-      , ($a.file_path // $a.path // $a.notebook_path // "")
-      , (($a.offset // 0) | tostring)
-      , (($a.limit // 0) | tostring)
-      , ($a.command // "")
-      , (.agent_type // .agentType // "")
-      , (.agent_id // .agentId // "")
-      , (.session_id // .sessionId // "")
-      ] | .[]
-  ' 2>/dev/null)" || { degrade "payload parse failed"; return 1; }
+  local -a f=()
+  local item
+  while IFS= read -r -d '' item; do f+=("$item"); done < <(
+    printf '%s' "$raw" | jq -j '
+      def obj(g): (g | if type == "object" then . else {} end);
+      (obj(.tool_input) + obj(.toolArgs)) as $a
+      | [ (.tool_name // .toolName // "")
+        , ($a.file_path // $a.path // $a.notebook_path // "")
+        , (($a.offset // 0) | tostring)
+        , (($a.limit // 0) | tostring)
+        , ($a.command // "")
+        , (.agent_type // .agentType // "")
+        , (.agent_id // .agentId // "")
+        , (.session_id // .sessionId // "")
+        ] | map(. + "\u0000") | join("")
+    ' 2>/dev/null
+  )
 
-  [[ -z "$out" ]] && { degrade "payload parse failed"; return 1; }
+  # Exactly eight fields, or the parse failed. This also catches malformed JSON,
+  # where jq emits nothing at all.
+  if [[ "${#f[@]}" -ne 8 ]]; then
+    degrade "payload parse failed (${#f[@]} of 8 fields)"
+    return 1
+  fi
 
-  P_TOOL="$(printf '%s\n' "$out" | sed -n 1p)"
-  P_PATH="$(printf '%s\n' "$out" | sed -n 2p)"
-  P_OFFSET="$(printf '%s\n' "$out" | sed -n 3p)"
-  P_LIMIT="$(printf '%s\n' "$out" | sed -n 4p)"
-  P_COMMAND="$(printf '%s\n' "$out" | sed -n 5p)"
-  P_AGENT_TYPE="$(printf '%s\n' "$out" | sed -n 6p)"
-  P_AGENT_ID="$(printf '%s\n' "$out" | sed -n 7p)"
-  P_SESSION="$(printf '%s\n' "$out" | sed -n 8p)"
+  P_TOOL="${f[0]}"; P_PATH="${f[1]}"; P_OFFSET="${f[2]}"; P_LIMIT="${f[3]}"
+  P_COMMAND="${f[4]}"; P_AGENT_TYPE="${f[5]}"; P_AGENT_ID="${f[6]}"; P_SESSION="${f[7]}"
   is_uint "$P_OFFSET" || P_OFFSET=0
   is_uint "$P_LIMIT"  || P_LIMIT=0
   return 0

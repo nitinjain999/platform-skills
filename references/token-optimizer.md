@@ -188,7 +188,7 @@ The core denies an oversized read **at most once per session per file**. The sec
 
 On the first oversized read of a target, if state can be durably persisted:
 - `record_redirect_attempt` writes the counter file
-- If the write succeeds, the core denies with exit 2
+- If the write succeeds, the core emits the JSON deny envelope. Real clients (claude, copilot, vscode) exit 0 so the client consumes `permissionDecision` and the reason; only `--platform=none` exits 2, as its scriptable dry-run signal
 - The second read of the same target sees `redirect_attempts >= 1` and passes
 
 If the write fails:

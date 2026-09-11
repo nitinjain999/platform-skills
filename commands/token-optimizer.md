@@ -186,8 +186,16 @@ Steps:
    ```bash
    mkdir -p .token-optimizer/probe
    cp examples/token-optimizer/claude/probe/run-probe.sh .token-optimizer/probe/run-probe.sh
-   cp examples/token-optimizer/claude/probe/fixture.json .token-optimizer/probe/fixture.json
    chmod +x .token-optimizer/probe/run-probe.sh
+
+   # Seed the fixture ONLY on first install. An unconditional copy would
+   # overwrite a fixture the operator had already populated by running the
+   # probe against a live session, silently reverting delegation to unverified
+   # while the config still said `redirect` — so `doctor` would contradict the
+   # mode setup had just accepted. The script is always refreshed; the recorded
+   # observation never is.
+   [ -f .token-optimizer/probe/fixture.json ] \
+     || cp examples/token-optimizer/claude/probe/fixture.json .token-optimizer/probe/fixture.json
    ```
    The probe script resolves its output path relative to its own location, so running `.token-optimizer/probe/run-probe.sh` updates `.token-optimizer/probe/fixture.json`.
 

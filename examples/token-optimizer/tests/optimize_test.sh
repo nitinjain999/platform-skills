@@ -251,6 +251,19 @@ hookrc "$SHELLBIG_AUD" claude audit_log.yaml >/dev/null
 count_audit_shell="$(wc -l < "$W/audit.log" 2>/dev/null | tr -d ' ')"
 eq "audit mode: shell logs one line" "1" "$count_audit_shell"
 
+echo "=== payload content cannot forge a field boundary (newline in file_path) ==="
+# A newline-delimited parse let a file_path containing a newline shift every
+# later field: the offset landed in limit, the session id was lost, and the
+# truncated path failed classification so an oversized read passed unchallenged.
+shift_out="$(bash -c 'source '"$OPT"' --source-only
+  normalize_payload "{\"tool_name\":\"Read\",\"tool_input\":{\"file_path\":\"/a/b.tf\\nEXTRA\",\"offset\":7,\"limit\":9},\"agent_type\":\"w\",\"session_id\":\"S-SHIFT\"}"
+  printf "%s|%s|%s|%s" "$P_OFFSET" "$P_LIMIT" "$P_AGENT_TYPE" "$P_SESSION"')"
+eq "newline in path does not shift offset/limit/agent/session" "7|9|w|S-SHIFT" "$shift_out"
+cmd_out="$(bash -c 'source '"$OPT"' --source-only
+  normalize_payload "{\"toolName\":\"bash\",\"toolArgs\":{\"command\":\"cat /a/b.tf\\nrm -rf /\"},\"session_id\":\"S-CMD\"}"
+  printf "%s" "$P_SESSION"')"
+eq "multiline shell command does not shift the session id" "S-CMD" "$cmd_out"
+
 echo
 echo "PASS: $PASS   FAIL: $FAIL"
 [[ "$FAIL" -eq 0 ]] || exit 1
