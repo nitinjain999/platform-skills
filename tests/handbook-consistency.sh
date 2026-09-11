@@ -118,4 +118,7 @@ bash tests/token-optimizer-script.sh
 echo "Running token-optimizer policy core tests..."
 bash examples/token-optimizer/tests/optimize_test.sh
 
+echo "Running website coverage checks..."
+bash tests/website-coverage.sh
+
 echo "✅ Handbook consistency checks passed"

@@ -188,10 +188,51 @@ const FEATURES = [
   },
 ];
 
-function FeatureStrip() {
+const GOVERNANCE_CAPABILITIES = [
+  {
+    name: '/platform-skills:ai-governance',
+    desc: 'Decides what an AI agent is allowed to do in your repo. Real-time session hooks for Copilot and Claude Code deny edits to protected paths and dangerous shell commands before they run, and a merge-time check catches whatever bypasses them — a different tool, a manual push, or an edit to the governance files themselves. Three enforcement tiers so a rollout starts by logging, not blocking.',
+    link: '/platform-skills/commands/ai-governance',
+  },
+  {
+    name: '/platform-skills:token-optimizer',
+    desc: 'Decides which model does the reading. Broad repository discovery moves to a cheaper worker through each client’s native subagent, while the main agent keeps decisions and targeted verification. Ships a runnable benchmark rather than a savings claim, and reports delegation, resolved model, redirection and read limit as four separate states so nothing reads as proven when it is not.',
+    link: '/platform-skills/commands/token-optimizer',
+  },
+];
+
+function GovernanceSection() {
   return (
     <section className="feature-strip">
-      <h2 className="feature-strip__heading">41 commands. Every domain a platform team touches.</h2>
+      <h2 className="feature-strip__heading">
+        Govern what your agent does, and what it costs
+      </h2>
+      <p className="install-section__sub">
+        Two companion commands. One bounds an agent&apos;s authority, the other bounds its
+        spend. They register on the same hook event and compose deliberately: the
+        governance gate fails closed so it never stops enforcing, the cost optimizer
+        fails open so it never blocks work.
+      </p>
+      <div className="command-cards">
+        {GOVERNANCE_CAPABILITIES.map((c) => (
+          <div className="command-card" key={c.name}>
+            <div className="command-card__name">
+              <Link to={c.link}>{c.name}</Link>
+            </div>
+            <div className="command-card__desc">{c.desc}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function FeatureStrip() {
+  const {siteConfig} = useDocusaurusContext();
+  const commandCount = siteConfig.customFields?.commandCount as number;
+  return (
+    <section className="feature-strip">
+      <h2 className="feature-strip__heading">{commandCount} commands. Every domain a platform team touches.</h2>
       <div className="feature-grid">
         {FEATURES.map((f) => (
           <div className="feature-tile" key={f.title}>
@@ -276,6 +317,7 @@ export default function Home(): ReactNode {
         <Hero />
         <ProblemStatement />
         <StarScenarios />
+        <GovernanceSection />
         <FeatureStrip />
         <InstallSection />
       </main>
