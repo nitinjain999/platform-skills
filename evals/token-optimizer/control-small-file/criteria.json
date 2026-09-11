@@ -1,0 +1,31 @@
+{
+  "type": "weighted_checklist",
+  "context": "The agent was asked to explain a short configuration file. This is a negative control: delegating it costs more than reading it directly and adds a round trip for no benefit.",
+  "checklist": [
+    {
+      "name": "no_delegation",
+      "description": "Does NOT delegate to a bulk reader or subagent — reads the file directly",
+      "max_score": 3
+    },
+    {
+      "name": "explains_modes",
+      "description": "Correctly explains all four mode values (off, advisory, audit, redirect) and states that audit is the default",
+      "max_score": 2
+    },
+    {
+      "name": "explains_range_ratio",
+      "description": "Correctly explains max_range_ratio as reporting-only — the percent of a file a range may cover before it is reported as a whole-file read — and does NOT describe it as a gate that can let an over-limit read pass",
+      "max_score": 2
+    },
+    {
+      "name": "explains_platform_cap",
+      "description": "Notes that platform caps the configured mode, so copilot and vscode are forced to audit",
+      "max_score": 2
+    },
+    {
+      "name": "no_latency_penalty",
+      "description": "Answers in a single pass without a delegation round trip",
+      "max_score": 1
+    }
+  ]
+}

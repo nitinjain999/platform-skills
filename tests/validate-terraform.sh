@@ -15,9 +15,20 @@ cd "$ROOT_DIR"
 
 # examples/demo is excluded because demo dirs intentionally pair a bad file with
 # its fixed version; as a single module they declare conflicting resources.
+#
+# evals/*/evidence is excluded for the same class of reason. Benchmark fixture
+# evidence is an EXCERPT copied so a fixture is self-contained for an agent to
+# read, not a module anyone applies. Some are deliberately partial: the IAM
+# control ships only the one policy file its question is about, so it references
+# a bucket and an assume-role document declared in the sibling files it does not
+# carry, and `terraform validate` reports four undeclared-resource errors.
+# Sweeping them would force every fixture to grow scaffolding unrelated to the
+# discovery question it measures, and would run `terraform init` with a provider
+# download once per fixture.
 TF_DIRS=$(find . -type f -name "*.tf" \
   ! -path "./.git/*" \
   ! -path "./examples/demo/*" \
+  ! -path "./evals/*/evidence/*" \
   ! -path "*/.terraform/*" \
   -exec dirname {} \; | sort -u)
 

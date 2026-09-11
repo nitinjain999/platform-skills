@@ -145,7 +145,7 @@ My Flux Kustomization `apps` is stuck in NotReady with: "context deadline exceed
 - It cannot see your cluster or cloud account — paste the relevant output
 - It works best on one concrete problem at a time, not "review everything"
 
-### All 43 command workflows
+### All 44 command workflows
 
 See [COMMANDS.md](COMMANDS.md) for every command with modes and example prompts:
 
@@ -159,6 +159,7 @@ See [COMMANDS.md](COMMANDS.md) for every command with modes and example prompts:
 | `zizmor` | GitHub Actions workflow security audit; auto-fix, `zizmor.yml` policy, CI gate, pre-commit hook |
 | `kingfisher` | Find, live-validate, map blast radius of, and revoke leaked secrets; baseline tracking, CI gate, pre-commit hook |
 | `ai-governance` | Policy gate for AI coding agents (Copilot, Claude Code): session hooks, merge-time backstop, dry-run, fleet audit, plain-English explain |
+| `token-optimizer` | Route broad repository discovery to a cheaper worker model via native subagents; `doctor` reports delegation, model, redirection, and read limit as four separate states |
 | `gitops` | Flux / Argo CD — `debug` live issues or `audit` a GitOps repo |
 | `helmchart` | Scaffold, review, or security-audit a Helm chart |
 | `kyverno` | Generate, test, audit, or migrate Kyverno policies |

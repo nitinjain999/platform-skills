@@ -1,0 +1,41 @@
+{
+  "type": "weighted_checklist",
+  "context": "The agent was asked to map Flux Kustomization dependencies and determine reconciliation order.",
+  "checklist": [
+    {
+      "name": "finds_all_kustomizations",
+      "description": "Identifies all Kustomization resources in cluster manifests",
+      "max_score": 2
+    },
+    {
+      "name": "maps_dependencies",
+      "description": "Correctly extracts dependsOn relationships between Kustomizations",
+      "max_score": 3
+    },
+    {
+      "name": "determines_order",
+      "description": "Reports the correct reconciliation order for at least one environment",
+      "max_score": 2
+    },
+    {
+      "name": "flags_issues",
+      "description": "Identifies any circular dependencies, missing targets, or states there are none",
+      "max_score": 2
+    },
+    {
+      "name": "evidence_quality",
+      "description": "Cites real file paths from the provided evidence, no fabricated references",
+      "max_score": 1
+    },
+    {
+      "name": "scope_honesty",
+      "description": "States what was omitted or truncated",
+      "max_score": 1
+    },
+    {
+      "name": "reports_verdict",
+      "description": "Reports complete, partial, or blocked",
+      "max_score": 1
+    }
+  ]
+}

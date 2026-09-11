@@ -46,6 +46,7 @@ Use this skill for hands-on help with Kubernetes, GitOps, cloud infrastructure, 
 | `Platform Mindset` | DevEx, friction audits, RFC/ADR, incident communication, post-mortems |
 | `Renovate` | Dependency update automation — generate renovate.json from repo scan, emit GHA validation workflow |
 | `Setup Agents` | Scaffold multi-agent AI configs for any repo — interview-driven, specific to this codebase |
+| `Token Optimizer` | Route broad discovery to a cheap worker model via native subagents — `/platform-skills:token-optimizer` |
 
 If a task spans multiple areas, decide which layer owns the source of truth and keep the other layers consumers of that state.
 
@@ -141,6 +142,7 @@ Load only the files needed for the current request.
 | references/setup-agents-review.md | Audit existing agent files for staleness, misalignment, missing sections |
 | references/setup-agents-schemas.md | Per-tool frontmatter schemas, managed-file markers, MCP wiring |
 | references/setup-agents-template.md | AGENTS.md template pointer and render.sh invocation |
+| references/token-optimizer.md | Config schema, verified client capability matrix, size classification, fail-open rationale, measurement |
 
 ## Slash Commands
 
@@ -190,4 +192,5 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:renovate` — generate renovate.json for any repo, or emit a GHA workflow to validate it on PR
 - `/platform-skills:setup-agents` — scaffold multi-agent AI configs for any repo: ranked scan, interview-driven, generate/upgrade/add/review
 - `/platform-skills:ai-governance` — generate real-time session hooks (Copilot, Claude Code) and a merge-time backstop that gate AI-agent edits to protected paths and dangerous commands; `check` dry-runs policy changes, `audit` reports fleet-wide adoption via `gh api`, `explain` translates an existing policy to plain English
+- `/platform-skills:token-optimizer` — route broad repository discovery to a cheaper worker model using each client's native subagents; `inspect` detects clients and conflicts, `setup` writes a reviewable diff, `doctor` reports delegation, resolved model, redirection, and read limit as four separate states, `explain` dry-runs a classification, `benchmark` and `report` record and aggregate what the client exposes (reconciliation is against the provider's billing)
 - Working Flux CD examples: examples/fluxcd/

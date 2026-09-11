@@ -1,0 +1,46 @@
+{
+  "type": "weighted_checklist",
+  "context": "The agent was asked to deduplicate vulnerability scan findings and prioritize remediation. CVE-2024-1234 appears in two packages (libssl3 and libcrypto3) but is one vulnerability. Critical and high-severity findings must not be omitted.",
+  "checklist": [
+    {
+      "name": "deduplicates_correctly",
+      "description": "Correctly identifies that CVE-2024-1234 is one vulnerability affecting two packages, not two vulnerabilities",
+      "max_score": 3
+    },
+    {
+      "name": "counts_distinct_cves",
+      "description": "Reports the correct count of distinct CVEs (5 distinct CVEs across all findings)",
+      "max_score": 2
+    },
+    {
+      "name": "prioritizes_by_severity_and_fix",
+      "description": "Correctly identifies high/critical findings with fixes (CVE-2024-1234, CVE-2024-3456, CVE-2024-7890) as top priority",
+      "max_score": 2
+    },
+    {
+      "name": "flags_no_fix_available",
+      "description": "Identifies CVE-2024-9012 as having no fix available and requiring mitigation or risk acceptance",
+      "max_score": 2
+    },
+    {
+      "name": "no_critical_finding_lost",
+      "description": "Does NOT omit any critical or high-severity finding in the summary",
+      "max_score": 1
+    },
+    {
+      "name": "evidence_quality",
+      "description": "Cites real CVE IDs and package names from the provided scan results, no fabricated findings",
+      "max_score": 1
+    },
+    {
+      "name": "scope_honesty",
+      "description": "States what was omitted or truncated in the prioritization",
+      "max_score": 1
+    },
+    {
+      "name": "reports_verdict",
+      "description": "Reports complete, partial, or blocked",
+      "max_score": 1
+    }
+  ]
+}

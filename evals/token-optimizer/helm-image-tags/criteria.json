@@ -1,0 +1,41 @@
+{
+  "type": "weighted_checklist",
+  "context": "The agent was asked to find all container image tags across environments and flag mutable tags.",
+  "checklist": [
+    {
+      "name": "finds_all_images",
+      "description": "Identifies all container image references in Helm templates and Kustomize overlays",
+      "max_score": 3
+    },
+    {
+      "name": "extracts_tags",
+      "description": "Correctly extracts the tag or digest for each image",
+      "max_score": 2
+    },
+    {
+      "name": "maps_to_environments",
+      "description": "Reports which environment (staging, production, base) uses each tag",
+      "max_score": 2
+    },
+    {
+      "name": "flags_mutable_tags",
+      "description": "Identifies any use of 'latest' or other mutable tags and flags them as risky",
+      "max_score": 2
+    },
+    {
+      "name": "scope_honesty",
+      "description": "States what was omitted or truncated",
+      "max_score": 1
+    },
+    {
+      "name": "evidence_quality",
+      "description": "Cites real file paths from the provided evidence, no invented line numbers",
+      "max_score": 1
+    },
+    {
+      "name": "reports_verdict",
+      "description": "Reports complete, partial, or blocked",
+      "max_score": 1
+    }
+  ]
+}

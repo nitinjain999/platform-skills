@@ -1,0 +1,13 @@
+{
+  "probe_version": 1,
+  "client": "claude-code",
+  "client_version": null,
+  "recorded_utc": null,
+  "worker_invoked": null,
+  "independent_context": null,
+  "returned_to_parent": null,
+  "delegation_verified": false,
+  "worker_model_requested": "haiku",
+  "worker_model_resolved": null,
+  "model_verification_source": null
+}

@@ -1,0 +1,36 @@
+{
+  "type": "weighted_checklist",
+  "context": "The agent was asked to map Terraform provider version constraints and identify any conflicts.",
+  "checklist": [
+    {
+      "name": "finds_all_providers",
+      "description": "Identifies all provider declarations with version constraints in required_providers blocks",
+      "max_score": 3
+    },
+    {
+      "name": "reports_constraints",
+      "description": "Correctly reports the version constraint for each provider (exact syntax)",
+      "max_score": 3
+    },
+    {
+      "name": "checks_conflicts",
+      "description": "Identifies any version conflicts across modules or states there are none",
+      "max_score": 2
+    },
+    {
+      "name": "evidence_quality",
+      "description": "Cites real file paths, no fabricated locations",
+      "max_score": 1
+    },
+    {
+      "name": "scope_honesty",
+      "description": "States what was omitted or truncated",
+      "max_score": 1
+    },
+    {
+      "name": "reports_verdict",
+      "description": "Reports complete, partial, or blocked",
+      "max_score": 1
+    }
+  ]
+}

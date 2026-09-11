@@ -1,0 +1,1 @@
+Discovery: locate IAM role assumptions across Terraform modules and report principals and conditions.
