@@ -324,6 +324,28 @@ fi
 
 # ---------------------------------------------------------------------------
 echo ""
+echo "=== Docs site version is derived, not hardcoded ==="
+
+# The homepage hero showed v1.38.0 through the 1.39.0, 1.40.0 and 1.41.0
+# releases: it was a hardcoded string and no gate covered website/. The version
+# is now read from customFields, which docusaurus.config.js derives from
+# .claude-plugin/plugin.json. These two checks keep it that way — asserting the
+# derivation exists is what prevents the drift, since asserting a literal
+# version would just move the stale string into this file.
+if grep -q "require('../.claude-plugin/plugin.json')" website/docusaurus.config.js 2>/dev/null; then
+  pass "website/docusaurus.config.js derives the version from plugin.json"
+else
+  fail "website/docusaurus.config.js must derive the version from .claude-plugin/plugin.json"
+fi
+
+if grep -qE '^\s*v1\.[0-9]+\.[0-9]+|>v1\.[0-9]+\.[0-9]+' website/src/pages/index.tsx 2>/dev/null; then
+  fail "website/src/pages/index.tsx hardcodes a version — read siteConfig.customFields.pluginVersion instead"
+else
+  pass "website/src/pages/index.tsx does not hardcode a version"
+fi
+
+# ---------------------------------------------------------------------------
+echo ""
 echo "=== Example maturity labels ==="
 
 while IFS= read -r readme; do

@@ -7,10 +7,16 @@ import TabItem from '@theme/TabItem';
 import CodeBlock from '@theme/CodeBlock';
 
 function Hero() {
+  // Read from customFields, which docusaurus.config.js derives from
+  // .claude-plugin/plugin.json. Do not hardcode a version here: the previous
+  // hardcoded string sat at v1.38.0 across three releases because no gate
+  // covered website/.
+  const {siteConfig} = useDocusaurusContext();
+  const version = siteConfig.customFields?.pluginVersion as string;
   return (
     <div className="hero-section">
       <div className="hero-section__eyebrow">
-        v1.38.0 &mdash;{' '}
+        v{version} &mdash;{' '}
         <a href="https://github.com/nitinjain999/platform-skills/blob/main/CHANGELOG.md">
           What&apos;s new
         </a>
