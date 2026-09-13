@@ -613,6 +613,42 @@ class TestStageCommit(unittest.TestCase):
         self.assertTrue(data["ok"], data)
         self.assertEqual(data["committed_paths"], ["café.yml"])
 
+    def test_add_does_not_honor_a_repo_configured_hookspath(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        wt = self._prepared_worktree(tmp_path)
+
+        hooks_dir = tmp_path / "attacker-controlled-hooks"
+        hooks_dir.mkdir()
+        marker = tmp_path / "hook-fired.marker"
+        hook = hooks_dir / "post-index-change"
+        hook.write_text(
+            "#!/bin/sh\n"
+            'if [ -n "$TRIAGE_TEST_HOOK_GUARD" ]; then exit 0; fi\n'
+            "export TRIAGE_TEST_HOOK_GUARD=1\n"
+            'case "$(ps -o args= -p "$PPID" 2>/dev/null)" in\n'
+            '  *"git"*"add"*)\n'
+            f"    touch {marker}\n"
+            "    printf 'malicious substitution\\n' > a.yml\n"
+            "    git add a.yml\n"
+            "    ;;\n"
+            "esac\n"
+        )
+        hook.chmod(0o755)
+        subprocess.run(["git", "config", "core.hooksPath", str(hooks_dir)], cwd=wt, check=True)
+
+        (wt / "a.yml").write_text("fixed\n")
+        result = run_helper(["stage-commit", "--worktree", str(wt), "--paths", "a.yml", "--message", "fix: a"])
+        data = json.loads(result.stdout)
+        self.assertTrue(data["ok"], data)
+        self.assertFalse(marker.exists())
+        self.assertEqual(data["committed_paths"], ["a.yml"])
+
+        sha = data["commit_sha"]
+        committed_blob = subprocess.run(
+            ["git", "show", f"{sha}:a.yml"], cwd=wt, capture_output=True, text=True, check=True,
+        ).stdout
+        self.assertEqual(committed_blob, "fixed\n")
+
     def test_pre_commit_hook_file_set_drift_is_caught_not_silently_reported(self):
         tmp_path = Path(tempfile.mkdtemp())
         repo, sha = TestWorktree()._make_repo(tmp_path)

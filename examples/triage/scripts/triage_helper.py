@@ -367,7 +367,7 @@ def cmd_worktree_cleanup(args):
 
 
 def cmd_stage_commit(args):
-    run(["git", "add", "--"] + args.paths, cwd=args.worktree)
+    run(["git", "-c", f"core.hooksPath={_null_hooks_dir()}", "add", "--"] + args.paths, cwd=args.worktree)
     staged_raw = run(["git", "diff", "--cached", "--name-only", "-z"], cwd=args.worktree).stdout
     staged = [p for p in staged_raw.split("\0") if p]
     staged_set, intended_set = set(staged), set(args.paths)
