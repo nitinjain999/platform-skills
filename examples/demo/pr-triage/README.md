@@ -13,7 +13,7 @@ PR #42 adds a new `payment-api` Deployment. Three reviewer comments are open:
 |---|---|---|
 | "Missing `securityContext` — container runs as root" | `ACTIONABLE_FIX` | Adds pod + container securityContext, commits, publishes, resolves thread |
 | "Consider adding a PodDisruptionBudget for HA" | `INFORMATIONAL` | Replies explaining the trade-off; thread left open — informational findings aren't resolved automatically |
-| "Why not use Knative here?" | `NOT_APPLICABLE` | Replies that Knative is out of scope, resolves thread since the explanation isn't disputed |
+| "Why not use Knative here?" | `NOT_APPLICABLE` | Replies with the evidence that disproves the premise; thread left open for the reviewer to close |
 
 ## How to run
 

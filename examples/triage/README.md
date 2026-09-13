@@ -34,31 +34,9 @@ No workflow. No secrets to configure. Runs entirely inside Claude Code with `gh 
 /platform-skills:triage --all 42
 ```
 
-Get comment IDs from the PR URL or:
+A comment ID comes from the PR URL, or from the helper's own `snapshot` subcommand. Use the helper: it paginates every thread and every comment in one pass and writes the whole set to a file the rest of the run reuses. A hand-rolled `gh api graphql | jq` pipeline is what this command was rewritten to stop doing, because the obvious version of it silently truncates at the first page of threads and reads only the first comment of each thread, so a reply-only finding or a 101st thread just disappears.
 
-```bash
-# List all review thread comments on a PR
-gh api graphql -f query='
-  query($owner:String!, $repo:String!, $pr:Int!) {
-    repository(owner:$owner, name:$repo) {
-      pullRequest(number:$pr) {
-        reviewThreads(first:100) {
-          nodes {
-            isResolved
-            comments(first:1) {
-              nodes { databaseId body author { login } }
-            }
-          }
-        }
-      }
-    }
-  }' \
-  -f owner=nitinjain999 -f repo=platform-skills -F pr=42 \
-  --jq '.data.repository.pullRequest.reviewThreads.nodes[]
-        | select(.isResolved==false)
-        | .comments.nodes[0]
-        | "\(.databaseId)  @\(.author.login)  \(.body[:80])"'
-```
+`references/triage.md`'s worked example for `snapshot` gives the exact invocation and the exact JSON shape it returns, including where each comment's `database_id` and its thread's node ID sit in that structure. Read the IDs out of that snapshot file rather than issuing a second query for them.
 
 ---
 
@@ -298,23 +276,25 @@ app:
 
 ---
 
-## Scenario: INFORMATIONAL
+## Scenario: OUT_OF_SCOPE (valid follow-up)
 
 ### 7. "Consider adding a PDB"
 
 **PR comment** (from `@dave`):
 > This Deployment has no PodDisruptionBudget. Worth adding in a follow-up to protect against simultaneous node drains.
 
-**Classification:** INFORMATIONAL — valid suggestion but out of scope for this PR.
+**Classification:** OUT_OF_SCOPE — the suggestion is valid, but remediation sits outside this authorized change. This is not `INFORMATIONAL`: it is not a question or a status note, it is a real improvement whose fix belongs to a different change.
 
 **No fix applied.**
 
 **Reply posted:**
 > Agreed — a PDB is the right call for this service. This PR only changes the image tag; adding a PDB is a separate operational change that needs load testing to set the correct `minAvailable` value first. This would need a follow-up issue, which I have not created — say if you want one opened.
 >
-> ℹ️ Replied — thread left open. This is a valid follow-up outside this PR's scope, not something to auto-close.
+> 📌 Out of scope for this PR — thread left open. A valid follow-up outside the authorized change doesn't auto-close.
 
 ---
+
+## Scenario: INFORMATIONAL
 
 ### 8. "Is KMS rotation enabled?"
 
@@ -369,7 +349,7 @@ This is different from a CI *failure* comment, which does carry a diagnostic and
 
 ---
 
-## Scenario: OUT_OF_SCOPE
+## Scenario: OUT_OF_SCOPE (file not in this PR)
 
 ### 11. Comment on a file not in this PR
 
@@ -397,16 +377,17 @@ When you run `/platform-skills:triage --all 42`, triage processes every unresolv
 | #123456789   | @alice      | ACTIONABLE_FIX     | Published a1b2c3d   | Replied, resolved                       |
 | #123456790   | @bob        | ACTIONABLE_FIX     | Published b2c3d4e   | Replied, resolved                       |
 | #123456791   | @carol      | NEEDS_CLARIFICATION | N/A                 | Replied, open (not eligible for auto-close) |
-| #123456792   | @dave       | INFORMATIONAL      | N/A                  | Replied, open (not eligible for auto-close) |
+| #123456792   | @dave       | OUT_OF_SCOPE       | N/A                  | Replied, open (not eligible for auto-close) |
 | #123456793   | actions[bot]| (none — pure status, no diagnostic) | N/A | Skipped — no reply, no mutation |
 
-5 comments processed. 2 fixes committed and published, threads resolved. 1 clarification reply posted, thread left open pending missing capacity data. 1 informational reply posted, thread left open pending the reviewer. 1 pure CI status message skipped with no reply or mutation.
+5 comments processed. 2 fixes committed and published, threads resolved. 1 clarification reply posted, thread left open pending missing capacity data. 1 out-of-scope reply posted, thread left open for the reviewer to decide on a follow-up. 1 pure CI status message skipped with no reply or mutation.
 ```
 
 ---
 
 ## See Also
 
-- [commands/triage.md](../../commands/triage.md) — full skill definition with all gh CLI commands
+- [commands/triage.md](../../commands/triage.md) — the command router: invocation forms, phase order, hard gates, classification table, report format
+- [references/triage.md](../../references/triage.md) — evidence rules, resolution eligibility, the three-layer state model, failure recovery, and the `triage_helper.py` contract flag by flag
 - [references/pr-review.md](../../references/pr-review.md) — PR review reference with rollback matrix and SOC 2 mapping
 - `/platform-skills:pr-review full <PR number>` — run a full pre-merge review before triaging comments

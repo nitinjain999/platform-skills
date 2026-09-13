@@ -23,7 +23,7 @@ spec:
 
 ---
 
-1. Classify this comment as ACTIONABLE_FIX, INFORMATIONAL, or NOT_APPLICABLE.
+1. Classify this comment as one of `ACTIONABLE_FIX`, `ALREADY_FIXED`, `INFORMATIONAL`, `NOT_APPLICABLE`, `NEEDS_CLARIFICATION`, `OUT_OF_SCOPE`, or `DUPLICATE`.
 2. If ACTIONABLE_FIX: show the corrected YAML with appropriate resource requests and limits.
 3. Explain the blast radius of the change and provide a rollback plan.
 4. Write the reply you would post on the review thread.
