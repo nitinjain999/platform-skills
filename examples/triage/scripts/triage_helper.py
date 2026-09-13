@@ -371,6 +371,57 @@ def cmd_publish(args):
     })
 
 
+def _thread_already_has_marker(snapshot_path, thread_node_id, marker):
+    if not snapshot_path or not marker:
+        return False
+    snapshot = json.loads(Path(snapshot_path).read_text())
+    for thread in snapshot["threads"]:
+        if thread["id"] == thread_node_id:
+            return any(marker in (c.get("body") or "") for c in thread["comments"])
+    return False
+
+
+def cmd_reply(args):
+    host = args.host or "github.com"
+    body = Path(args.body_file).read_text()
+
+    if args.thread_node_id:
+        if _thread_already_has_marker(args.snapshot, args.thread_node_id, args.dedup_marker):
+            emit({"ok": True, "status": "ALREADY_REPLIED", "thread_node_id": args.thread_node_id})
+            return
+
+        query = """
+        mutation($threadId: ID!, $body: String!) {
+          addPullRequestReviewThreadReply(input: {pullRequestReviewThreadId: $threadId, body: $body}) {
+            comment { id url }
+          }
+        }
+        """
+        payload_path = _graphql_payload_file(query, {"threadId": args.thread_node_id, "body": body})
+        try:
+            result = run(["gh", "api", "graphql", "--hostname", host, "--input", payload_path])
+        finally:
+            os.unlink(payload_path)
+        data = json.loads(result.stdout)
+        if data.get("errors"):
+            raise HelperError("REPLY_FAILED", "addPullRequestReviewThreadReply failed", errors=data["errors"])
+        comment = data["data"]["addPullRequestReviewThreadReply"]["comment"]
+        emit({"ok": True, "status": "CONFIRMED", "comment_node_id": comment["id"], "comment_id": None, "url": comment["url"]})
+        return
+
+    fd, payload_path = tempfile.mkstemp(suffix=".json")
+    with os.fdopen(fd, "w") as f:
+        json.dump({"body": body}, f)
+    try:
+        result = run(["gh", "api", f"repos/{args.repo}/issues/{args.pr}/comments", "--hostname", host, "--input", payload_path], check=False)
+    finally:
+        os.unlink(payload_path)
+    if result.returncode != 0:
+        raise HelperError("REPLY_UNKNOWN", "conversation comment POST failed or response ambiguous", stderr=result.stderr, returncode=result.returncode)
+    data = json.loads(result.stdout)
+    emit({"ok": True, "status": "CONFIRMED", "comment_node_id": None, "comment_id": str(data["id"]), "url": data["html_url"]})
+
+
 def build_parser():
     parser = JSONArgumentParser(prog="triage_helper.py")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -439,6 +490,16 @@ def build_parser():
     p.add_argument("--head-ref", required=True)
     p.add_argument("--host")
     p.set_defaults(func=cmd_publish)
+
+    p = sub.add_parser("reply")
+    p.add_argument("--repo", required=True)
+    p.add_argument("--pr", type=int)
+    p.add_argument("--thread-node-id")
+    p.add_argument("--body-file", required=True)
+    p.add_argument("--snapshot")
+    p.add_argument("--dedup-marker")
+    p.add_argument("--host")
+    p.set_defaults(func=cmd_reply)
 
     return parser
 

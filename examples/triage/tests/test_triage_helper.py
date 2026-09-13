@@ -493,6 +493,62 @@ class TestPublish(unittest.TestCase):
         self.assertEqual(data["error"]["code"], "PUSH_REJECTED_NON_FASTFORWARD")
 
 
+class TestReply(unittest.TestCase):
+    def test_thread_reply_preserves_literal_backticks_and_leading_at(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        body_file = tmp_path / "body.txt"
+        tricky_body = "Fixed `foo` @user $(rm -rf /) and `bar`. ✅ Fixed"
+        body_file.write_text(tricky_body)
+
+        rules = [{
+            "contains": ["addPullRequestReviewThreadReply"],
+            "stdout": {"data": {"addPullRequestReviewThreadReply": {"comment": {"id": "PRRC_new", "url": "https://x/1"}}}},
+        }]
+        env, calls_log = gh_env(tmp_path, rules)
+        result = run_helper([
+            "reply", "--repo", "acme/widgets", "--thread-node-id", "PRT_1", "--body-file", str(body_file),
+        ], env=env)
+        data = json.loads(result.stdout)
+        self.assertTrue(data["ok"])
+        self.assertEqual(data["status"], "CONFIRMED")
+        logged = calls_log.read_text() if calls_log.exists() else ""
+        self.assertNotIn(tricky_body, logged)
+
+    def test_dedup_skips_a_repost_when_marker_already_present(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        body_file = tmp_path / "body.txt"
+        body_file.write_text("Fixed. <!-- triage:marker:abc123 --> ✅ Fixed")
+        snapshot = {"threads": [{"id": "PRT_1", "comments": [
+            {"node_id": "PRRC_x", "body": "Fixed already. <!-- triage:marker:abc123 --> ✅ Fixed"},
+        ]}]}
+        snap_path = tmp_path / "snapshot.json"
+        snap_path.write_text(json.dumps(snapshot))
+        env, calls_log = gh_env(tmp_path, [])
+        result = run_helper([
+            "reply", "--repo", "acme/widgets", "--thread-node-id", "PRT_1", "--body-file", str(body_file),
+            "--snapshot", str(snap_path), "--dedup-marker", "triage:marker:abc123",
+        ], env=env)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["status"], "ALREADY_REPLIED")
+        self.assertFalse(calls_log.exists())
+
+    def test_conversation_comment_reply_uses_input_payload(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        body_file = tmp_path / "body.txt"
+        body_file.write_text("Not applicable here. ❌ Not applicable.")
+        rules = [{"contains": ["issues/42/comments"], "stdout": {"id": 900, "html_url": "https://x/2"}}]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper([
+            "reply", "--repo", "acme/widgets", "--pr", "42", "--body-file", str(body_file),
+        ], env=env)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["status"], "CONFIRMED")
+        self.assertEqual(data["comment_id"], "900")
+
+
 class TestHelperSkeleton(unittest.TestCase):
     def test_help_exits_zero(self):
         result = run_helper(["--help"])
