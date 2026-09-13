@@ -57,6 +57,8 @@ The remaining classifications below are documented inline because they do not ne
 
 ## Scenario: ACTIONABLE_FIX
 
+The `✅ Fixed` suffix below assumes required checks have already passed, or aren't configured for this repository — the suffix requires that in addition to `publish` confirming `matches_pushed_commit: true`, not the SHA match alone.
+
 ### 1. Copilot flags wildcard IAM
 
 **PR comment** (from `github-advanced-security[bot]`):
