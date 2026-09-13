@@ -776,7 +776,41 @@ class TestStageCommit(unittest.TestCase):
         self.assertEqual(data["error"]["code"], "STAGED_SET_MISMATCH")
 
 
+class TestNormalizeGitUrl(unittest.TestCase):
+    def test_every_common_remote_form_maps_to_owner_repo(self):
+        normalize = helper_module()._normalize_git_url_to_repo
+        for url in (
+            "https://github.com/owner/repo.git",
+            "https://github.com/owner/repo",
+            "https://github.com/owner/repo/",
+            "git@github.com:owner/repo.git",
+            "git@github.com:owner/repo",
+            "ssh://git@github.com/owner/repo.git",
+            "ssh://git@github.com/owner/repo",
+            "https://x-access-token:ghs_SECRET@github.com/owner/repo.git",
+            "https://ghes.example.com/owner/repo.git",
+        ):
+            with self.subTest(url=url):
+                self.assertEqual(normalize(url), "owner/repo")
+
+    def test_garbage_input_returns_none_rather_than_something_misleading(self):
+        normalize = helper_module()._normalize_git_url_to_repo
+        for url in ("", "not-a-url", "github.com", "https://github.com/", "owner/repo", None):
+            with self.subTest(url=url):
+                self.assertIsNone(normalize(url))
+
+
 class TestPublish(unittest.TestCase):
+    def _pr(self, sha, remote_url, ref="fix-branch", state="open"):
+        return {
+            "state": state,
+            "head": {
+                "sha": sha,
+                "ref": ref,
+                "repo": {"full_name": helper_module()._normalize_git_url_to_repo(str(remote_url))},
+            },
+        }
+
     def _remote_and_worktree(self, tmp_path):
         remote = tmp_path / "remote.git"
         subprocess.run(["git", "init", "--bare", str(remote)], check=True, capture_output=True)
@@ -805,7 +839,7 @@ class TestPublish(unittest.TestCase):
         tmp_path = Path(tempfile.mkdtemp())
         remote, wt, head_sha, commit_sha = self._remote_and_worktree(tmp_path)
         rules = [
-            {"contains": ["pulls/42"], "stdout": {"head": {"sha": head_sha}}, "max_uses": 1},
+            {"contains": ["pulls/42"], "stdout": self._pr(head_sha, remote), "max_uses": 1},
             {"contains": ["pulls/42"], "stdout": {"head": {"sha": commit_sha}}},
         ]
         env, _ = gh_env(tmp_path, rules)
@@ -826,7 +860,7 @@ class TestPublish(unittest.TestCase):
         tmp_path = Path(tempfile.mkdtemp())
         remote, wt, head_sha, commit_sha = self._remote_and_worktree(tmp_path)
         rules = [
-            {"contains": ["pulls/42"], "stdout": {"head": {"sha": head_sha}}, "max_uses": 1},
+            {"contains": ["pulls/42"], "stdout": self._pr(head_sha, remote), "max_uses": 1},
             {"contains": ["pulls/42"], "stdout": {"head": {"sha": "f" * 40}}},
         ]
         env, _ = gh_env(tmp_path, rules)
@@ -847,7 +881,7 @@ class TestPublish(unittest.TestCase):
         tmp_path = Path(tempfile.mkdtemp())
         remote, wt, head_sha, commit_sha = self._remote_and_worktree(tmp_path)
         rules = [
-            {"contains": ["pulls/42"], "stdout": {"head": {"sha": head_sha}}, "max_uses": 1},
+            {"contains": ["pulls/42"], "stdout": self._pr(head_sha, remote), "max_uses": 1},
             {"contains": ["pulls/42"], "stdout": "", "stderr": "gh: HTTP 502 Bad Gateway", "returncode": 1},
         ]
         env, _ = gh_env(tmp_path, rules)
@@ -869,7 +903,7 @@ class TestPublish(unittest.TestCase):
         tmp_path = Path(tempfile.mkdtemp())
         remote, wt, head_sha, commit_sha = self._remote_and_worktree(tmp_path)
         rules = [
-            {"contains": ["pulls/42"], "stdout": {"head": {"sha": head_sha}}, "max_uses": 1},
+            {"contains": ["pulls/42"], "stdout": self._pr(head_sha, remote), "max_uses": 1},
             {"contains": ["pulls/42"], "stdout": {"message": "Moved Permanently"}},
         ]
         env, _ = gh_env(tmp_path, rules)
@@ -890,7 +924,7 @@ class TestPublish(unittest.TestCase):
     def test_publish_refuses_when_remote_pr_head_already_moved(self):
         tmp_path = Path(tempfile.mkdtemp())
         remote, wt, head_sha, commit_sha = self._remote_and_worktree(tmp_path)
-        rules = [{"contains": ["pulls/42"], "stdout": {"head": {"sha": "f" * 40}}}]
+        rules = [{"contains": ["pulls/42"], "stdout": self._pr("f" * 40, remote)}]
         env, _ = gh_env(tmp_path, rules)
         result = run_helper([
             "publish", "--repo", "acme/widgets", "--pr", "42", "--worktree", wt,
@@ -912,7 +946,7 @@ class TestPublish(unittest.TestCase):
         subprocess.run(["git", "-c", "user.email=x@x.com", "-c", "user.name=x", "commit", "-m", "divergent"], cwd=other, check=True, capture_output=True)
         subprocess.run(["git", "push", "origin", "fix-branch"], cwd=other, check=True, capture_output=True)
 
-        rules = [{"contains": ["pulls/42"], "stdout": {"head": {"sha": head_sha}}}]
+        rules = [{"contains": ["pulls/42"], "stdout": self._pr(head_sha, remote)}]
         env, _ = gh_env(tmp_path, rules)
         result = run_helper([
             "publish", "--repo", "acme/widgets", "--pr", "42", "--worktree", wt,
@@ -964,7 +998,7 @@ class TestPublish(unittest.TestCase):
         subprocess.run(["git", "-c", "user.email=x@x.com", "-c", "user.name=x", "commit", "-m", "divergent"], cwd=other, check=True, capture_output=True)
         subprocess.run(["git", "push", "origin", branch], cwd=other, check=True, capture_output=True)
 
-        rules = [{"contains": ["pulls/42"], "stdout": {"head": {"sha": head_sha}}}]
+        rules = [{"contains": ["pulls/42"], "stdout": self._pr(head_sha, remote, ref=branch)}]
         env, _ = gh_env(tmp_path, rules)
         result = run_helper([
             "publish", "--repo", "acme/widgets", "--pr", "42", "--worktree", wt,
@@ -987,7 +1021,7 @@ class TestPublish(unittest.TestCase):
         hook.write_text("#!/bin/sh\necho 'protected branch hook declined: fix-branch is protected' >&2\nexit 1\n")
         hook.chmod(0o755)
 
-        rules = [{"contains": ["pulls/42"], "stdout": {"head": {"sha": head_sha}}}]
+        rules = [{"contains": ["pulls/42"], "stdout": self._pr(head_sha, remote)}]
         env, _ = gh_env(tmp_path, rules)
         result = run_helper([
             "publish", "--repo", "acme/widgets", "--pr", "42", "--worktree", wt,
@@ -1011,7 +1045,7 @@ class TestPublish(unittest.TestCase):
         )
         hook.chmod(0o755)
 
-        rules = [{"contains": ["pulls/42"], "stdout": {"head": {"sha": head_sha}}}]
+        rules = [{"contains": ["pulls/42"], "stdout": self._pr(head_sha, remote)}]
         env, _ = gh_env(tmp_path, rules)
         result = run_helper([
             "publish", "--repo", "acme/widgets", "--pr", "42", "--worktree", wt,
@@ -1028,7 +1062,7 @@ class TestPublish(unittest.TestCase):
     def test_unreachable_remote_is_an_unknown_transport_failure(self):
         tmp_path = Path(tempfile.mkdtemp())
         remote, wt, head_sha, commit_sha = self._remote_and_worktree(tmp_path)
-        rules = [{"contains": ["pulls/42"], "stdout": {"head": {"sha": head_sha}}}]
+        rules = [{"contains": ["pulls/42"], "stdout": self._pr(head_sha, tmp_path / "no-such-remote.git")}]
         env, _ = gh_env(tmp_path, rules)
         result = run_helper([
             "publish", "--repo", "acme/widgets", "--pr", "42", "--worktree", wt,
@@ -1039,11 +1073,175 @@ class TestPublish(unittest.TestCase):
         data = json.loads(result.stdout)
         self.assertEqual(data["error"]["code"], "UNKNOWN_TRANSPORT_FAILURE")
 
+    def _two_remotes_and_worktree(self, tmp_path):
+        remote_a = tmp_path / "repo-a.git"
+        remote_b = tmp_path / "repo-b.git"
+        subprocess.run(["git", "init", "--bare", str(remote_a)], check=True, capture_output=True)
+        subprocess.run(["git", "init", "--bare", str(remote_b)], check=True, capture_output=True)
+
+        seed = tmp_path / "seed"
+        seed.mkdir()
+        subprocess.run(["git", "init"], cwd=seed, check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "t@example.com"], cwd=seed, check=True)
+        subprocess.run(["git", "config", "user.name", "Test"], cwd=seed, check=True)
+        (seed / "a.yml").write_text("original\n")
+        subprocess.run(["git", "add", "a.yml"], cwd=seed, check=True)
+        subprocess.run(["git", "commit", "-m", "init"], cwd=seed, check=True, capture_output=True)
+        head_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=seed, capture_output=True, text=True).stdout.strip()
+        for remote in (remote_a, remote_b):
+            subprocess.run(
+                ["git", "push", str(remote), "HEAD:refs/heads/fix-branch"], cwd=seed, check=True, capture_output=True,
+            )
+
+        wt = tempfile.mkdtemp()
+        subprocess.run(["git", "worktree", "add", "--detach", wt, head_sha], cwd=seed, check=True, capture_output=True)
+        (Path(wt) / "a.yml").write_text("fixed\n")
+        subprocess.run(["git", "add", "a.yml"], cwd=wt, check=True)
+        subprocess.run(["git", "commit", "-m", "fix"], cwd=wt, check=True, capture_output=True)
+        commit_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=wt, capture_output=True, text=True).stdout.strip()
+        return remote_a, remote_b, wt, head_sha, commit_sha
+
+    def _remote_ref(self, remote, ref="fix-branch"):
+        return subprocess.run(
+            ["git", "rev-parse", f"refs/heads/{ref}"], cwd=remote, capture_output=True, text=True, check=True,
+        ).stdout.strip()
+
+    def test_publish_refuses_a_destination_the_pr_does_not_point_at(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        remote_a, remote_b, wt, head_sha, commit_sha = self._two_remotes_and_worktree(tmp_path)
+        self.assertEqual(self._remote_ref(remote_a), self._remote_ref(remote_b))
+
+        rules = [{"contains": ["pulls/42"], "stdout": self._pr(head_sha, remote_a)}]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper([
+            "publish", "--repo", "acme/widgets", "--pr", "42", "--worktree", wt,
+            "--expected-head-sha", head_sha, "--commit-sha", commit_sha,
+            "--head-remote-url", str(remote_b), "--head-ref", "fix-branch",
+        ], env=env)
+        self.assertNotEqual(result.returncode, 0)
+        error = json.loads(result.stdout)["error"]
+        self.assertEqual(error["code"], "PUBLISH_DESTINATION_MISMATCH")
+        self.assertEqual(error["expected_repo"], helper_module()._normalize_git_url_to_repo(str(remote_a)))
+        self.assertEqual(error["given_repo"], helper_module()._normalize_git_url_to_repo(str(remote_b)))
+        self.assertEqual(self._remote_ref(remote_b), head_sha)
+        self.assertEqual(self._remote_ref(remote_a), head_sha)
+
+    def test_publish_refuses_a_head_ref_that_is_not_the_prs_branch(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        remote, wt, head_sha, commit_sha = self._remote_and_worktree(tmp_path)
+        rules = [{"contains": ["pulls/42"], "stdout": self._pr(head_sha, remote, ref="some-other-branch")}]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper([
+            "publish", "--repo", "acme/widgets", "--pr", "42", "--worktree", wt,
+            "--expected-head-sha", head_sha, "--commit-sha", commit_sha,
+            "--head-remote-url", str(remote), "--head-ref", "fix-branch",
+        ], env=env)
+        self.assertNotEqual(result.returncode, 0)
+        error = json.loads(result.stdout)["error"]
+        self.assertEqual(error["code"], "PUBLISH_DESTINATION_MISMATCH")
+        self.assertEqual(error["expected_ref"], "some-other-branch")
+        self.assertEqual(error["given_ref"], "fix-branch")
+        self.assertEqual(self._remote_ref(remote), head_sha)
+
+    def test_publish_refuses_when_the_head_repo_is_null(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        remote, wt, head_sha, commit_sha = self._remote_and_worktree(tmp_path)
+        rules = [{"contains": ["pulls/42"], "stdout": {
+            "state": "open", "head": {"sha": head_sha, "ref": "fix-branch", "repo": None},
+        }}]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper([
+            "publish", "--repo", "acme/widgets", "--pr", "42", "--worktree", wt,
+            "--expected-head-sha", head_sha, "--commit-sha", commit_sha,
+            "--head-remote-url", str(remote), "--head-ref", "fix-branch",
+        ], env=env)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(json.loads(result.stdout)["error"]["code"], "HEAD_REPO_UNAVAILABLE")
+        self.assertEqual(self._remote_ref(remote), head_sha)
+
+    def test_publish_refuses_a_closed_pr_before_attempting_a_push(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        remote, wt, head_sha, commit_sha = self._remote_and_worktree(tmp_path)
+        rules = [{"contains": ["pulls/42"], "stdout": self._pr(head_sha, remote, state="merged")}]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper([
+            "publish", "--repo", "acme/widgets", "--pr", "42", "--worktree", wt,
+            "--expected-head-sha", head_sha, "--commit-sha", commit_sha,
+            "--head-remote-url", str(remote), "--head-ref", "fix-branch",
+        ], env=env)
+        self.assertNotEqual(result.returncode, 0)
+        error = json.loads(result.stdout)["error"]
+        self.assertEqual(error["code"], "PR_NOT_OPEN")
+        self.assertEqual(error["state"], "merged")
+        self.assertEqual(self._remote_ref(remote), head_sha)
+
+    def test_publish_refuses_when_the_pre_push_pr_read_is_unusable(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        remote, wt, head_sha, commit_sha = self._remote_and_worktree(tmp_path)
+        rules = [{"contains": ["pulls/42"], "stdout": "<html>502 Bad Gateway</html>"}]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper([
+            "publish", "--repo", "acme/widgets", "--pr", "42", "--worktree", wt,
+            "--expected-head-sha", head_sha, "--commit-sha", commit_sha,
+            "--head-remote-url", str(remote), "--head-ref", "fix-branch",
+        ], env=env)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(json.loads(result.stdout)["error"]["code"], "PR_READ_UNUSABLE")
+        self.assertEqual(self._remote_ref(remote), head_sha)
+
+    def test_publish_degrades_when_the_post_push_ls_remote_read_fails(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        remote, wt, head_sha, commit_sha = self._remote_and_worktree(tmp_path)
+        rules = [
+            {"contains": ["pulls/42"], "stdout": self._pr(head_sha, remote), "max_uses": 1},
+            {"contains": ["pulls/42"], "stdout": {"head": {"sha": commit_sha}}},
+        ]
+        env, _ = gh_env(tmp_path, rules)
+        env = fake_git_env(tmp_path, env)
+        env["FAKE_GIT_LS_REMOTE"] = "fail"
+        result = run_helper([
+            "publish", "--repo", "acme/widgets", "--pr", "42", "--worktree", wt,
+            "--expected-head-sha", head_sha, "--commit-sha", commit_sha,
+            "--head-remote-url", str(remote), "--head-ref", "fix-branch",
+        ], env=env)
+        data = json.loads(result.stdout)
+        self.assertEqual(result.returncode, 0, data)
+        self.assertTrue(data["ok"], data)
+        self.assertIsNone(data["remote_head_after"])
+        self.assertFalse(data["push_landed"])
+        self.assertTrue(data["verification_incomplete"])
+        self.assertFalse(data["matches_pushed_commit"])
+        self.assertEqual(self._remote_ref(remote), commit_sha)
+
+    def test_publish_degrades_when_the_post_push_ls_remote_read_is_empty(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        remote, wt, head_sha, commit_sha = self._remote_and_worktree(tmp_path)
+        rules = [
+            {"contains": ["pulls/42"], "stdout": self._pr(head_sha, remote), "max_uses": 1},
+            {"contains": ["pulls/42"], "stdout": {"head": {"sha": commit_sha}}},
+        ]
+        env, _ = gh_env(tmp_path, rules)
+        env = fake_git_env(tmp_path, env)
+        env["FAKE_GIT_LS_REMOTE"] = "empty"
+        result = run_helper([
+            "publish", "--repo", "acme/widgets", "--pr", "42", "--worktree", wt,
+            "--expected-head-sha", head_sha, "--commit-sha", commit_sha,
+            "--head-remote-url", str(remote), "--head-ref", "fix-branch",
+        ], env=env)
+        data = json.loads(result.stdout)
+        self.assertEqual(result.returncode, 0, data)
+        self.assertTrue(data["ok"], data)
+        self.assertNotIn("index out of range", result.stdout)
+        self.assertIsNone(data["remote_head_after"])
+        self.assertTrue(data["verification_incomplete"])
+        self.assertFalse(data["matches_pushed_commit"])
+        self.assertEqual(self._remote_ref(remote), commit_sha)
+
     def test_tokenised_remote_url_is_redacted_from_error_output(self):
         tmp_path = Path(tempfile.mkdtemp())
         remote, wt, head_sha, commit_sha = self._remote_and_worktree(tmp_path)
         token_url = "https://x-access-token:ghs_SUPERSECRETVALUE@127.0.0.1:1/acme/widgets.git"
-        rules = [{"contains": ["pulls/42"], "stdout": {"head": {"sha": head_sha}}}]
+        rules = [{"contains": ["pulls/42"], "stdout": self._pr(head_sha, token_url)}]
         env, _ = gh_env(tmp_path, rules)
         result = run_helper([
             "publish", "--repo", "acme/widgets", "--pr", "42", "--worktree", wt,

@@ -13,6 +13,7 @@ from pathlib import Path
 STATE_DIR_NAME = "triage-state"
 SCHEMA_VERSION = 1
 URL_USERINFO_RE = re.compile(r"://[^@/\s]*@")
+GIT_URL_REPO_RE = re.compile(r"[:/]([^/:]+/[^/:]+?)(?:\.git)?/?$")
 
 _NULL_HOOKS_DIR = None
 
@@ -79,6 +80,13 @@ def redact(text):
     if not isinstance(text, str):
         return text
     return URL_USERINFO_RE.sub("://", text)
+
+
+def _normalize_git_url_to_repo(url):
+    if not isinstance(url, str):
+        return None
+    match = GIT_URL_REPO_RE.search(url)
+    return match.group(1) if match else None
 
 
 def run(cmd, cwd=None, check=True, input_text=None, env=None):
@@ -420,13 +428,57 @@ def cmd_stage_commit(args):
 
 def cmd_publish(args):
     host = args.host or "github.com"
-    current = _head_sha(args.repo, args.pr, host)
+    pr_read = run(["gh", "api", f"repos/{args.repo}/pulls/{args.pr}", "--hostname", host])
+    try:
+        pr_data = json.loads(pr_read.stdout)
+    except ValueError:
+        pr_data = None
+    if not isinstance(pr_data, dict):
+        raise HelperError(
+            "PR_READ_UNUSABLE",
+            "the pre-push PR read did not return a usable JSON object, so neither the head SHA nor the "
+            "publication destination can be verified; refusing to push against unverified facts",
+        )
+    head = pr_data.get("head") or {}
 
+    if pr_data.get("state") != "open":
+        raise HelperError(
+            "PR_NOT_OPEN",
+            f"PR #{args.pr} is not open (state={pr_data.get('state')}), so nothing may be published to it",
+            state=pr_data.get("state"),
+        )
+
+    current = head.get("sha")
     if current != args.expected_head_sha:
         raise HelperError(
             "HEAD_MOVED",
             "PR head advanced since the plan was built; refresh and revalidate before retrying",
             expected=args.expected_head_sha, actual=current,
+        )
+
+    head_repo = head.get("repo")
+    if head_repo is None:
+        raise HelperError(
+            "HEAD_REPO_UNAVAILABLE",
+            "the PR's head repository is null (a deleted or inaccessible fork), so the push destination "
+            "cannot be verified against it; refusing to push somewhere unverifiable",
+            head_ref=head.get("ref"),
+        )
+
+    expected_repo = head_repo.get("full_name")
+    given_repo = _normalize_git_url_to_repo(args.head_remote_url)
+    repo_matches = (
+        given_repo is not None and expected_repo is not None
+        and given_repo.lower() == expected_repo.lower()
+    )
+    if not repo_matches or args.head_ref != head.get("ref"):
+        raise HelperError(
+            "PUBLISH_DESTINATION_MISMATCH",
+            "the push destination does not match the PR's actual head repository/branch; refusing to "
+            "mutate a destination this PR does not point at",
+            expected_repo=expected_repo, given_repo=given_repo,
+            expected_ref=head.get("ref"), given_ref=args.head_ref,
+            given_url=redact(args.head_remote_url),
         )
 
     refspec = f"{args.commit_sha}:refs/heads/{args.head_ref}"
@@ -457,9 +509,13 @@ def cmd_publish(args):
             raise HelperError("PUSH_REJECTED_NON_FASTFORWARD", "remote head moved; refresh before retrying", stderr=stderr)
         raise HelperError("UNKNOWN_TRANSPORT_FAILURE", "push failed for an unrecognized reason", stderr=stderr)
 
-    after = run(["git", "ls-remote", args.head_remote_url, f"refs/heads/{args.head_ref}"], cwd=args.worktree).stdout.split()[0]
+    after_result = run(
+        ["git", "ls-remote", args.head_remote_url, f"refs/heads/{args.head_ref}"], cwd=args.worktree, check=False,
+    )
+    after_tokens = after_result.stdout.split() if after_result.returncode == 0 else []
+    after = after_tokens[0] if after_tokens else None
     pr_head_after = _head_sha(args.repo, args.pr, host, check=False)
-    verification_incomplete = pr_head_after is None
+    verification_incomplete = after is None or pr_head_after is None
     emit({
         "ok": True, "pushed_commit": args.commit_sha, "remote_head_after": after, "pr_head_after": pr_head_after,
         "push_landed": after == args.commit_sha,
