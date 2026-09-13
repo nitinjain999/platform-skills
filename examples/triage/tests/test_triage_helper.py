@@ -12,6 +12,10 @@ FAKE_GH_TEMPLATE = '''#!/usr/bin/env python3
 import sys, os, json
 rules = json.loads(os.environ["FAKE_GH_RULES"])
 argv_line = " ".join(sys.argv[1:])
+argv_log_path = os.environ.get("FAKE_GH_ARGV_LOG")
+if argv_log_path:
+    with open(argv_log_path, "a") as f:
+        f.write(argv_line + "\\n")
 if "--input" in sys.argv:
     idx = sys.argv.index("--input")
     input_path = sys.argv[idx + 1]
@@ -64,6 +68,7 @@ def gh_env(tmp_path, rules):
     env["PATH"] = str(bin_dir) + os.pathsep + env["PATH"]
     env["FAKE_GH_RULES"] = json.dumps(rules)
     env["FAKE_GH_CALLS_LOG"] = str(calls_log)
+    env["FAKE_GH_ARGV_LOG"] = str(tmp_path / "gh_argv.log")
     return env, calls_log
 
 
@@ -505,15 +510,16 @@ class TestReply(unittest.TestCase):
             "contains": ["addPullRequestReviewThreadReply"],
             "stdout": {"data": {"addPullRequestReviewThreadReply": {"comment": {"id": "PRRC_new", "url": "https://x/1"}}}},
         }]
-        env, calls_log = gh_env(tmp_path, rules)
+        env, _ = gh_env(tmp_path, rules)
         result = run_helper([
             "reply", "--repo", "acme/widgets", "--thread-node-id", "PRT_1", "--body-file", str(body_file),
         ], env=env)
         data = json.loads(result.stdout)
         self.assertTrue(data["ok"])
         self.assertEqual(data["status"], "CONFIRMED")
-        logged = calls_log.read_text() if calls_log.exists() else ""
-        self.assertNotIn(tricky_body, logged)
+        argv_log = tmp_path / "gh_argv.log"
+        logged_argv = argv_log.read_text() if argv_log.exists() else ""
+        self.assertNotIn(tricky_body, logged_argv)
 
     def test_dedup_skips_a_repost_when_marker_already_present(self, tmp_path=None):
         import tempfile
