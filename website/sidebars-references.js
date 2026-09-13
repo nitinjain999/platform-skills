@@ -120,6 +120,7 @@ const sidebars = {
         { type: 'doc', id: 'chaos' },
         { type: 'doc', id: 'compliance' },
         { type: 'doc', id: 'pr-review' },
+        { type: 'doc', id: 'triage' },
         { type: 'doc', id: 'documentation' },
         { type: 'doc', id: 'awesome-docs' },
         { type: 'doc', id: 'mcp' },

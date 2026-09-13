@@ -1963,31 +1963,51 @@ Reference: `references/pr-review.md`
 
 ## `/platform-skills:triage`
 
-Triage a PR review or issue comment from a bot, CI tool, or human reviewer. The command fetches the comment and diff with `gh`, classifies the thread, applies a minimal fix when the feedback is valid, replies, and resolves the review thread.
+Triage a PR review or issue comment from a bot, CI tool, or human reviewer. Every Git and GitHub mechanic runs through `examples/triage/scripts/triage_helper.py` (identity checks, one paginated thread snapshot, per-file diff evidence, isolated-worktree edit, push, reply, resolve, local run lock and state record) instead of hand-rolled `gh`/`jq` pipelines. The command classifies the finding, applies a justified fix inside a disposable worktree, publishes it only after a validation command reports PASS, replies on the thread, and resolves the thread only when that specific finding is eligible for closure.
 
 **Modes**
 
 | Mode | What it does |
 |---|---|
-| `<PR number> <comment ID>` | Triage one specific comment |
-| `--all <PR number>` | Triage every unresolved review thread on the PR |
+| `<PR number> <comment ID>` | Triage one specific review comment or PR conversation comment |
+| `--all <PR number>` | Triage every unresolved review thread captured in one pinned snapshot |
+| `--dry-run` | Read-only investigation. Prints the plan. Zero mutations, local or remote |
+| `--no-resolve` | Runs the full authorized fix/reply workflow but never resolves a thread |
+| `--repo OWNER/REPO` | Overrides repo auto-detection. Valid on either invocation form |
 
 **Usage**
 
 ```
 /platform-skills:triage 42 123456789
 /platform-skills:triage --all 42
+/platform-skills:triage --all 42 --dry-run
+/platform-skills:triage 42 123456789 --no-resolve --repo acme/widgets
 ```
 
 **Classifications**
 
 | Classification | Meaning |
 |---|---|
-| `ACTIONABLE_FIX` | Real issue in the changed files; apply the minimal fix, reply, and resolve |
-| `INFORMATIONAL` | Question or non-blocking suggestion; answer, reply, and resolve |
-| `NOT_APPLICABLE` | Status message, duplicate, already fixed, or outside this PR; explain and resolve |
+| `ACTIONABLE_FIX` | Demonstrable defect or policy violation inside this PR's authorized scope, with a justified remediation |
+| `ALREADY_FIXED` | Current head and change/test evidence show the original concern is already addressed |
+| `INFORMATIONAL` | Question, explanation, or pure status notification with no established defect |
+| `NOT_APPLICABLE` | Positive evidence disproves the finding's premise in this context |
+| `NEEDS_CLARIFICATION` | Intent, correctness, or required configuration cannot be established from available evidence |
+| `OUT_OF_SCOPE` | Potentially valid issue whose remediation sits outside this authorized change |
+| `DUPLICATE` | Another identified finding addresses the same underlying concern |
 
-Reference: `commands/triage.md` and `examples/triage/README.md`
+**Resolution is eligibility-gated, not automatic**
+
+| Classification | Eligible to close a thread? |
+|---|---|
+| `ACTIONABLE_FIX` | Only after remediation is validated, published, and confirmed live |
+| `ALREADY_FIXED` | Only with current-head evidence |
+| `DUPLICATE` | Only once the canonical concern is verified addressed and linked |
+| `INFORMATIONAL`, `NEEDS_CLARIFICATION`, `OUT_OF_SCOPE`, disputed `NOT_APPLICABLE` | No — reply and leave the thread open |
+
+A mixed thread stays open while any substantive concern remains, and a PR conversation comment has no thread to resolve at all. Classification, fix execution state, and discussion state are reported as three separate facts, so "fixed, pushed, thread open pending CI" is a complete outcome rather than a partial failure.
+
+Reference: `commands/triage.md` (router), `references/triage.md` (evidence rules, helper contract, failure recovery), and `examples/triage/README.md`
 
 ---
 

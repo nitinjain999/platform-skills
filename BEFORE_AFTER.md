@@ -299,24 +299,24 @@ Thread 3: "Why not use Knative here?"                          → NOT_APPLICABL
 
 ### What /platform-skills:triage --all does
 
-1. Fetches all unresolved threads via `gh` CLI
-2. Classifies each: `ACTIONABLE_FIX` | `INFORMATIONAL` | `NOT_APPLICABLE`
-3. For `ACTIONABLE_FIX` — reads the file, applies the minimal fix, commits
-4. Posts a reply on every thread explaining the decision
-5. Resolves all threads via GitHub GraphQL
+1. Collects every unresolved thread in one fully paginated snapshot via the `triage_helper.py` helper
+2. Classifies each finding as one of seven values: `ACTIONABLE_FIX`, `ALREADY_FIXED`, `INFORMATIONAL`, `NOT_APPLICABLE`, `NEEDS_CLARIFICATION`, `OUT_OF_SCOPE`, `DUPLICATE`
+3. For `ACTIONABLE_FIX` — edits inside a disposable worktree, validates, commits, pushes, and confirms the pushed commit is live
+4. Posts a reply on every thread that needs one, with evidence for the decision
+5. Resolves a thread only when that finding is eligible for closure. Everything else gets a reply and stays open
 
 ```
 ── Thread 1 → ACTIONABLE_FIX
    Applying fix: adding securityContext at pod and container level
-   Committed ✅   Reply posted ✅   Thread resolved ✅
+   Validated ✅   Committed ✅   Published ✅   Reply posted ✅   Thread resolved ✅
 
 ── Thread 2 → INFORMATIONAL
-   Reply: PDB is tracked in issue #87 — out of scope for this PR
-   Reply posted ✅   Thread resolved ✅
+   Reply: PDB is tracked in issue #87 — a separate operational change
+   Reply posted ✅   Thread left open (informational findings do not auto-close)
 
 ── Thread 3 → NOT_APPLICABLE
-   Reply: Knative is not in our platform stack — closing as not applicable
-   Reply posted ✅   Thread resolved ✅
+   Reply: Knative is not in our platform stack, with the evidence for that
+   Reply posted ✅   Thread left open for the reviewer to close
 ```
 
 > Full fixture: [`examples/demo/pr-triage/`](examples/demo/pr-triage/)
