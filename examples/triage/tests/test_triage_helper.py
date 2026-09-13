@@ -238,6 +238,38 @@ class TestResolveComment(unittest.TestCase):
         data = json.loads(result.stdout)
         self.assertEqual(data["comment_type"], "issue")
 
+    def test_review_comment_body_is_included_in_output(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        rules = [{
+            "contains": ["pulls/comments/555"],
+            "stdout": {
+                "node_id": "PRRC_kw123", "id": 555, "pull_request_url": "https://api.github.com/repos/acme/widgets/pulls/42",
+                "body": "This is the actual review comment body text.",
+            },
+        }]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper(
+            ["resolve-comment", "--repo", "acme/widgets", "--pr", "42", "--comment-id", "555"], env=env,
+        )
+        data = json.loads(result.stdout)
+        self.assertEqual(data["body"], "This is the actual review comment body text.")
+
+    def test_issue_comment_body_is_included_in_output(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        rules = [
+            {"contains": ["pulls/comments/777"], "stdout": "", "returncode": 1, "stderr": "404"},
+            {"contains": ["issues/comments/777"], "stdout": {
+                "node_id": "IC_kwxyz", "id": 777, "html_url": "https://github.com/acme/widgets/pull/42#issuecomment-777",
+                "body": "This is the actual issue comment body text.",
+            }},
+        ]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper(
+            ["resolve-comment", "--repo", "acme/widgets", "--pr", "42", "--comment-id", "777"], env=env,
+        )
+        data = json.loads(result.stdout)
+        self.assertEqual(data["body"], "This is the actual issue comment body text.")
+
 
 class TestSnapshot(unittest.TestCase):
     def test_paginates_threads_across_two_pages(self):
@@ -1010,14 +1042,25 @@ class TestResolveThread(unittest.TestCase):
         snap_path.write_text(json.dumps(snapshot))
         return snap_path
 
-    def _live_rules(self, comment_node_ids, is_resolved=False, total_count=None):
+    def _live_rules(self, comment_node_ids, is_resolved=False, total_count=None, bodies=None):
         if total_count is None:
             total_count = len(comment_node_ids)
+        bodies = bodies or {}
+
+        def _body_for(cid):
+            if cid in bodies:
+                return bodies[cid]
+            if cid == "PRRC_root":
+                return "root"
+            if cid.startswith("PRRC_") and cid[len("PRRC_"):].isdigit():
+                return "c"
+            return cid
+
         return [
             {"contains": ["resolveReviewThread"], "stdout": {"data": {"resolveReviewThread": {"thread": {"isResolved": True}}}}},
             {"contains": ["viewerCanResolve"], "stdout": {"data": {"node": {
                 "isResolved": is_resolved, "viewerCanResolve": True,
-                "comments": {"totalCount": total_count, "nodes": [{"id": cid} for cid in comment_node_ids]},
+                "comments": {"totalCount": total_count, "nodes": [{"id": cid, "body": _body_for(cid)} for cid in comment_node_ids]},
             }}}},
         ]
 
@@ -1064,6 +1107,29 @@ class TestResolveThread(unittest.TestCase):
         error = json.loads(result.stdout)["error"]
         self.assertEqual(error["code"], "THREAD_CHANGED_SINCE_SNAPSHOT")
         self.assertEqual(error["unexpected_comment_node_ids"], ["PRRC_human_snuck_in"])
+        self.assertEqual(error["missing_comment_node_ids"], [])
+        self.assertNotIn("resolveReviewThread", calls_log.read_text())
+
+    def test_edited_comment_body_blocks_resolution_even_with_the_same_node_id(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        snapshot = {"threads": [{"id": "PRT_1", "comments": [
+            {"node_id": "PRRC_root", "body": "original text"},
+        ]}]}
+        snap_path = tmp_path / "snapshot.json"
+        snap_path.write_text(json.dumps(snapshot))
+        rules = self._live_rules(
+            ["PRRC_root"],
+            bodies={"PRRC_root": "edited text — this is now much worse than I thought"},
+        )
+        env, calls_log = gh_env(tmp_path, rules)
+        result = run_helper([
+            "resolve-thread", "--thread-node-id", "PRT_1", "--snapshot", str(snap_path),
+        ], env=env)
+        self.assertNotEqual(result.returncode, 0)
+        error = json.loads(result.stdout)["error"]
+        self.assertEqual(error["code"], "THREAD_CHANGED_SINCE_SNAPSHOT")
+        self.assertEqual(error["edited_comment_node_ids"], ["PRRC_root"])
+        self.assertEqual(error["unexpected_comment_node_ids"], [])
         self.assertEqual(error["missing_comment_node_ids"], [])
         self.assertNotIn("resolveReviewThread", calls_log.read_text())
 

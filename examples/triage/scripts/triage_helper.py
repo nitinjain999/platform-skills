@@ -228,6 +228,7 @@ def cmd_resolve_comment(args):
             "full_database_id": None,
             "belongs_to_pr": True,
             "pull_request_url": pr_url,
+            "body": data.get("body"),
         })
         return
 
@@ -250,6 +251,7 @@ def cmd_resolve_comment(args):
             "full_database_id": None,
             "belongs_to_pr": True,
             "pull_request_url": None,
+            "body": data.get("body"),
         })
         return
 
@@ -535,6 +537,7 @@ def cmd_resolve_thread(args):
     host = args.host or "github.com"
 
     expected_node_ids = None
+    expected_bodies = None
     if args.snapshot:
         snapshot = json.loads(Path(args.snapshot).read_text())
         matched = None
@@ -550,13 +553,14 @@ def cmd_resolve_thread(args):
                 thread_node_id=args.thread_node_id,
             )
         expected_node_ids = {c["node_id"] for c in matched["comments"]}
+        expected_bodies = {c["node_id"]: c.get("body") for c in matched["comments"]}
 
     check_query = """
     query($id: ID!) {
       node(id: $id) {
         ... on PullRequestReviewThread {
           isResolved viewerCanResolve
-          comments(first: 100) { totalCount nodes { id } }
+          comments(first: 100) { totalCount nodes { id body } }
         }
       }
     }
@@ -591,16 +595,22 @@ def cmd_resolve_thread(args):
                 total_comment_count=node["comments"]["totalCount"], fetched_comment_count=len(live_nodes),
             )
         live_node_ids = {c["id"] for c in live_nodes}
+        live_bodies = {c["id"]: c.get("body") for c in live_nodes}
         allowed_extra = set(args.allow_new_comment_node_id or [])
         unexpected = live_node_ids - expected_node_ids - allowed_extra
         missing = expected_node_ids - live_node_ids
-        if unexpected or missing:
+        edited = sorted(
+            cid for cid in (expected_node_ids & live_node_ids)
+            if live_bodies.get(cid) != expected_bodies.get(cid)
+        )
+        if unexpected or missing or edited:
             raise HelperError(
                 "THREAD_CHANGED_SINCE_SNAPSHOT",
                 "the thread's comments differ from the supplied snapshot in a way not covered by "
-                "--allow-new-comment-node-id; someone else changed this thread after the snapshot was taken, "
-                "so the resolution decision may be stale — reassess before resolving",
+                "--allow-new-comment-node-id; someone else changed this thread's content after the "
+                "snapshot was taken, so the resolution decision may be stale — reassess before resolving",
                 unexpected_comment_node_ids=sorted(unexpected), missing_comment_node_ids=sorted(missing),
+                edited_comment_node_ids=edited,
             )
 
     if not node["viewerCanResolve"]:
