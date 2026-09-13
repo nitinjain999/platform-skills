@@ -9,7 +9,7 @@ Covers the judgment, evidence rules, data model, and helper contract behind `/pl
 
 `commands/triage.md` is the router: modes, invocation forms, the classification table, the hard gates, and the report format live there. This file is where the reasoning behind each phase lives, and where the helper's mechanical contract is spelled out flag by flag so a future reader does not have to open the Python source to know what a subcommand actually does.
 
-**Verified against `examples/triage/scripts/triage_helper.py` at commit `e23bbf2`** (12 subcommands, state schema version 1). If the installed helper's `--help` output disagrees with a flag shown here, trust the installed helper and treat this file as stale for that detail.
+**Verified against `examples/triage/scripts/triage_helper.py` at commit `e23bbf2`** (11 top-level subcommands, state schema version 1). `worktree` and `state` each nest further verbs (`worktree prepare`/`cleanup`; `state lock`/`unlock`/`read`/`write`), for 15 invokable operations in total if you count every leaf individually. If the installed helper's `--help` output disagrees with a flag shown here, trust the installed helper and treat this file as stale for that detail.
 
 ---
 
@@ -236,7 +236,7 @@ The dedup marker embedded in a reply body is a fingerprint tied to this run's sn
 
 ## Helper invocation reference
 
-One worked example per subcommand, with exact flags and the exact JSON shape `emit(...)` produces on success. All twelve follow one worked scenario for continuity: PR #482 in `atg/platform-skills`, a Copilot review comment (database ID `1928374650`) on `src/worker.py` line 118 flagging a missing timeout on a `requests.get()` call, root of thread `PRRT_kwDOJz9x1s5abcdef`.
+The helper exposes 11 top-level subcommands. The 12 headings below give one worked example per subcommand, except `worktree`, whose two verbs (`prepare`, `cleanup`) each get their own numbered heading since they run at different phases; `state`'s four verbs (`lock`, `unlock`, `read`, `write`) are grouped under a single heading with one example apiece, since they share the same identity flags and run together as one bookkeeping step. Every example gives exact flags and the exact JSON shape `emit(...)` produces on success. All of them follow one worked scenario for continuity: PR #482 in `atg/platform-skills`, a Copilot review comment (database ID `1928374650`) on `src/worker.py` line 118 flagging a missing timeout on a `requests.get()` call, root of thread `PRRT_kwDOJz9x1s5abcdef`.
 
 ### 1. `resolve-identity`
 
