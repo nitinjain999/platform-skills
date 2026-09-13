@@ -18,6 +18,13 @@ class HelperError(Exception):
         self.extra = extra
 
 
+class JSONArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        self.print_usage(sys.stderr)
+        emit_error("ARGUMENT_ERROR", message)
+        self.exit(2)
+
+
 def run(cmd, cwd=None, check=True, input_text=None):
     proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, input=input_text)
     if check and proc.returncode != 0:
@@ -66,7 +73,7 @@ def cmd_resolve_identity(args):
 
 
 def build_parser():
-    parser = argparse.ArgumentParser(prog="triage_helper.py")
+    parser = JSONArgumentParser(prog="triage_helper.py")
     sub = parser.add_subparsers(dest="command", required=True)
 
     p = sub.add_parser("resolve-identity")

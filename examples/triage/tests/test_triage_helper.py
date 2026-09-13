@@ -130,6 +130,15 @@ class TestHelperSkeleton(unittest.TestCase):
         result = run_helper(["resolve-identity"])
         self.assertNotEqual(result.returncode, 0)
         self.assertNotIn("Traceback", result.stderr)
+        data = json.loads(result.stdout)
+        self.assertFalse(data["ok"])
+
+    def test_subcommand_missing_required_flag_emits_json_not_empty_stdout(self):
+        result = run_helper(["resolve-identity", "--pr", "1"])
+        self.assertEqual(result.returncode, 2)
+        data = json.loads(result.stdout)
+        self.assertFalse(data["ok"])
+        self.assertEqual(data["error"]["code"], "ARGUMENT_ERROR")
 
 
 if __name__ == "__main__":
