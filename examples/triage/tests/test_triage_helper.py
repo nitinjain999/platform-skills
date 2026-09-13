@@ -116,6 +116,78 @@ class TestResolveIdentity(unittest.TestCase):
         self.assertEqual(data["error"]["code"], "PR_NOT_OPEN")
 
 
+class TestResolveComment(unittest.TestCase):
+    def test_review_comment_on_requested_pr(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        rules = [{
+            "contains": ["pulls/comments/555"],
+            "stdout": {
+                "node_id": "PRRC_kw123", "id": 555, "pull_request_url": "https://api.github.com/repos/acme/widgets/pulls/42",
+            },
+        }]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper(
+            ["resolve-comment", "--repo", "acme/widgets", "--pr", "42", "--comment-id", "555"], env=env,
+        )
+        data = json.loads(result.stdout)
+        self.assertTrue(data["ok"])
+        self.assertEqual(data["comment_type"], "review")
+        self.assertEqual(data["database_id"], "555")
+        self.assertTrue(data["belongs_to_pr"])
+
+    def test_comment_belongs_to_a_different_pr_is_refused(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        rules = [{
+            "contains": ["pulls/comments/555"],
+            "stdout": {
+                "node_id": "PRRC_kw123", "id": 555, "pull_request_url": "https://api.github.com/repos/acme/widgets/pulls/99",
+            },
+        }]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper(
+            ["resolve-comment", "--repo", "acme/widgets", "--pr", "42", "--comment-id", "555"], env=env,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["error"]["code"], "COMMENT_WRONG_PR")
+
+    def test_large_id_beyond_js_safe_integer_stays_lossless(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        big = 9223372036854775800  # beyond Number.MAX_SAFE_INTEGER
+        rules = [{
+            "contains": ["pulls/comments/555"],
+            "stdout": {
+                "node_id": "PRRC_kwbig", "id": 555, "pull_request_url": "https://api.github.com/repos/acme/widgets/pulls/42",
+                "full_database_id": big,
+            },
+        }]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper(
+            ["resolve-comment", "--repo", "acme/widgets", "--pr", "42", "--comment-id", "555"], env=env,
+        )
+        data = json.loads(result.stdout)
+        self.assertEqual(data["full_database_id"], str(big))
+
+    def test_falls_back_to_issue_comment_when_review_lookup_404s(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        rules = [
+            {"contains": ["pulls/comments/777"], "stdout": "", "returncode": 1, "stderr": "404"},
+            {"contains": ["issues/comments/777"], "stdout": {
+                "node_id": "IC_kwxyz", "id": 777, "html_url": "https://github.com/acme/widgets/pull/42#issuecomment-777",
+            }},
+        ]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper(
+            ["resolve-comment", "--repo", "acme/widgets", "--pr", "42", "--comment-id", "777"], env=env,
+        )
+        data = json.loads(result.stdout)
+        self.assertEqual(data["comment_type"], "issue")
+
+
 class TestHelperSkeleton(unittest.TestCase):
     def test_help_exits_zero(self):
         result = run_helper(["--help"])

@@ -72,6 +72,60 @@ def cmd_resolve_identity(args):
     })
 
 
+def cmd_resolve_comment(args):
+    host = args.host or "github.com"
+
+    review = run(["gh", "api", f"repos/{args.repo}/pulls/comments/{args.comment_id}", "--hostname", host], check=False)
+    if review.returncode == 0:
+        data = json.loads(review.stdout)
+        pr_url = data.get("pull_request_url", "")
+        belongs = pr_url.rstrip("/").endswith(f"/pulls/{args.pr}")
+        if not belongs:
+            raise HelperError(
+                "COMMENT_WRONG_PR",
+                f"comment {args.comment_id} belongs to a different PR than #{args.pr}",
+                pull_request_url=pr_url,
+            )
+        emit({
+            "ok": True,
+            "comment_type": "review",
+            "node_id": data["node_id"],
+            "database_id": str(data["id"]),
+            "full_database_id": str(data["full_database_id"]) if data.get("full_database_id") is not None else None,
+            "belongs_to_pr": True,
+            "pull_request_url": pr_url,
+        })
+        return
+
+    issue = run(["gh", "api", f"repos/{args.repo}/issues/comments/{args.comment_id}", "--hostname", host], check=False)
+    if issue.returncode == 0:
+        data = json.loads(issue.stdout)
+        html_url = data.get("html_url", "")
+        belongs = f"/pull/{args.pr}#" in html_url
+        if not belongs:
+            raise HelperError(
+                "COMMENT_WRONG_PR",
+                f"comment {args.comment_id} belongs to a different PR than #{args.pr}",
+                html_url=html_url,
+            )
+        emit({
+            "ok": True,
+            "comment_type": "issue",
+            "node_id": data["node_id"],
+            "database_id": str(data["id"]),
+            "full_database_id": None,
+            "belongs_to_pr": True,
+            "pull_request_url": None,
+        })
+        return
+
+    raise HelperError(
+        "COMMENT_NOT_FOUND",
+        f"comment {args.comment_id} is not a review comment or an issue comment on this host "
+        "(a 404 here can also mean an inaccessible private resource, not proof the ID is wrong)",
+    )
+
+
 def build_parser():
     parser = JSONArgumentParser(prog="triage_helper.py")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -81,6 +135,13 @@ def build_parser():
     p.add_argument("--repo", required=True)
     p.add_argument("--host")
     p.set_defaults(func=cmd_resolve_identity)
+
+    p = sub.add_parser("resolve-comment")
+    p.add_argument("--repo", required=True)
+    p.add_argument("--pr", type=int, required=True)
+    p.add_argument("--comment-id", required=True)
+    p.add_argument("--host")
+    p.set_defaults(func=cmd_resolve_comment)
 
     return parser
 
