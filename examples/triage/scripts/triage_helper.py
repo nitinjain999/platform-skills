@@ -422,6 +422,46 @@ def cmd_reply(args):
     emit({"ok": True, "status": "CONFIRMED", "comment_node_id": None, "comment_id": str(data["id"]), "url": data["html_url"]})
 
 
+def cmd_resolve_thread(args):
+    host = args.host or "github.com"
+
+    check_query = """
+    query($id: ID!) {
+      node(id: $id) { ... on PullRequestReviewThread { isResolved viewerCanResolve } }
+    }
+    """
+    payload_path = _graphql_payload_file(check_query, {"id": args.thread_node_id})
+    try:
+        pre = json.loads(run(["gh", "api", "graphql", "--hostname", host, "--input", payload_path]).stdout)
+    finally:
+        os.unlink(payload_path)
+    node = pre["data"]["node"]
+
+    if node["isResolved"]:
+        emit({"ok": True, "status": "ALREADY_RESOLVED", "thread_node_id": args.thread_node_id})
+        return
+    if not node["viewerCanResolve"]:
+        raise HelperError("NOT_AUTHORIZED", "viewerCanResolve is false for this thread")
+
+    mutation = """
+    mutation($id: ID!) {
+      resolveReviewThread(input: {threadId: $id}) { thread { isResolved } }
+    }
+    """
+    payload_path = _graphql_payload_file(mutation, {"id": args.thread_node_id})
+    try:
+        result = json.loads(run(["gh", "api", "graphql", "--hostname", host, "--input", payload_path]).stdout)
+    finally:
+        os.unlink(payload_path)
+
+    if result.get("errors"):
+        raise HelperError("RESOLVE_FAILED", "resolveReviewThread returned errors", errors=result["errors"])
+    resolved = result["data"]["resolveReviewThread"]["thread"]["isResolved"]
+    if not resolved:
+        raise HelperError("RESOLVE_NOT_CONFIRMED", "mutation returned isResolved=false")
+    emit({"ok": True, "status": "CONFIRMED", "thread_node_id": args.thread_node_id})
+
+
 def build_parser():
     parser = JSONArgumentParser(prog="triage_helper.py")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -500,6 +540,11 @@ def build_parser():
     p.add_argument("--dedup-marker")
     p.add_argument("--host")
     p.set_defaults(func=cmd_reply)
+
+    p = sub.add_parser("resolve-thread")
+    p.add_argument("--thread-node-id", required=True)
+    p.add_argument("--host")
+    p.set_defaults(func=cmd_resolve_thread)
 
     return parser
 

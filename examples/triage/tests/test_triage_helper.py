@@ -555,6 +555,43 @@ class TestReply(unittest.TestCase):
         self.assertEqual(data["comment_id"], "900")
 
 
+class TestResolveThread(unittest.TestCase):
+    def test_resolves_and_confirms_isresolved_true(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        rules = [
+            {"contains": ["resolveReviewThread"], "stdout": {"data": {"resolveReviewThread": {"thread": {"isResolved": True}}}}},
+            {"contains": ["viewerCanResolve"], "stdout": {"data": {"node": {"isResolved": False, "viewerCanResolve": True}}}},
+        ]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper(["resolve-thread", "--thread-node-id", "PRT_1"], env=env)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["status"], "CONFIRMED")
+
+    def test_already_resolved_is_idempotent_no_mutation_call(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        rules = [{"contains": ["viewerCanResolve"], "stdout": {"data": {"node": {"isResolved": True, "viewerCanResolve": True}}}}]
+        env, calls_log = gh_env(tmp_path, rules)
+        result = run_helper(["resolve-thread", "--thread-node-id", "PRT_1"], env=env)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["status"], "ALREADY_RESOLVED")
+        self.assertNotIn("resolveReviewThread", calls_log.read_text())
+
+    def test_mutation_result_false_is_not_treated_as_success(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        rules = [
+            {"contains": ["resolveReviewThread"], "stdout": {"data": {"resolveReviewThread": {"thread": {"isResolved": False}}}}},
+            {"contains": ["viewerCanResolve"], "stdout": {"data": {"node": {"isResolved": False, "viewerCanResolve": True}}}},
+        ]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper(["resolve-thread", "--thread-node-id", "PRT_1"], env=env)
+        self.assertNotEqual(result.returncode, 0)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["error"]["code"], "RESOLVE_NOT_CONFIRMED")
+
+
 class TestHelperSkeleton(unittest.TestCase):
     def test_help_exits_zero(self):
         result = run_helper(["--help"])
