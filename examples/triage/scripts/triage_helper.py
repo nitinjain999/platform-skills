@@ -191,7 +191,10 @@ def _head_sha(repo, pr, host, check=True):
     proc = run(["gh", "api", f"repos/{repo}/pulls/{pr}", "--hostname", host], check=check)
     if proc.returncode != 0:
         return None
-    return json.loads(proc.stdout)["head"]["sha"]
+    try:
+        return json.loads(proc.stdout)["head"]["sha"]
+    except (ValueError, KeyError, TypeError):
+        return None
 
 
 def cmd_resolve_comment(args):
@@ -540,7 +543,7 @@ def cmd_resolve_thread(args):
       node(id: $id) {
         ... on PullRequestReviewThread {
           isResolved viewerCanResolve
-          comments(first: 100) { nodes { id } }
+          comments(first: 100) { totalCount nodes { id } }
         }
       }
     }
@@ -566,7 +569,15 @@ def cmd_resolve_thread(args):
         return
 
     if expected_node_ids is not None:
-        live_node_ids = {c["id"] for c in node["comments"]["nodes"]}
+        live_nodes = node["comments"]["nodes"]
+        if node["comments"]["totalCount"] > len(live_nodes):
+            raise HelperError(
+                "THREAD_CHANGED_SINCE_SNAPSHOT",
+                "the thread has more comments than this check can page through (over 100); "
+                "refusing rather than risking an incomplete comparison",
+                total_comment_count=node["comments"]["totalCount"], fetched_comment_count=len(live_nodes),
+            )
+        live_node_ids = {c["id"] for c in live_nodes}
         allowed_extra = set(args.allow_new_comment_node_id or [])
         unexpected = live_node_ids - expected_node_ids - allowed_extra
         missing = expected_node_ids - live_node_ids

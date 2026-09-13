@@ -697,6 +697,28 @@ class TestPublish(unittest.TestCase):
         self.assertIsNone(data["pr_head_after"])
         self.assertFalse(data["matches_pushed_commit"])
 
+    def test_publish_reports_success_when_the_post_push_pr_read_is_malformed(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        remote, wt, head_sha, commit_sha = self._remote_and_worktree(tmp_path)
+        rules = [
+            {"contains": ["pulls/42"], "stdout": {"head": {"sha": head_sha}}, "max_uses": 1},
+            {"contains": ["pulls/42"], "stdout": {"message": "Moved Permanently"}},
+        ]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper([
+            "publish", "--repo", "acme/widgets", "--pr", "42", "--worktree", wt,
+            "--expected-head-sha", head_sha, "--commit-sha", commit_sha,
+            "--head-remote-url", str(remote), "--head-ref", "fix-branch",
+        ], env=env)
+        data = json.loads(result.stdout)
+        self.assertTrue(data["ok"], data)
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(data["remote_head_after"], commit_sha)
+        self.assertTrue(data["push_landed"])
+        self.assertTrue(data["verification_incomplete"])
+        self.assertIsNone(data["pr_head_after"])
+        self.assertFalse(data["matches_pushed_commit"])
+
     def test_publish_refuses_when_remote_pr_head_already_moved(self):
         tmp_path = Path(tempfile.mkdtemp())
         remote, wt, head_sha, commit_sha = self._remote_and_worktree(tmp_path)
@@ -968,14 +990,23 @@ class TestResolveThread(unittest.TestCase):
         snap_path.write_text(json.dumps(snapshot))
         return snap_path
 
-    def _live_rules(self, comment_node_ids, is_resolved=False):
+    def _live_rules(self, comment_node_ids, is_resolved=False, total_count=None):
+        if total_count is None:
+            total_count = len(comment_node_ids)
         return [
             {"contains": ["resolveReviewThread"], "stdout": {"data": {"resolveReviewThread": {"thread": {"isResolved": True}}}}},
             {"contains": ["viewerCanResolve"], "stdout": {"data": {"node": {
                 "isResolved": is_resolved, "viewerCanResolve": True,
-                "comments": {"nodes": [{"id": cid} for cid in comment_node_ids]},
+                "comments": {"totalCount": total_count, "nodes": [{"id": cid} for cid in comment_node_ids]},
             }}}},
         ]
+
+    def _snapshot_with_n_comments(self, tmp_path, n, thread_id="PRT_1"):
+        comments = [{"node_id": f"PRRC_{i}", "body": "c"} for i in range(n)]
+        snapshot = {"threads": [{"id": thread_id, "comments": comments}]}
+        snap_path = tmp_path / "snapshot.json"
+        snap_path.write_text(json.dumps(snapshot))
+        return snap_path
 
     def test_reply_then_resolve_mainline_succeeds_when_the_reply_is_allowlisted(self):
         tmp_path = Path(tempfile.mkdtemp())
@@ -1014,6 +1045,22 @@ class TestResolveThread(unittest.TestCase):
         self.assertEqual(error["code"], "THREAD_CHANGED_SINCE_SNAPSHOT")
         self.assertEqual(error["unexpected_comment_node_ids"], ["PRRC_human_snuck_in"])
         self.assertEqual(error["missing_comment_node_ids"], [])
+        self.assertNotIn("resolveReviewThread", calls_log.read_text())
+
+    def test_thread_with_more_than_100_live_comments_is_refused_even_when_first_100_match(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        snap_path = self._snapshot_with_n_comments(tmp_path, 100)
+        live_ids = [f"PRRC_{i}" for i in range(100)]
+        rules = self._live_rules(live_ids, total_count=101)
+        env, calls_log = gh_env(tmp_path, rules)
+        result = run_helper([
+            "resolve-thread", "--thread-node-id", "PRT_1", "--snapshot", str(snap_path),
+        ], env=env)
+        self.assertNotEqual(result.returncode, 0)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["error"]["code"], "THREAD_CHANGED_SINCE_SNAPSHOT")
+        self.assertEqual(data["error"]["total_comment_count"], 101)
+        self.assertEqual(data["error"]["fetched_comment_count"], 100)
         self.assertNotIn("resolveReviewThread", calls_log.read_text())
 
     def test_already_resolved_short_circuits_before_the_drift_check(self):
