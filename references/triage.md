@@ -226,7 +226,7 @@ Tracks reply and resolution independently of execution state, because a fix can 
 
 `state lock` creates a lock file with `O_CREAT|O_EXCL|O_WRONLY`; a second `state lock` for the same repo/PR fails immediately with `LOCK_HELD` rather than blocking or retrying. This is a single-machine guard against two local instances acting on the same PR concurrently. It coordinates nothing across machines: a second checkout on a different runner still needs the Phase F/G rereads (expected-head-SHA check, thread-state reread before resolving) to avoid stepping on concurrent remote changes, because the lock file itself is invisible to it.
 
-Stale-lock recovery is manual, and deliberately so. The lock file records the acquiring process's `pid` and `acquired_at`, and a `LOCK_HELD` error hands both back as `held_by_pid` and `held_since` alongside `lock_path`. Nothing in the helper decides for you whether that holder is dead: there is no TTL and no liveness probe, because "is this PID still alive" is not a question with one portable answer, and guessing it wrong means two runs mutating one PR at the same time. Check it yourself (`ps -p <held_by_pid>`, or the equivalent on your platform), and weigh `held_since` against how long a run should plausibly take. Only once the holder is confirmed gone, clear it:
+Stale-lock recovery is manual, and deliberately so. The lock file records the acquiring process's `pid` and `acquired_at`, and a `LOCK_HELD` error hands them back as `held_by_pid`, `held_since`, and `age_seconds` alongside `lock_path`. `held_by_pid` is not useful for a liveness check: it names the short-lived `state lock` CLI process that created the lock file, which exits immediately after writing it, not a long-running triage run, so it is always gone by the time anyone reads it, whether or not the run that acquired the lock is still active. `ps -p <held_by_pid>` will therefore always report "not running," even for a lock that is still validly held. Judge staleness from `age_seconds` instead: weigh it against how long a run should plausibly take. There is no TTL and no automatic cutoff, because "how long is too long" is not a question with one portable answer, and guessing it wrong means two runs mutating one PR at the same time. Only once you are confident the run that acquired it has actually ended, clear it:
 
 ```bash
 python3 "$CLAUDE_PLUGIN_ROOT/examples/triage/scripts/triage_helper.py" state unlock \
@@ -605,7 +605,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/examples/triage/scripts/triage_helper.py" state unl
 }
 ```
 
-A second `state lock` call for the same repo/PR while the first is still held returns `LOCK_HELD` with `lock_path`, `held_by_pid`, and `held_since`, not a queued wait. Clearing a lock whose holder is confirmed dead is `state unlock --force-unlock` (see the local-lock section above for the confirmation step that has to come first).
+A second `state lock` call for the same repo/PR while the first is still held returns `LOCK_HELD` with `lock_path`, `held_by_pid`, `held_since`, and `age_seconds`, not a queued wait. Clearing a lock once you are confident the run that acquired it has ended is `state unlock --force-unlock` (see the local-lock section above for why that judgment is made from `age_seconds`, not from `held_by_pid`).
 
 ---
 

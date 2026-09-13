@@ -586,11 +586,14 @@ def cmd_state_lock(args):
         emit({"ok": True, "status": "ACQUIRED", "lock_path": str(lock_path)})
     except FileExistsError:
         held_by_pid, held_since = _read_lock_holder(lock_path)
+        age_seconds = (time.time() - held_since) if held_since else None
         raise HelperError(
             "LOCK_HELD",
-            "another triage instance holds the lock for this repo/PR; if that process is gone, "
-            "release it with `state unlock --force-unlock` after confirming held_by_pid is not running",
-            lock_path=str(lock_path), held_by_pid=held_by_pid, held_since=held_since,
+            "another triage instance holds the lock for this repo/PR; `held_by_pid` is the short-lived "
+            "`state lock` process that created this file, not a long-running process, so checking it with "
+            "`ps` proves nothing — judge staleness from `held_since`/`age_seconds` instead, and release with "
+            "`state unlock --force-unlock` only once you are confident the run that acquired it has ended",
+            lock_path=str(lock_path), held_by_pid=held_by_pid, held_since=held_since, age_seconds=age_seconds,
         )
 
 

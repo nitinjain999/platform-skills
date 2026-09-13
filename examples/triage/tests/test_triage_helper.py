@@ -907,6 +907,9 @@ class TestState(unittest.TestCase):
         self.assertEqual(error["code"], "LOCK_HELD")
         self.assertIsInstance(error["held_by_pid"], int)
         self.assertIsInstance(error["held_since"], float)
+        self.assertIsInstance(error["age_seconds"], float)
+        self.assertGreaterEqual(error["age_seconds"], 0)
+        self.assertNotIn("confirming held_by_pid is not running", error["message"])
 
     def test_unrecognized_lock_needs_force_unlock(self):
         tmp_path = Path(tempfile.mkdtemp())
