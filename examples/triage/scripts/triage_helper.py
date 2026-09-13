@@ -14,6 +14,15 @@ STATE_DIR_NAME = "triage-state"
 SCHEMA_VERSION = 1
 URL_USERINFO_RE = re.compile(r"://[^@/\s]*@")
 
+_NULL_HOOKS_DIR = None
+
+
+def _null_hooks_dir():
+    global _NULL_HOOKS_DIR
+    if _NULL_HOOKS_DIR is None:
+        _NULL_HOOKS_DIR = tempfile.mkdtemp(prefix="triage-null-hooks-")
+    return _NULL_HOOKS_DIR
+
 
 GRAPHQL_THREADS_PAGE = """
 query($owner:String!, $repo:String!, $pr:Int!, $after:String) {
@@ -339,13 +348,14 @@ def cmd_patch_context(args):
 
 
 def cmd_worktree_prepare(args):
+    hooks_flag = ("-c", f"core.hooksPath={_null_hooks_dir()}")
     if args.fetch_remote_url:
         run(
-            ["git", "fetch", args.fetch_remote_url, args.head_sha], cwd=args.repo_root,
+            ["git", *hooks_flag, "fetch", args.fetch_remote_url, args.head_sha], cwd=args.repo_root,
             env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
         )
     worktree_dir = tempfile.mkdtemp(prefix="triage-worktree-")
-    run(["git", "worktree", "add", "--detach", worktree_dir, args.head_sha], cwd=args.repo_root)
+    run(["git", *hooks_flag, "worktree", "add", "--detach", worktree_dir, args.head_sha], cwd=args.repo_root)
     emit({"ok": True, "worktree_path": worktree_dir, "head_sha": args.head_sha})
 
 
@@ -416,7 +426,10 @@ def cmd_publish(args):
         )
 
     refspec = f"{args.commit_sha}:refs/heads/{args.head_ref}"
-    push = run(["git", "push", args.head_remote_url, refspec], cwd=args.worktree, check=False)
+    push = run(
+        ["git", "-c", f"core.hooksPath={_null_hooks_dir()}", "push", args.head_remote_url, refspec],
+        cwd=args.worktree, check=False,
+    )
     if push.returncode != 0:
         stderr = redact(push.stderr)
         lowered = stderr.lower()

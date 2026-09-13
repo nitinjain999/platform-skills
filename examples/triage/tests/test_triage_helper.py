@@ -536,6 +536,26 @@ class TestWorktree(unittest.TestCase):
         cleanup = run_helper(["worktree", "cleanup", "--repo-root", str(origin), "--path", str(wt_path)])
         self.assertTrue(json.loads(cleanup.stdout)["ok"])
 
+    def test_prepare_does_not_honor_a_repo_configured_hookspath(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        repo, sha = self._make_repo(tmp_path)
+
+        hooks_dir = tmp_path / "attacker-controlled-hooks"
+        hooks_dir.mkdir()
+        marker = tmp_path / "hook-fired.marker"
+        hook = hooks_dir / "post-checkout"
+        hook.write_text(f"#!/bin/sh\ntouch {marker}\n")
+        hook.chmod(0o755)
+        subprocess.run(["git", "config", "core.hooksPath", str(hooks_dir)], cwd=repo, check=True)
+
+        result = run_helper(["worktree", "prepare", "--repo-root", str(repo), "--head-sha", sha])
+        data = json.loads(result.stdout)
+        self.assertTrue(data["ok"], data)
+        self.assertFalse(marker.exists())
+
+        cleanup = run_helper(["worktree", "cleanup", "--repo-root", str(repo), "--path", data["worktree_path"]])
+        self.assertTrue(json.loads(cleanup.stdout)["ok"])
+
 
 class TestStageCommit(unittest.TestCase):
     def _prepared_worktree(self, tmp_path):
