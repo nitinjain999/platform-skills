@@ -442,11 +442,11 @@ def cmd_publish(args):
         # must not short-circuit a genuine non-fast-forward into NO_PUSH_PERMISSION.
         if "non-fast-forward" in lowered or "fetch first" in lowered:
             raise HelperError("PUSH_REJECTED_NON_FASTFORWARD", "remote head moved; refresh before retrying", stderr=stderr)
-        if "protected branch" in lowered or "hook declined" in lowered:
+        if "protected branch" in lowered or "hook declined" in lowered or "gh013" in lowered or "rule violation" in lowered:
             raise HelperError(
                 "PUSH_REJECTED_BY_POLICY",
-                "the head repository refused the push by policy (branch protection or a server-side hook); "
-                "this is not a non-fast-forward and retrying after a refresh will not clear it",
+                "the head repository refused the push by policy (branch protection, a repository ruleset, or "
+                "a server-side hook); this is not a non-fast-forward and retrying after a refresh will not clear it",
                 stderr=stderr,
             )
         if "permission" in lowered or "403" in stderr or "authentication failed" in lowered:

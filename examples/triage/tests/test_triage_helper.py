@@ -918,6 +918,33 @@ class TestPublish(unittest.TestCase):
         data = json.loads(result.stdout)
         self.assertEqual(data["error"]["code"], "PUSH_REJECTED_BY_POLICY")
 
+    def test_ruleset_rejection_is_not_reported_as_non_fast_forward(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        remote, wt, head_sha, commit_sha = self._remote_and_worktree(tmp_path)
+        hook = Path(remote) / "hooks" / "pre-receive"
+        hook.write_text(
+            "#!/bin/sh\n"
+            "echo 'error: GH013: Repository rule violations found for refs/heads/fix-branch.' >&2\n"
+            "echo remote: >&2\n"
+            "echo '- Cannot push to this branch' >&2\n"
+            "exit 1\n"
+        )
+        hook.chmod(0o755)
+
+        rules = [{"contains": ["pulls/42"], "stdout": {"head": {"sha": head_sha}}}]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper([
+            "publish", "--repo", "acme/widgets", "--pr", "42", "--worktree", wt,
+            "--expected-head-sha", head_sha, "--commit-sha", commit_sha,
+            "--head-remote-url", str(remote), "--head-ref", "fix-branch",
+        ], env=env)
+        self.assertNotEqual(result.returncode, 0)
+        data = json.loads(result.stdout)
+        stderr = data["error"]["stderr"]
+        self.assertIn("gh013", stderr.lower())
+        self.assertIn("rule violation", stderr.lower())
+        self.assertEqual(data["error"]["code"], "PUSH_REJECTED_BY_POLICY")
+
     def test_unreachable_remote_is_an_unknown_transport_failure(self):
         tmp_path = Path(tempfile.mkdtemp())
         remote, wt, head_sha, commit_sha = self._remote_and_worktree(tmp_path)
