@@ -3,6 +3,7 @@
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -11,6 +12,7 @@ from pathlib import Path
 
 STATE_DIR_NAME = "triage-state"
 SCHEMA_VERSION = 1
+URL_USERINFO_RE = re.compile(r"://[^@/\s]*@")
 
 
 GRAPHQL_THREADS_PAGE = """
@@ -64,13 +66,19 @@ class JSONArgumentParser(argparse.ArgumentParser):
         self.exit(2)
 
 
+def redact(text):
+    if not isinstance(text, str):
+        return text
+    return URL_USERINFO_RE.sub("://", text)
+
+
 def run(cmd, cwd=None, check=True, input_text=None):
     proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, input=input_text)
     if check and proc.returncode != 0:
         raise HelperError(
             "SUBPROCESS_FAILED",
-            f"{' '.join(cmd)} failed",
-            stdout=proc.stdout, stderr=proc.stderr, returncode=proc.returncode,
+            redact(f"{' '.join(cmd)} failed"),
+            stdout=redact(proc.stdout), stderr=redact(proc.stderr), returncode=proc.returncode,
         )
     return proc
 
@@ -203,7 +211,7 @@ def cmd_resolve_comment(args):
             "comment_type": "review",
             "node_id": data["node_id"],
             "database_id": str(data["id"]),
-            "full_database_id": str(data["full_database_id"]) if data.get("full_database_id") is not None else None,
+            "full_database_id": None,
             "belongs_to_pr": True,
             "pull_request_url": pr_url,
         })
@@ -233,8 +241,13 @@ def cmd_resolve_comment(args):
 
     raise HelperError(
         "COMMENT_NOT_FOUND",
-        f"comment {args.comment_id} is not a review comment or an issue comment on this host "
-        "(a 404 here can also mean an inaccessible private resource, not proof the ID is wrong)",
+        f"comment {args.comment_id} was not returned as a review comment or an issue comment on this host "
+        "(a 404 here can also mean an inaccessible private resource, and a non-404 transport or auth failure "
+        "is reported below rather than proving the ID is wrong)",
+        review_lookup_returncode=review.returncode,
+        review_lookup_stderr=redact(review.stderr),
+        issue_lookup_returncode=issue.returncode,
+        issue_lookup_stderr=redact(issue.stderr),
     )
 
 
@@ -333,7 +346,8 @@ def cmd_worktree_cleanup(args):
 
 def cmd_stage_commit(args):
     run(["git", "add", "--"] + args.paths, cwd=args.worktree)
-    staged = run(["git", "diff", "--cached", "--name-only"], cwd=args.worktree).stdout.splitlines()
+    staged_raw = run(["git", "diff", "--cached", "--name-only", "-z"], cwd=args.worktree).stdout
+    staged = [p for p in staged_raw.split("\0") if p]
     staged_set, intended_set = set(staged), set(args.paths)
     if staged_set != intended_set:
         raise HelperError(
@@ -360,11 +374,19 @@ def cmd_publish(args):
     refspec = f"{args.commit_sha}:refs/heads/{args.head_ref}"
     push = run(["git", "push", args.head_remote_url, refspec], cwd=args.worktree, check=False)
     if push.returncode != 0:
-        stderr = push.stderr
-        if "non-fast-forward" in stderr or "fetch first" in stderr or "rejected" in stderr:
-            raise HelperError("PUSH_REJECTED_NON_FASTFORWARD", "remote head moved; refresh before retrying", stderr=stderr)
-        if "permission" in stderr.lower() or "403" in stderr:
+        stderr = redact(push.stderr)
+        lowered = stderr.lower()
+        if "protected branch" in lowered or "hook declined" in lowered:
+            raise HelperError(
+                "PUSH_REJECTED_BY_POLICY",
+                "the head repository refused the push by policy (branch protection or a server-side hook); "
+                "this is not a non-fast-forward and retrying after a refresh will not clear it",
+                stderr=stderr,
+            )
+        if "permission" in lowered or "403" in stderr or "authentication failed" in lowered:
             raise HelperError("NO_PUSH_PERMISSION", "no write access to the head repository", stderr=stderr)
+        if "non-fast-forward" in lowered or "fetch first" in lowered or "rejected" in lowered:
+            raise HelperError("PUSH_REJECTED_NON_FASTFORWARD", "remote head moved; refresh before retrying", stderr=stderr)
         raise HelperError("UNKNOWN_TRANSPORT_FAILURE", "push failed for an unrecognized reason", stderr=stderr)
 
     after = run(["git", "ls-remote", args.head_remote_url, f"refs/heads/{args.head_ref}"], cwd=args.worktree).stdout.split()[0]
@@ -386,6 +408,19 @@ def _thread_already_has_marker(snapshot_path, thread_node_id, marker):
 
 def cmd_reply(args):
     host = args.host or "github.com"
+
+    if not args.thread_node_id and args.pr is None:
+        raise HelperError(
+            "INVALID_ARGUMENTS",
+            "reply needs either --thread-node-id (review thread reply) or --pr (PR conversation comment)",
+        )
+    if not args.thread_node_id and (args.dedup_marker or args.snapshot):
+        raise HelperError(
+            "INVALID_ARGUMENTS",
+            "--dedup-marker/--snapshot are only checked on the --thread-node-id path; "
+            "the PR conversation comment path has no dedup mechanism, so passing them there would be misleading",
+        )
+
     body = Path(args.body_file).read_text()
 
     if args.thread_node_id:
@@ -466,7 +501,15 @@ def cmd_resolve_thread(args):
 
 
 def _state_dir(repo_root):
-    d = Path(repo_root) / ".git" / STATE_DIR_NAME
+    git_path = Path(repo_root) / ".git"
+    if git_path.is_file():
+        raise HelperError(
+            "REPO_ROOT_IS_LINKED_WORKTREE",
+            f"{git_path} is a file, not a directory, so --repo-root points at a linked worktree; "
+            "pass the main checkout's root (the one whose .git is a directory) instead",
+            repo_root=str(repo_root), git_path=str(git_path),
+        )
+    d = git_path / STATE_DIR_NAME
     d.mkdir(parents=True, exist_ok=True)
     return d
 
@@ -483,6 +526,16 @@ def _lock_file(repo_root, repo, pr):
     return _state_dir(repo_root) / f"{_safe_name(repo, pr)}.lock"
 
 
+def _read_lock_holder(lock_path):
+    try:
+        held = json.loads(Path(lock_path).read_text())
+    except (OSError, ValueError):
+        return None, None
+    if not isinstance(held, dict):
+        return None, None
+    return held.get("pid"), held.get("acquired_at")
+
+
 def cmd_state_lock(args):
     lock_path = _lock_file(args.repo_root, args.repo, args.pr)
     try:
@@ -491,12 +544,35 @@ def cmd_state_lock(args):
         os.close(fd)
         emit({"ok": True, "status": "ACQUIRED", "lock_path": str(lock_path)})
     except FileExistsError:
-        raise HelperError("LOCK_HELD", "another triage instance holds the lock for this repo/PR", lock_path=str(lock_path))
+        held_by_pid, held_since = _read_lock_holder(lock_path)
+        raise HelperError(
+            "LOCK_HELD",
+            "another triage instance holds the lock for this repo/PR; if that process is gone, "
+            "release it with `state unlock --force-unlock` after confirming held_by_pid is not running",
+            lock_path=str(lock_path), held_by_pid=held_by_pid, held_since=held_since,
+        )
 
 
 def cmd_state_unlock(args):
-    _lock_file(args.repo_root, args.repo, args.pr).unlink(missing_ok=True)
-    emit({"ok": True, "status": "RELEASED"})
+    lock_path = _lock_file(args.repo_root, args.repo, args.pr)
+    if not lock_path.exists():
+        emit({"ok": True, "status": "RELEASED", "existed": False, "held_by_pid": None, "held_since": None})
+        return
+
+    held_by_pid, held_since = _read_lock_holder(lock_path)
+    if held_by_pid is None and not args.force_unlock:
+        raise HelperError(
+            "LOCK_NOT_RECOGNIZED",
+            "the lock file is unreadable or was not written by this helper, so it is not safe to assume "
+            "it belongs to this run; re-run with --force-unlock once the holding process is confirmed dead",
+            lock_path=str(lock_path),
+        )
+
+    lock_path.unlink(missing_ok=True)
+    emit({
+        "ok": True, "status": "RELEASED", "existed": True,
+        "forced": bool(args.force_unlock), "held_by_pid": held_by_pid, "held_since": held_since,
+    })
 
 
 def cmd_state_read(args):
@@ -621,6 +697,8 @@ def build_parser():
         sp.add_argument("--pr", type=int, required=True)
         if name == "write":
             sp.add_argument("--record-file", required=True)
+        if name == "unlock":
+            sp.add_argument("--force-unlock", action="store_true")
         sp.set_defaults(func=func)
 
     return parser
