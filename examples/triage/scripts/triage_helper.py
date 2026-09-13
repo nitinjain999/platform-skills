@@ -276,6 +276,47 @@ def cmd_map_thread(args):
     raise HelperError("COMMENT_NOT_IN_SNAPSHOT", f"comment {args.comment_id} not found in any collected thread")
 
 
+def cmd_patch_context(args):
+    host = args.host or "github.com"
+    out = run(["gh", "api", f"repos/{args.repo}/pulls/{args.pr}/files", "--hostname", host, "--paginate"]).stdout
+    entries = json.loads(out)
+
+    match = None
+    for e in entries:
+        if e["filename"] == args.path or e.get("previous_filename") == args.path:
+            match = e
+            break
+
+    if match is None:
+        emit({"ok": True, "evidence_status": "NOT_IN_DIFF", "filename": None, "previous_filename": None, "patch": None})
+        return
+
+    if match.get("patch"):
+        emit({
+            "ok": True,
+            "evidence_status": "RENAMED" if match.get("previous_filename") else "PATCH_OK",
+            "filename": match["filename"],
+            "previous_filename": match.get("previous_filename"),
+            "patch": match["patch"],
+        })
+        return
+
+    if args.base_sha and args.head_sha and args.repo_root:
+        diff = run(["git", "diff", f"{args.base_sha}..{args.head_sha}", "--", match["filename"]], cwd=args.repo_root, check=False)
+        if diff.returncode == 0 and diff.stdout.strip():
+            emit({
+                "ok": True, "evidence_status": "LOCAL_DIFF_FALLBACK",
+                "filename": match["filename"], "previous_filename": match.get("previous_filename"),
+                "patch": diff.stdout,
+            })
+            return
+
+    emit({
+        "ok": True, "evidence_status": "BINARY_OR_UNAVAILABLE",
+        "filename": match["filename"], "previous_filename": match.get("previous_filename"), "patch": None,
+    })
+
+
 def build_parser():
     parser = JSONArgumentParser(prog="triage_helper.py")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -304,6 +345,16 @@ def build_parser():
     p.add_argument("--snapshot", required=True)
     p.add_argument("--comment-id", required=True)
     p.set_defaults(func=cmd_map_thread)
+
+    p = sub.add_parser("patch-context")
+    p.add_argument("--repo", required=True)
+    p.add_argument("--pr", type=int, required=True)
+    p.add_argument("--path", required=True)
+    p.add_argument("--base-sha")
+    p.add_argument("--head-sha")
+    p.add_argument("--repo-root")
+    p.add_argument("--host")
+    p.set_defaults(func=cmd_patch_context)
 
     return parser
 

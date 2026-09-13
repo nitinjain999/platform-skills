@@ -305,6 +305,53 @@ class TestMapThread(unittest.TestCase):
         self.assertEqual(data["error"]["code"], "COMMENT_NOT_IN_SNAPSHOT")
 
 
+class TestPatchContext(unittest.TestCase):
+    def test_exact_filename_match_returns_patch_ok(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        rules = [{"contains": ["pulls/42/files"], "stdout": [
+            {"filename": "a.yml", "patch": "@@ -1 +1 @@\n-old\n+new"},
+        ]}]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper(["patch-context", "--repo", "acme/widgets", "--pr", "42", "--path", "a.yml"], env=env)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["evidence_status"], "PATCH_OK")
+
+    def test_renamed_file_matches_previous_filename(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        rules = [{"contains": ["pulls/42/files"], "stdout": [
+            {"filename": "new-name.yaml", "previous_filename": "old-name.yaml", "patch": "@@ -1 +1 @@\n-x\n+y"},
+        ]}]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper(["patch-context", "--repo", "acme/widgets", "--pr", "42", "--path", "old-name.yaml"], env=env)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["evidence_status"], "RENAMED")
+        self.assertEqual(data["filename"], "new-name.yaml")
+
+    def test_binary_file_has_no_patch_but_explicit_status(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        rules = [{"contains": ["pulls/42/files"], "stdout": [
+            {"filename": "logo.png"},
+        ]}]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper(["patch-context", "--repo", "acme/widgets", "--pr", "42", "--path", "logo.png"], env=env)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["evidence_status"], "BINARY_OR_UNAVAILABLE")
+
+    def test_file_not_in_diff_at_all(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        rules = [{"contains": ["pulls/42/files"], "stdout": [
+            {"filename": "unrelated.yml", "patch": "@@ -1 +1 @@\n-x\n+y"},
+        ]}]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper(["patch-context", "--repo", "acme/widgets", "--pr", "42", "--path", "missing.yml"], env=env)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["evidence_status"], "NOT_IN_DIFF")
+
+
 class TestHelperSkeleton(unittest.TestCase):
     def test_help_exits_zero(self):
         result = run_helper(["--help"])
