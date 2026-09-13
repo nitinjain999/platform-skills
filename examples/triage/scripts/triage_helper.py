@@ -360,7 +360,16 @@ def cmd_stage_commit(args):
         )
     run(["git", "commit", "-m", args.message], cwd=args.worktree)
     sha = run(["git", "rev-parse", "HEAD"], cwd=args.worktree).stdout.strip()
-    emit({"ok": True, "commit_sha": sha, "committed_paths": sorted(staged_set)})
+    committed_raw = run(["git", "diff-tree", "--no-commit-id", "--name-only", "-r", "-z", sha], cwd=args.worktree).stdout
+    committed = sorted(p for p in committed_raw.split("\0") if p)
+    if set(committed) != intended_set:
+        raise HelperError(
+            "COMMIT_CONTENT_DRIFTED_FROM_STAGED_SET",
+            "a commit hook changed the staged content after the allowlist check passed; the resulting commit "
+            "does not match the intended paths and must be reinspected before publication",
+            committed=committed, intended=sorted(intended_set), commit_sha=sha,
+        )
+    emit({"ok": True, "commit_sha": sha, "committed_paths": committed})
 
 
 def cmd_publish(args):

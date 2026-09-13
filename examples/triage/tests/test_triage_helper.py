@@ -551,6 +551,24 @@ class TestStageCommit(unittest.TestCase):
         self.assertTrue(data["ok"], data)
         self.assertEqual(data["committed_paths"], ["café.yml"])
 
+    def test_pre_commit_hook_content_drift_is_caught_not_silently_reported(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        repo, sha = TestWorktree()._make_repo(tmp_path)
+        hook = repo / ".git" / "hooks" / "pre-commit"
+        hook.write_text("#!/bin/sh\necho extra > extra.txt\ngit add extra.txt\n")
+        hook.chmod(0o755)
+
+        prep = run_helper(["worktree", "prepare", "--repo-root", str(repo), "--head-sha", sha])
+        wt = Path(json.loads(prep.stdout)["worktree_path"])
+        (wt / "a.yml").write_text("fixed\n")
+        result = run_helper(["stage-commit", "--worktree", str(wt), "--paths", "a.yml", "--message", "fix: a"])
+        self.assertNotEqual(result.returncode, 0)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["error"]["code"], "COMMIT_CONTENT_DRIFTED_FROM_STAGED_SET")
+        self.assertIn("extra.txt", data["error"]["committed"])
+        self.assertIn("a.yml", data["error"]["committed"])
+        self.assertEqual(data["error"]["intended"], ["a.yml"])
+
     def test_refuses_when_staged_set_has_extra_unrelated_file(self):
         tmp_path = Path(tempfile.mkdtemp())
         wt = self._prepared_worktree(tmp_path)

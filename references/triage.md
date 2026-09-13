@@ -138,7 +138,7 @@ Capture the command run, the working directory, the exit code, a concise result,
 
 For a documentation-only change, meaningful validation may be a link check, a frontmatter check, or a render check rather than a new unit test manufactured just to have one; do not add implementation-mirroring tests purely to raise a count. For an actual defect fix, prefer a behavioral regression test where practical, and explain the coverage limits when one is not practical.
 
-Only a reported PASS unlocks `stage-commit` (Phase D). If a commit hook then modifies the staged content (formatting, generated file regeneration), re-inspect the resulting commit and revalidate the changed result before publication; the validation that ran against pre-hook content does not automatically speak for post-hook content.
+Only a reported PASS unlocks `stage-commit` (Phase D). If a `pre-commit` hook then modifies the staged content (formatting, generated file regeneration) after the allowlist check but before the commit is sealed, `stage-commit` itself catches the drift: it rereads the sealed commit's actual file set and raises `COMMIT_CONTENT_DRIFTED_FROM_STAGED_SET` when it no longer matches the intended paths, rather than silently reporting the pre-hook set. Re-inspect the resulting commit and revalidate the changed result before publication in that case; the validation that ran against pre-hook content does not automatically speak for post-hook content.
 
 ---
 
@@ -459,7 +459,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/examples/triage/scripts/triage_helper.py" stage-com
 }
 ```
 
-A stray unrelated staged file in the same worktree produces `STAGED_SET_MISMATCH` instead, with `staged` and `intended` arrays showing exactly where they diverge.
+`committed_paths` is read back from the sealed commit itself (`git diff-tree` against `commit_sha`), not from the pre-commit staged set, so it reflects what a hook may have changed. A stray unrelated staged file in the same worktree produces `STAGED_SET_MISMATCH` instead, with `staged` and `intended` arrays showing exactly where they diverge, before any commit is made. If a `pre-commit` hook modifies the index after that check passes (a formatter, a generated-file regeneration) so the sealed commit no longer matches the intended path list, `stage-commit` raises `COMMIT_CONTENT_DRIFTED_FROM_STAGED_SET` with `committed`, `intended`, and `commit_sha`, rather than reporting the pre-hook set as if it were what actually landed.
 
 ### 9. `publish`
 
