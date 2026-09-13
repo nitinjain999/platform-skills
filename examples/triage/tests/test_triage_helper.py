@@ -596,6 +596,63 @@ class TestPublish(unittest.TestCase):
         self.assertFalse(data["ok"])
         self.assertEqual(data["error"]["code"], "PUSH_REJECTED_NON_FASTFORWARD")
 
+    def test_non_fast_forward_with_permission_like_name_is_not_misclassified(self):
+        # Regression: git push stderr always echoes the remote URL and ref
+        # name. A repo named "permission-service.git" or a branch named
+        # "fix/permissions-audit-403" must not cause a genuine non-fast-forward
+        # rejection to be misread as NO_PUSH_PERMISSION just because the loose
+        # "permission"/"403" substring check used to run before the
+        # unambiguous non-fast-forward token check.
+        tmp_path = Path(tempfile.mkdtemp())
+        remote = tmp_path / "permission-service.git"
+        subprocess.run(["git", "init", "--bare", str(remote)], check=True, capture_output=True)
+        branch = "fix/permissions-audit-403"
+
+        seed = tmp_path / "seed"
+        seed.mkdir()
+        subprocess.run(["git", "init"], cwd=seed, check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "t@example.com"], cwd=seed, check=True)
+        subprocess.run(["git", "config", "user.name", "Test"], cwd=seed, check=True)
+        (seed / "a.yml").write_text("original\n")
+        subprocess.run(["git", "add", "a.yml"], cwd=seed, check=True)
+        subprocess.run(["git", "commit", "-m", "init"], cwd=seed, check=True, capture_output=True)
+        subprocess.run(["git", "remote", "add", "origin", str(remote)], cwd=seed, check=True)
+        subprocess.run(["git", "push", "origin", f"HEAD:refs/heads/{branch}"], cwd=seed, check=True, capture_output=True)
+        head_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=seed, capture_output=True, text=True).stdout.strip()
+
+        wt = tempfile.mkdtemp()
+        subprocess.run(["git", "worktree", "add", "--detach", wt, head_sha], cwd=seed, check=True, capture_output=True)
+        (Path(wt) / "a.yml").write_text("fixed\n")
+        subprocess.run(["git", "add", "a.yml"], cwd=wt, check=True)
+        subprocess.run(["git", "commit", "-m", "fix"], cwd=wt, check=True, capture_output=True)
+        commit_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=wt, capture_output=True, text=True).stdout.strip()
+
+        # Someone else pushes a divergent commit to the same branch first, so
+        # the worktree's push below is rejected as a genuine non-fast-forward.
+        other = tempfile.mkdtemp()
+        subprocess.run(["git", "clone", str(remote), other], check=True, capture_output=True)
+        subprocess.run(["git", "checkout", branch], cwd=other, check=True, capture_output=True)
+        (Path(other) / "a.yml").write_text("someone else's change\n")
+        subprocess.run(["git", "add", "a.yml"], cwd=other, check=True)
+        subprocess.run(["git", "-c", "user.email=x@x.com", "-c", "user.name=x", "commit", "-m", "divergent"], cwd=other, check=True, capture_output=True)
+        subprocess.run(["git", "push", "origin", branch], cwd=other, check=True, capture_output=True)
+
+        rules = [{"contains": ["pulls/42"], "stdout": {"head": {"sha": head_sha}}}]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper([
+            "publish", "--repo", "acme/widgets", "--pr", "42", "--worktree", wt,
+            "--expected-head-sha", head_sha, "--commit-sha", commit_sha,
+            "--head-remote-url", str(remote), "--head-ref", branch,
+        ], env=env)
+        data = json.loads(result.stdout)
+        self.assertFalse(data["ok"])
+        # Sanity check: the stderr genuinely contains the misleading tokens,
+        # so this test would have failed against the pre-reorder classifier.
+        stderr = data["error"]["stderr"]
+        self.assertIn("permission", stderr.lower())
+        self.assertIn("403", stderr)
+        self.assertEqual(data["error"]["code"], "PUSH_REJECTED_NON_FASTFORWARD")
+
     def test_policy_rejection_is_not_reported_as_non_fast_forward(self):
         tmp_path = Path(tempfile.mkdtemp())
         remote, wt, head_sha, commit_sha = self._remote_and_worktree(tmp_path)

@@ -376,6 +376,13 @@ def cmd_publish(args):
     if push.returncode != 0:
         stderr = redact(push.stderr)
         lowered = stderr.lower()
+        # Order matters: unambiguous tokens first, then the loose "permission"
+        # substring check, then the loosest "rejected" fallback last. git push
+        # stderr always echoes the remote URL and ref name, so a branch or repo
+        # name containing "permission" or "403" (e.g. fix/permissions-audit)
+        # must not short-circuit a genuine non-fast-forward into NO_PUSH_PERMISSION.
+        if "non-fast-forward" in lowered or "fetch first" in lowered:
+            raise HelperError("PUSH_REJECTED_NON_FASTFORWARD", "remote head moved; refresh before retrying", stderr=stderr)
         if "protected branch" in lowered or "hook declined" in lowered:
             raise HelperError(
                 "PUSH_REJECTED_BY_POLICY",
@@ -385,7 +392,7 @@ def cmd_publish(args):
             )
         if "permission" in lowered or "403" in stderr or "authentication failed" in lowered:
             raise HelperError("NO_PUSH_PERMISSION", "no write access to the head repository", stderr=stderr)
-        if "non-fast-forward" in lowered or "fetch first" in lowered or "rejected" in lowered:
+        if "rejected" in lowered:
             raise HelperError("PUSH_REJECTED_NON_FASTFORWARD", "remote head moved; refresh before retrying", stderr=stderr)
         raise HelperError("UNKNOWN_TRANSPORT_FAILURE", "push failed for an unrecognized reason", stderr=stderr)
 
