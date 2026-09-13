@@ -347,7 +347,7 @@ platform-skills/
 
 ## Roadmap
 
-**Current release: v1.41.0** — 44 commands, 63 domain reference guides, 50+ wiki pages.
+**Current release: v1.42.0** — 44 commands, 63 domain reference guides, 50+ wiki pages.
 
 Full version history is in [CHANGELOG.md](CHANGELOG.md).
 
