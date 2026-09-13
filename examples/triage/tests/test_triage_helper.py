@@ -262,6 +262,49 @@ class TestSnapshot(unittest.TestCase):
         self.assertEqual(data["head_sha_after"], "b" * 40)
 
 
+class TestMapThread(unittest.TestCase):
+    def _write_snapshot(self, tmp_path):
+        snapshot = {
+            "threads": [{
+                "id": "PRT_1", "is_resolved": False, "viewer_can_reply": True, "viewer_can_resolve": True,
+                "comments": [
+                    {"node_id": "PRRC_root", "database_id": "11", "full_database_id": "11", "body": "root"},
+                    {"node_id": "PRRC_reply", "database_id": "22", "full_database_id": "22", "body": "a reply"},
+                ],
+            }],
+        }
+        path = tmp_path / "snapshot.json"
+        path.write_text(json.dumps(snapshot))
+        return path
+
+    def test_maps_a_reply_id_not_just_the_root(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        snap = self._write_snapshot(tmp_path)
+        result = run_helper(["map-thread", "--snapshot", str(snap), "--comment-id", "22"])
+        data = json.loads(result.stdout)
+        self.assertTrue(data["ok"])
+        self.assertEqual(data["thread_node_id"], "PRT_1")
+        self.assertFalse(data["is_root_comment"])
+
+    def test_maps_the_root_id_too(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        snap = self._write_snapshot(tmp_path)
+        result = run_helper(["map-thread", "--snapshot", str(snap), "--comment-id", "11"])
+        data = json.loads(result.stdout)
+        self.assertTrue(data["is_root_comment"])
+
+    def test_unmapped_comment_is_a_clear_error_not_silence(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        snap = self._write_snapshot(tmp_path)
+        result = run_helper(["map-thread", "--snapshot", str(snap), "--comment-id", "999"])
+        self.assertNotEqual(result.returncode, 0)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["error"]["code"], "COMMENT_NOT_IN_SNAPSHOT")
+
+
 class TestHelperSkeleton(unittest.TestCase):
     def test_help_exits_zero(self):
         result = run_helper(["--help"])

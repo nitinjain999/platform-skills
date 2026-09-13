@@ -257,6 +257,25 @@ def cmd_snapshot(args):
     emit(snapshot)
 
 
+def cmd_map_thread(args):
+    snapshot = json.loads(Path(args.snapshot).read_text())
+    comment_id = str(args.comment_id)
+    for thread in snapshot["threads"]:
+        for idx, c in enumerate(thread["comments"]):
+            if comment_id in (c["database_id"], c["full_database_id"], c["node_id"]):
+                emit({
+                    "ok": True,
+                    "thread_node_id": thread["id"],
+                    "is_resolved": thread["is_resolved"],
+                    "viewer_can_reply": thread["viewer_can_reply"],
+                    "viewer_can_resolve": thread["viewer_can_resolve"],
+                    "matched_comment_node_id": c["node_id"],
+                    "is_root_comment": idx == 0,
+                })
+                return
+    raise HelperError("COMMENT_NOT_IN_SNAPSHOT", f"comment {args.comment_id} not found in any collected thread")
+
+
 def build_parser():
     parser = JSONArgumentParser(prog="triage_helper.py")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -280,6 +299,11 @@ def build_parser():
     p.add_argument("--host")
     p.add_argument("--out")
     p.set_defaults(func=cmd_snapshot)
+
+    p = sub.add_parser("map-thread")
+    p.add_argument("--snapshot", required=True)
+    p.add_argument("--comment-id", required=True)
+    p.set_defaults(func=cmd_map_thread)
 
     return parser
 
