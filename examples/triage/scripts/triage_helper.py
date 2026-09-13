@@ -37,9 +37,44 @@ def emit_error(code, message, **extra):
     emit({"ok": False, "error": {"code": code, "message": message, **extra}})
 
 
+def cmd_resolve_identity(args):
+    host = args.host or "github.com"
+    out = run(["gh", "api", f"repos/{args.repo}/pulls/{args.pr}", "--hostname", host]).stdout
+    pr_data = json.loads(out)
+
+    if pr_data.get("state") != "open":
+        raise HelperError("PR_NOT_OPEN", f"PR #{args.pr} is not open (state={pr_data.get('state')})")
+
+    base_repo = pr_data["base"]["repo"]["full_name"]
+    head_repo_data = pr_data["head"].get("repo")
+    head_repo = head_repo_data["full_name"] if head_repo_data else None
+    is_fork = head_repo is not None and head_repo != base_repo
+
+    emit({
+        "ok": True,
+        "repo": args.repo,
+        "host": host,
+        "pr_number": args.pr,
+        "state": pr_data["state"],
+        "is_draft": pr_data.get("draft", False),
+        "base_repo": base_repo,
+        "head_repo": head_repo,
+        "head_ref": pr_data["head"]["ref"],
+        "head_sha": pr_data["head"]["sha"],
+        "is_fork": is_fork,
+    })
+
+
 def build_parser():
     parser = argparse.ArgumentParser(prog="triage_helper.py")
-    parser.add_subparsers(dest="command", required=True)
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    p = sub.add_parser("resolve-identity")
+    p.add_argument("--pr", type=int, required=True)
+    p.add_argument("--repo", required=True)
+    p.add_argument("--host")
+    p.set_defaults(func=cmd_resolve_identity)
+
     return parser
 
 

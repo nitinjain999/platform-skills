@@ -58,6 +58,64 @@ def gh_env(tmp_path, rules):
     return env, calls_log
 
 
+class TestResolveIdentity(unittest.TestCase):
+    def test_open_pr_same_repo_head(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        rules = [{
+            "contains": ["repos/acme/widgets/pulls/42"],
+            "stdout": {
+                "state": "open", "draft": False,
+                "base": {"repo": {"full_name": "acme/widgets"}},
+                "head": {"repo": {"full_name": "acme/widgets"}, "ref": "fix-42", "sha": "a" * 40},
+            },
+        }]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper(["resolve-identity", "--pr", "42", "--repo", "acme/widgets"], env=env)
+        self.assertEqual(result.returncode, 0)
+        data = json.loads(result.stdout)
+        self.assertTrue(data["ok"])
+        self.assertEqual(data["head_sha"], "a" * 40)
+        self.assertFalse(data["is_fork"])
+        self.assertFalse(data["is_draft"])
+
+    def test_fork_pr_head_repo_differs_from_base(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        rules = [{
+            "contains": ["repos/acme/widgets/pulls/7"],
+            "stdout": {
+                "state": "open", "draft": True,
+                "base": {"repo": {"full_name": "acme/widgets"}},
+                "head": {"repo": {"full_name": "contributor/widgets"}, "ref": "patch-1", "sha": "b" * 40},
+            },
+        }]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper(["resolve-identity", "--pr", "7", "--repo", "acme/widgets"], env=env)
+        data = json.loads(result.stdout)
+        self.assertTrue(data["is_fork"])
+        self.assertTrue(data["is_draft"])
+        self.assertEqual(data["state"], "open")
+
+    def test_closed_pr_is_rejected(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        rules = [{
+            "contains": ["repos/acme/widgets/pulls/99"],
+            "stdout": {
+                "state": "closed", "draft": False,
+                "base": {"repo": {"full_name": "acme/widgets"}},
+                "head": {"repo": {"full_name": "acme/widgets"}, "ref": "old", "sha": "c" * 40},
+            },
+        }]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper(["resolve-identity", "--pr", "99", "--repo", "acme/widgets"], env=env)
+        self.assertNotEqual(result.returncode, 0)
+        data = json.loads(result.stdout)
+        self.assertFalse(data["ok"])
+        self.assertEqual(data["error"]["code"], "PR_NOT_OPEN")
+
+
 class TestHelperSkeleton(unittest.TestCase):
     def test_help_exits_zero(self):
         result = run_helper(["--help"])
