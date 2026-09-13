@@ -36,6 +36,21 @@
       "name": "execution_state_separate_from_classification",
       "description": "States fix/publish/resolution status as a distinct field from the classification, not conflated into one verdict.",
       "max_score": 1
+    },
+    {
+      "name": "scenario_2_correct_classification",
+      "description": "Classifies scenario 2's finding as `ACTIONABLE_FIX` — the bug persists under the renamed `apply_discount_code`, so it is not `ALREADY_FIXED` or `NOT_APPLICABLE`.",
+      "max_score": 2
+    },
+    {
+      "name": "scenario_2_correct_fix",
+      "description": "Provides a corrected `apply_discount_code` that adds a bounds check on `discount.percent` (0-100) before it is used in the invoice-total calculation.",
+      "max_score": 2
+    },
+    {
+      "name": "scenario_2_reply_quality",
+      "description": "Review reply for scenario 2 names `apply_discount_code` as the renamed target and explains that the absent literal name did not mean the bug was fixed.",
+      "max_score": 1
     }
   ]
 }
