@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# tests/triage-script.sh — validates triage_helper.py without a live PR/session
 set -euo pipefail
 
 HELPER="examples/triage/scripts/triage_helper.py"

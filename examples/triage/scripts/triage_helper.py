@@ -52,7 +52,7 @@ def main(argv=None):
     except HelperError as e:
         emit_error(e.code, e.message, **e.extra)
         return 1
-    except Exception as e:  # last resort: never surface a raw traceback
+    except Exception as e:
         emit_error("UNEXPECTED_ERROR", str(e))
         return 1
 
