@@ -383,6 +383,35 @@ class TestWorktree(unittest.TestCase):
         self.assertTrue(json.loads(cleanup.stdout)["ok"])
 
 
+class TestStageCommit(unittest.TestCase):
+    def _prepared_worktree(self, tmp_path):
+        repo, sha = TestWorktree()._make_repo(tmp_path)
+        result = run_helper(["worktree", "prepare", "--repo-root", str(repo), "--head-sha", sha])
+        return Path(json.loads(result.stdout)["worktree_path"])
+
+    def test_commits_only_the_named_path(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        wt = self._prepared_worktree(tmp_path)
+        (wt / "a.yml").write_text("fixed\n")
+        result = run_helper(["stage-commit", "--worktree", str(wt), "--paths", "a.yml", "--message", "fix: a"])
+        data = json.loads(result.stdout)
+        self.assertTrue(data["ok"])
+        self.assertEqual(data["committed_paths"], ["a.yml"])
+
+    def test_refuses_when_staged_set_has_extra_unrelated_file(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        wt = self._prepared_worktree(tmp_path)
+        (wt / "a.yml").write_text("fixed\n")
+        (wt / "b.yml").write_text("unrelated new file\n")
+        subprocess.run(["git", "add", "b.yml"], cwd=wt, check=True)
+        result = run_helper(["stage-commit", "--worktree", str(wt), "--paths", "a.yml", "--message", "fix: a"])
+        self.assertNotEqual(result.returncode, 0)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["error"]["code"], "STAGED_SET_MISMATCH")
+
+
 class TestHelperSkeleton(unittest.TestCase):
     def test_help_exits_zero(self):
         result = run_helper(["--help"])

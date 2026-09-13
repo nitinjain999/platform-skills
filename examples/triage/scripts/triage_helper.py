@@ -328,6 +328,21 @@ def cmd_worktree_cleanup(args):
     emit({"ok": True, "removed": args.path})
 
 
+def cmd_stage_commit(args):
+    run(["git", "add", "--"] + args.paths, cwd=args.worktree)
+    staged = run(["git", "diff", "--cached", "--name-only"], cwd=args.worktree).stdout.splitlines()
+    staged_set, intended_set = set(staged), set(args.paths)
+    if staged_set != intended_set:
+        raise HelperError(
+            "STAGED_SET_MISMATCH",
+            "staged files do not match the intended path allowlist",
+            staged=sorted(staged_set), intended=sorted(intended_set),
+        )
+    run(["git", "commit", "-m", args.message], cwd=args.worktree)
+    sha = run(["git", "rev-parse", "HEAD"], cwd=args.worktree).stdout.strip()
+    emit({"ok": True, "commit_sha": sha, "committed_paths": sorted(staged_set)})
+
+
 def build_parser():
     parser = JSONArgumentParser(prog="triage_helper.py")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -366,6 +381,12 @@ def build_parser():
     p.add_argument("--repo-root")
     p.add_argument("--host")
     p.set_defaults(func=cmd_patch_context)
+
+    p = sub.add_parser("stage-commit")
+    p.add_argument("--worktree", required=True)
+    p.add_argument("--paths", nargs="+", required=True)
+    p.add_argument("--message", required=True)
+    p.set_defaults(func=cmd_stage_commit)
 
     p = sub.add_parser("worktree")
     wsub = p.add_subparsers(dest="worktree_command", required=True)
