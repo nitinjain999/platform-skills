@@ -14,11 +14,11 @@ an actual PR comment, the file it refers to, the expected classification, the fi
 ```
 
 Claude:
-1. Fetches the comment and PR diff via `gh` CLI
-2. Classifies: `ACTIONABLE_FIX` | `INFORMATIONAL` | `NOT_APPLICABLE`
-3. If `ACTIONABLE_FIX` — reads the file, applies the minimal fix, commits and pushes
+1. Fetches the comment and PR diff via the triage helper
+2. Classifies the finding as one of `ACTIONABLE_FIX` | `ALREADY_FIXED` | `INFORMATIONAL` | `NOT_APPLICABLE` | `NEEDS_CLARIFICATION` | `OUT_OF_SCOPE` | `DUPLICATE`
+3. If `ACTIONABLE_FIX` and the fix is sufficiently justified — reads the file, applies the minimal fix in an isolated worktree, validates, commits and pushes
 4. Posts a reply on the thread explaining the decision
-5. Resolves the thread via GraphQL
+5. Resolves the thread only if the finding is eligible for closure — an `ACTIONABLE_FIX` after successful remediation, `ALREADY_FIXED` with current evidence, or a verified `DUPLICATE`. `INFORMATIONAL`, `NEEDS_CLARIFICATION`, `OUT_OF_SCOPE`, and disputed `NOT_APPLICABLE` findings do not auto-close, and a mixed thread stays open while any substantive concern remains.
 
 No workflow. No secrets to configure. Runs entirely inside Claude Code with `gh auth` active.
 
@@ -274,6 +274,8 @@ app:
 **Reply posted:**
 > Replaced the hardcoded key with an environment variable reference. The actual secret must be stored in your secrets manager (AWS Secrets Manager / Vault) and injected at runtime via External Secrets Operator or a Kubernetes `secretKeyRef`. See [references/secrets.md](../../references/secrets.md) for the setup pattern.
 >
+> The exposed key itself should be rotated in your secrets manager — that is outstanding and separate from this source-code fix. Removing it from the file does not revoke it.
+>
 > ✅ Fixed — thread resolved.
 
 ---
@@ -290,9 +292,9 @@ app:
 **No fix applied.**
 
 **Reply posted:**
-> Two replicas gives us N+1 redundancy for the expected 200 RPS load (each pod handles ~200 RPS at 60% CPU). We have HPA configured to scale up to 10 when CPU exceeds 70%, so burst traffic is covered. The PodDisruptionBudget ensures at least 1 is always available during rolling deploys.
+> Two replicas gives basic redundancy against a single pod failure, but I don't have capacity data (expected request rate, per-pod resource usage, or an HPA/scaling policy) in this diff or the rest of the repo to confirm 2 is enough for production traffic. If there's a capacity plan or autoscaler config elsewhere I should check against, point me to it; otherwise this needs input from whoever owns the capacity numbers rather than a figure I'd be guessing here.
 >
-> ℹ️ Thread resolved — no code change needed.
+> ℹ️ Replied — thread left open. Informational findings aren't resolved automatically; close it once you're satisfied with the answer.
 
 ---
 
@@ -306,9 +308,9 @@ app:
 **No fix applied.**
 
 **Reply posted:**
-> Agreed — a PDB is the right call for this service. Tracked as a follow-up in issue #89. This PR only changes the image tag; adding a PDB is a separate operational change that needs load testing to set the correct `minAvailable` value first.
+> Agreed — a PDB is the right call for this service. This PR only changes the image tag; adding a PDB is a separate operational change that needs load testing to set the correct `minAvailable` value first. This would need a follow-up issue, which I have not created — say if you want one opened.
 >
-> ℹ️ Thread resolved — no code change needed.
+> ℹ️ Replied — thread left open. This is a valid follow-up outside this PR's scope, not something to auto-close.
 
 ---
 
@@ -322,13 +324,13 @@ app:
 **No fix applied.**
 
 **Reply posted:**
-> The KMS key is managed in the `terraform/shared/kms` module (not changed in this PR). You can confirm rotation is active with:
+> The KMS key is managed in the `terraform/shared/kms` module, which isn't touched by this PR's diff, so I can't confirm rotation status from what's in evidence here. You can check it directly with:
 > ```bash
 > aws kms get-key-rotation-status --key-id <key-id>
 > ```
-> The shared module has `enable_key_rotation = true` set. If you want to verify before merging, I can paste the current `terraform plan` output for that module.
+> or by reading `enable_key_rotation` in that module's current state. Happy to paste the `terraform plan` output for that module if that's easier than running the command yourself.
 >
-> ℹ️ Thread resolved — no code change needed.
+> ℹ️ Replied — thread left open. This is a question about existing infrastructure, not a defect in this diff, and isn't something to auto-close.
 
 ---
 
@@ -339,14 +341,11 @@ app:
 **PR comment** (from `github-actions[bot]`):
 > ✅ All checks passed: validate (2m 14s), security (1m 03s), terraform (3m 22s)
 
-**Classification:** NOT_APPLICABLE — automated status message, no action needed.
+**Classification:** none needed — pure status notification with no diagnostic content (no failing check, no stack trace, no assertion). Not every bot comment is worth a classification pass.
 
-**No fix applied.**
+**No fix applied. No reply posted. No thread mutation.**
 
-**Reply posted:**
-> Automated CI status message — no action needed.
->
-> ❌ Not applicable — thread resolved.
+This is different from a CI *failure* comment, which does carry a diagnostic and gets investigated before being classified — a changed caller can break an unchanged callee, so a stack trace or named failing check is never skipped quietly.
 
 ---
 
@@ -376,7 +375,7 @@ app:
 **No fix applied.**
 
 **Reply posted:**
-> `terraform/rds.tf` is not changed in this PR — this comment belongs on the PR that last modified that file, or as a standalone issue. Opening a separate issue to track the retention change.
+> `terraform/rds.tf` is not changed in this PR — this comment belongs on the PR that last modified that file, or as a standalone issue. I have not opened one; say if you want that tracked separately.
 >
 > ❌ Not applicable — thread resolved.
 
@@ -384,18 +383,18 @@ app:
 
 ## --all Mode Output
 
-When you run `/platform-skills:triage --all 42`, triage processes every unresolved thread and prints a summary table:
+When you run `/platform-skills:triage --all 42`, triage processes every unresolved thread captured in the snapshot and prints a summary table with classification, execution, and discussion state kept separate — resolution is not an unconditional outcome of processing a comment:
 
 ```
-| Comment      | Author      | Classification  | Action                                        |
-|---|---|---|---|
-| #123456789   | @alice      | ACTIONABLE_FIX  | Fixed: Deployment.yaml — resource limits added, committed a1b2c3d |
-| #123456790   | @bob        | ACTIONABLE_FIX  | Fixed: ingress.yaml — migrated to networking.k8s.io/v1, committed b2c3d4e |
-| #123456791   | @carol      | INFORMATIONAL   | Replied — replica count explained, thread resolved |
-| #123456792   | @dave       | INFORMATIONAL   | Replied — PDB tracked in issue #89, thread resolved |
-| #123456793   | actions[bot]| NOT_APPLICABLE  | Replied — CI status message, thread resolved |
+| Comment      | Author      | Classification  | Execution           | Discussion                              |
+|---|---|---|---|---|
+| #123456789   | @alice      | ACTIONABLE_FIX  | Published a1b2c3d   | Replied, resolved                       |
+| #123456790   | @bob        | ACTIONABLE_FIX  | Published b2c3d4e   | Replied, resolved                       |
+| #123456791   | @carol      | INFORMATIONAL   | N/A                  | Replied, open (not eligible for auto-close) |
+| #123456792   | @dave       | INFORMATIONAL   | N/A                  | Replied, open (not eligible for auto-close) |
+| #123456793   | actions[bot]| (none — pure status, no diagnostic) | N/A | Skipped — no reply, no mutation |
 
-5 comments processed. 2 fixes committed. 5 threads resolved.
+5 comments processed. 2 fixes committed and published, threads resolved. 2 informational replies posted, threads left open pending the reviewer. 1 pure CI status message skipped with no reply or mutation.
 ```
 
 ---
