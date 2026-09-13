@@ -352,6 +352,37 @@ class TestPatchContext(unittest.TestCase):
         self.assertEqual(data["evidence_status"], "NOT_IN_DIFF")
 
 
+class TestWorktree(unittest.TestCase):
+    def _make_repo(self, tmp_path):
+        repo = tmp_path / "origin"
+        repo.mkdir()
+        subprocess.run(["git", "init"], cwd=repo, check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "t@example.com"], cwd=repo, check=True)
+        subprocess.run(["git", "config", "user.name", "Test"], cwd=repo, check=True)
+        (repo / "a.yml").write_text("original\n")
+        subprocess.run(["git", "add", "a.yml"], cwd=repo, check=True)
+        subprocess.run(["git", "commit", "-m", "init"], cwd=repo, check=True, capture_output=True)
+        sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, capture_output=True, text=True).stdout.strip()
+        return repo, sha
+
+    def test_prepare_does_not_touch_original_dirty_files(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        repo, sha = self._make_repo(tmp_path)
+        (repo / "a.yml").write_text("dirty uncommitted edit\n")
+
+        result = run_helper(["worktree", "prepare", "--repo-root", str(repo), "--head-sha", sha])
+        data = json.loads(result.stdout)
+        self.assertTrue(data["ok"])
+        wt_path = Path(data["worktree_path"])
+
+        self.assertEqual((repo / "a.yml").read_text(), "dirty uncommitted edit\n")
+        self.assertEqual((wt_path / "a.yml").read_text(), "original\n")
+
+        cleanup = run_helper(["worktree", "cleanup", "--repo-root", str(repo), "--path", str(wt_path)])
+        self.assertTrue(json.loads(cleanup.stdout)["ok"])
+
+
 class TestHelperSkeleton(unittest.TestCase):
     def test_help_exits_zero(self):
         result = run_helper(["--help"])

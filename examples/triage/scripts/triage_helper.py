@@ -317,6 +317,17 @@ def cmd_patch_context(args):
     })
 
 
+def cmd_worktree_prepare(args):
+    worktree_dir = tempfile.mkdtemp(prefix="triage-worktree-")
+    run(["git", "worktree", "add", "--detach", worktree_dir, args.head_sha], cwd=args.repo_root)
+    emit({"ok": True, "worktree_path": worktree_dir, "head_sha": args.head_sha})
+
+
+def cmd_worktree_cleanup(args):
+    run(["git", "worktree", "remove", "--force", args.path], cwd=args.repo_root)
+    emit({"ok": True, "removed": args.path})
+
+
 def build_parser():
     parser = JSONArgumentParser(prog="triage_helper.py")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -355,6 +366,19 @@ def build_parser():
     p.add_argument("--repo-root")
     p.add_argument("--host")
     p.set_defaults(func=cmd_patch_context)
+
+    p = sub.add_parser("worktree")
+    wsub = p.add_subparsers(dest="worktree_command", required=True)
+
+    wp = wsub.add_parser("prepare")
+    wp.add_argument("--repo-root", required=True)
+    wp.add_argument("--head-sha", required=True)
+    wp.set_defaults(func=cmd_worktree_prepare)
+
+    wc = wsub.add_parser("cleanup")
+    wc.add_argument("--repo-root", required=True)
+    wc.add_argument("--path", required=True)
+    wc.set_defaults(func=cmd_worktree_cleanup)
 
     return parser
 
