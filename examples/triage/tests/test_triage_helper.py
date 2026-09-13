@@ -2,6 +2,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -410,6 +411,86 @@ class TestStageCommit(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         data = json.loads(result.stdout)
         self.assertEqual(data["error"]["code"], "STAGED_SET_MISMATCH")
+
+
+class TestPublish(unittest.TestCase):
+    def _remote_and_worktree(self, tmp_path):
+        remote = tmp_path / "remote.git"
+        subprocess.run(["git", "init", "--bare", str(remote)], check=True, capture_output=True)
+
+        seed = tmp_path / "seed"
+        seed.mkdir()
+        subprocess.run(["git", "init"], cwd=seed, check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "t@example.com"], cwd=seed, check=True)
+        subprocess.run(["git", "config", "user.name", "Test"], cwd=seed, check=True)
+        (seed / "a.yml").write_text("original\n")
+        subprocess.run(["git", "add", "a.yml"], cwd=seed, check=True)
+        subprocess.run(["git", "commit", "-m", "init"], cwd=seed, check=True, capture_output=True)
+        subprocess.run(["git", "remote", "add", "origin", str(remote)], cwd=seed, check=True)
+        subprocess.run(["git", "push", "origin", "HEAD:refs/heads/fix-branch"], cwd=seed, check=True, capture_output=True)
+        head_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=seed, capture_output=True, text=True).stdout.strip()
+
+        wt = tempfile.mkdtemp()
+        subprocess.run(["git", "worktree", "add", "--detach", wt, head_sha], cwd=seed, check=True, capture_output=True)
+        (Path(wt) / "a.yml").write_text("fixed\n")
+        subprocess.run(["git", "add", "a.yml"], cwd=wt, check=True)
+        subprocess.run(["git", "commit", "-m", "fix"], cwd=wt, check=True, capture_output=True)
+        commit_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=wt, capture_output=True, text=True).stdout.strip()
+        return remote, wt, head_sha, commit_sha
+
+    def test_publish_succeeds_when_remote_head_matches_expectation(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        remote, wt, head_sha, commit_sha = self._remote_and_worktree(tmp_path)
+        rules = [{"contains": ["pulls/42"], "stdout": {"head": {"sha": head_sha}}}]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper([
+            "publish", "--repo", "acme/widgets", "--pr", "42", "--worktree", wt,
+            "--expected-head-sha", head_sha, "--commit-sha", commit_sha,
+            "--head-remote-url", str(remote), "--head-ref", "fix-branch",
+        ], env=env)
+        data = json.loads(result.stdout)
+        self.assertTrue(data["ok"])
+        self.assertEqual(data["remote_head_after"], commit_sha)
+
+    def test_publish_refuses_when_remote_pr_head_already_moved(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        remote, wt, head_sha, commit_sha = self._remote_and_worktree(tmp_path)
+        rules = [{"contains": ["pulls/42"], "stdout": {"head": {"sha": "f" * 40}}}]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper([
+            "publish", "--repo", "acme/widgets", "--pr", "42", "--worktree", wt,
+            "--expected-head-sha", head_sha, "--commit-sha", commit_sha,
+            "--head-remote-url", str(remote), "--head-ref", "fix-branch",
+        ], env=env)
+        self.assertNotEqual(result.returncode, 0)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["error"]["code"], "HEAD_MOVED")
+
+    def test_publish_never_uses_force(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        remote, wt, head_sha, commit_sha = self._remote_and_worktree(tmp_path)
+        subprocess.run(["git", "push", str(remote), "HEAD~0:refs/heads/other-marker"], cwd=wt, check=False, capture_output=True)
+        other = tempfile.mkdtemp()
+        subprocess.run(["git", "clone", str(remote), other], check=True, capture_output=True)
+        subprocess.run(["git", "checkout", "fix-branch"], cwd=other, check=True, capture_output=True)
+        (Path(other) / "a.yml").write_text("someone else's change\n")
+        subprocess.run(["git", "add", "a.yml"], cwd=other, check=True)
+        subprocess.run(["git", "-c", "user.email=x@x.com", "-c", "user.name=x", "commit", "-m", "divergent"], cwd=other, check=True, capture_output=True)
+        subprocess.run(["git", "push", "origin", "fix-branch"], cwd=other, check=True, capture_output=True)
+
+        rules = [{"contains": ["pulls/42"], "stdout": {"head": {"sha": head_sha}}}]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper([
+            "publish", "--repo", "acme/widgets", "--pr", "42", "--worktree", wt,
+            "--expected-head-sha", head_sha, "--commit-sha", commit_sha,
+            "--head-remote-url", str(remote), "--head-ref", "fix-branch",
+        ], env=env)
+        data = json.loads(result.stdout)
+        self.assertFalse(data["ok"])
+        self.assertEqual(data["error"]["code"], "PUSH_REJECTED_NON_FASTFORWARD")
 
 
 class TestHelperSkeleton(unittest.TestCase):

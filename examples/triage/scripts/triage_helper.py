@@ -343,6 +343,34 @@ def cmd_stage_commit(args):
     emit({"ok": True, "commit_sha": sha, "committed_paths": sorted(staged_set)})
 
 
+def cmd_publish(args):
+    host = args.host or "github.com"
+    current = json.loads(run(["gh", "api", f"repos/{args.repo}/pulls/{args.pr}", "--hostname", host]).stdout)["head"]["sha"]
+
+    if current != args.expected_head_sha:
+        raise HelperError(
+            "HEAD_MOVED",
+            "PR head advanced since the plan was built; refresh and revalidate before retrying",
+            expected=args.expected_head_sha, actual=current,
+        )
+
+    refspec = f"{args.commit_sha}:refs/heads/{args.head_ref}"
+    push = run(["git", "push", args.head_remote_url, refspec], cwd=args.worktree, check=False)
+    if push.returncode != 0:
+        stderr = push.stderr
+        if "non-fast-forward" in stderr or "fetch first" in stderr or "rejected" in stderr:
+            raise HelperError("PUSH_REJECTED_NON_FASTFORWARD", "remote head moved; refresh before retrying", stderr=stderr)
+        if "permission" in stderr.lower() or "403" in stderr:
+            raise HelperError("NO_PUSH_PERMISSION", "no write access to the head repository", stderr=stderr)
+        raise HelperError("UNKNOWN_TRANSPORT_FAILURE", "push failed for an unrecognized reason", stderr=stderr)
+
+    after = run(["git", "ls-remote", args.head_remote_url, f"refs/heads/{args.head_ref}"], cwd=args.worktree).stdout.split()[0]
+    emit({
+        "ok": True, "pushed_commit": args.commit_sha, "remote_head_after": after,
+        "matches_pushed_commit": after == args.commit_sha,
+    })
+
+
 def build_parser():
     parser = JSONArgumentParser(prog="triage_helper.py")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -400,6 +428,17 @@ def build_parser():
     wc.add_argument("--repo-root", required=True)
     wc.add_argument("--path", required=True)
     wc.set_defaults(func=cmd_worktree_cleanup)
+
+    p = sub.add_parser("publish")
+    p.add_argument("--repo", required=True)
+    p.add_argument("--pr", type=int, required=True)
+    p.add_argument("--worktree", required=True)
+    p.add_argument("--expected-head-sha", required=True)
+    p.add_argument("--commit-sha", required=True)
+    p.add_argument("--head-remote-url", required=True)
+    p.add_argument("--head-ref", required=True)
+    p.add_argument("--host")
+    p.set_defaults(func=cmd_publish)
 
     return parser
 
