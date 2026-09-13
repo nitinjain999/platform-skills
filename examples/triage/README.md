@@ -73,7 +73,7 @@ actionable-fix/
   plaintext-secret-in-config.yaml   # Copilot flags a hardcoded API key
 ```
 
-The informational and not-applicable cases below are documented inline because they do not need fixture files.
+The remaining classifications below are documented inline because they do not need fixture files.
 
 ---
 
@@ -280,23 +280,25 @@ app:
 
 ---
 
-## Scenario: INFORMATIONAL
+## Scenario: NEEDS_CLARIFICATION
 
 ### 6. "Why only 2 replicas?"
 
 **PR comment** (from `@carol`):
 > Why is `replicas: 2`? Is that enough for production traffic? Just want to understand the reasoning.
 
-**Classification:** INFORMATIONAL — asking for context, not pointing at a bug.
+**Classification:** NEEDS_CLARIFICATION — the question is reasonable, but answering it correctly requires capacity or scaling evidence (expected request rate, per-pod capacity, an autoscaling policy) that isn't available anywhere in this diff or the rest of the repo. The right move is to say so, not guess a number.
 
 **No fix applied.**
 
 **Reply posted:**
 > Two replicas gives basic redundancy against a single pod failure, but I don't have capacity data (expected request rate, per-pod resource usage, or an HPA/scaling policy) in this diff or the rest of the repo to confirm 2 is enough for production traffic. If there's a capacity plan or autoscaler config elsewhere I should check against, point me to it; otherwise this needs input from whoever owns the capacity numbers rather than a figure I'd be guessing here.
 >
-> ℹ️ Replied — thread left open. Informational findings aren't resolved automatically; close it once you're satisfied with the answer.
+> ❓ Replied — thread left open pending the missing capacity data. Clarification requests aren't resolved automatically.
 
 ---
+
+## Scenario: INFORMATIONAL
 
 ### 7. "Consider adding a PDB"
 
@@ -334,7 +336,7 @@ app:
 
 ---
 
-## Scenario: NOT_APPLICABLE
+## Scenario: Quiet Skip (no classification needed)
 
 ### 9. CI status bot comment
 
@@ -349,35 +351,39 @@ This is different from a CI *failure* comment, which does carry a diagnostic and
 
 ---
 
+## Scenario: ALREADY_FIXED
+
 ### 10. Already fixed in a later commit
 
 **PR comment** (from `@frank`):
 > The `latest` image tag on line 9 needs to be pinned.
 
-**Classification:** NOT_APPLICABLE — commit `a3f91b2` on this branch already pins the tag.
+**Classification:** ALREADY_FIXED — the concern was valid when raised, but commit `a3f91b2` on this branch already pins the tag, and current-head evidence confirms it. This is not `NOT_APPLICABLE`: the finding's premise was true, it just got fixed by later work already on this head.
 
-**No fix applied.**
+**No fix applied — already addressed.**
 
 **Reply posted:**
 > This was already addressed in commit `a3f91b2` — image tag is now pinned to `orders:1.4.2@sha256:...`.
 >
-> ❌ Not applicable — thread resolved.
+> ✅ Already fixed — thread resolved.
 
 ---
+
+## Scenario: OUT_OF_SCOPE
 
 ### 11. Comment on a file not in this PR
 
 **PR comment** (from `@grace`):
 > The `terraform/rds.tf` backup retention should be 35 days not 7.
 
-**Classification:** NOT_APPLICABLE — `terraform/rds.tf` was not modified in this PR.
+**Classification:** OUT_OF_SCOPE — `terraform/rds.tf` may well need a longer retention window, but it was not modified in this PR, so remediation is outside this authorized change. This is not `NOT_APPLICABLE`: nothing here disproves the finding's premise, it's just not this PR's diff to fix.
 
 **No fix applied.**
 
 **Reply posted:**
 > `terraform/rds.tf` is not changed in this PR — this comment belongs on the PR that last modified that file, or as a standalone issue. I have not opened one; say if you want that tracked separately.
 >
-> ❌ Not applicable — thread resolved.
+> 📌 Out of scope for this PR — thread left open. A potentially valid concern outside the authorized change doesn't auto-close.
 
 ---
 
@@ -388,13 +394,13 @@ When you run `/platform-skills:triage --all 42`, triage processes every unresolv
 ```
 | Comment      | Author      | Classification  | Execution           | Discussion                              |
 |---|---|---|---|---|
-| #123456789   | @alice      | ACTIONABLE_FIX  | Published a1b2c3d   | Replied, resolved                       |
-| #123456790   | @bob        | ACTIONABLE_FIX  | Published b2c3d4e   | Replied, resolved                       |
-| #123456791   | @carol      | INFORMATIONAL   | N/A                  | Replied, open (not eligible for auto-close) |
-| #123456792   | @dave       | INFORMATIONAL   | N/A                  | Replied, open (not eligible for auto-close) |
+| #123456789   | @alice      | ACTIONABLE_FIX     | Published a1b2c3d   | Replied, resolved                       |
+| #123456790   | @bob        | ACTIONABLE_FIX     | Published b2c3d4e   | Replied, resolved                       |
+| #123456791   | @carol      | NEEDS_CLARIFICATION | N/A                 | Replied, open (not eligible for auto-close) |
+| #123456792   | @dave       | INFORMATIONAL      | N/A                  | Replied, open (not eligible for auto-close) |
 | #123456793   | actions[bot]| (none — pure status, no diagnostic) | N/A | Skipped — no reply, no mutation |
 
-5 comments processed. 2 fixes committed and published, threads resolved. 2 informational replies posted, threads left open pending the reviewer. 1 pure CI status message skipped with no reply or mutation.
+5 comments processed. 2 fixes committed and published, threads resolved. 1 clarification reply posted, thread left open pending missing capacity data. 1 informational reply posted, thread left open pending the reviewer. 1 pure CI status message skipped with no reply or mutation.
 ```
 
 ---
