@@ -901,7 +901,7 @@ def cmd_state_unlock(args):
                 "it belongs to this run; re-run with --force-unlock once the holding process is confirmed dead",
                 lock_path=str(lock_path),
             )
-        if args.lock_token != held_token:
+        if held_token is None or args.lock_token != held_token:
             raise HelperError(
                 "LOCK_TOKEN_MISMATCH",
                 "the supplied --lock-token does not match this lock's recorded token; this run did not "

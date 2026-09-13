@@ -1966,6 +1966,24 @@ class TestState(unittest.TestCase):
         self.assertIsNone(error["age_seconds"])
         self.assertEqual(error["lock_path"], str(lock))
 
+    def test_a_lock_file_without_a_token_still_needs_force_unlock(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        repo_root = tmp_path / "repo"
+        (repo_root / ".git" / "triage-state").mkdir(parents=True)
+        lock = repo_root / ".git" / "triage-state" / "acme__widgets-42.lock"
+        lock.write_text(json.dumps({"pid": 4242, "acquired_at": 1757000000.0}))
+        refused = run_helper(["state", "unlock", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42"])
+        self.assertNotEqual(refused.returncode, 0)
+        self.assertEqual(json.loads(refused.stdout)["error"]["code"], "LOCK_TOKEN_MISMATCH")
+        self.assertTrue(lock.exists())
+        forced = run_helper([
+            "state", "unlock", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42", "--force-unlock",
+        ])
+        data = json.loads(forced.stdout)
+        self.assertTrue(data["ok"], data)
+        self.assertTrue(data["forced"])
+        self.assertFalse(lock.exists())
+
     def test_unrecognized_lock_needs_force_unlock(self):
         tmp_path = Path(tempfile.mkdtemp())
         repo_root = tmp_path / "repo"
