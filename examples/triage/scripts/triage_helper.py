@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -372,6 +373,70 @@ def cmd_worktree_prepare(args):
 def cmd_worktree_cleanup(args):
     run(["git", "worktree", "remove", "--force", args.path], cwd=args.repo_root)
     emit({"ok": True, "removed": args.path})
+
+
+def cmd_worktree_preserve(args):
+    worktree = Path(args.path)
+    if not worktree.is_dir():
+        raise HelperError("WORKTREE_NOT_FOUND", f"{worktree} does not exist", worktree_path=str(worktree))
+
+    out_dir = Path(args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    head_now = run(["git", "rev-parse", "HEAD"], cwd=worktree, check=False)
+    has_commits_beyond_original = head_now.returncode == 0 and head_now.stdout.strip() != args.original_head_sha
+
+    committed_patch = None
+    if has_commits_beyond_original:
+        patch = run(
+            ["git", "format-patch", f"{args.original_head_sha}..HEAD", "--stdout"], cwd=worktree, check=False,
+        )
+        if patch.returncode == 0 and patch.stdout:
+            committed_patch = out_dir / "committed.patch"
+            committed_patch.write_text(patch.stdout)
+
+    uncommitted_patch = None
+    diff = run(["git", "diff", "HEAD", "--binary"], cwd=worktree, check=False)
+    if diff.returncode == 0 and diff.stdout:
+        uncommitted_patch = out_dir / "uncommitted.patch"
+        uncommitted_patch.write_text(diff.stdout)
+
+    status = run(["git", "status", "--porcelain", "-uall", "-z"], cwd=worktree, check=False)
+    untracked_rel_paths = [entry[3:] for entry in status.stdout.split("\0") if entry.startswith("??")]
+    untracked_dir = out_dir / "untracked"
+    copied_untracked = []
+    for rel in untracked_rel_paths:
+        src = worktree / rel
+        if not src.exists() or src.is_dir():
+            continue
+        dest = untracked_dir / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dest)
+        copied_untracked.append(rel)
+
+    problems = []
+    if status.returncode != 0:
+        problems.append("untracked_file_enumeration_failed")
+    if has_commits_beyond_original and committed_patch is None:
+        problems.append("committed_changes_present_but_patch_capture_failed")
+    for rel in copied_untracked:
+        src, dest = worktree / rel, untracked_dir / rel
+        if not dest.exists() or dest.stat().st_size != src.stat().st_size:
+            problems.append(f"untracked_copy_incomplete:{rel}")
+    if problems:
+        raise HelperError(
+            "PRESERVATION_FAILED",
+            "could not verify complete preservation of this worktree's changes; the worktree was left in "
+            "place for manual recovery rather than risking data loss on cleanup",
+            problems=problems, worktree_path=str(worktree),
+        )
+
+    emit({
+        "ok": True, "out_dir": str(out_dir),
+        "committed_patch": str(committed_patch) if committed_patch else None,
+        "uncommitted_patch": str(uncommitted_patch) if uncommitted_patch else None,
+        "untracked_files": copied_untracked,
+    })
 
 
 def cmd_stage_commit(args):
@@ -857,6 +922,12 @@ def build_parser():
     wc.add_argument("--repo-root", required=True)
     wc.add_argument("--path", required=True)
     wc.set_defaults(func=cmd_worktree_cleanup)
+
+    wpr = wsub.add_parser("preserve")
+    wpr.add_argument("--path", required=True)
+    wpr.add_argument("--original-head-sha", required=True)
+    wpr.add_argument("--out", required=True)
+    wpr.set_defaults(func=cmd_worktree_preserve)
 
     p = sub.add_parser("publish")
     p.add_argument("--repo", required=True)

@@ -640,6 +640,141 @@ class TestWorktree(unittest.TestCase):
         self.assertTrue(json.loads(cleanup.stdout)["ok"])
 
 
+class TestWorktreePreserve(unittest.TestCase):
+    def _prepared(self, tmp_path):
+        repo, sha = TestWorktree()._make_repo(tmp_path)
+        result = run_helper(["worktree", "prepare", "--repo-root", str(repo), "--head-sha", sha])
+        return repo, sha, Path(json.loads(result.stdout)["worktree_path"])
+
+    def _fresh_checkout_of(self, repo, sha, dest):
+        subprocess.run(["git", "clone", "--no-checkout", str(repo), str(dest)], check=True, capture_output=True)
+        subprocess.run(["git", "checkout", "--detach", sha], cwd=dest, check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "t@example.com"], cwd=dest, check=True)
+        subprocess.run(["git", "config", "user.name", "Test"], cwd=dest, check=True)
+        return dest
+
+    def _assert_trees_identical(self, left, right):
+        diff = subprocess.run(
+            ["diff", "-r", "-x", ".git", str(left), str(right)], capture_output=True, text=True,
+        )
+        self.assertEqual(diff.returncode, 0, f"reconstructed tree differs:\n{diff.stdout}{diff.stderr}")
+
+    def test_missing_worktree_is_a_clear_error(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        result = run_helper([
+            "worktree", "preserve", "--path", str(tmp_path / "gone"),
+            "--original-head-sha", "a" * 40, "--out", str(tmp_path / "out"),
+        ])
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(json.loads(result.stdout)["error"]["code"], "WORKTREE_NOT_FOUND")
+
+    def test_a_path_that_is_not_a_git_worktree_fails_preservation_rather_than_reporting_success(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        not_a_worktree = tmp_path / "plain-dir"
+        not_a_worktree.mkdir()
+        (not_a_worktree / "work.py").write_text("work that must not be silently dropped\n")
+        result = run_helper([
+            "worktree", "preserve", "--path", str(not_a_worktree),
+            "--original-head-sha", "a" * 40, "--out", str(tmp_path / "out"),
+        ])
+        self.assertNotEqual(result.returncode, 0)
+        error = json.loads(result.stdout)["error"]
+        self.assertEqual(error["code"], "PRESERVATION_FAILED")
+        self.assertIn("untracked_file_enumeration_failed", error["problems"])
+
+    def test_untracked_file_survives_alongside_a_tracked_edit(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        _, sha, wt = self._prepared(tmp_path)
+        (wt / "a.yml").write_text("fixed tracked file\n")
+        (wt / "new impl.py").write_text("brand new file, never git added\n")
+        (wt / "nested").mkdir()
+        (wt / "nested" / "test_new.py").write_text("def test_regression():\n    assert True\n")
+
+        documented_old_recovery = subprocess.run(
+            ["git", "diff", "HEAD"], cwd=wt, capture_output=True, text=True, check=True,
+        ).stdout
+        self.assertNotIn("new impl.py", documented_old_recovery)
+        self.assertNotIn("test_new.py", documented_old_recovery)
+
+        out = tmp_path / "preserved"
+        result = run_helper([
+            "worktree", "preserve", "--path", str(wt), "--original-head-sha", sha, "--out", str(out),
+        ])
+        data = json.loads(result.stdout)
+        self.assertTrue(data["ok"], data)
+        self.assertIsNone(data["committed_patch"])
+        self.assertEqual(sorted(data["untracked_files"]), ["nested/test_new.py", "new impl.py"])
+        self.assertTrue(filecmp.cmp(wt / "new impl.py", out / "untracked" / "new impl.py", shallow=False))
+        self.assertTrue(
+            filecmp.cmp(wt / "nested" / "test_new.py", out / "untracked" / "nested" / "test_new.py", shallow=False),
+        )
+        self.assertIn("fixed tracked file", Path(data["uncommitted_patch"]).read_text())
+
+    def test_committed_then_uncommitted_changes_round_trip_to_the_exact_worktree_state(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        repo, sha, wt = self._prepared(tmp_path)
+        (wt / "a.yml").write_text("committed fix\n")
+        subprocess.run(["git", "add", "a.yml"], cwd=wt, check=True)
+        subprocess.run(["git", "commit", "-m", "fix: a"], cwd=wt, check=True, capture_output=True)
+        (wt / "a.yml").write_text("committed fix plus a later uncommitted edit\n")
+        (wt / "b.yml").write_text("second tracked file added after the commit\n")
+        subprocess.run(["git", "add", "b.yml"], cwd=wt, check=True)
+        (wt / "notes.txt").write_text("untracked scratch notes\n")
+
+        out = tmp_path / "preserved"
+        result = run_helper([
+            "worktree", "preserve", "--path", str(wt), "--original-head-sha", sha, "--out", str(out),
+        ])
+        data = json.loads(result.stdout)
+        self.assertTrue(data["ok"], data)
+        self.assertIsNotNone(data["committed_patch"])
+        self.assertIsNotNone(data["uncommitted_patch"])
+        self.assertEqual(data["untracked_files"], ["notes.txt"])
+
+        fresh = self._fresh_checkout_of(repo, sha, tmp_path / "fresh")
+        subprocess.run(
+            ["git", "am", data["committed_patch"]], cwd=fresh, check=True, capture_output=True,
+        )
+        subprocess.run(
+            ["git", "apply", "--index", data["uncommitted_patch"]], cwd=fresh, check=True, capture_output=True,
+        )
+        for rel in data["untracked_files"]:
+            shutil.copy2(out / "untracked" / rel, fresh / rel)
+        self._assert_trees_identical(fresh, wt)
+
+    def test_binary_change_round_trips_and_needs_the_binary_flag(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        repo, sha, wt = self._prepared(tmp_path)
+        payload = bytes(range(256)) * 8
+        (wt / "fixture.bin").write_bytes(payload)
+        subprocess.run(["git", "add", "fixture.bin"], cwd=wt, check=True)
+
+        plain_diff = subprocess.run(
+            ["git", "diff", "HEAD"], cwd=wt, capture_output=True, text=True, check=True,
+        ).stdout
+        self.assertIn("Binary files", plain_diff)
+        plain_patch = tmp_path / "plain.patch"
+        plain_patch.write_text(plain_diff)
+
+        out = tmp_path / "preserved"
+        result = run_helper([
+            "worktree", "preserve", "--path", str(wt), "--original-head-sha", sha, "--out", str(out),
+        ])
+        data = json.loads(result.stdout)
+        self.assertTrue(data["ok"], data)
+
+        fresh = self._fresh_checkout_of(repo, sha, tmp_path / "fresh")
+        rejected = subprocess.run(["git", "apply", str(plain_patch)], cwd=fresh, capture_output=True, text=True)
+        self.assertNotEqual(rejected.returncode, 0)
+        self.assertFalse((fresh / "fixture.bin").exists())
+
+        subprocess.run(
+            ["git", "apply", "--index", data["uncommitted_patch"]], cwd=fresh, check=True, capture_output=True,
+        )
+        self.assertEqual((fresh / "fixture.bin").read_bytes(), payload)
+        self._assert_trees_identical(fresh, wt)
+
+
 class TestStageCommit(unittest.TestCase):
     def _prepared_worktree(self, tmp_path):
         repo, sha = TestWorktree()._make_repo(tmp_path)
