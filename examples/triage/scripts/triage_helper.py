@@ -108,12 +108,19 @@ def cmd_resolve_identity(args):
     })
 
 
+def _graphql_payload_file(query, variables):
+    fd, path = tempfile.mkstemp(suffix=".json")
+    with os.fdopen(fd, "w") as f:
+        json.dump({"query": query, "variables": variables}, f)
+    return path
+
+
 def _gh_graphql(query, variables, host):
-    cmd = ["gh", "api", "graphql", "--hostname", host, "-F", f"query={query}"]
-    for key, value in variables.items():
-        if value is not None:
-            cmd += ["-f", f"{key}={json.dumps(value) if isinstance(value, (dict, list)) else value}"]
-    out = run(cmd).stdout
+    payload_path = _graphql_payload_file(query, variables)
+    try:
+        out = run(["gh", "api", "graphql", "--hostname", host, "--input", payload_path]).stdout
+    finally:
+        os.unlink(payload_path)
     data = json.loads(out)
     if data.get("errors"):
         raise HelperError("GRAPHQL_ERROR", "GraphQL query returned errors", errors=data["errors"])

@@ -11,6 +11,14 @@ FAKE_GH_TEMPLATE = '''#!/usr/bin/env python3
 import sys, os, json
 rules = json.loads(os.environ["FAKE_GH_RULES"])
 argv_line = " ".join(sys.argv[1:])
+if "--input" in sys.argv:
+    idx = sys.argv.index("--input")
+    input_path = sys.argv[idx + 1]
+    try:
+        with open(input_path, "r") as f:
+            argv_line += " " + f.read()
+    except:
+        pass
 log_path = os.environ.get("FAKE_GH_CALLS_LOG")
 if log_path:
     with open(log_path, "a") as f:
@@ -242,7 +250,6 @@ class TestSnapshot(unittest.TestCase):
         empty_page = {"data": {"repository": {"pullRequest": {"reviewThreads": {
             "pageInfo": {"hasNextPage": False, "endCursor": None}, "nodes": [],
         }}}}}
-        calls = {"n": 0}
         rules = [
             {"contains": ["reviewThreads"], "stdout": empty_page},
             {"contains": ["repos/acme/widgets/pulls/42"], "stdout": {"head": {"sha": "b" * 40}}},
