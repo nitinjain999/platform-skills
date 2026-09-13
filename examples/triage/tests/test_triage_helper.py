@@ -389,9 +389,9 @@ class TestMapThread(unittest.TestCase):
 class TestPatchContext(unittest.TestCase):
     def test_exact_filename_match_returns_patch_ok(self):
         tmp_path = Path(tempfile.mkdtemp())
-        rules = [{"contains": ["pulls/42/files"], "stdout": [[
+        rules = [{"contains": ["pulls/42/files"], "stdout": [
             {"filename": "a.yml", "patch": "@@ -1 +1 @@\n-old\n+new"},
-        ]]}]
+        ]}]
         env, _ = gh_env(tmp_path, rules)
         result = run_helper(["patch-context", "--repo", "acme/widgets", "--pr", "42", "--path", "a.yml"], env=env)
         data = json.loads(result.stdout)
@@ -399,9 +399,9 @@ class TestPatchContext(unittest.TestCase):
 
     def test_renamed_file_matches_previous_filename(self):
         tmp_path = Path(tempfile.mkdtemp())
-        rules = [{"contains": ["pulls/42/files"], "stdout": [[
+        rules = [{"contains": ["pulls/42/files"], "stdout": [
             {"filename": "new-name.yaml", "previous_filename": "old-name.yaml", "patch": "@@ -1 +1 @@\n-x\n+y"},
-        ]]}]
+        ]}]
         env, _ = gh_env(tmp_path, rules)
         result = run_helper(["patch-context", "--repo", "acme/widgets", "--pr", "42", "--path", "old-name.yaml"], env=env)
         data = json.loads(result.stdout)
@@ -410,9 +410,9 @@ class TestPatchContext(unittest.TestCase):
 
     def test_binary_file_has_no_patch_but_explicit_status(self):
         tmp_path = Path(tempfile.mkdtemp())
-        rules = [{"contains": ["pulls/42/files"], "stdout": [[
+        rules = [{"contains": ["pulls/42/files"], "stdout": [
             {"filename": "logo.png"},
-        ]]}]
+        ]}]
         env, _ = gh_env(tmp_path, rules)
         result = run_helper(["patch-context", "--repo", "acme/widgets", "--pr", "42", "--path", "logo.png"], env=env)
         data = json.loads(result.stdout)
@@ -433,7 +433,7 @@ class TestPatchContext(unittest.TestCase):
         subprocess.run(["git", "commit", "-am", "bump"], cwd=repo, check=True, capture_output=True)
         head_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, capture_output=True, text=True).stdout.strip()
 
-        rules = [{"contains": ["pulls/42/files"], "stdout": [[{"filename": "big.yml"}]]}]
+        rules = [{"contains": ["pulls/42/files"], "stdout": [{"filename": "big.yml"}]}]
         env, _ = gh_env(tmp_path, rules)
         result = run_helper([
             "patch-context", "--repo", "acme/widgets", "--pr", "42", "--path", "big.yml",
@@ -444,11 +444,11 @@ class TestPatchContext(unittest.TestCase):
         self.assertIn("-replicas: 1", data["patch"])
         self.assertIn("+replicas: 3", data["patch"])
 
-    def test_paginate_slurp_shape_is_flattened_across_pages(self):
+    def test_paginated_flat_array_is_searched_beyond_the_first_entry(self):
         tmp_path = Path(tempfile.mkdtemp())
-        rules = [{"contains": ["pulls/42/files"], "stdout": [
-            [{"filename": "a.yml", "patch": "@@ -1 +1 @@\n-old\n+new"}],
-            [{"filename": "b.yml", "patch": "@@ -1 +1 @@\n-x\n+y"}],
+        rules = [{"contains": ["pulls/42/files", "--paginate"], "stdout": [
+            {"filename": "a.yml", "patch": "@@ -1 +1 @@\n-old\n+new"},
+            {"filename": "b.yml", "patch": "@@ -1 +1 @@\n-x\n+y"},
         ]}]
         env, _ = gh_env(tmp_path, rules)
         result = run_helper(["patch-context", "--repo", "acme/widgets", "--pr", "42", "--path", "b.yml"], env=env)
@@ -457,11 +457,21 @@ class TestPatchContext(unittest.TestCase):
         self.assertEqual(data["evidence_status"], "PATCH_OK")
         self.assertEqual(data["filename"], "b.yml")
 
+    def test_paginate_is_requested_without_slurp(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        rules = [{"contains": ["pulls/42/files"], "stdout": [{"filename": "a.yml", "patch": "@@ -1 +1 @@\n-o\n+n"}]}]
+        env, calls_log = gh_env(tmp_path, rules)
+        result = run_helper(["patch-context", "--repo", "acme/widgets", "--pr", "42", "--path", "a.yml"], env=env)
+        self.assertTrue(json.loads(result.stdout)["ok"])
+        logged = calls_log.read_text()
+        self.assertIn("--paginate", logged)
+        self.assertNotIn("--slurp", logged)
+
     def test_file_not_in_diff_at_all(self):
         tmp_path = Path(tempfile.mkdtemp())
-        rules = [{"contains": ["pulls/42/files"], "stdout": [[
+        rules = [{"contains": ["pulls/42/files"], "stdout": [
             {"filename": "unrelated.yml", "patch": "@@ -1 +1 @@\n-x\n+y"},
-        ]]}]
+        ]}]
         env, _ = gh_env(tmp_path, rules)
         result = run_helper(["patch-context", "--repo", "acme/widgets", "--pr", "42", "--path", "missing.yml"], env=env)
         data = json.loads(result.stdout)
@@ -551,7 +561,7 @@ class TestStageCommit(unittest.TestCase):
         self.assertTrue(data["ok"], data)
         self.assertEqual(data["committed_paths"], ["café.yml"])
 
-    def test_pre_commit_hook_content_drift_is_caught_not_silently_reported(self):
+    def test_pre_commit_hook_file_set_drift_is_caught_not_silently_reported(self):
         tmp_path = Path(tempfile.mkdtemp())
         repo, sha = TestWorktree()._make_repo(tmp_path)
         hook = repo / ".git" / "hooks" / "pre-commit"
@@ -564,10 +574,27 @@ class TestStageCommit(unittest.TestCase):
         result = run_helper(["stage-commit", "--worktree", str(wt), "--paths", "a.yml", "--message", "fix: a"])
         self.assertNotEqual(result.returncode, 0)
         data = json.loads(result.stdout)
-        self.assertEqual(data["error"]["code"], "COMMIT_CONTENT_DRIFTED_FROM_STAGED_SET")
+        self.assertEqual(data["error"]["code"], "COMMIT_FILE_SET_DRIFTED_FROM_STAGED")
         self.assertIn("extra.txt", data["error"]["committed"])
         self.assertIn("a.yml", data["error"]["committed"])
         self.assertEqual(data["error"]["intended"], ["a.yml"])
+
+    def test_pre_commit_hook_rewriting_an_intended_file_is_caught_as_content_drift(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        repo, sha = TestWorktree()._make_repo(tmp_path)
+        hook = repo / ".git" / "hooks" / "pre-commit"
+        hook.write_text("#!/bin/sh\necho 'reformatted by a hook' > a.yml\ngit add a.yml\n")
+        hook.chmod(0o755)
+
+        prep = run_helper(["worktree", "prepare", "--repo-root", str(repo), "--head-sha", sha])
+        wt = Path(json.loads(prep.stdout)["worktree_path"])
+        (wt / "a.yml").write_text("fixed\n")
+        result = run_helper(["stage-commit", "--worktree", str(wt), "--paths", "a.yml", "--message", "fix: a"])
+        self.assertNotEqual(result.returncode, 0)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["error"]["code"], "COMMIT_CONTENT_DRIFTED_FROM_STAGED")
+        self.assertEqual(data["error"]["drifted_paths"], ["a.yml"])
+        self.assertEqual((wt / "a.yml").read_text(), "reformatted by a hook\n")
 
     def test_refuses_when_staged_set_has_extra_unrelated_file(self):
         tmp_path = Path(tempfile.mkdtemp())
@@ -623,6 +650,8 @@ class TestPublish(unittest.TestCase):
         self.assertTrue(data["ok"])
         self.assertEqual(data["remote_head_after"], commit_sha)
         self.assertEqual(data["pr_head_after"], commit_sha)
+        self.assertTrue(data["push_landed"])
+        self.assertFalse(data["verification_incomplete"])
         self.assertTrue(data["matches_pushed_commit"])
 
     def test_publish_reports_mismatch_when_pr_head_disagrees_with_pushed_ref(self):
@@ -642,6 +671,30 @@ class TestPublish(unittest.TestCase):
         self.assertTrue(data["ok"])
         self.assertEqual(data["remote_head_after"], commit_sha)
         self.assertEqual(data["pr_head_after"], "f" * 40)
+        self.assertTrue(data["push_landed"])
+        self.assertFalse(data["verification_incomplete"])
+        self.assertFalse(data["matches_pushed_commit"])
+
+    def test_publish_reports_success_when_the_post_push_pr_read_fails(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        remote, wt, head_sha, commit_sha = self._remote_and_worktree(tmp_path)
+        rules = [
+            {"contains": ["pulls/42"], "stdout": {"head": {"sha": head_sha}}, "max_uses": 1},
+            {"contains": ["pulls/42"], "stdout": "", "stderr": "gh: HTTP 502 Bad Gateway", "returncode": 1},
+        ]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper([
+            "publish", "--repo", "acme/widgets", "--pr", "42", "--worktree", wt,
+            "--expected-head-sha", head_sha, "--commit-sha", commit_sha,
+            "--head-remote-url", str(remote), "--head-ref", "fix-branch",
+        ], env=env)
+        data = json.loads(result.stdout)
+        self.assertTrue(data["ok"], data)
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(data["remote_head_after"], commit_sha)
+        self.assertTrue(data["push_landed"])
+        self.assertTrue(data["verification_incomplete"])
+        self.assertIsNone(data["pr_head_after"])
         self.assertFalse(data["matches_pushed_commit"])
 
     def test_publish_refuses_when_remote_pr_head_already_moved(self):
@@ -909,24 +962,85 @@ class TestResolveThread(unittest.TestCase):
         data = json.loads(result.stdout)
         self.assertEqual(data["error"]["code"], "THREAD_NOT_FOUND")
 
-    def test_snapshot_comment_count_drift_blocks_resolution(self):
-        tmp_path = Path(tempfile.mkdtemp())
-        snapshot = {"threads": [{"id": "PRT_1", "comments": [{"node_id": "PRRC_1", "body": "root"}]}]}
+    def _snapshot_with_one_comment(self, tmp_path, thread_id="PRT_1"):
+        snapshot = {"threads": [{"id": thread_id, "comments": [{"node_id": "PRRC_root", "body": "root"}]}]}
         snap_path = tmp_path / "snapshot.json"
         snap_path.write_text(json.dumps(snapshot))
-        rules = [{"contains": ["viewerCanResolve"], "stdout": {"data": {"node": {
-            "isResolved": False, "viewerCanResolve": True, "comments": {"totalCount": 2},
-        }}}}]
+        return snap_path
+
+    def _live_rules(self, comment_node_ids, is_resolved=False):
+        return [
+            {"contains": ["resolveReviewThread"], "stdout": {"data": {"resolveReviewThread": {"thread": {"isResolved": True}}}}},
+            {"contains": ["viewerCanResolve"], "stdout": {"data": {"node": {
+                "isResolved": is_resolved, "viewerCanResolve": True,
+                "comments": {"nodes": [{"id": cid} for cid in comment_node_ids]},
+            }}}},
+        ]
+
+    def test_reply_then_resolve_mainline_succeeds_when_the_reply_is_allowlisted(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        snap_path = self._snapshot_with_one_comment(tmp_path)
+        rules = self._live_rules(["PRRC_root", "PRRC_our_own_reply"])
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper([
+            "resolve-thread", "--thread-node-id", "PRT_1", "--snapshot", str(snap_path),
+            "--allow-new-comment-node-id", "PRRC_our_own_reply",
+        ], env=env)
+        data = json.loads(result.stdout)
+        self.assertEqual(result.returncode, 0, data)
+        self.assertEqual(data["status"], "CONFIRMED")
+
+        deadlock_path = Path(tempfile.mkdtemp())
+        deadlock_snap = self._snapshot_with_one_comment(deadlock_path)
+        env2, calls_log2 = gh_env(deadlock_path, rules)
+        refused = run_helper([
+            "resolve-thread", "--thread-node-id", "PRT_1", "--snapshot", str(deadlock_snap),
+        ], env=env2)
+        self.assertNotEqual(refused.returncode, 0)
+        self.assertEqual(json.loads(refused.stdout)["error"]["code"], "THREAD_CHANGED_SINCE_SNAPSHOT")
+        self.assertNotIn("resolveReviewThread", calls_log2.read_text())
+
+    def test_a_third_party_comment_still_blocks_resolution_despite_the_allowlist(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        snap_path = self._snapshot_with_one_comment(tmp_path)
+        rules = self._live_rules(["PRRC_root", "PRRC_our_own_reply", "PRRC_human_snuck_in"])
         env, calls_log = gh_env(tmp_path, rules)
+        result = run_helper([
+            "resolve-thread", "--thread-node-id", "PRT_1", "--snapshot", str(snap_path),
+            "--allow-new-comment-node-id", "PRRC_our_own_reply",
+        ], env=env)
+        self.assertNotEqual(result.returncode, 0)
+        error = json.loads(result.stdout)["error"]
+        self.assertEqual(error["code"], "THREAD_CHANGED_SINCE_SNAPSHOT")
+        self.assertEqual(error["unexpected_comment_node_ids"], ["PRRC_human_snuck_in"])
+        self.assertEqual(error["missing_comment_node_ids"], [])
+        self.assertNotIn("resolveReviewThread", calls_log.read_text())
+
+    def test_already_resolved_short_circuits_before_the_drift_check(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        snap_path = self._snapshot_with_one_comment(tmp_path)
+        rules = self._live_rules(["PRRC_totally_different"], is_resolved=True)
+        env, calls_log = gh_env(tmp_path, rules)
+        result = run_helper([
+            "resolve-thread", "--thread-node-id", "PRT_1", "--snapshot", str(snap_path),
+        ], env=env)
+        data = json.loads(result.stdout)
+        self.assertEqual(result.returncode, 0, data)
+        self.assertEqual(data["status"], "ALREADY_RESOLVED")
+        self.assertNotIn("resolveReviewThread", calls_log.read_text())
+
+    def test_thread_absent_from_the_supplied_snapshot_is_refused_before_any_call(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        snap_path = self._snapshot_with_one_comment(tmp_path, thread_id="PRT_somewhere_else")
+        env, calls_log = gh_env(tmp_path, self._live_rules(["PRRC_root"]))
         result = run_helper([
             "resolve-thread", "--thread-node-id", "PRT_1", "--snapshot", str(snap_path),
         ], env=env)
         self.assertNotEqual(result.returncode, 0)
         data = json.loads(result.stdout)
-        self.assertEqual(data["error"]["code"], "THREAD_CHANGED_SINCE_SNAPSHOT")
-        self.assertEqual(data["error"]["expected_comment_count"], 1)
-        self.assertEqual(data["error"]["actual_comment_count"], 2)
-        self.assertNotIn("resolveReviewThread", calls_log.read_text())
+        self.assertEqual(data["error"]["code"], "THREAD_NOT_IN_SNAPSHOT")
+        self.assertEqual(data["error"]["thread_node_id"], "PRT_1")
+        self.assertFalse(calls_log.exists())
 
     def test_mutation_result_false_is_not_treated_as_success(self):
         tmp_path = Path(tempfile.mkdtemp())
@@ -970,6 +1084,21 @@ class TestState(unittest.TestCase):
         self.assertIsInstance(error["age_seconds"], float)
         self.assertGreaterEqual(error["age_seconds"], 0)
         self.assertNotIn("confirming held_by_pid is not running", error["message"])
+
+    def test_non_numeric_acquired_at_still_reports_lock_held(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        repo_root = tmp_path / "repo"
+        (repo_root / ".git" / "triage-state").mkdir(parents=True)
+        lock = repo_root / ".git" / "triage-state" / "acme__widgets-42.lock"
+        lock.write_text(json.dumps({"pid": 12345, "acquired_at": "not-a-number"}))
+        result = run_helper(["state", "lock", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42"])
+        self.assertNotEqual(result.returncode, 0)
+        error = json.loads(result.stdout)["error"]
+        self.assertEqual(error["code"], "LOCK_HELD")
+        self.assertEqual(error["held_by_pid"], 12345)
+        self.assertEqual(error["held_since"], "not-a-number")
+        self.assertIsNone(error["age_seconds"])
+        self.assertEqual(error["lock_path"], str(lock))
 
     def test_unrecognized_lock_needs_force_unlock(self):
         tmp_path = Path(tempfile.mkdtemp())

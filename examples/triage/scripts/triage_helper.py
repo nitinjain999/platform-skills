@@ -72,8 +72,8 @@ def redact(text):
     return URL_USERINFO_RE.sub("://", text)
 
 
-def run(cmd, cwd=None, check=True, input_text=None):
-    proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, input=input_text)
+def run(cmd, cwd=None, check=True, input_text=None, env=None):
+    proc = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, input=input_text, env=env)
     if check and proc.returncode != 0:
         raise HelperError(
             "SUBPROCESS_FAILED",
@@ -187,9 +187,11 @@ def _paginate_threads(owner, repo, pr, host):
     return threads
 
 
-def _head_sha(repo, pr, host):
-    out = run(["gh", "api", f"repos/{repo}/pulls/{pr}", "--hostname", host]).stdout
-    return json.loads(out)["head"]["sha"]
+def _head_sha(repo, pr, host, check=True):
+    proc = run(["gh", "api", f"repos/{repo}/pulls/{pr}", "--hostname", host], check=check)
+    if proc.returncode != 0:
+        return None
+    return json.loads(proc.stdout)["head"]["sha"]
 
 
 def cmd_resolve_comment(args):
@@ -294,9 +296,8 @@ def cmd_map_thread(args):
 
 def cmd_patch_context(args):
     host = args.host or "github.com"
-    out = run(["gh", "api", f"repos/{args.repo}/pulls/{args.pr}/files", "--hostname", host, "--paginate", "--slurp"]).stdout
-    pages = json.loads(out)
-    entries = [item for page in pages for item in page]
+    out = run(["gh", "api", f"repos/{args.repo}/pulls/{args.pr}/files", "--hostname", host, "--paginate"]).stdout
+    entries = json.loads(out)
 
     match = None
     for e in entries:
@@ -336,7 +337,10 @@ def cmd_patch_context(args):
 
 def cmd_worktree_prepare(args):
     if args.fetch_remote_url:
-        run(["git", "fetch", args.fetch_remote_url, args.head_sha], cwd=args.repo_root)
+        run(
+            ["git", "fetch", args.fetch_remote_url, args.head_sha], cwd=args.repo_root,
+            env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
+        )
     worktree_dir = tempfile.mkdtemp(prefix="triage-worktree-")
     run(["git", "worktree", "add", "--detach", worktree_dir, args.head_sha], cwd=args.repo_root)
     emit({"ok": True, "worktree_path": worktree_dir, "head_sha": args.head_sha})
@@ -358,23 +362,48 @@ def cmd_stage_commit(args):
             "staged files do not match the intended path allowlist",
             staged=sorted(staged_set), intended=sorted(intended_set),
         )
+
+    pre_commit_blobs = {}
+    for p in args.paths:
+        blob = run(["git", "rev-parse", f":{p}"], cwd=args.worktree, check=False)
+        pre_commit_blobs[p] = blob.stdout.strip() if blob.returncode == 0 else None
+
     run(["git", "commit", "-m", args.message], cwd=args.worktree)
     sha = run(["git", "rev-parse", "HEAD"], cwd=args.worktree).stdout.strip()
-    committed_raw = run(["git", "diff-tree", "--no-commit-id", "--name-only", "-r", "-z", sha], cwd=args.worktree).stdout
+
+    committed_raw = run(
+        ["git", "diff-tree", "--no-commit-id", "--name-only", "-r", "-z", "--root", sha], cwd=args.worktree,
+    ).stdout
     committed = sorted(p for p in committed_raw.split("\0") if p)
     if set(committed) != intended_set:
         raise HelperError(
-            "COMMIT_CONTENT_DRIFTED_FROM_STAGED_SET",
-            "a commit hook changed the staged content after the allowlist check passed; the resulting commit "
-            "does not match the intended paths and must be reinspected before publication",
+            "COMMIT_FILE_SET_DRIFTED_FROM_STAGED",
+            "a commit hook changed which files are in the commit after the allowlist check passed; the "
+            "resulting commit's file set does not match the intended paths and must be reinspected",
             committed=committed, intended=sorted(intended_set), commit_sha=sha,
         )
+
+    content_drifted = []
+    for p in args.paths:
+        post = run(["git", "rev-parse", f"{sha}:{p}"], cwd=args.worktree, check=False)
+        post_hash = post.stdout.strip() if post.returncode == 0 else None
+        if post_hash != pre_commit_blobs.get(p):
+            content_drifted.append(p)
+    if content_drifted:
+        raise HelperError(
+            "COMMIT_CONTENT_DRIFTED_FROM_STAGED",
+            "a commit hook changed the content of one or more intended files after the allowlist check "
+            "passed; the validation that ran before this commit does not speak for what was actually "
+            "committed — revalidate the changed result before publication",
+            drifted_paths=content_drifted, commit_sha=sha,
+        )
+
     emit({"ok": True, "commit_sha": sha, "committed_paths": committed})
 
 
 def cmd_publish(args):
     host = args.host or "github.com"
-    current = json.loads(run(["gh", "api", f"repos/{args.repo}/pulls/{args.pr}", "--hostname", host]).stdout)["head"]["sha"]
+    current = _head_sha(args.repo, args.pr, host)
 
     if current != args.expected_head_sha:
         raise HelperError(
@@ -409,10 +438,13 @@ def cmd_publish(args):
         raise HelperError("UNKNOWN_TRANSPORT_FAILURE", "push failed for an unrecognized reason", stderr=stderr)
 
     after = run(["git", "ls-remote", args.head_remote_url, f"refs/heads/{args.head_ref}"], cwd=args.worktree).stdout.split()[0]
-    pr_head_after = json.loads(run(["gh", "api", f"repos/{args.repo}/pulls/{args.pr}", "--hostname", host]).stdout)["head"]["sha"]
+    pr_head_after = _head_sha(args.repo, args.pr, host, check=False)
+    verification_incomplete = pr_head_after is None
     emit({
         "ok": True, "pushed_commit": args.commit_sha, "remote_head_after": after, "pr_head_after": pr_head_after,
-        "matches_pushed_commit": after == args.commit_sha and pr_head_after == args.commit_sha,
+        "push_landed": after == args.commit_sha,
+        "matches_pushed_commit": (not verification_incomplete) and after == args.commit_sha and pr_head_after == args.commit_sha,
+        "verification_incomplete": verification_incomplete,
     })
 
 
@@ -486,17 +518,31 @@ def cmd_reply(args):
 def cmd_resolve_thread(args):
     host = args.host or "github.com"
 
-    expected_count = None
+    expected_node_ids = None
     if args.snapshot:
         snapshot = json.loads(Path(args.snapshot).read_text())
+        matched = None
         for thread in snapshot["threads"]:
             if thread["id"] == args.thread_node_id:
-                expected_count = len(thread["comments"])
+                matched = thread
                 break
+        if matched is None:
+            raise HelperError(
+                "THREAD_NOT_IN_SNAPSHOT",
+                "the supplied snapshot does not contain this thread; the drift guard cannot run without knowing "
+                "what comments existed at snapshot time, so resolution is refused rather than skipping the check",
+                thread_node_id=args.thread_node_id,
+            )
+        expected_node_ids = {c["node_id"] for c in matched["comments"]}
 
     check_query = """
     query($id: ID!) {
-      node(id: $id) { ... on PullRequestReviewThread { isResolved viewerCanResolve comments { totalCount } } }
+      node(id: $id) {
+        ... on PullRequestReviewThread {
+          isResolved viewerCanResolve
+          comments(first: 100) { nodes { id } }
+        }
+      }
     }
     """
     payload_path = _graphql_payload_file(check_query, {"id": args.thread_node_id})
@@ -515,20 +561,24 @@ def cmd_resolve_thread(args):
             thread_node_id=args.thread_node_id,
         )
 
-    if expected_count is not None:
-        actual_count = node["comments"]["totalCount"]
-        if actual_count != expected_count:
-            raise HelperError(
-                "THREAD_CHANGED_SINCE_SNAPSHOT",
-                "the thread has a different comment count now than in the supplied snapshot; someone added "
-                "or removed a comment after the snapshot was taken, so the resolution decision may be stale "
-                "— re-snapshot and reclassify before resolving",
-                expected_comment_count=expected_count, actual_comment_count=actual_count,
-            )
-
     if node["isResolved"]:
         emit({"ok": True, "status": "ALREADY_RESOLVED", "thread_node_id": args.thread_node_id})
         return
+
+    if expected_node_ids is not None:
+        live_node_ids = {c["id"] for c in node["comments"]["nodes"]}
+        allowed_extra = set(args.allow_new_comment_node_id or [])
+        unexpected = live_node_ids - expected_node_ids - allowed_extra
+        missing = expected_node_ids - live_node_ids
+        if unexpected or missing:
+            raise HelperError(
+                "THREAD_CHANGED_SINCE_SNAPSHOT",
+                "the thread's comments differ from the supplied snapshot in a way not covered by "
+                "--allow-new-comment-node-id; someone else changed this thread after the snapshot was taken, "
+                "so the resolution decision may be stale — reassess before resolving",
+                unexpected_comment_node_ids=sorted(unexpected), missing_comment_node_ids=sorted(missing),
+            )
+
     if not node["viewerCanResolve"]:
         raise HelperError("NOT_AUTHORIZED", "viewerCanResolve is false for this thread")
 
@@ -598,7 +648,7 @@ def cmd_state_lock(args):
         emit({"ok": True, "status": "ACQUIRED", "lock_path": str(lock_path)})
     except FileExistsError:
         held_by_pid, held_since = _read_lock_holder(lock_path)
-        age_seconds = (time.time() - held_since) if held_since else None
+        age_seconds = (time.time() - held_since) if isinstance(held_since, (int, float)) else None
         raise HelperError(
             "LOCK_HELD",
             "another triage instance holds the lock for this repo/PR; `held_by_pid` is the short-lived "
@@ -740,6 +790,7 @@ def build_parser():
     p = sub.add_parser("resolve-thread")
     p.add_argument("--thread-node-id", required=True)
     p.add_argument("--snapshot")
+    p.add_argument("--allow-new-comment-node-id", action="append")
     p.add_argument("--host")
     p.set_defaults(func=cmd_resolve_thread)
 
