@@ -8,6 +8,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 HELPER = Path(__file__).resolve().parents[1] / "scripts" / "triage_helper.py"
 
@@ -2064,6 +2065,36 @@ class TestState(unittest.TestCase):
         read = run_helper(["state", "read", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42"])
         record = json.loads(read.stdout)["record"]
         self.assertEqual(record["findings"][0]["id"], "T01")
+
+    def test_a_write_that_dies_before_the_rename_keeps_the_previous_record_readable(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        repo_root = self._repo_root(tmp_path)
+        first_record = tmp_path / "first.json"
+        first_record.write_text(json.dumps({"findings": [{"id": "T01", "status": "PLANNED"}]}))
+        first = run_helper([
+            "state", "write", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42",
+            "--record-file", str(first_record),
+        ])
+        self.assertTrue(json.loads(first.stdout)["ok"], first.stdout)
+
+        second_record = tmp_path / "second.json"
+        second_record.write_text(json.dumps({"findings": [{"id": "T99", "status": "READY"}]}))
+        module = load_helper_module()
+        args = module.build_parser().parse_args([
+            "state", "write", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42",
+            "--record-file", str(second_record),
+        ])
+        with mock.patch.object(module.os, "replace", side_effect=OSError("killed before the rename")):
+            with self.assertRaises(OSError):
+                args.func(args)
+
+        state_dir = repo_root / ".git" / "triage-state"
+        self.assertEqual(sorted(p.name for p in state_dir.iterdir()), ["acme__widgets-42.json"])
+        read = run_helper(["state", "read", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42"])
+        self.assertEqual(read.returncode, 0, read.stdout)
+        self.assertEqual(
+            json.loads(read.stdout)["record"]["findings"], [{"id": "T01", "status": "PLANNED"}],
+        )
 
     def test_read_survives_a_leftover_partial_temp_file_from_an_interrupted_write(self):
         tmp_path = Path(tempfile.mkdtemp())
