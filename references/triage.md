@@ -174,7 +174,7 @@ Before calling `resolve-thread` at all, every one of these must hold, not just s
 - No new human input has arrived that would change the decision since the snapshot was taken.
 - Resolution is actually authorized for this run (not disabled by `--no-resolve`, not a `--dry-run`).
 
-`resolve-thread` itself is idempotent and self-checking: it first reads `isResolved`/`viewerCanResolve` and returns `ALREADY_RESOLVED` if someone beat you to it, raises `NOT_AUTHORIZED` if `viewerCanResolve` is false, and after the mutation reads the result's `isResolved` again, raising `RESOLVE_NOT_CONFIRMED` if the mutation returned without error but somehow did not actually resolve. A clean HTTP exchange is not proof of anything; only a confirmed `isResolved: true` is.
+`resolve-thread` itself is idempotent and self-checking: it first reads `isResolved`/`viewerCanResolve` and returns `ALREADY_RESOLVED` if someone beat you to it, raises `NOT_AUTHORIZED` if `viewerCanResolve` is false, and after the mutation reads the result's `isResolved` again, raising `RESOLVE_NOT_CONFIRMED` if the mutation returned without error but somehow did not actually resolve. A clean HTTP exchange is not proof of anything; only a confirmed `isResolved: true` is. Passing `--snapshot <path>` also mechanizes the "no new human input" eligibility item above: it compares the snapshot's comment count for this thread against a fresh live count and raises `THREAD_CHANGED_SINCE_SNAPSHOT` on any disagreement, before the mutation is ever attempted.
 
 Separately from this mechanical gate, which findings are *eligible* to close at all is a per-classification decision (already covered in `commands/triage.md`'s resolution eligibility section): `ACTIONABLE_FIX` only after successful remediation, `ALREADY_FIXED` only with current evidence, `DUPLICATE` only once its canonical concern is verified and linked, and `INFORMATIONAL`/`NEEDS_CLARIFICATION`/`OUT_OF_SCOPE`/disputed `NOT_APPLICABLE` never by default.
 
@@ -526,7 +526,8 @@ If the dedup marker was already found in the supplied `--snapshot`, the response
 
 ```bash
 python3 "$CLAUDE_PLUGIN_ROOT/examples/triage/scripts/triage_helper.py" resolve-thread \
-  --thread-node-id PRRT_kwDOJz9x1s5abcdef
+  --thread-node-id PRRT_kwDOJz9x1s5abcdef \
+  --snapshot /tmp/triage-482-snapshot.json
 ```
 
 ```json
@@ -537,7 +538,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/examples/triage/scripts/triage_helper.py" resolve-t
 }
 ```
 
-An already-resolved thread returns `{"ok": true, "status": "ALREADY_RESOLVED", "thread_node_id": "..."}` with no mutation attempted. `viewerCanResolve: false` raises `NOT_AUTHORIZED` instead of emitting. The pre-check is checked before it is trusted: GraphQL `errors` raise `RESOLVE_PRECHECK_FAILED`, and a node that resolves to nothing reviewable (a deleted thread, or a comment node ID passed by mistake) raises `THREAD_NOT_FOUND` rather than crashing on a missing field.
+`--snapshot` is optional but recommended: when given, it compares the thread's comment count as of that snapshot against a fresh live count taken right before resolving, and refuses with `THREAD_CHANGED_SINCE_SNAPSHOT` (carrying `expected_comment_count`/`actual_comment_count`) if someone added or removed a comment in between, since that new human input can change the resolution decision. Omitting it skips that guard entirely (the previous behavior). An already-resolved thread returns `{"ok": true, "status": "ALREADY_RESOLVED", "thread_node_id": "..."}` with no mutation attempted. `viewerCanResolve: false` raises `NOT_AUTHORIZED` instead of emitting. The pre-check is checked before it is trusted: GraphQL `errors` raise `RESOLVE_PRECHECK_FAILED`, and a node that resolves to nothing reviewable (a deleted thread, or a comment node ID passed by mistake) raises `THREAD_NOT_FOUND` rather than crashing on a missing field.
 
 ### 12. `state` (lock, unlock, read, write)
 

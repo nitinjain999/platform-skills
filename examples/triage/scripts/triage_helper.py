@@ -474,9 +474,17 @@ def cmd_reply(args):
 def cmd_resolve_thread(args):
     host = args.host or "github.com"
 
+    expected_count = None
+    if args.snapshot:
+        snapshot = json.loads(Path(args.snapshot).read_text())
+        for thread in snapshot["threads"]:
+            if thread["id"] == args.thread_node_id:
+                expected_count = len(thread["comments"])
+                break
+
     check_query = """
     query($id: ID!) {
-      node(id: $id) { ... on PullRequestReviewThread { isResolved viewerCanResolve } }
+      node(id: $id) { ... on PullRequestReviewThread { isResolved viewerCanResolve comments { totalCount } } }
     }
     """
     payload_path = _graphql_payload_file(check_query, {"id": args.thread_node_id})
@@ -494,6 +502,17 @@ def cmd_resolve_thread(args):
             "confirm the ID came from map-thread and that it is a review thread, not a comment",
             thread_node_id=args.thread_node_id,
         )
+
+    if expected_count is not None:
+        actual_count = node["comments"]["totalCount"]
+        if actual_count != expected_count:
+            raise HelperError(
+                "THREAD_CHANGED_SINCE_SNAPSHOT",
+                "the thread has a different comment count now than in the supplied snapshot; someone added "
+                "or removed a comment after the snapshot was taken, so the resolution decision may be stale "
+                "— re-snapshot and reclassify before resolving",
+                expected_comment_count=expected_count, actual_comment_count=actual_count,
+            )
 
     if node["isResolved"]:
         emit({"ok": True, "status": "ALREADY_RESOLVED", "thread_node_id": args.thread_node_id})
@@ -704,6 +723,7 @@ def build_parser():
 
     p = sub.add_parser("resolve-thread")
     p.add_argument("--thread-node-id", required=True)
+    p.add_argument("--snapshot")
     p.add_argument("--host")
     p.set_defaults(func=cmd_resolve_thread)
 

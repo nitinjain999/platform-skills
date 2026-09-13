@@ -849,6 +849,25 @@ class TestResolveThread(unittest.TestCase):
         data = json.loads(result.stdout)
         self.assertEqual(data["error"]["code"], "THREAD_NOT_FOUND")
 
+    def test_snapshot_comment_count_drift_blocks_resolution(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        snapshot = {"threads": [{"id": "PRT_1", "comments": [{"node_id": "PRRC_1", "body": "root"}]}]}
+        snap_path = tmp_path / "snapshot.json"
+        snap_path.write_text(json.dumps(snapshot))
+        rules = [{"contains": ["viewerCanResolve"], "stdout": {"data": {"node": {
+            "isResolved": False, "viewerCanResolve": True, "comments": {"totalCount": 2},
+        }}}}]
+        env, calls_log = gh_env(tmp_path, rules)
+        result = run_helper([
+            "resolve-thread", "--thread-node-id", "PRT_1", "--snapshot", str(snap_path),
+        ], env=env)
+        self.assertNotEqual(result.returncode, 0)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["error"]["code"], "THREAD_CHANGED_SINCE_SNAPSHOT")
+        self.assertEqual(data["error"]["expected_comment_count"], 1)
+        self.assertEqual(data["error"]["actual_comment_count"], 2)
+        self.assertNotIn("resolveReviewThread", calls_log.read_text())
+
     def test_mutation_result_false_is_not_treated_as_success(self):
         tmp_path = Path(tempfile.mkdtemp())
         rules = [
