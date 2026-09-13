@@ -9,7 +9,7 @@ Covers the judgment, evidence rules, data model, and helper contract behind `/pl
 
 `commands/triage.md` is the router: modes, invocation forms, the classification table, the hard gates, and the report format live there. This file is where the reasoning behind each phase lives, and where the helper's mechanical contract is spelled out flag by flag so a future reader does not have to open the Python source to know what a subcommand actually does.
 
-**Verified against `examples/triage/scripts/triage_helper.py` at commit `71b073a`** (11 top-level subcommands, state schema version 1). `worktree` and `state` each nest further verbs (`worktree prepare`/`cleanup`; `state lock`/`unlock`/`read`/`write`), for 15 invokable operations in total if you count every leaf individually. If the installed helper's `--help` output disagrees with a flag shown here, trust the installed helper and treat this file as stale for that detail.
+**Verified against `examples/triage/scripts/triage_helper.py` at commit `6624900`** (11 top-level subcommands, state schema version 1). `worktree` and `state` each nest further verbs (`worktree prepare`/`cleanup`; `state lock`/`unlock`/`read`/`write`), for 15 invokable operations in total if you count every leaf individually. If the installed helper's `--help` output disagrees with a flag shown here, trust the installed helper and treat this file as stale for that detail.
 
 ---
 
