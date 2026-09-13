@@ -1665,19 +1665,93 @@ class TestResolveThread(unittest.TestCase):
 
 
 class TestState(unittest.TestCase):
-    def test_lock_then_second_lock_is_refused(self):
-        tmp_path = Path(tempfile.mkdtemp())
+    def _repo_root(self, tmp_path):
         repo_root = tmp_path / "repo"
         (repo_root / ".git").mkdir(parents=True)
-        first = run_helper(["state", "lock", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42"])
-        self.assertTrue(json.loads(first.stdout)["ok"])
+        return repo_root
+
+    def _lock(self, repo_root):
+        result = run_helper(["state", "lock", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42"])
+        data = json.loads(result.stdout)
+        self.assertTrue(data["ok"], data)
+        return data["lock_token"]
+
+    def test_lock_then_second_lock_is_refused(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        repo_root = self._repo_root(tmp_path)
+        token = self._lock(repo_root)
         second = run_helper(["state", "lock", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42"])
         self.assertNotEqual(second.returncode, 0)
         self.assertEqual(json.loads(second.stdout)["error"]["code"], "LOCK_HELD")
-        unlock = run_helper(["state", "unlock", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42"])
+        unlock = run_helper([
+            "state", "unlock", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42",
+            "--lock-token", token,
+        ])
         self.assertTrue(json.loads(unlock.stdout)["ok"])
         third = run_helper(["state", "lock", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42"])
         self.assertTrue(json.loads(third.stdout)["ok"])
+
+    def test_lock_returns_an_opaque_token_that_is_recorded_in_the_lock_file(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        repo_root = self._repo_root(tmp_path)
+        token = self._lock(repo_root)
+        self.assertIsInstance(token, str)
+        self.assertEqual(len(token), 32)
+        recorded = json.loads((repo_root / ".git" / "triage-state" / "acme__widgets-42.lock").read_text())
+        self.assertEqual(recorded["lock_token"], token)
+
+    def test_unlock_with_the_matching_token_releases_the_lock(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        repo_root = self._repo_root(tmp_path)
+        token = self._lock(repo_root)
+        lock = repo_root / ".git" / "triage-state" / "acme__widgets-42.lock"
+        result = run_helper([
+            "state", "unlock", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42",
+            "--lock-token", token,
+        ])
+        data = json.loads(result.stdout)
+        self.assertTrue(data["ok"], data)
+        self.assertEqual(data["status"], "RELEASED")
+        self.assertTrue(data["existed"])
+        self.assertFalse(data["forced"])
+        self.assertFalse(lock.exists())
+
+    def test_unlock_without_a_token_cannot_release_another_runs_lock(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        repo_root = self._repo_root(tmp_path)
+        self._lock(repo_root)
+        lock = repo_root / ".git" / "triage-state" / "acme__widgets-42.lock"
+        result = run_helper(["state", "unlock", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42"])
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(json.loads(result.stdout)["error"]["code"], "LOCK_TOKEN_MISMATCH")
+        self.assertTrue(lock.exists())
+
+    def test_unlock_with_a_wrong_token_cannot_release_another_runs_lock(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        repo_root = self._repo_root(tmp_path)
+        token = self._lock(repo_root)
+        lock = repo_root / ".git" / "triage-state" / "acme__widgets-42.lock"
+        result = run_helper([
+            "state", "unlock", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42",
+            "--lock-token", "0" * 32,
+        ])
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(json.loads(result.stdout)["error"]["code"], "LOCK_TOKEN_MISMATCH")
+        self.assertTrue(lock.exists())
+        self.assertNotEqual(token, "0" * 32)
+
+    def test_force_unlock_still_releases_without_any_token(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        repo_root = self._repo_root(tmp_path)
+        self._lock(repo_root)
+        lock = repo_root / ".git" / "triage-state" / "acme__widgets-42.lock"
+        result = run_helper([
+            "state", "unlock", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42", "--force-unlock",
+        ])
+        data = json.loads(result.stdout)
+        self.assertTrue(data["ok"], data)
+        self.assertTrue(data["forced"])
+        self.assertFalse(lock.exists())
 
     def test_lock_held_error_names_the_holder(self):
         tmp_path = Path(tempfile.mkdtemp())
@@ -1749,6 +1823,63 @@ class TestState(unittest.TestCase):
         data = json.loads(read.stdout)
         self.assertTrue(data["exists"])
         self.assertEqual(data["record"]["findings"][0]["id"], "T01")
+
+    def test_read_creates_no_state_directory_when_nothing_has_been_written(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        repo_root = self._repo_root(tmp_path)
+        state_dir = repo_root / ".git" / "triage-state"
+        self.assertFalse(state_dir.exists())
+        result = run_helper(["state", "read", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42"])
+        data = json.loads(result.stdout)
+        self.assertEqual(result.returncode, 0, data)
+        self.assertTrue(data["ok"])
+        self.assertFalse(data["exists"])
+        self.assertFalse(state_dir.exists(), "state read created .git/triage-state as a side effect")
+
+    def test_unlock_creates_no_state_directory_when_nothing_is_held(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        repo_root = self._repo_root(tmp_path)
+        state_dir = repo_root / ".git" / "triage-state"
+        result = run_helper(["state", "unlock", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42"])
+        data = json.loads(result.stdout)
+        self.assertTrue(data["ok"], data)
+        self.assertFalse(data["existed"])
+        self.assertFalse(state_dir.exists())
+
+    def test_write_creates_the_state_directory_and_leaves_no_temp_file(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        repo_root = self._repo_root(tmp_path)
+        state_dir = repo_root / ".git" / "triage-state"
+        record_file = tmp_path / "record.json"
+        record_file.write_text(json.dumps({"findings": [{"id": "T01", "status": "PLANNED"}]}))
+        write = run_helper([
+            "state", "write", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42",
+            "--record-file", str(record_file),
+        ])
+        data = json.loads(write.stdout)
+        self.assertTrue(data["ok"], data)
+        self.assertTrue(state_dir.is_dir())
+        self.assertEqual(sorted(p.name for p in state_dir.iterdir()), ["acme__widgets-42.json"])
+        read = run_helper(["state", "read", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42"])
+        record = json.loads(read.stdout)["record"]
+        self.assertEqual(record["findings"][0]["id"], "T01")
+
+    def test_read_survives_a_leftover_partial_temp_file_from_an_interrupted_write(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        repo_root = self._repo_root(tmp_path)
+        record_file = tmp_path / "record.json"
+        record_file.write_text(json.dumps({"findings": []}))
+        run_helper([
+            "state", "write", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42",
+            "--record-file", str(record_file),
+        ])
+        state_dir = repo_root / ".git" / "triage-state"
+        (state_dir / ".tmp-state-interrupted").write_text('{"findings": [{"id": "T0')
+        read = run_helper(["state", "read", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42"])
+        data = json.loads(read.stdout)
+        self.assertEqual(read.returncode, 0, data)
+        self.assertTrue(data["exists"])
+        self.assertEqual(data["record"]["findings"], [])
 
     def test_read_rejects_state_written_for_a_different_pr_number(self):
         tmp_path = Path(tempfile.mkdtemp())
