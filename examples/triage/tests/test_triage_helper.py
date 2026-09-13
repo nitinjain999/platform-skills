@@ -930,19 +930,97 @@ class TestNormalizeGitUrl(unittest.TestCase):
 
     def test_garbage_input_returns_none_rather_than_something_misleading(self):
         normalize = helper_module()._normalize_git_url_to_repo
-        for url in ("", "not-a-url", "github.com", "https://github.com/", "owner/repo", None):
+        for url in (
+            "", "not-a-url", "github.com", "https://github.com/", "owner/repo", None,
+            "https://github.com/acme",
+            "https://github.com/acme/",
+            "https://github.com/acme/repo/extra",
+        ):
             with self.subTest(url=url):
                 self.assertIsNone(normalize(url))
 
+    def test_host_is_extracted_from_every_remote_form(self):
+        host = helper_module()._git_url_host
+        for url, expected in (
+            ("https://github.com/owner/repo.git", "github.com"),
+            ("https://GitHub.com/owner/repo.git", "github.com"),
+            ("git@github.com:owner/repo.git", "github.com"),
+            ("ssh://git@ghes.example.com/owner/repo.git", "ghes.example.com"),
+            ("https://x-access-token:ghs_SECRET@github.com/owner/repo.git", "github.com"),
+            ("https://github.com:8443/owner/repo.git", "github.com"),
+            ("file:///tmp/x/owner/repo", None),
+            ("/tmp/x/owner/repo.git", None),
+            ("../owner/repo", None),
+            (None, None),
+        ):
+            with self.subTest(url=url):
+                self.assertEqual(host(url), expected)
+
+
+class TestPublishDestinationMatch(unittest.TestCase):
+    def _matches(self, given, expected_full_name, expected_clone_url):
+        return helper_module()._publish_destination_matches(given, expected_full_name, expected_clone_url)
+
+    def test_the_prs_own_host_and_repo_match_in_every_remote_form(self):
+        for given in (
+            "https://github.com/acme/repo.git",
+            "https://github.com/acme/repo",
+            "https://GitHub.com/Acme/Repo.git",
+            "git@github.com:acme/repo.git",
+            "ssh://git@github.com/acme/repo",
+            "https://x-access-token:ghs_SECRET@github.com/acme/repo.git",
+        ):
+            with self.subTest(given=given):
+                self.assertTrue(self._matches(given, "acme/repo", "https://github.com/acme/repo.git"))
+
+    def test_same_owner_repo_on_a_different_host_is_never_a_match(self):
+        for given in (
+            "https://evil.example.com/acme/repo.git",
+            "git@evil.example.com:acme/repo.git",
+            "ssh://git@evil.example.com/acme/repo.git",
+            "https://github.com.evil.example.com/acme/repo.git",
+        ):
+            with self.subTest(given=given):
+                self.assertFalse(self._matches(given, "acme/repo", "https://github.com/acme/repo.git"))
+
+    def test_a_local_or_relative_path_never_matches_a_hosted_head_repo(self):
+        for given in ("file:///tmp/x/acme/repo", "/tmp/x/acme/repo.git", "../acme/repo", "./acme/repo"):
+            with self.subTest(given=given):
+                self.assertFalse(self._matches(given, "acme/repo", "https://github.com/acme/repo.git"))
+
+    def test_an_owner_only_url_matches_nothing(self):
+        self.assertIsNone(helper_module()._normalize_git_url_to_repo("https://github.com/acme"))
+        for expected_full_name in ("github.com/acme", "acme", "acme/repo"):
+            with self.subTest(expected_full_name=expected_full_name):
+                self.assertFalse(self._matches(
+                    "https://github.com/acme", expected_full_name, "https://github.com/acme",
+                ))
+
+    def test_a_missing_head_clone_url_fails_closed(self):
+        self.assertFalse(self._matches("https://github.com/acme/repo.git", "acme/repo", None))
+        self.assertFalse(self._matches("https://github.com/acme/repo.git", "acme/repo", ""))
+
+    def test_two_local_paths_sharing_owner_repo_segments_are_not_the_same_destination(self):
+        self.assertTrue(self._matches("/tmp/x/acme/repo.git", "acme/repo", "/tmp/x/acme/repo.git"))
+        self.assertFalse(self._matches("/tmp/b/acme/repo.git", "acme/repo", "/tmp/a/acme/repo.git"))
+
+    def test_a_different_repo_on_the_right_host_is_still_a_mismatch(self):
+        self.assertFalse(self._matches(
+            "https://github.com/acme/other.git", "acme/repo", "https://github.com/acme/repo.git",
+        ))
+
 
 class TestPublish(unittest.TestCase):
-    def _pr(self, sha, remote_url, ref="fix-branch", state="open"):
+    def _pr(self, sha, remote_url, ref="fix-branch", state="open", clone_url=None):
         return {
             "state": state,
             "head": {
                 "sha": sha,
                 "ref": ref,
-                "repo": {"full_name": helper_module()._normalize_git_url_to_repo(str(remote_url))},
+                "repo": {
+                    "full_name": helper_module()._normalize_git_url_to_repo(str(remote_url)),
+                    "clone_url": str(remote_url) if clone_url is None else clone_url,
+                },
             },
         }
 
@@ -1211,8 +1289,13 @@ class TestPublish(unittest.TestCase):
     def _two_remotes_and_worktree(self, tmp_path):
         remote_a = tmp_path / "repo-a.git"
         remote_b = tmp_path / "repo-b.git"
-        subprocess.run(["git", "init", "--bare", str(remote_a)], check=True, capture_output=True)
-        subprocess.run(["git", "init", "--bare", str(remote_b)], check=True, capture_output=True)
+        wt, head_sha, commit_sha = self._seeded_remotes_and_worktree(tmp_path, (remote_a, remote_b))
+        return remote_a, remote_b, wt, head_sha, commit_sha
+
+    def _seeded_remotes_and_worktree(self, tmp_path, remotes):
+        for remote in remotes:
+            remote.parent.mkdir(parents=True, exist_ok=True)
+            subprocess.run(["git", "init", "--bare", str(remote)], check=True, capture_output=True)
 
         seed = tmp_path / "seed"
         seed.mkdir()
@@ -1223,7 +1306,7 @@ class TestPublish(unittest.TestCase):
         subprocess.run(["git", "add", "a.yml"], cwd=seed, check=True)
         subprocess.run(["git", "commit", "-m", "init"], cwd=seed, check=True, capture_output=True)
         head_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=seed, capture_output=True, text=True).stdout.strip()
-        for remote in (remote_a, remote_b):
+        for remote in remotes:
             subprocess.run(
                 ["git", "push", str(remote), "HEAD:refs/heads/fix-branch"], cwd=seed, check=True, capture_output=True,
             )
@@ -1234,7 +1317,7 @@ class TestPublish(unittest.TestCase):
         subprocess.run(["git", "add", "a.yml"], cwd=wt, check=True)
         subprocess.run(["git", "commit", "-m", "fix"], cwd=wt, check=True, capture_output=True)
         commit_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=wt, capture_output=True, text=True).stdout.strip()
-        return remote_a, remote_b, wt, head_sha, commit_sha
+        return wt, head_sha, commit_sha
 
     def _remote_ref(self, remote, ref="fix-branch"):
         return subprocess.run(
@@ -1260,6 +1343,55 @@ class TestPublish(unittest.TestCase):
         self.assertEqual(error["given_repo"], helper_module()._normalize_git_url_to_repo(str(remote_b)))
         self.assertEqual(self._remote_ref(remote_b), head_sha)
         self.assertEqual(self._remote_ref(remote_a), head_sha)
+
+    def test_publish_refuses_two_locations_sharing_the_same_owner_repo_segments(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        remote_a = tmp_path / "location-a" / "acme" / "repo.git"
+        remote_b = tmp_path / "location-b" / "acme" / "repo.git"
+        wt, head_sha, commit_sha = self._seeded_remotes_and_worktree(tmp_path, (remote_a, remote_b))
+        normalize = helper_module()._normalize_git_url_to_repo
+        self.assertEqual(normalize(str(remote_a)), normalize(str(remote_b)))
+
+        rules = [{"contains": ["pulls/42"], "stdout": self._pr(head_sha, remote_a)}]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper([
+            "publish", "--repo", "acme/widgets", "--pr", "42", "--worktree", wt,
+            "--expected-head-sha", head_sha, "--commit-sha", commit_sha,
+            "--head-remote-url", str(remote_b), "--head-ref", "fix-branch",
+        ], env=env)
+        self.assertNotEqual(result.returncode, 0)
+        error = json.loads(result.stdout)["error"]
+        self.assertEqual(error["code"], "PUBLISH_DESTINATION_MISMATCH")
+        self.assertEqual(error["expected_repo"], error["given_repo"])
+        self.assertEqual(self._remote_ref(remote_b), head_sha)
+        self.assertEqual(self._remote_ref(remote_a), head_sha)
+
+    def test_publish_refuses_the_prs_owner_repo_on_a_different_host(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        remote, wt, head_sha, commit_sha = self._remote_and_worktree(tmp_path)
+        rules = [{"contains": ["pulls/42"], "stdout": self._pr(
+            head_sha, "https://github.com/acme/widgets.git",
+        )}]
+        env, _ = gh_env(tmp_path, rules)
+        for given in (
+            "https://evil.example.invalid/acme/widgets.git",
+            "git@evil.example.invalid:acme/widgets.git",
+            "file:///tmp/definitely-not-here/acme/widgets",
+            "../acme/widgets",
+        ):
+            with self.subTest(given=given):
+                result = run_helper([
+                    "publish", "--repo", "acme/widgets", "--pr", "42", "--worktree", wt,
+                    "--expected-head-sha", head_sha, "--commit-sha", commit_sha,
+                    "--head-remote-url", given, "--head-ref", "fix-branch",
+                ], env=env)
+                self.assertNotEqual(result.returncode, 0)
+                error = json.loads(result.stdout)["error"]
+                self.assertEqual(error["code"], "PUBLISH_DESTINATION_MISMATCH")
+                self.assertEqual(error["expected_repo"], "acme/widgets")
+                self.assertEqual(error["given_repo"], "acme/widgets")
+                self.assertEqual(error["expected_host"], "github.com")
+        self.assertEqual(self._remote_ref(remote), head_sha)
 
     def test_publish_refuses_a_head_ref_that_is_not_the_prs_branch(self):
         tmp_path = Path(tempfile.mkdtemp())

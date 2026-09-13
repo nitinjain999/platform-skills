@@ -10,12 +10,15 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.parse
 from pathlib import Path
 
 STATE_DIR_NAME = "triage-state"
 SCHEMA_VERSION = 1
 URL_USERINFO_RE = re.compile(r"://[^@/\s]*@")
 GIT_URL_REPO_RE = re.compile(r"[:/]([^/:]+/[^/:]+?)(?:\.git)?/?$")
+GIT_URL_SCP_RE = re.compile(r"^(?:[^@/:]+@)?(?P<host>[^@/:]+):(?P<path>[^:]+)$")
+GIT_URL_DOT_GIT_RE = re.compile(r"\.git$")
 
 _NULL_HOOKS_DIR = None
 
@@ -84,11 +87,50 @@ def redact(text):
     return URL_USERINFO_RE.sub("://", text)
 
 
+def _split_git_url(url):
+    if not isinstance(url, str) or not url.strip():
+        return None, None
+    if "://" in url:
+        parts = urllib.parse.urlsplit(url)
+        return (parts.hostname or None), parts.path
+    scp = GIT_URL_SCP_RE.match(url)
+    if scp:
+        return scp.group("host").lower(), scp.group("path")
+    return None, url
+
+
 def _normalize_git_url_to_repo(url):
-    if not isinstance(url, str):
+    host, path = _split_git_url(url)
+    if path is None:
         return None
-    match = GIT_URL_REPO_RE.search(url)
-    return match.group(1) if match else None
+    if host is None:
+        match = GIT_URL_REPO_RE.search(path)
+        return match.group(1) if match else None
+    segments = [s for s in path.split("/") if s]
+    if len(segments) != 2:
+        return None
+    owner, repo = segments[0], GIT_URL_DOT_GIT_RE.sub("", segments[1])
+    return f"{owner}/{repo}" if owner and repo else None
+
+
+def _git_url_host(url):
+    return _split_git_url(url)[0]
+
+
+def _publish_destination_matches(head_remote_url, expected_full_name, expected_clone_url):
+    given_repo = _normalize_git_url_to_repo(head_remote_url)
+    if given_repo is None or not isinstance(expected_full_name, str) or not expected_full_name.strip():
+        return False
+    if given_repo.lower() != expected_full_name.strip().lower():
+        return False
+
+    given_host, given_path = _split_git_url(head_remote_url)
+    expected_host, expected_path = _split_git_url(expected_clone_url)
+    if given_host is not None or expected_host is not None:
+        return given_host is not None and expected_host is not None and given_host == expected_host
+    if not given_path or not expected_path:
+        return False
+    return os.path.realpath(given_path) == os.path.realpath(expected_path)
 
 
 def run(cmd, cwd=None, check=True, input_text=None, env=None):
@@ -532,19 +574,18 @@ def cmd_publish(args):
         )
 
     expected_repo = head_repo.get("full_name")
+    expected_clone_url = head_repo.get("clone_url")
     given_repo = _normalize_git_url_to_repo(args.head_remote_url)
-    repo_matches = (
-        given_repo is not None and expected_repo is not None
-        and given_repo.lower() == expected_repo.lower()
-    )
-    if not repo_matches or args.head_ref != head.get("ref"):
+    destination_matches = _publish_destination_matches(args.head_remote_url, expected_repo, expected_clone_url)
+    if not destination_matches or args.head_ref != head.get("ref"):
         raise HelperError(
             "PUBLISH_DESTINATION_MISMATCH",
-            "the push destination does not match the PR's actual head repository/branch; refusing to "
+            "the push destination does not match the PR's actual head host/repository/branch; refusing to "
             "mutate a destination this PR does not point at",
             expected_repo=expected_repo, given_repo=given_repo,
+            expected_host=_git_url_host(expected_clone_url), given_host=_git_url_host(args.head_remote_url),
             expected_ref=head.get("ref"), given_ref=args.head_ref,
-            given_url=redact(args.head_remote_url),
+            given_url=redact(args.head_remote_url), expected_url=redact(expected_clone_url),
         )
 
     refspec = f"{args.commit_sha}:refs/heads/{args.head_ref}"
