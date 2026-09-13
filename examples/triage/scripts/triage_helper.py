@@ -294,8 +294,9 @@ def cmd_map_thread(args):
 
 def cmd_patch_context(args):
     host = args.host or "github.com"
-    out = run(["gh", "api", f"repos/{args.repo}/pulls/{args.pr}/files", "--hostname", host, "--paginate"]).stdout
-    entries = json.loads(out)
+    out = run(["gh", "api", f"repos/{args.repo}/pulls/{args.pr}/files", "--hostname", host, "--paginate", "--slurp"]).stdout
+    pages = json.loads(out)
+    entries = [item for page in pages for item in page]
 
     match = None
     for e in entries:

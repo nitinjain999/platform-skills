@@ -389,9 +389,9 @@ class TestMapThread(unittest.TestCase):
 class TestPatchContext(unittest.TestCase):
     def test_exact_filename_match_returns_patch_ok(self):
         tmp_path = Path(tempfile.mkdtemp())
-        rules = [{"contains": ["pulls/42/files"], "stdout": [
+        rules = [{"contains": ["pulls/42/files"], "stdout": [[
             {"filename": "a.yml", "patch": "@@ -1 +1 @@\n-old\n+new"},
-        ]}]
+        ]]}]
         env, _ = gh_env(tmp_path, rules)
         result = run_helper(["patch-context", "--repo", "acme/widgets", "--pr", "42", "--path", "a.yml"], env=env)
         data = json.loads(result.stdout)
@@ -399,9 +399,9 @@ class TestPatchContext(unittest.TestCase):
 
     def test_renamed_file_matches_previous_filename(self):
         tmp_path = Path(tempfile.mkdtemp())
-        rules = [{"contains": ["pulls/42/files"], "stdout": [
+        rules = [{"contains": ["pulls/42/files"], "stdout": [[
             {"filename": "new-name.yaml", "previous_filename": "old-name.yaml", "patch": "@@ -1 +1 @@\n-x\n+y"},
-        ]}]
+        ]]}]
         env, _ = gh_env(tmp_path, rules)
         result = run_helper(["patch-context", "--repo", "acme/widgets", "--pr", "42", "--path", "old-name.yaml"], env=env)
         data = json.loads(result.stdout)
@@ -410,9 +410,9 @@ class TestPatchContext(unittest.TestCase):
 
     def test_binary_file_has_no_patch_but_explicit_status(self):
         tmp_path = Path(tempfile.mkdtemp())
-        rules = [{"contains": ["pulls/42/files"], "stdout": [
+        rules = [{"contains": ["pulls/42/files"], "stdout": [[
             {"filename": "logo.png"},
-        ]}]
+        ]]}]
         env, _ = gh_env(tmp_path, rules)
         result = run_helper(["patch-context", "--repo", "acme/widgets", "--pr", "42", "--path", "logo.png"], env=env)
         data = json.loads(result.stdout)
@@ -433,7 +433,7 @@ class TestPatchContext(unittest.TestCase):
         subprocess.run(["git", "commit", "-am", "bump"], cwd=repo, check=True, capture_output=True)
         head_sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, capture_output=True, text=True).stdout.strip()
 
-        rules = [{"contains": ["pulls/42/files"], "stdout": [{"filename": "big.yml"}]}]
+        rules = [{"contains": ["pulls/42/files"], "stdout": [[{"filename": "big.yml"}]]}]
         env, _ = gh_env(tmp_path, rules)
         result = run_helper([
             "patch-context", "--repo", "acme/widgets", "--pr", "42", "--path", "big.yml",
@@ -444,11 +444,24 @@ class TestPatchContext(unittest.TestCase):
         self.assertIn("-replicas: 1", data["patch"])
         self.assertIn("+replicas: 3", data["patch"])
 
-    def test_file_not_in_diff_at_all(self):
+    def test_paginate_slurp_shape_is_flattened_across_pages(self):
         tmp_path = Path(tempfile.mkdtemp())
         rules = [{"contains": ["pulls/42/files"], "stdout": [
-            {"filename": "unrelated.yml", "patch": "@@ -1 +1 @@\n-x\n+y"},
+            [{"filename": "a.yml", "patch": "@@ -1 +1 @@\n-old\n+new"}],
+            [{"filename": "b.yml", "patch": "@@ -1 +1 @@\n-x\n+y"}],
         ]}]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper(["patch-context", "--repo", "acme/widgets", "--pr", "42", "--path", "b.yml"], env=env)
+        data = json.loads(result.stdout)
+        self.assertTrue(data["ok"], data)
+        self.assertEqual(data["evidence_status"], "PATCH_OK")
+        self.assertEqual(data["filename"], "b.yml")
+
+    def test_file_not_in_diff_at_all(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        rules = [{"contains": ["pulls/42/files"], "stdout": [[
+            {"filename": "unrelated.yml", "patch": "@@ -1 +1 @@\n-x\n+y"},
+        ]]}]
         env, _ = gh_env(tmp_path, rules)
         result = run_helper(["patch-context", "--repo", "acme/widgets", "--pr", "42", "--path", "missing.yml"], env=env)
         data = json.loads(result.stdout)
