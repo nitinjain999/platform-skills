@@ -188,6 +188,73 @@ class TestResolveComment(unittest.TestCase):
         self.assertEqual(data["comment_type"], "issue")
 
 
+class TestSnapshot(unittest.TestCase):
+    def test_paginates_threads_across_two_pages(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        page1 = {
+            "data": {"repository": {"pullRequest": {"reviewThreads": {
+                "pageInfo": {"hasNextPage": True, "endCursor": "CURSOR1"},
+                "nodes": [{
+                    "id": "PRT_1", "isResolved": False, "isOutdated": False,
+                    "viewerCanReply": True, "viewerCanResolve": True,
+                    "comments": {"pageInfo": {"hasNextPage": False, "endCursor": None},
+                                 "nodes": [{"id": "PRRC_1", "databaseId": 11, "fullDatabaseId": 11,
+                                            "body": "root", "path": "a.yml", "line": 3,
+                                            "author": {"login": "alice"}, "updatedAt": "2026-01-01T00:00:00Z",
+                                            "replyTo": None}]},
+                }],
+            }}}}
+        }
+        page2 = {
+            "data": {"repository": {"pullRequest": {"reviewThreads": {
+                "pageInfo": {"hasNextPage": False, "endCursor": None},
+                "nodes": [{
+                    "id": "PRT_2", "isResolved": True, "isOutdated": False,
+                    "viewerCanReply": True, "viewerCanResolve": True,
+                    "comments": {"pageInfo": {"hasNextPage": False, "endCursor": None},
+                                 "nodes": [{"id": "PRRC_2", "databaseId": 22, "fullDatabaseId": 22,
+                                            "body": "second thread", "path": "b.yml", "line": 1,
+                                            "author": {"login": "bob"}, "updatedAt": "2026-01-02T00:00:00Z",
+                                            "replyTo": None}]},
+                }],
+            }}}}
+        }
+        rules = [
+            {"contains": ["repos/acme/widgets/pulls/42"], "stdout": {"head": {"sha": "a" * 40}}},
+            {"contains": ["reviewThreads", "CURSOR1"], "stdout": page2},
+            {"contains": ["reviewThreads"], "stdout": page1},
+        ]
+        env, calls_log = gh_env(tmp_path, rules)
+        out_file = tmp_path / "snapshot.json"
+        result = run_helper(
+            ["snapshot", "--repo", "acme/widgets", "--pr", "42", "--out", str(out_file)], env=env,
+        )
+        data = json.loads(result.stdout)
+        self.assertTrue(data["ok"])
+        self.assertEqual(len(data["threads"]), 2)
+        self.assertEqual(data["threads"][0]["comments"][0]["database_id"], "11")
+        self.assertTrue(out_file.exists())
+
+    def test_head_drift_is_reported_not_hidden(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        empty_page = {"data": {"repository": {"pullRequest": {"reviewThreads": {
+            "pageInfo": {"hasNextPage": False, "endCursor": None}, "nodes": [],
+        }}}}}
+        calls = {"n": 0}
+        rules = [
+            {"contains": ["reviewThreads"], "stdout": empty_page},
+            {"contains": ["repos/acme/widgets/pulls/42"], "stdout": {"head": {"sha": "b" * 40}}},
+        ]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper(["snapshot", "--repo", "acme/widgets", "--pr", "42"], env=env)
+        data = json.loads(result.stdout)
+        self.assertIn("head_changed_during_collection", data)
+        self.assertEqual(data["head_sha_before"], "b" * 40)
+        self.assertEqual(data["head_sha_after"], "b" * 40)
+
+
 class TestHelperSkeleton(unittest.TestCase):
     def test_help_exits_zero(self):
         result = run_helper(["--help"])
