@@ -1,6 +1,8 @@
+import filecmp
 import importlib.util
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -9,12 +11,61 @@ from pathlib import Path
 
 HELPER = Path(__file__).resolve().parents[1] / "scripts" / "triage_helper.py"
 
+_HELPER_MODULE = None
+
 
 def load_helper_module():
     spec = importlib.util.spec_from_file_location("triage_helper_under_test", HELPER)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def helper_module():
+    global _HELPER_MODULE
+    if _HELPER_MODULE is None:
+        _HELPER_MODULE = load_helper_module()
+    return _HELPER_MODULE
+
+
+FAKE_GIT_TEMPLATE = '''#!/usr/bin/env python3
+import os, subprocess, sys
+REAL_GIT = {real_git!r}
+args = sys.argv[1:]
+if "ls-remote" in args:
+    mode = os.environ.get("FAKE_GIT_LS_REMOTE", "pass")
+    if mode == "fail":
+        sys.stderr.write("fatal: unable to access remote: transient failure\\n")
+        sys.exit(128)
+    if mode == "empty":
+        sys.exit(0)
+if "commit" in args:
+    for var, content in (
+        ("FAKE_GIT_COMMIT_ADDS_FILE", "injected between the allowlist check and the commit\\n"),
+        ("FAKE_GIT_COMMIT_REWRITES_FILE", "rewritten between the allowlist check and the commit\\n"),
+    ):
+        target = os.environ.get(var)
+        if target:
+            with open(target, "w") as handle:
+                handle.write(content)
+            subprocess.run([REAL_GIT, "add", target], check=True)
+sys.exit(subprocess.run([REAL_GIT] + args).returncode)
+'''
+
+
+def fake_git_env(tmp_path, env=None):
+    real_git = shutil.which("git")
+    if real_git is None:
+        raise unittest.SkipTest("git is not on PATH")
+    bin_dir = tmp_path / "fakebin"
+    bin_dir.mkdir(exist_ok=True)
+    git_path = bin_dir / "git"
+    git_path.write_text(FAKE_GIT_TEMPLATE.format(real_git=real_git))
+    git_path.chmod(0o755)
+    env = dict(env) if env else dict(os.environ)
+    env["PATH"] = str(bin_dir) + os.pathsep + env["PATH"]
+    return env
+
 
 FAKE_GH_TEMPLATE = '''#!/usr/bin/env python3
 import sys, os, json
@@ -649,17 +700,15 @@ class TestStageCommit(unittest.TestCase):
         ).stdout
         self.assertEqual(committed_blob, "fixed\n")
 
-    def test_pre_commit_hook_file_set_drift_is_caught_not_silently_reported(self):
+    def test_file_set_drift_after_the_allowlist_check_is_caught_not_silently_reported(self):
         tmp_path = Path(tempfile.mkdtemp())
-        repo, sha = TestWorktree()._make_repo(tmp_path)
-        hook = repo / ".git" / "hooks" / "pre-commit"
-        hook.write_text("#!/bin/sh\necho extra > extra.txt\ngit add extra.txt\n")
-        hook.chmod(0o755)
-
-        prep = run_helper(["worktree", "prepare", "--repo-root", str(repo), "--head-sha", sha])
-        wt = Path(json.loads(prep.stdout)["worktree_path"])
+        wt = self._prepared_worktree(tmp_path)
         (wt / "a.yml").write_text("fixed\n")
-        result = run_helper(["stage-commit", "--worktree", str(wt), "--paths", "a.yml", "--message", "fix: a"])
+        env = fake_git_env(tmp_path)
+        env["FAKE_GIT_COMMIT_ADDS_FILE"] = str(wt / "extra.txt")
+        result = run_helper(
+            ["stage-commit", "--worktree", str(wt), "--paths", "a.yml", "--message", "fix: a"], env=env,
+        )
         self.assertNotEqual(result.returncode, 0)
         data = json.loads(result.stdout)
         self.assertEqual(data["error"]["code"], "COMMIT_FILE_SET_DRIFTED_FROM_STAGED")
@@ -667,22 +716,53 @@ class TestStageCommit(unittest.TestCase):
         self.assertIn("a.yml", data["error"]["committed"])
         self.assertEqual(data["error"]["intended"], ["a.yml"])
 
-    def test_pre_commit_hook_rewriting_an_intended_file_is_caught_as_content_drift(self):
+    def test_content_drift_after_the_allowlist_check_is_caught_as_content_drift(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        wt = self._prepared_worktree(tmp_path)
+        (wt / "a.yml").write_text("fixed\n")
+        env = fake_git_env(tmp_path)
+        env["FAKE_GIT_COMMIT_REWRITES_FILE"] = str(wt / "a.yml")
+        result = run_helper(
+            ["stage-commit", "--worktree", str(wt), "--paths", "a.yml", "--message", "fix: a"], env=env,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["error"]["code"], "COMMIT_CONTENT_DRIFTED_FROM_STAGED")
+        self.assertEqual(data["error"]["drifted_paths"], ["a.yml"])
+        self.assertEqual((wt / "a.yml").read_text(), "rewritten between the allowlist check and the commit\n")
+
+    def test_commit_hooks_do_not_execute_even_when_they_leave_staged_content_alone(self):
         tmp_path = Path(tempfile.mkdtemp())
         repo, sha = TestWorktree()._make_repo(tmp_path)
-        hook = repo / ".git" / "hooks" / "pre-commit"
-        hook.write_text("#!/bin/sh\necho 'reformatted by a hook' > a.yml\ngit add a.yml\n")
-        hook.chmod(0o755)
+        hook_names = ["pre-commit", "prepare-commit-msg", "commit-msg", "post-commit"]
+        markers = {}
+        for name in hook_names:
+            marker = tmp_path / f"{name}-fired.marker"
+            markers[name] = marker
+            hook = repo / ".git" / "hooks" / name
+            hook.write_text(f"#!/bin/sh\ntouch {marker}\nexit 0\n")
+            hook.chmod(0o755)
 
         prep = run_helper(["worktree", "prepare", "--repo-root", str(repo), "--head-sha", sha])
         wt = Path(json.loads(prep.stdout)["worktree_path"])
         (wt / "a.yml").write_text("fixed\n")
         result = run_helper(["stage-commit", "--worktree", str(wt), "--paths", "a.yml", "--message", "fix: a"])
-        self.assertNotEqual(result.returncode, 0)
         data = json.loads(result.stdout)
-        self.assertEqual(data["error"]["code"], "COMMIT_CONTENT_DRIFTED_FROM_STAGED")
-        self.assertEqual(data["error"]["drifted_paths"], ["a.yml"])
-        self.assertEqual((wt / "a.yml").read_text(), "reformatted by a hook\n")
+        self.assertTrue(data["ok"], data)
+        self.assertEqual(data["committed_paths"], ["a.yml"])
+
+        for name in hook_names:
+            with self.subTest(hook=name):
+                self.assertFalse(
+                    markers[name].exists(),
+                    f"{name} hook executed during stage-commit and could have run arbitrary code",
+                )
+
+        (wt / "a.yml").write_text("second edit\n")
+        subprocess.run(["git", "commit", "-am", "control"], cwd=wt, check=True, capture_output=True)
+        for name in hook_names:
+            with self.subTest(hook=name, control=True):
+                self.assertTrue(markers[name].exists(), f"{name} fixture never fires at all")
 
     def test_refuses_when_staged_set_has_extra_unrelated_file(self):
         tmp_path = Path(tempfile.mkdtemp())

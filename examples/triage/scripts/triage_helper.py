@@ -367,7 +367,8 @@ def cmd_worktree_cleanup(args):
 
 
 def cmd_stage_commit(args):
-    run(["git", "-c", f"core.hooksPath={_null_hooks_dir()}", "add", "--"] + args.paths, cwd=args.worktree)
+    hooks_flag = ("-c", f"core.hooksPath={_null_hooks_dir()}")
+    run(["git", *hooks_flag, "add", "--"] + args.paths, cwd=args.worktree)
     staged_raw = run(["git", "diff", "--cached", "--name-only", "-z"], cwd=args.worktree).stdout
     staged = [p for p in staged_raw.split("\0") if p]
     staged_set, intended_set = set(staged), set(args.paths)
@@ -383,7 +384,7 @@ def cmd_stage_commit(args):
         blob = run(["git", "rev-parse", f":{p}"], cwd=args.worktree, check=False)
         pre_commit_blobs[p] = blob.stdout.strip() if blob.returncode == 0 else None
 
-    run(["git", "commit", "-m", args.message], cwd=args.worktree)
+    run(["git", *hooks_flag, "commit", "-m", args.message], cwd=args.worktree)
     sha = run(["git", "rev-parse", "HEAD"], cwd=args.worktree).stdout.strip()
 
     committed_raw = run(
@@ -393,8 +394,9 @@ def cmd_stage_commit(args):
     if set(committed) != intended_set:
         raise HelperError(
             "COMMIT_FILE_SET_DRIFTED_FROM_STAGED",
-            "a commit hook changed which files are in the commit after the allowlist check passed; the "
-            "resulting commit's file set does not match the intended paths and must be reinspected",
+            "the sealed commit's file set does not match the intended paths even though the allowlist check "
+            "passed; commit hooks are disabled on this path, so something else moved the index and the "
+            "resulting commit must be reinspected before it is trusted",
             committed=committed, intended=sorted(intended_set), commit_sha=sha,
         )
 
@@ -407,9 +409,9 @@ def cmd_stage_commit(args):
     if content_drifted:
         raise HelperError(
             "COMMIT_CONTENT_DRIFTED_FROM_STAGED",
-            "a commit hook changed the content of one or more intended files after the allowlist check "
-            "passed; the validation that ran before this commit does not speak for what was actually "
-            "committed — revalidate the changed result before publication",
+            "one or more intended files were committed with different content than was staged even though "
+            "commit hooks are disabled on this path; the validation that ran before this commit does not "
+            "speak for what was actually committed, so revalidate the changed result before publication",
             drifted_paths=content_drifted, commit_sha=sha,
         )
 
