@@ -710,6 +710,57 @@ class TestWorktreePreserve(unittest.TestCase):
         )
         self.assertIn("fixed tracked file", Path(data["uncommitted_patch"]).read_text())
 
+    def test_untracked_symlinks_are_preserved_as_symlinks(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        _, sha, wt = self._prepared(tmp_path)
+        (wt / "target.txt").write_text("the real file behind the link\n")
+        (wt / "target-dir").mkdir()
+        (wt / "target-dir" / "inside.txt").write_text("inside the linked directory\n")
+        (wt / "link-to-file").symlink_to("target.txt")
+        (wt / "link-to-dir").symlink_to("target-dir")
+        (wt / "dangling-link").symlink_to("nothing-real-here")
+
+        out = tmp_path / "preserved"
+        result = run_helper([
+            "worktree", "preserve", "--path", str(wt), "--original-head-sha", sha, "--out", str(out),
+        ])
+        data = json.loads(result.stdout)
+        self.assertTrue(data["ok"], data)
+        for rel, target in (
+            ("link-to-file", "target.txt"),
+            ("link-to-dir", "target-dir"),
+            ("dangling-link", "nothing-real-here"),
+        ):
+            with self.subTest(rel=rel):
+                self.assertIn(rel, data["untracked_files"])
+                dest = out / "untracked" / rel
+                self.assertTrue(dest.is_symlink(), f"{rel} was not preserved as a symlink")
+                self.assertEqual(os.readlink(dest), target)
+
+    def test_an_untracked_entry_that_cannot_be_copied_fails_preservation(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        _, sha, wt = self._prepared(tmp_path)
+        unreadable = wt / "unreadable.py"
+        unreadable.write_text("work that must not vanish silently\n")
+        os.chmod(unreadable, 0)
+        try:
+            with open(unreadable, "rb"):
+                readable = True
+        except PermissionError:
+            readable = False
+        if readable:
+            self.skipTest("a mode-0 file is still readable here, so a copy failure cannot be simulated")
+
+        out = tmp_path / "preserved"
+        result = run_helper([
+            "worktree", "preserve", "--path", str(wt), "--original-head-sha", sha, "--out", str(out),
+        ])
+        self.assertNotEqual(result.returncode, 0)
+        error = json.loads(result.stdout)["error"]
+        self.assertEqual(error["code"], "PRESERVATION_FAILED")
+        self.assertIn("untracked_entry_not_preserved:unreadable.py", error["problems"])
+        self.assertTrue(wt.is_dir())
+
     def test_committed_then_uncommitted_changes_round_trip_to_the_exact_worktree_state(self):
         tmp_path = Path(tempfile.mkdtemp())
         repo, sha, wt = self._prepared(tmp_path)

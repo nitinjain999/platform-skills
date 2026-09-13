@@ -450,11 +450,17 @@ def cmd_worktree_preserve(args):
     copied_untracked = []
     for rel in untracked_rel_paths:
         src = worktree / rel
-        if not src.exists() or src.is_dir():
-            continue
         dest = untracked_dir / rel
         dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dest)
+        try:
+            if src.is_symlink():
+                shutil.copy2(src, dest, follow_symlinks=False)
+            elif src.is_dir() or not src.exists():
+                continue
+            else:
+                shutil.copy2(src, dest)
+        except OSError:
+            continue
         copied_untracked.append(rel)
 
     problems = []
@@ -464,8 +470,13 @@ def cmd_worktree_preserve(args):
         problems.append("committed_changes_present_but_patch_capture_failed")
     for rel in copied_untracked:
         src, dest = worktree / rel, untracked_dir / rel
-        if not dest.exists() or dest.stat().st_size != src.stat().st_size:
+        if src.is_symlink():
+            if not dest.is_symlink() or os.readlink(dest) != os.readlink(src):
+                problems.append(f"untracked_copy_incomplete:{rel}")
+        elif not dest.exists() or dest.stat().st_size != src.stat().st_size:
             problems.append(f"untracked_copy_incomplete:{rel}")
+    for rel in sorted(set(untracked_rel_paths) - set(copied_untracked)):
+        problems.append(f"untracked_entry_not_preserved:{rel}")
     if problems:
         raise HelperError(
             "PRESERVATION_FAILED",
