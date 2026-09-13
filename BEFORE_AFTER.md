@@ -293,8 +293,8 @@ A PR with three open threads — one real fix needed, two that just need a respo
 
 ```
 Thread 1: "Missing securityContext — container runs as root"   → ACTIONABLE_FIX
-Thread 2: "Consider adding a PodDisruptionBudget for HA"       → INFORMATIONAL
-Thread 3: "Why not use Knative here?"                          → NOT_APPLICABLE
+Thread 2: "Consider adding a PodDisruptionBudget for HA"       → OUT_OF_SCOPE
+Thread 3: "Why not use Knative here?"                          → INFORMATIONAL
 ```
 
 ### What /platform-skills:triage --all does
@@ -310,13 +310,13 @@ Thread 3: "Why not use Knative here?"                          → NOT_APPLICABL
    Applying fix: adding securityContext at pod and container level
    Validated ✅   Committed ✅   Published ✅   Reply posted ✅   Thread resolved ✅
 
-── Thread 2 → INFORMATIONAL
-   Reply: PDB is tracked in issue #87 — a separate operational change
-   Reply posted ✅   Thread left open (informational findings do not auto-close)
+── Thread 2 → OUT_OF_SCOPE
+   Reply: PDB is a valid follow-up, but adding it is a separate operational change outside this PR's authorized scope; no follow-up issue was created
+   Reply posted ✅   Thread left open (a valid follow-up outside the authorized change doesn't auto-close)
 
-── Thread 3 → NOT_APPLICABLE
+── Thread 3 → INFORMATIONAL
    Reply: Knative is not in our platform stack, with the evidence for that
-   Reply posted ✅   Thread left open for the reviewer to close
+   Reply posted ✅   Thread left open (a question about existing infrastructure, not a defect in this diff)
 ```
 
 > Full fixture: [`examples/demo/pr-triage/`](examples/demo/pr-triage/)

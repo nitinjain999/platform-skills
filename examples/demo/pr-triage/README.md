@@ -2,7 +2,7 @@
 
 > Status: Stable
 
-A PR with three open review threads — one actionable fix, one informational, one not applicable.
+A PR with three open review threads — one actionable fix, one out of scope, one informational.
 The `/platform-skills:triage --all` command classifies each, applies the fix where justified, replies on every thread, and resolves only the threads that are eligible for closure.
 
 ## The scenario
@@ -12,8 +12,8 @@ PR #42 adds a new `payment-api` Deployment. Three reviewer comments are open:
 | Comment | Classification | Action |
 |---|---|---|
 | "Missing `securityContext` — container runs as root" | `ACTIONABLE_FIX` | Adds pod + container securityContext, commits, publishes, resolves thread |
-| "Consider adding a PodDisruptionBudget for HA" | `INFORMATIONAL` | Replies explaining the trade-off; thread left open — informational findings aren't resolved automatically |
-| "Why not use Knative here?" | `NOT_APPLICABLE` | Replies with the evidence that disproves the premise; thread left open for the reviewer to close |
+| "Consider adding a PodDisruptionBudget for HA" | `OUT_OF_SCOPE` | Replies explaining that PDB is a valid follow-up but remediation is outside this PR's authorized change; thread left open — out-of-scope findings aren't resolved automatically |
+| "Why not use Knative here?" | `INFORMATIONAL` | Replies with the evidence answering the question; thread left open — informational findings aren't resolved automatically |
 
 ## How to run
 

@@ -98,7 +98,9 @@ resource "aws_iam_policy" "app" {
 **Reply posted:**
 > Scoped the IAM policy to the four required S3 actions (`GetObject`, `PutObject`, `DeleteObject`, `ListBucket`) and replaced the wildcard resource with the bucket ARN. This satisfies SOC 2 CC6.1 least-privilege requirement.
 >
-> ✅ Fixed — thread resolved.
+> ✅ Fixed
+
+Thread resolved after this reply — `publish` confirmed `matches_pushed_commit: true`.
 
 ---
 
@@ -139,7 +141,9 @@ containers:
 **Reply posted:**
 > Added resource requests (`100m` CPU, `128Mi` memory) and limits (`500m` CPU, `256Mi` memory) to the `orders` container. Adjust values to match your profiling data before merging to production.
 >
-> ✅ Fixed — thread resolved.
+> ✅ Fixed
+
+Thread resolved after this reply — `publish` confirmed `matches_pushed_commit: true`.
 
 ---
 
@@ -192,7 +196,9 @@ spec:
 **Reply posted:**
 > Migrated the Ingress to `networking.k8s.io/v1` and updated the backend spec to the v1 format (`service.name` / `service.port.number`). Also added `pathType: Prefix` which is required in v1.
 >
-> ✅ Fixed — thread resolved.
+> ✅ Fixed
+
+Thread resolved after this reply — `publish` confirmed `matches_pushed_commit: true`.
 
 ---
 
@@ -224,7 +230,9 @@ livenessProbe:
 **Reply posted:**
 > Corrected the liveness probe path to `/health` to match the actual endpoint exposed by the application.
 >
-> ✅ Fixed — thread resolved.
+> ✅ Fixed
+
+Thread resolved after this reply — `publish` confirmed `matches_pushed_commit: true`.
 
 ---
 
@@ -254,7 +262,9 @@ app:
 >
 > The exposed key itself should be rotated in your secrets manager — that is outstanding and separate from this source-code fix. Removing it from the file does not revoke it.
 >
-> ✅ Fixed — thread resolved.
+> ✅ Fixed
+
+This is a case where execution state and discussion state genuinely diverge: the source-code fix is real, complete, and published, which is what `✅ Fixed` certifies. The thread stays open, not resolved — key rotation is a human/ops action this tool cannot verify, so closure waits for the reviewer to confirm the exposed key was actually rotated.
 
 ---
 

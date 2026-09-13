@@ -3,8 +3,8 @@
 > A production-grade field handbook for platform, DevOps, SRE, and cloud engineers covering Kubernetes, Flux CD, Terraform, GitHub Actions, AWS, OPA/Rego, KEDA, Karpenter, supply chain security, Falco, observability, and more. Use it on GitHub, as a local reference, or with Claude, Codex, Cursor, and Copilot for interactive guidance with blast radius, validation steps, and rollback plans built in.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-v1.41.0-0e1117)](CHANGELOG.md)
-[![Domains](https://img.shields.io/badge/Domains-63-4c8eda)](references/)
+[![Version](https://img.shields.io/badge/Version-v1.42.0-0e1117)](CHANGELOG.md)
+[![Domains](https://img.shields.io/badge/Domains-64-4c8eda)](references/)
 [![Commands](https://img.shields.io/badge/Commands-44-e87c2b)](commands/)
 [![Examples](https://img.shields.io/badge/Examples-28-6f42c1)](examples/)
 [![Editors](https://img.shields.io/badge/Editors-VSCode%20%7C%20Cursor%20%7C%20Copilot-2ea44f)](EDITOR_INTEGRATIONS.md)
@@ -347,7 +347,7 @@ platform-skills/
 
 ## Roadmap
 
-**Current release: v1.42.0** — 44 commands, 63 domain reference guides, 50+ wiki pages.
+**Current release: v1.42.0** — 44 commands, 64 domain reference guides, 50+ wiki pages.
 
 Full version history is in [CHANGELOG.md](CHANGELOG.md).
 
