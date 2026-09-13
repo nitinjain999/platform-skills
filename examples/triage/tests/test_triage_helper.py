@@ -592,6 +592,48 @@ class TestResolveThread(unittest.TestCase):
         self.assertEqual(data["error"]["code"], "RESOLVE_NOT_CONFIRMED")
 
 
+class TestState(unittest.TestCase):
+    def test_lock_then_second_lock_is_refused(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        repo_root = tmp_path / "repo"
+        (repo_root / ".git").mkdir(parents=True)
+        first = run_helper(["state", "lock", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42"])
+        self.assertTrue(json.loads(first.stdout)["ok"])
+        second = run_helper(["state", "lock", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42"])
+        self.assertNotEqual(second.returncode, 0)
+        self.assertEqual(json.loads(second.stdout)["error"]["code"], "LOCK_HELD")
+        unlock = run_helper(["state", "unlock", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42"])
+        self.assertTrue(json.loads(unlock.stdout)["ok"])
+        third = run_helper(["state", "lock", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42"])
+        self.assertTrue(json.loads(third.stdout)["ok"])
+
+    def test_write_then_read_round_trips(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        repo_root = tmp_path / "repo"
+        (repo_root / ".git").mkdir(parents=True)
+        record_file = tmp_path / "record.json"
+        record_file.write_text(json.dumps({"findings": [{"id": "T01", "status": "PLANNED"}]}))
+        write = run_helper(["state", "write", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42", "--record-file", str(record_file)])
+        self.assertTrue(json.loads(write.stdout)["ok"])
+        read = run_helper(["state", "read", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42"])
+        data = json.loads(read.stdout)
+        self.assertTrue(data["exists"])
+        self.assertEqual(data["record"]["findings"][0]["id"], "T01")
+
+    def test_read_rejects_state_written_for_a_different_pr_number(self, tmp_path=None):
+        import tempfile
+        tmp_path = Path(tempfile.mkdtemp())
+        repo_root = tmp_path / "repo"
+        (repo_root / ".git" / "triage-state").mkdir(parents=True)
+        corrupted = repo_root / ".git" / "triage-state" / "acme__widgets-42.json"
+        corrupted.write_text(json.dumps({"schema_version": 1, "repo": "acme/widgets", "pr_number": 999}))
+        read = run_helper(["state", "read", "--repo-root", str(repo_root), "--repo", "acme/widgets", "--pr", "42"])
+        self.assertNotEqual(read.returncode, 0)
+        self.assertEqual(json.loads(read.stdout)["error"]["code"], "STALE_OR_WRONG_STATE")
+
+
 class TestHelperSkeleton(unittest.TestCase):
     def test_help_exits_zero(self):
         result = run_helper(["--help"])

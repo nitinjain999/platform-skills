@@ -9,6 +9,9 @@ import tempfile
 import time
 from pathlib import Path
 
+STATE_DIR_NAME = "triage-state"
+SCHEMA_VERSION = 1
+
 
 GRAPHQL_THREADS_PAGE = """
 query($owner:String!, $repo:String!, $pr:Int!, $after:String) {
@@ -462,6 +465,66 @@ def cmd_resolve_thread(args):
     emit({"ok": True, "status": "CONFIRMED", "thread_node_id": args.thread_node_id})
 
 
+def _state_dir(repo_root):
+    d = Path(repo_root) / ".git" / STATE_DIR_NAME
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def _safe_name(repo, pr):
+    return f"{repo.replace('/', '__')}-{pr}"
+
+
+def _state_file(repo_root, repo, pr):
+    return _state_dir(repo_root) / f"{_safe_name(repo, pr)}.json"
+
+
+def _lock_file(repo_root, repo, pr):
+    return _state_dir(repo_root) / f"{_safe_name(repo, pr)}.lock"
+
+
+def cmd_state_lock(args):
+    lock_path = _lock_file(args.repo_root, args.repo, args.pr)
+    try:
+        fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        os.write(fd, json.dumps({"pid": os.getpid(), "acquired_at": time.time()}).encode())
+        os.close(fd)
+        emit({"ok": True, "status": "ACQUIRED", "lock_path": str(lock_path)})
+    except FileExistsError:
+        raise HelperError("LOCK_HELD", "another triage instance holds the lock for this repo/PR", lock_path=str(lock_path))
+
+
+def cmd_state_unlock(args):
+    _lock_file(args.repo_root, args.repo, args.pr).unlink(missing_ok=True)
+    emit({"ok": True, "status": "RELEASED"})
+
+
+def cmd_state_read(args):
+    path = _state_file(args.repo_root, args.repo, args.pr)
+    if not path.exists():
+        emit({"ok": True, "exists": False})
+        return
+    record = json.loads(path.read_text())
+    if record.get("schema_version") != SCHEMA_VERSION or record.get("repo") != args.repo or record.get("pr_number") != args.pr:
+        raise HelperError(
+            "STALE_OR_WRONG_STATE",
+            "state record fails identity/schema check; refusing to reuse",
+            record_repo=record.get("repo"), record_pr=record.get("pr_number"), record_schema=record.get("schema_version"),
+        )
+    emit({"ok": True, "exists": True, "record": record})
+
+
+def cmd_state_write(args):
+    path = _state_file(args.repo_root, args.repo, args.pr)
+    record = json.loads(Path(args.record_file).read_text())
+    record["schema_version"] = SCHEMA_VERSION
+    record["repo"] = args.repo
+    record["pr_number"] = args.pr
+    record["updated_at"] = time.time()
+    path.write_text(json.dumps(record, indent=2))
+    emit({"ok": True, "status": "WRITTEN", "path": str(path)})
+
+
 def build_parser():
     parser = JSONArgumentParser(prog="triage_helper.py")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -545,6 +608,20 @@ def build_parser():
     p.add_argument("--thread-node-id", required=True)
     p.add_argument("--host")
     p.set_defaults(func=cmd_resolve_thread)
+
+    p = sub.add_parser("state")
+    ssub = p.add_subparsers(dest="state_command", required=True)
+    for name, func in (
+        ("lock", cmd_state_lock), ("unlock", cmd_state_unlock),
+        ("read", cmd_state_read), ("write", cmd_state_write),
+    ):
+        sp = ssub.add_parser(name)
+        sp.add_argument("--repo-root", required=True)
+        sp.add_argument("--repo", required=True)
+        sp.add_argument("--pr", type=int, required=True)
+        if name == "write":
+            sp.add_argument("--record-file", required=True)
+        sp.set_defaults(func=func)
 
     return parser
 
