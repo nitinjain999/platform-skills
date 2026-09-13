@@ -497,6 +497,35 @@ class TestWorktree(unittest.TestCase):
         cleanup = run_helper(["worktree", "cleanup", "--repo-root", str(repo), "--path", str(wt_path)])
         self.assertTrue(json.loads(cleanup.stdout)["ok"])
 
+    def test_prepare_fetches_missing_sha_from_fork_remote(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        origin, _ = self._make_repo(tmp_path)
+
+        fork = tmp_path / "fork"
+        subprocess.run(["git", "clone", str(origin), str(fork)], check=True, capture_output=True)
+        subprocess.run(["git", "config", "user.email", "t@example.com"], cwd=fork, check=True)
+        subprocess.run(["git", "config", "user.name", "Test"], cwd=fork, check=True)
+        (fork / "a.yml").write_text("fork-only change\n")
+        subprocess.run(["git", "commit", "-am", "fork commit"], cwd=fork, check=True, capture_output=True)
+        fork_sha = subprocess.run(
+            ["git", "rev-parse", "HEAD"], cwd=fork, capture_output=True, text=True,
+        ).stdout.strip()
+
+        without_fetch = run_helper(["worktree", "prepare", "--repo-root", str(origin), "--head-sha", fork_sha])
+        self.assertNotEqual(without_fetch.returncode, 0)
+
+        result = run_helper([
+            "worktree", "prepare", "--repo-root", str(origin), "--head-sha", fork_sha,
+            "--fetch-remote-url", str(fork),
+        ])
+        data = json.loads(result.stdout)
+        self.assertTrue(data["ok"], data)
+        wt_path = Path(data["worktree_path"])
+        self.assertEqual((wt_path / "a.yml").read_text(), "fork-only change\n")
+
+        cleanup = run_helper(["worktree", "cleanup", "--repo-root", str(origin), "--path", str(wt_path)])
+        self.assertTrue(json.loads(cleanup.stdout)["ok"])
+
 
 class TestStageCommit(unittest.TestCase):
     def _prepared_worktree(self, tmp_path):

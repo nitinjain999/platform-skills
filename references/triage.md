@@ -122,6 +122,8 @@ Two mechanical calls bracket the actual edit, and they belong together because t
 
 `worktree prepare` creates a disposable worktree detached at the verified PR head SHA. It must not inherit the original checkout's index or uncommitted files; a caller can have unrelated staged, unstaged, or untracked changes, including changes in the exact file this fix is about to touch, and every one of those must survive this run untouched. Never auto-stash, never `reset --hard`, never `clean`, never rewrite the caller's branch to make the command's job easier. A dirty worktree being "cleaned up" on the caller's behalf is not an acceptable safety mechanism; a fresh, detached worktree that never shares state with the original checkout is.
 
+`git worktree add --detach <dir> <sha>` fails outright if `<sha>` is not already a local object, which is the common case for a fork PR (the SHA lives only in the fork's repository) and is often true even for a same-repo PR the caller's checkout has not fetched. Pass `--fetch-remote-url <url>` to fetch that exact SHA from the head repository before the worktree is created; derive `<url>` from `resolve-identity`'s `host`/`head_repo` (`https://<host>/<head_repo>.git`). It is optional: omit it when the SHA is already known to be local, and `worktree prepare` behaves exactly as before.
+
 Treat path arguments literally: spaces, Unicode, a leading dash, characters that look like Git pathspec magic. A bare `--` delimiter does not by itself disable pathspec magic in every Git subcommand that accepts paths. Reject traversal outside the worktree, symlink escapes, and edits that would cross a submodule boundary unless that boundary is specifically and deliberately handled.
 
 `stage-commit` is the other bracket, and its contract is a hard refusal, not a warning: it stages exactly the paths it was given, reads back the staged *file set* with `git diff --cached --name-only -z`, and raises `STAGED_SET_MISMATCH` the moment that set and the intended path list disagree, listing both sets in the error. Be precise about what that buys: it is a file-level check, so it catches cross-file contamination (an unrelated file left staged by an earlier `git add`, a hook that staged something extra), and it cannot see an unrelated edit sitting inside one of the intended files, because `git add -- <path>` stages that file's full content either way. Same-file safety comes from the isolation in the paragraph above instead: a fresh `git worktree add --detach` starts from the verified head commit with no pre-existing human edits, so there is nothing unrelated inside that file for the stage to sweep in. `stage-commit` is invoked exactly once, and only after Phase E below reports a PASS for the intended change; nothing in this section authorizes calling it earlier.
@@ -412,7 +414,8 @@ python3 "$CLAUDE_PLUGIN_ROOT/examples/triage/scripts/triage_helper.py" patch-con
 
 ```bash
 python3 "$CLAUDE_PLUGIN_ROOT/examples/triage/scripts/triage_helper.py" worktree prepare \
-  --repo-root "$REPO_ROOT" --head-sha 9f2a1c4e8b3d5f60a1c2b3d4e5f60718293a4b5c
+  --repo-root "$REPO_ROOT" --head-sha 9f2a1c4e8b3d5f60a1c2b3d4e5f60718293a4b5c \
+  --fetch-remote-url https://github.com/contributor/platform-skills.git
 ```
 
 ```json
@@ -422,6 +425,8 @@ python3 "$CLAUDE_PLUGIN_ROOT/examples/triage/scripts/triage_helper.py" worktree 
   "head_sha": "9f2a1c4e8b3d5f60a1c2b3d4e5f60718293a4b5c"
 }
 ```
+
+`--fetch-remote-url` is optional and fetches the head SHA from that URL before creating the worktree; it exists because a fork PR's head commit commonly is not present in a base-repo checkout's object database, so `git worktree add --detach` would otherwise fail outright. Omit it when the SHA is already known to be local (same-repo PR on a checkout that already fetched the branch).
 
 ### 7. `worktree cleanup`
 

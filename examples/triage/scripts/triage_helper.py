@@ -335,6 +335,8 @@ def cmd_patch_context(args):
 
 
 def cmd_worktree_prepare(args):
+    if args.fetch_remote_url:
+        run(["git", "fetch", args.fetch_remote_url, args.head_sha], cwd=args.repo_root)
     worktree_dir = tempfile.mkdtemp(prefix="triage-worktree-")
     run(["git", "worktree", "add", "--detach", worktree_dir, args.head_sha], cwd=args.repo_root)
     emit({"ok": True, "worktree_path": worktree_dir, "head_sha": args.head_sha})
@@ -697,6 +699,7 @@ def build_parser():
     wp = wsub.add_parser("prepare")
     wp.add_argument("--repo-root", required=True)
     wp.add_argument("--head-sha", required=True)
+    wp.add_argument("--fetch-remote-url")
     wp.set_defaults(func=cmd_worktree_prepare)
 
     wc = wsub.add_parser("cleanup")
