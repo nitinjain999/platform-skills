@@ -156,7 +156,7 @@ class TestResolveComment(unittest.TestCase):
     def test_large_id_beyond_js_safe_integer_stays_lossless(self, tmp_path=None):
         import tempfile
         tmp_path = Path(tempfile.mkdtemp())
-        big = 9223372036854775800  # beyond Number.MAX_SAFE_INTEGER
+        big = 9223372036854775800
         rules = [{
             "contains": ["pulls/comments/555"],
             "stdout": {
