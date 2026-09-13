@@ -549,7 +549,10 @@ class TestPublish(unittest.TestCase):
     def test_publish_succeeds_when_remote_head_matches_expectation(self):
         tmp_path = Path(tempfile.mkdtemp())
         remote, wt, head_sha, commit_sha = self._remote_and_worktree(tmp_path)
-        rules = [{"contains": ["pulls/42"], "stdout": {"head": {"sha": head_sha}}}]
+        rules = [
+            {"contains": ["pulls/42"], "stdout": {"head": {"sha": head_sha}}, "max_uses": 1},
+            {"contains": ["pulls/42"], "stdout": {"head": {"sha": commit_sha}}},
+        ]
         env, _ = gh_env(tmp_path, rules)
         result = run_helper([
             "publish", "--repo", "acme/widgets", "--pr", "42", "--worktree", wt,
@@ -559,6 +562,27 @@ class TestPublish(unittest.TestCase):
         data = json.loads(result.stdout)
         self.assertTrue(data["ok"])
         self.assertEqual(data["remote_head_after"], commit_sha)
+        self.assertEqual(data["pr_head_after"], commit_sha)
+        self.assertTrue(data["matches_pushed_commit"])
+
+    def test_publish_reports_mismatch_when_pr_head_disagrees_with_pushed_ref(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        remote, wt, head_sha, commit_sha = self._remote_and_worktree(tmp_path)
+        rules = [
+            {"contains": ["pulls/42"], "stdout": {"head": {"sha": head_sha}}, "max_uses": 1},
+            {"contains": ["pulls/42"], "stdout": {"head": {"sha": "f" * 40}}},
+        ]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper([
+            "publish", "--repo", "acme/widgets", "--pr", "42", "--worktree", wt,
+            "--expected-head-sha", head_sha, "--commit-sha", commit_sha,
+            "--head-remote-url", str(remote), "--head-ref", "fix-branch",
+        ], env=env)
+        data = json.loads(result.stdout)
+        self.assertTrue(data["ok"])
+        self.assertEqual(data["remote_head_after"], commit_sha)
+        self.assertEqual(data["pr_head_after"], "f" * 40)
+        self.assertFalse(data["matches_pushed_commit"])
 
     def test_publish_refuses_when_remote_pr_head_already_moved(self):
         tmp_path = Path(tempfile.mkdtemp())

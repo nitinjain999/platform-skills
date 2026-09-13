@@ -397,9 +397,10 @@ def cmd_publish(args):
         raise HelperError("UNKNOWN_TRANSPORT_FAILURE", "push failed for an unrecognized reason", stderr=stderr)
 
     after = run(["git", "ls-remote", args.head_remote_url, f"refs/heads/{args.head_ref}"], cwd=args.worktree).stdout.split()[0]
+    pr_head_after = json.loads(run(["gh", "api", f"repos/{args.repo}/pulls/{args.pr}", "--hostname", host]).stdout)["head"]["sha"]
     emit({
-        "ok": True, "pushed_commit": args.commit_sha, "remote_head_after": after,
-        "matches_pushed_commit": after == args.commit_sha,
+        "ok": True, "pushed_commit": args.commit_sha, "remote_head_after": after, "pr_head_after": pr_head_after,
+        "matches_pushed_commit": after == args.commit_sha and pr_head_after == args.commit_sha,
     })
 
 
