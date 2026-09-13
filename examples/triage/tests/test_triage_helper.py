@@ -759,6 +759,15 @@ class TestResolveThread(unittest.TestCase):
         self.assertEqual(data["error"]["code"], "NOT_AUTHORIZED")
         self.assertNotIn("resolveReviewThread", calls_log.read_text())
 
+    def test_empty_precheck_node_is_a_clear_error_not_a_crash(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        rules = [{"contains": ["viewerCanResolve"], "stdout": {"data": {"node": None}}}]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper(["resolve-thread", "--thread-node-id", "PRRC_not_a_thread"], env=env)
+        self.assertNotEqual(result.returncode, 0)
+        data = json.loads(result.stdout)
+        self.assertEqual(data["error"]["code"], "THREAD_NOT_FOUND")
+
     def test_mutation_result_false_is_not_treated_as_success(self):
         tmp_path = Path(tempfile.mkdtemp())
         rules = [

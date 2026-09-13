@@ -425,7 +425,10 @@ def cmd_reply(args):
 
     if args.thread_node_id:
         if _thread_already_has_marker(args.snapshot, args.thread_node_id, args.dedup_marker):
-            emit({"ok": True, "status": "ALREADY_REPLIED", "thread_node_id": args.thread_node_id})
+            emit({
+                "ok": True, "status": "ALREADY_REPLIED", "thread_node_id": args.thread_node_id,
+                "comment_node_id": None, "comment_id": None, "url": None,
+            })
             return
 
         query = """
@@ -455,7 +458,7 @@ def cmd_reply(args):
     finally:
         os.unlink(payload_path)
     if result.returncode != 0:
-        raise HelperError("REPLY_UNKNOWN", "conversation comment POST failed or response ambiguous", stderr=result.stderr, returncode=result.returncode)
+        raise HelperError("REPLY_UNKNOWN", "conversation comment POST failed or response ambiguous", stderr=redact(result.stderr), returncode=result.returncode)
     data = json.loads(result.stdout)
     emit({"ok": True, "status": "CONFIRMED", "comment_node_id": None, "comment_id": str(data["id"]), "url": data["html_url"]})
 
@@ -473,7 +476,16 @@ def cmd_resolve_thread(args):
         pre = json.loads(run(["gh", "api", "graphql", "--hostname", host, "--input", payload_path]).stdout)
     finally:
         os.unlink(payload_path)
-    node = pre["data"]["node"]
+    if pre.get("errors"):
+        raise HelperError("RESOLVE_PRECHECK_FAILED", "thread state query returned errors", errors=pre["errors"])
+    node = (pre.get("data") or {}).get("node")
+    if not node or "isResolved" not in node:
+        raise HelperError(
+            "THREAD_NOT_FOUND",
+            "the thread state query returned no reviewable thread for this node ID; "
+            "confirm the ID came from map-thread and that it is a review thread, not a comment",
+            thread_node_id=args.thread_node_id,
+        )
 
     if node["isResolved"]:
         emit({"ok": True, "status": "ALREADY_RESOLVED", "thread_node_id": args.thread_node_id})
@@ -540,8 +552,10 @@ def cmd_state_lock(args):
     lock_path = _lock_file(args.repo_root, args.repo, args.pr)
     try:
         fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        os.write(fd, json.dumps({"pid": os.getpid(), "acquired_at": time.time()}).encode())
-        os.close(fd)
+        try:
+            os.write(fd, json.dumps({"pid": os.getpid(), "acquired_at": time.time()}).encode())
+        finally:
+            os.close(fd)
         emit({"ok": True, "status": "ACQUIRED", "lock_path": str(lock_path)})
     except FileExistsError:
         held_by_pid, held_since = _read_lock_holder(lock_path)

@@ -519,7 +519,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/examples/triage/scripts/triage_helper.py" reply \
 }
 ```
 
-If the dedup marker was already found in the supplied `--snapshot`, the response is `{"ok": true, "status": "ALREADY_REPLIED", "thread_node_id": "PRRT_kwDOJz9x1s5abcdef"}` and nothing is posted. That short-circuit exists only on the thread path. Two argument combinations are rejected with `INVALID_ARGUMENTS` before any `gh` call: neither `--thread-node-id` nor `--pr` (there is no destination), and `--dedup-marker`/`--snapshot` without `--thread-node-id` (nothing on the conversation path reads them, and accepting them would imply a dedup guarantee that does not exist).
+If the dedup marker was already found in the supplied `--snapshot`, the response is `{"ok": true, "status": "ALREADY_REPLIED", "thread_node_id": "PRRT_kwDOJz9x1s5abcdef", "comment_node_id": null, "comment_id": null, "url": null}` and nothing is posted; the three identity keys are present and null so one parser handles both outcomes. That short-circuit exists only on the thread path. Two argument combinations are rejected with `INVALID_ARGUMENTS` before any `gh` call: neither `--thread-node-id` nor `--pr` (there is no destination), and `--dedup-marker`/`--snapshot` without `--thread-node-id` (nothing on the conversation path reads them, and accepting them would imply a dedup guarantee that does not exist).
 
 ### 11. `resolve-thread`
 
@@ -536,7 +536,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/examples/triage/scripts/triage_helper.py" resolve-t
 }
 ```
 
-An already-resolved thread returns `{"ok": true, "status": "ALREADY_RESOLVED", "thread_node_id": "..."}` with no mutation attempted. `viewerCanResolve: false` raises `NOT_AUTHORIZED` instead of emitting.
+An already-resolved thread returns `{"ok": true, "status": "ALREADY_RESOLVED", "thread_node_id": "..."}` with no mutation attempted. `viewerCanResolve: false` raises `NOT_AUTHORIZED` instead of emitting. The pre-check is checked before it is trusted: GraphQL `errors` raise `RESOLVE_PRECHECK_FAILED`, and a node that resolves to nothing reviewable (a deleted thread, or a comment node ID passed by mistake) raises `THREAD_NOT_FOUND` rather than crashing on a missing field.
 
 ### 12. `state` (lock, unlock, read, write)
 
