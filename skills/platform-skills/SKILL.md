@@ -32,7 +32,7 @@ Use this skill for hands-on help with Kubernetes, GitOps, cloud infrastructure, 
 | `OPA / Conftest` | Rego policies, unit tests, fmt/regal/verify pipeline, debug |
 | `Kyverno` | CEL-based ValidatingPolicy, MutatingPolicy, ImageValidatingPolicy |
 | `PR Review` | Cost, drift, ownership, SOC 2, deprecated APIs, rollback feasibility |
-| `PR Triage` | Classify comments ACTIONABLE_FIX/INFORMATIONAL/NOT_APPLICABLE, fix, reply |
+| `PR Triage` | 7-way comment classification, isolated-worktree fix, reply, eligibility-gated resolve |
 | `KEDA` | ScaledObject/ScaledJob, all scalers, TriggerAuthentication, scale-to-zero |
 | `Karpenter` | NodePool/EC2NodeClass design, Spot diversity, disruption strategy, capacity planning, audit, CA migration, v0→v1 upgrade |
 | `Agent Self-Improvement` | `.learnings/` workspace, LRN/ERR lifecycle, WAL, VFM, ADL |
@@ -171,7 +171,7 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:opa` — generate Rego policies, write unit tests, run fmt/regal/verify pipeline, explain or debug policies
 - `/platform-skills:kyverno` — generate, test, audit, debug, or migrate Kyverno CEL-based admission policies
 - `/platform-skills:pr-review` — comprehensive PR review: cost, drift, ownership, compliance, upgrade, rollback
-- `/platform-skills:triage` — triage a PR comment (bot or human): classify as ACTIONABLE_FIX / INFORMATIONAL / NOT_APPLICABLE, produce the exact fix if needed, and write the thread reply
+- `/platform-skills:triage` — triage a PR comment (bot or human): classify as ACTIONABLE_FIX / ALREADY_FIXED / INFORMATIONAL / NOT_APPLICABLE / NEEDS_CLARIFICATION / OUT_OF_SCOPE / DUPLICATE, produce the exact fix if needed, write the thread reply, and resolve the thread only when that finding is eligible for closure
 - `/platform-skills:keda` — design, generate, debug, or review KEDA ScaledObject/ScaledJob autoscaling
 - `/platform-skills:karpenter` — install, generate NodePool/EC2NodeClass, debug provisioning, plan capacity before rollout, audit scale history, migrate from Cluster Autoscaler, or upgrade (including v0→v1 CRD migration)
 - `/platform-skills:self-improve` — bootstrap global or project-local `.learnings/` workspace (`init global`/`init local`), log/review/promote learnings and errors, status overview, and migrate between scopes
