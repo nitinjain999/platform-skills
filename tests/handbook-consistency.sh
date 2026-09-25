@@ -115,6 +115,9 @@ bash examples/ai-governance/tests/evaluate_test.sh
 echo "Running token-optimizer script tests..."
 bash tests/token-optimizer-script.sh
 
+echo "Running triage script tests..."
+bash tests/triage-script.sh
+
 echo "Running token-optimizer policy core tests..."
 bash examples/token-optimizer/tests/optimize_test.sh
 

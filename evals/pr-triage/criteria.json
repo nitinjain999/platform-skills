@@ -1,6 +1,6 @@
 {
   "type": "weighted_checklist",
-  "context": "The agent was asked to triage a PR review comment about missing resource limits on a Kubernetes container, classify it, produce corrected YAML, and write a review reply.",
+  "context": "The agent was asked to triage two independent PR review comments. Scenario 1: missing resource limits on a Kubernetes container, which it must classify, produce corrected YAML for, and write a review reply to. Scenario 2: a comment names a function that was renamed before the pinned PR head, where the underlying bug persists under the new name; the agent must investigate the rename rather than treat the absent identifier as evidence the bug is already fixed.",
   "checklist": [
     {
       "name": "correct_classification",
@@ -25,6 +25,31 @@
     {
       "name": "reply_quality",
       "description": "Review reply is concise and references the specific file (`apps/api/deployment.yaml`) and/or the specific change made (resource requests/limits added)",
+      "max_score": 1
+    },
+    {
+      "name": "no_absence_as_fixed",
+      "description": "Does not classify as `ALREADY_FIXED` or `NOT_APPLICABLE` merely because the original identifier is absent; investigates the renamed target and confirms the bug status there.",
+      "max_score": 2
+    },
+    {
+      "name": "execution_state_separate_from_classification",
+      "description": "States fix/publish/resolution status as a distinct field from the classification, not conflated into one verdict.",
+      "max_score": 1
+    },
+    {
+      "name": "scenario_2_correct_classification",
+      "description": "Classifies scenario 2's finding as `ACTIONABLE_FIX` — the bug persists under the renamed `apply_discount_code`, so it is not `ALREADY_FIXED` or `NOT_APPLICABLE`.",
+      "max_score": 2
+    },
+    {
+      "name": "scenario_2_correct_fix",
+      "description": "Provides a corrected `apply_discount_code` that adds a bounds check on `discount.percent` (0-100) before it is used in the invoice-total calculation.",
+      "max_score": 2
+    },
+    {
+      "name": "scenario_2_reply_quality",
+      "description": "Review reply for scenario 2 names `apply_discount_code` as the renamed target and explains that the absent literal name did not mean the bug was fixed.",
       "max_score": 1
     }
   ]
