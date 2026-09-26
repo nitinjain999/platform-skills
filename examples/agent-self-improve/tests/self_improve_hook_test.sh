@@ -6,7 +6,6 @@
 set -uo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-REPO="$(cd "$DIR/../.." && pwd)"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
@@ -263,7 +262,7 @@ t_session_end_respects_drain_lock() {
   assert_eq "pending line left for the next drain" "1" "$(line_count "$BASE/.learnings/.pending-errors.log")"
   assert_contains "the daily note is still written" "## Session closed: " "$(file_or_empty "$BASE/memory/$TODAY.md")"
   assert_eq "someone else's lock is not removed" "0" "$(line_count "$BASE/.learnings/.drain.lock")"
-  [ -e "$BASE/.learnings/.drain.lock" ] && pass || fail "fresh lock left in place"
+  if [ -e "$BASE/.learnings/.drain.lock" ]; then pass; else fail "fresh lock left in place"; fi
 }
 
 t_session_end_breaks_stale_lock() {
@@ -519,7 +518,7 @@ s_ps1_is_ascii() {
   local n
   n="$(LC_ALL=C tr -d '\000-\177' < "$DIR/scripts/self-improve-hook.ps1" 2>/dev/null | wc -c | tr -d ' ')"
   assert_eq "self-improve-hook.ps1 is ASCII-only (PowerShell 5.1 reads BOM-less scripts as ANSI)" "0" "$n"
-  [ -f "$DIR/scripts/self-improve-hook.ps1" ] && pass || fail "self-improve-hook.ps1 exists"
+  if [ -f "$DIR/scripts/self-improve-hook.ps1" ]; then pass; else fail "self-improve-hook.ps1 exists"; fi
 }
 
 # ── Runner ────────────────────────────────────────────────────────────────────
