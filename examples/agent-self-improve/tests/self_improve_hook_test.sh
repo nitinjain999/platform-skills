@@ -381,6 +381,19 @@ t_session_end_stale_lock_break_is_exclusive() {
   assert_eq "at most one racer breaks the same stale lock" "1" "$wins"
 }
 
+# NOTE: acquire_lock also has a second, narrower race: after a racer wins the
+# atomic claim on a stale lock, it re-checks the CLAIMED file's own mtime and,
+# if that file turns out to be fresh, puts it back instead of destroying an
+# active lock (see the comment above acquire_lock). Forcing that specific
+# path deterministically needs a 3-step interleaving -- one racer's claim,
+# staleness check, and recreate all completing in the narrow window before a
+# second racer's own already-in-flight claim attempt on the same original
+# path lands -- which isn't practical to script without sleeps, and a
+# sleep-based version would be flaky under CI scheduling jitter. Skipped
+# deliberately; verified by code trace during review instead. The test above
+# still covers the property this fix preserves: at most one racer ever
+# breaks the same stale lock.
+
 # ── session-start ─────────────────────────────────────────────────────────────
 
 START_JSON='{"session_id":"sess-2","hook_event_name":"SessionStart","source":"startup"}'

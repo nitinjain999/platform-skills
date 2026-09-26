@@ -77,16 +77,29 @@ append_err() {
 
 # acquire_lock <file> — exclusive create (noclobber is O_EXCL), so two
 # sessions ending together never both drain or both pick the same ERR id.
-# A lock older than 10 minutes is presumed left by a killed session.
-# Stale-lock recovery uses atomic rename to prevent TOCTOU: only one process
-# can successfully mv the lock to its private name.
+# A lock older than 10 minutes is presumed left by a killed session. Atomic
+# claim via rename closes the two-party race where both processes see the
+# same stale lock: only one process can successfully mv the lock to its own
+# private name. After claiming, re-verify the claim was actually stale
+# before recreating, since a second racer's own claim attempt might land
+# after we already replaced the lock with a live one — if so, put it back
+# rather than destroying an active lock.
 acquire_lock() {
   if ( set -C; : > "$1" ) 2>/dev/null; then return 0; fi
   if [ -n "$(find "$1" -mmin +10 2>/dev/null)" ]; then
     local claim="$1.claim.$$"
     if mv "$1" "$claim" 2>/dev/null; then
-      rm -f "$claim"
-      ( set -C; : > "$1" ) 2>/dev/null && return 0
+      if [ -n "$(find "$claim" -mmin +10 2>/dev/null)" ]; then
+        rm -f "$claim"
+        ( set -C; : > "$1" ) 2>/dev/null && return 0
+      else
+        # What we claimed turned out to be a live lock someone else just
+        # created between our staleness check and our mv; give it back.
+        # (A third racer landing in this exact window could still clobber
+        # this restore — accepted residual risk; see the comment this
+        # replaces for the two-party race this DOES close.)
+        mv "$claim" "$1" 2>/dev/null
+      fi
     fi
   fi
   return 1
