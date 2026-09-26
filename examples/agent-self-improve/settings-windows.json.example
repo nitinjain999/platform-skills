@@ -1,33 +1,34 @@
 {
   "hooks": {
-    "Stop": [
+    "SessionStart": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NonInteractive -File %USERPROFILE%\\.claude\\scripts\\session-end.ps1"
+            "command": "powershell -NoLogo -NoProfile -NonInteractive -File C:\\Users\\alex\\.claude\\scripts\\self-improve-hook.ps1 session-start"
           }
         ]
       }
     ],
-    "PreToolUse": [
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoLogo -NoProfile -NonInteractive -File C:\\Users\\alex\\.claude\\scripts\\self-improve-hook.ps1 session-end",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
       {
         "matcher": ".*",
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NonInteractive -File %USERPROFILE%\\.claude\\scripts\\session-start-reminder.ps1"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "powershell -NonInteractive -Command \"$code=$env:CLAUDE_TOOL_EXIT_CODE; if ($code -and $code -ne '0') { $ts=[DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ'); $name=$env:CLAUDE_TOOL_NAME; \\\"$ts TOOL_FAILURE: $name\\\" | Add-Content -Encoding UTF8 \\\"$env:USERPROFILE\\.claude\\.learnings\\.pending-errors.log\\\" }\""
+            "command": "powershell -NoLogo -NoProfile -NonInteractive -File C:\\Users\\alex\\.claude\\scripts\\self-improve-hook.ps1 tool-failure",
+            "async": true
           }
         ]
       }

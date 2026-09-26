@@ -14,25 +14,26 @@ This directory contains ready-to-copy templates for bootstrapping the self-impro
 | `memory/working-buffer.md` | WAL scratchpad and task state template |
 | `memory/SESSION-STATE.md` | Always-on capture of corrections, preferences, decisions, proper nouns |
 | `memory/YYYY-MM-DD.md` | Daily notes template — rename to actual date on first use |
-| `scripts/session-end.sh` | Stop hook (macOS/Linux/WSL): drains errors, saves daily notes, session counter, review reminder |
-| `scripts/session-start-reminder.sh` | PreToolUse hook (macOS/Linux/WSL): injects memory-load banner at first tool use each session |
-| `scripts/session-end.ps1` | Stop hook (Windows native PowerShell): same behaviour as `.sh` equivalent |
-| `scripts/session-start-reminder.ps1` | PreToolUse hook (Windows native PowerShell): same behaviour as `.sh` equivalent |
+| `scripts/self-improve-hook.sh` | All three hooks (macOS/Linux/WSL/Git Bash). One script, three subcommands |
+| `scripts/self-improve-hook.ps1` | Same three hooks for Windows native PowerShell 5.1+ |
+| `tests/self_improve_hook_test.sh` | Behavioural suite, run against both implementations |
 | `global-claude.md` | Template for `~/.claude/CLAUDE.md` — path override, session-start, in-session logging rules |
 | `settings.json.example` | All 3 hooks wired for macOS / Linux / WSL / Git Bash |
 | `settings-windows.json.example` | All 3 hooks wired for Windows native (PowerShell) |
 
 ## Platform support
 
-| Platform | Shell scripts | Settings file |
+| Platform | Hook script | Settings file |
 |---|---|---|
-| macOS | `session-end.sh`, `session-start-reminder.sh` | `settings.json.example` |
-| Linux (Ubuntu, Debian, RHEL, Fedora, Arch) | `session-end.sh`, `session-start-reminder.sh` | `settings.json.example` |
+| macOS | `self-improve-hook.sh` | `settings.json.example` |
+| Linux (Ubuntu, Debian, RHEL, Fedora, Arch) | `self-improve-hook.sh` | `settings.json.example` |
 | Linux (Alpine, busybox-only) | Install bash first: `apk add bash` | `settings.json.example` |
-| Windows — WSL or Git Bash | `session-end.sh`, `session-start-reminder.sh` | `settings.json.example` |
-| Windows — native PowerShell | `session-end.ps1`, `session-start-reminder.ps1` | `settings-windows.json.example` |
+| Windows — WSL or Git Bash | `self-improve-hook.sh` | `settings.json.example` |
+| Windows — native PowerShell | `self-improve-hook.ps1` | `settings-windows.json.example` |
 
-**Windows recommendation:** WSL (Windows Subsystem for Linux) or Git Bash is the simplest path — no PowerShell scripts needed, and the bash setup is identical to macOS/Linux. Use the native PowerShell scripts only if you cannot use WSL or Git Bash.
+**Windows recommendation:** WSL (Windows Subsystem for Linux) or Git Bash is the simplest path — no PowerShell script needed, and the bash setup is identical to macOS/Linux. Use the native PowerShell script only if you cannot use WSL or Git Bash.
+
+The bash script needs bash 3.2 or newer. `jq` is optional: without it a `sed` fallback reads the handful of scalar fields the hooks use. The PowerShell script needs 5.1 or newer, and both write UTF-8 without a BOM using LF endings, so the two can share one workspace.
 
 The global config directory (`~/.claude/`) resolves to the same location on all platforms:
 - macOS / Linux: `~/.claude/` → `/Users/<you>/.claude/` or `/home/<you>/.claude/`
@@ -70,11 +71,10 @@ Commit `.learnings/` only if you want the team to share and build on these learn
 ### Wire the hooks — macOS / Linux / WSL / Git Bash
 
 ```bash
-# Copy scripts
+# Copy the hook script
 mkdir -p ~/.claude/scripts
-cp examples/agent-self-improve/scripts/session-end.sh ~/.claude/scripts/
-cp examples/agent-self-improve/scripts/session-start-reminder.sh ~/.claude/scripts/
-chmod +x ~/.claude/scripts/*.sh
+cp examples/agent-self-improve/scripts/self-improve-hook.sh ~/.claude/scripts/
+chmod +x ~/.claude/scripts/self-improve-hook.sh
 
 # Copy settings (merge manually if ~/.claude/settings.json already exists)
 cp examples/agent-self-improve/settings.json.example ~/.claude/settings.json
@@ -86,10 +86,9 @@ cp examples/agent-self-improve/global-claude.md ~/.claude/CLAUDE.md
 ### Wire the hooks — Windows native (PowerShell)
 
 ```powershell
-# Copy scripts
+# Copy the hook script
 New-Item -ItemType Directory -Force "$env:USERPROFILE\.claude\scripts"
-Copy-Item examples\agent-self-improve\scripts\session-end.ps1 "$env:USERPROFILE\.claude\scripts\"
-Copy-Item examples\agent-self-improve\scripts\session-start-reminder.ps1 "$env:USERPROFILE\.claude\scripts\"
+Copy-Item examples\agent-self-improve\scripts\self-improve-hook.ps1 "$env:USERPROFILE\.claude\scripts\"
 
 # Copy settings (merge manually if settings.json already exists)
 Copy-Item examples\agent-self-improve\settings-windows.json.example "$env:USERPROFILE\.claude\settings.json"
@@ -98,6 +97,8 @@ Copy-Item examples\agent-self-improve\settings-windows.json.example "$env:USERPR
 Copy-Item examples\agent-self-improve\global-claude.md "$env:USERPROFILE\.claude\CLAUDE.md"
 ```
 
+Then edit the three `command` strings in `settings.json` and replace `C:\Users\alex` with your own profile directory. The paths are spelled out in full on purpose: a hook `command` is a raw string handed to a shell, so `%USERPROFILE%` is only expanded by `cmd` and `$env:USERPROFILE` only by PowerShell. A literal path works whichever shell Claude Code uses to spawn the hook. `echo $env:USERPROFILE` prints the value to paste in.
+
 If you see an execution policy error when the hooks run, allow local scripts once:
 ```powershell
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
@@ -105,11 +106,44 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 
 What the hooks do:
 
-| Hook | Trigger | What it does |
-|---|---|---|
-| `Stop` → `session-end.sh` / `.ps1` | Session close | Saves daily notes, drains `.pending-errors.log` → ERR entries, clears session marker, increments counter, nudges if no LRN logged |
-| `PreToolUse` → `session-start-reminder.sh` / `.ps1` | First tool use per session | Prints memory-load banner once, silent after that |
-| `PostToolUse` | Every failed tool call | Appends to `.pending-errors.log` for batch processing at session end |
+| Hook | Subcommand | Trigger | What it does |
+|---|---|---|---|
+| `SessionStart` | `session-start` | Startup, resume, clear, compact, fork | Prints the memory-load banner. Plain stdout becomes context Claude sees |
+| `SessionEnd` | `session-end` | Session close | Saves daily notes, drains `.pending-errors.log` into ERR entries, increments the counter, nudges if no LRN was logged today |
+| `PostToolUseFailure` | `tool-failure` | Every failed tool call | Appends one line to `.pending-errors.log` for batch processing at session end |
+
+Three details in the settings files are deliberate:
+
+- `SessionEnd` sets `"timeout": 10`. Every `SessionEnd` hook shares a 1.5-second budget by default, which the drain can exceed on a busy day.
+- `PostToolUseFailure` sets `"async": true` so a failing tool call is never slowed by the capture.
+- Every path exits 0. A memory hook must never block a session, a tool call, or compaction.
+
+The capture records the tool name, session id and `tool_use_id` only. The `error` and `tool_input` fields are deliberately never persisted, because either can carry a credential.
+
+## Migrating from the legacy hooks
+
+Earlier versions wired `Stop`, `PreToolUse` and `PostToolUse` to four separate scripts. That wiring was wrong in two ways that are worth knowing if you are still running it:
+
+- `Stop` fires at the end of **every assistant turn**, not at session end. The daily note gained a "Session closed" heading per turn and the session counter ran up at the same rate.
+- `PostToolUse` never fires for a failed tool call, and the snippet it ran tested `$CLAUDE_TOOL_EXIT_CODE`, an environment variable Claude Code does not set. Failure capture recorded nothing at all.
+
+To migrate:
+
+```bash
+# 1. Remove the old scripts
+rm -f ~/.claude/scripts/session-end.sh ~/.claude/scripts/session-start-reminder.sh
+rm -f ~/.claude/scripts/session-end.ps1 ~/.claude/scripts/session-start-reminder.ps1
+
+# 2. Install the new one
+cp examples/agent-self-improve/scripts/self-improve-hook.sh ~/.claude/scripts/
+chmod +x ~/.claude/scripts/self-improve-hook.sh
+```
+
+3. In `~/.claude/settings.json`, delete the `Stop`, `PreToolUse` and `PostToolUse` self-improve entries and add the three blocks from `settings.json.example`. Leave any unrelated hooks on those events alone.
+
+4. Delete the stale marker the old banner used: `rm -f ~/.claude/memory/.session-active`.
+
+Nothing else needs touching. `.learnings/` and `memory/` file formats are unchanged, so existing notes, LRN and ERR entries carry over as they are. `SessionStart` scans `settings.json` and `settings.local.json` at both global and project scope and prints a warning for each one that still contains the old wiring, so you will be told if a copy was missed.
 
 ## Reference
 

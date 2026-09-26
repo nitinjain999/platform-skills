@@ -66,18 +66,19 @@ The `init` mode asks which scope to use before creating anything:
 
 **Promotion targets are always project-local** regardless of scope. `CLAUDE.md`, `AGENTS.md`, and `.github/copilot-instructions.md` live in the project repo — only the capture files (`.learnings/`, `memory/`) follow `LEARNINGS_BASE`.
 
-**Hook paths must be absolute** when using global setup. The PostToolUse hook in `~/.claude/settings.json` must reference the full path:
+**Hook script paths must be absolute** when using global setup, so that the hook resolves the same way from any project:
 
 ```json
 {
   "hooks": {
-    "PostToolUse": [
+    "PostToolUseFailure": [
       {
         "matcher": ".*",
         "hooks": [
           {
             "type": "command",
-            "command": "if [ \"$CLAUDE_TOOL_EXIT_CODE\" -ne 0 ]; then echo \"$(date -u +%Y-%m-%dT%H:%M:%SZ) TOOL_FAILURE: $CLAUDE_TOOL_NAME\" >> ~/.claude/.learnings/.pending-errors.log; fi"
+            "command": "bash ~/.claude/scripts/self-improve-hook.sh tool-failure",
+            "async": true
           }
         ]
       }
@@ -86,7 +87,7 @@ The `init` mode asks which scope to use before creating anything:
 }
 ```
 
-For project-scoped setup, replace `~/.claude/.learnings/` with `.learnings/` (relative path works because the hook runs from the project root).
+The same block serves project-scoped setup unchanged. The script applies the resolution order above on every invocation, so the log lands next to whichever `.learnings/` is in use rather than wherever the hook happened to be launched from.
 
 ### Entry format
 
@@ -142,7 +143,7 @@ Auto-capture errors after failed tool calls. The hook appends a timestamped line
 Hook setup varies by platform — see the **Platform Compatibility** section (below Part 2) for per-platform `settings.json` snippets and script copy commands.
 
 Key rules regardless of platform:
-- Global setup must use absolute paths in the PostToolUse hook — relative paths resolve from the project root and write to the wrong directory.
+- Global setup must use an absolute path to the hook script. The workspace itself is resolved by the script, not by the settings file.
 - For project-local setup, add `.learnings/.pending-errors.log` to `.gitignore`.
 
 ---
@@ -375,18 +376,22 @@ All skill modes use `~/.claude/` notation — no platform-specific path changes 
 
 ### Hook scripts by platform
 
-| Platform | Stop hook | PreToolUse hook | PostToolUse |
-|---|---|---|---|
-| macOS / Linux | `session-end.sh` | `session-start-reminder.sh` | inline bash (see below) |
-| Windows — WSL / Git Bash | `session-end.sh` | `session-start-reminder.sh` | inline bash (see below) |
-| Windows — native PowerShell | `session-end.ps1` | `session-start-reminder.ps1` | inline PowerShell (see below) |
+One script serves all three events, selected by subcommand:
 
-**Windows recommendation:** WSL or Git Bash is the simpler path — bash scripts work identically to macOS/Linux. Use the PowerShell (`.ps1`) scripts only when WSL or Git Bash is not available.
+| Platform | Hook script | `SessionStart` | `SessionEnd` | `PostToolUseFailure` |
+|---|---|---|---|---|
+| macOS / Linux | `self-improve-hook.sh` | `session-start` | `session-end` | `tool-failure` |
+| Windows — WSL / Git Bash | `self-improve-hook.sh` | `session-start` | `session-end` | `tool-failure` |
+| Windows — native PowerShell | `self-improve-hook.ps1` | `session-start` | `session-end` | `tool-failure` |
 
-**Alpine Linux / busybox-only containers:** The bash scripts require bash. Install it first:
+**Windows recommendation:** WSL or Git Bash is the simpler path — the bash script works identically to macOS/Linux. Use the PowerShell (`.ps1`) script only when WSL or Git Bash is not available.
+
+**Alpine Linux / busybox-only containers:** The bash script requires bash 3.2+. Install it first:
 ```sh
 apk add bash
 ```
+
+`jq` is optional. Without it, a `sed` fallback reads the few scalar payload fields the hooks use; that fallback takes the last match of a key anywhere in the payload, so a nested key of the same name can win. Install `jq` if you want the strict reading.
 
 ### Hook setup — macOS / Linux / WSL / Git Bash
 
@@ -395,24 +400,24 @@ Add to `~/.claude/settings.json`:
 ```json
 {
   "hooks": {
-    "Stop": [
+    "SessionStart": [
       {
-        "hooks": [{"type": "command", "command": "bash ~/.claude/scripts/session-end.sh"}]
+        "hooks": [{"type": "command", "command": "bash ~/.claude/scripts/self-improve-hook.sh session-start"}]
       }
     ],
-    "PreToolUse": [
+    "SessionEnd": [
       {
-        "matcher": ".*",
-        "hooks": [{"type": "command", "command": "bash ~/.claude/scripts/session-start-reminder.sh"}]
+        "hooks": [{"type": "command", "command": "bash ~/.claude/scripts/self-improve-hook.sh session-end", "timeout": 10}]
       }
     ],
-    "PostToolUse": [
+    "PostToolUseFailure": [
       {
         "matcher": ".*",
         "hooks": [
           {
             "type": "command",
-            "command": "if [ \"$CLAUDE_TOOL_EXIT_CODE\" -ne 0 ] 2>/dev/null; then echo \"$(date -u +%Y-%m-%dT%H:%M:%SZ) TOOL_FAILURE: $CLAUDE_TOOL_NAME\" >> ~/.claude/.learnings/.pending-errors.log; fi"
+            "command": "bash ~/.claude/scripts/self-improve-hook.sh tool-failure",
+            "async": true
           }
         ]
       }
@@ -421,39 +426,40 @@ Add to `~/.claude/settings.json`:
 }
 ```
 
-Copy scripts:
+`"timeout": 10` on `SessionEnd` is not optional in practice: all `SessionEnd` hooks share a 1.5-second budget by default, and the error drain plus daily-note write can exceed it. `"async": true` on `PostToolUseFailure` keeps the capture off the critical path of a tool call.
+
+Copy the script:
 ```sh
 mkdir -p ~/.claude/scripts
-cp examples/agent-self-improve/scripts/session-end.sh ~/.claude/scripts/
-cp examples/agent-self-improve/scripts/session-start-reminder.sh ~/.claude/scripts/
-chmod +x ~/.claude/scripts/*.sh
+cp examples/agent-self-improve/scripts/self-improve-hook.sh ~/.claude/scripts/
+chmod +x ~/.claude/scripts/self-improve-hook.sh
 ```
 
 ### Hook setup — Windows native (PowerShell)
 
-Add to `%USERPROFILE%\.claude\settings.json` (see `examples/agent-self-improve/settings-windows.json.example`):
+Add to `C:\Users\<you>\.claude\settings.json` (see `examples/agent-self-improve/settings-windows.json.example`):
 
 ```json
 {
   "hooks": {
-    "Stop": [
+    "SessionStart": [
       {
-        "hooks": [{"type": "command", "command": "powershell -NonInteractive -File %USERPROFILE%\\.claude\\scripts\\session-end.ps1"}]
+        "hooks": [{"type": "command", "command": "powershell -NoLogo -NoProfile -NonInteractive -File C:\\Users\\alex\\.claude\\scripts\\self-improve-hook.ps1 session-start"}]
       }
     ],
-    "PreToolUse": [
+    "SessionEnd": [
       {
-        "matcher": ".*",
-        "hooks": [{"type": "command", "command": "powershell -NonInteractive -File %USERPROFILE%\\.claude\\scripts\\session-start-reminder.ps1"}]
+        "hooks": [{"type": "command", "command": "powershell -NoLogo -NoProfile -NonInteractive -File C:\\Users\\alex\\.claude\\scripts\\self-improve-hook.ps1 session-end", "timeout": 10}]
       }
     ],
-    "PostToolUse": [
+    "PostToolUseFailure": [
       {
         "matcher": ".*",
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NonInteractive -Command \"$code=$env:CLAUDE_TOOL_EXIT_CODE; if ($code -and $code -ne '0') { $ts=(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ'); $name=$env:CLAUDE_TOOL_NAME; \\\"$ts TOOL_FAILURE: $name\\\" | Add-Content -Encoding UTF8 \\\"$env:USERPROFILE\\.claude\\.learnings\\.pending-errors.log\\\" }\""
+            "command": "powershell -NoLogo -NoProfile -NonInteractive -File C:\\Users\\alex\\.claude\\scripts\\self-improve-hook.ps1 tool-failure",
+            "async": true
           }
         ]
       }
@@ -461,6 +467,10 @@ Add to `%USERPROFILE%\.claude\settings.json` (see `examples/agent-self-improve/s
   }
 }
 ```
+
+Replace `C:\Users\alex` with your own profile directory. The path is written out in full deliberately. A hook `command` is a raw string handed to a shell, so `%USERPROFILE%` expands only under `cmd` and `$env:USERPROFILE` only under PowerShell; earlier versions of this example used `%USERPROFILE%` and failed silently when the hook was not spawned through `cmd`. A literal path cannot be misexpanded.
+
+`-NoProfile` matters beyond speed: a user profile that writes to stdout would otherwise corrupt the `SessionStart` banner, since that hook's stdout becomes context.
 
 If PowerShell blocks script execution, allow local scripts: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
 
@@ -542,4 +552,4 @@ VFM_THRESHOLD=70   # default 50; raise to require stronger justification
 
 ### Agent is not logging errors
 
-Check that the PostToolUse hook is configured in `.claude/settings.json`. Alternatively, ask the agent to log manually: "Log that error to `.learnings/ERRORS.md`."
+Check that the `PostToolUseFailure` hook is configured in `.claude/settings.json`. If it is still wired to `PostToolUse`, that is the cause: `PostToolUse` fires only for tool calls that succeed. Alternatively, ask the agent to log manually: "Log that error to `.learnings/ERRORS.md`."

@@ -5,6 +5,30 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **`examples/agent-self-improve/` now uses native Claude Code lifecycle events.** The four legacy scripts wired to `Stop`, `PreToolUse` and `PostToolUse` are replaced by one script with three subcommands: `SessionStart` → `session-start`, `SessionEnd` → `session-end`, `PostToolUseFailure` → `tool-failure`. Hook input is read as JSON on stdin. Every path exits 0, so a memory hook can never block a session, a tool call, or compaction
+- **`examples/agent-self-improve/settings.json.example` and `settings-windows.json.example`** — rewired to the three native events. `SessionEnd` carries `"timeout": 10` because all `SessionEnd` hooks share a 1.5-second budget by default and the error drain can exceed it; `PostToolUseFailure` carries `"async": true` so capture stays off the critical path of a tool call
+- **The Windows example uses a literal profile path** instead of `%USERPROFILE%`. A hook `command` is a raw string handed to a shell, so `%USERPROFILE%` expands only under `cmd`; the old example failed silently anywhere else. `references/agent-self-improve.md` and the README both say to substitute your own path
+- **Failure capture records the tool name, session id and `tool_use_id` only.** `error` and `tool_input` are deliberately never persisted: a failed `Bash` call can carry a token on its command line and a failed `Edit` can carry file contents, neither of which belongs in a notes file that may be committed. A failure whose `is_interrupt` is true is ignored
+
+### Added
+
+- **`examples/agent-self-improve/scripts/self-improve-hook.sh`** — bash 3.2+; `jq` optional, with a documented `sed` fallback for the handful of scalar payload fields the hooks read
+- **`examples/agent-self-improve/scripts/self-improve-hook.ps1`** — PowerShell 5.1+ port. ASCII-only source, because 5.1 reads a BOM-less script as ANSI. Writes UTF-8 without a BOM using LF endings, so the bash and PowerShell hooks can share one workspace
+- **`examples/agent-self-improve/tests/self_improve_hook_test.sh`** — 166 assertions run against both implementations, wired into `tests/handbook-consistency.sh`. The suite exits 1 rather than skipping when `pwsh` is absent and `CI` is set, so the PowerShell half cannot report green while going unexecuted
+- **Concurrency safety in `session-end`** — the error drain is guarded by an `O_EXCL` lock with a 10-minute staleness window, and a stale lock is reclaimed through an atomic rename whose claim is re-checked afterwards, so a racer that recreated the lock in the gap does not have its live lock destroyed. `ERR` ids come from the highest number already used today rather than a heading count, so an id is not reused after a deletion
+- **A "Migrating from the legacy hooks" section** in `examples/agent-self-improve/README.md`. `SessionStart` scans `settings.json` and `settings.local.json` at global and project scope and warns for each copy that still contains the old wiring
+
+### Fixed
+
+- **Session-close work ran once per assistant turn, not once per session.** `Stop` fires at the end of every turn, so the daily note gained a "Session closed" heading per turn and the session counter advanced at the same rate. Moved to `SessionEnd`
+- **Tool-failure capture recorded nothing at all.** The `PostToolUse` snippet tested `$CLAUDE_TOOL_EXIT_CODE`, an environment variable Claude Code does not set, and `PostToolUse` does not fire for a failed tool call in any case. Moved to `PostToolUseFailure`
+- **The `ERR` id counter crashed on a file with no match for today.** `grep -c … || echo 0` emitted `0\n0`, which then failed arithmetic expansion
+- **Every session end logged a false WAL error.** `grep 'Status.*PENDING'` matched the working-buffer template's own HTML comment (`**Status**: PENDING | COMMITTED | ROLLED_BACK`); the match is now anchored to a real status line
+
 ## [1.41.0] - 2026-09-10
 
 Adds the `/platform-skills:token-optimizer` command (44 commands total) — routes broad repository discovery to a cheaper worker via subagent delegation where the client supports it.

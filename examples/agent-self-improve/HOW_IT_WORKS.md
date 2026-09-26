@@ -39,7 +39,7 @@ After running `/platform-skills:self-improve init`, your project gains:
   LEARNINGS.md          # Positive learnings — what worked, useful techniques
   ERRORS.md             # Mistakes and wrong assumptions — what broke and why
   FEATURE_REQUESTS.md   # Recurring needs the current tool set couldn't meet
-  .pending-errors.log   # Scratch file written by the PostToolUse hook (gitignored)
+  .pending-errors.log   # Scratch file written by the PostToolUseFailure hook (gitignored)
 memory/
   working-buffer.md     # Live task state and WAL log
 ```
@@ -96,7 +96,7 @@ Creates `~/.claude/.learnings/` and `~/.claude/memory/`. Learnings persist acros
 /platform-skills:self-improve init local
 ```
 
-Creates `.learnings/` and `memory/` in the **current project directory**. Learnings live in the repo and can be committed and shared with the team. Asks whether to gitignore or commit. Offers to add the PostToolUse hook to `.claude/settings.json`.
+Creates `.learnings/` and `memory/` in the **current project directory**. Learnings live in the repo and can be committed and shared with the team. Asks whether to gitignore or commit. Offers to add the `PostToolUseFailure` hook to `.claude/settings.json`.
 
 ```text
 /platform-skills:self-improve init
@@ -296,20 +296,21 @@ Next session start
 
 ## Automatic Error Capture via Hook
 
-With the PostToolUse hook configured, tool failures are automatically appended to `$LEARNINGS_BASE/.learnings/.pending-errors.log`.
+With the `PostToolUseFailure` hook configured, failed tool calls are appended to `$LEARNINGS_BASE/.learnings/.pending-errors.log`.
 
-**Global setup** (`~/.claude/settings.json` — applies to all projects):
+`PostToolUse` is the wrong event for this: it fires only when a tool **succeeds**. Failures go to `PostToolUseFailure`, whose payload carries `tool_name`, `tool_input`, `tool_use_id`, `error` and `is_interrupt` as JSON on stdin.
 
 ```json
 {
   "hooks": {
-    "PostToolUse": [
+    "PostToolUseFailure": [
       {
         "matcher": ".*",
         "hooks": [
           {
             "type": "command",
-            "command": "if [ \"$CLAUDE_TOOL_EXIT_CODE\" -ne 0 ]; then echo \"$(date -u +%Y-%m-%dT%H:%M:%SZ) TOOL_FAILURE: $CLAUDE_TOOL_NAME\" >> ~/.claude/.learnings/.pending-errors.log; fi"
+            "command": "bash ~/.claude/scripts/self-improve-hook.sh tool-failure",
+            "async": true
           }
         ]
       }
@@ -318,29 +319,16 @@ With the PostToolUse hook configured, tool failures are automatically appended t
 }
 ```
 
-**Project-local setup** (`.claude/settings.json` in the project root):
+The same block works for global (`~/.claude/settings.json`) and project-local (`.claude/settings.json`) setup. The script resolves the workspace itself on each invocation — `~/.claude/.learnings` wins, then `$CLAUDE_PROJECT_DIR/.learnings` — so the log always lands next to the `.learnings` directory that is actually in use, and there is no relative-path trap to fall into.
 
-```json
-{
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "if [ \"$CLAUDE_TOOL_EXIT_CODE\" -ne 0 ]; then echo \"$(date -u +%Y-%m-%dT%H:%M:%SZ) TOOL_FAILURE: $CLAUDE_TOOL_NAME\" >> .learnings/.pending-errors.log; fi"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
+Two things the hook deliberately does not do:
 
-Global setup must use the absolute `~/.claude/` path. Relative paths resolve from the project root and will write to the wrong place when global setup is active.
+- It never persists `error` or `tool_input`. A failed `Bash` call can carry a token in its command line and a failed `Edit` can carry file contents; neither belongs in a notes file that may be committed.
+- It ignores a failure whose `is_interrupt` is true. You pressing escape is not a lesson.
 
-On `/platform-skills:self-improve review`, the agent reads `.pending-errors.log`, converts each line into a proper `ERR` entry in `ERRORS.md`, and clears the log.
+Each captured line is one short `printf`, so concurrent async writers cannot interleave mid-record.
+
+On `/platform-skills:self-improve review`, the agent reads `.pending-errors.log`, converts each line into a proper `ERR` entry in `ERRORS.md`, and clears the log. `SessionEnd` does the same conversion unattended, grouping repeats so a run of ten failed `Edit` calls in one session becomes one `ERR` entry rather than ten.
 
 For project-local setup, add to `.gitignore`:
 ```

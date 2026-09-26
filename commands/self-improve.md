@@ -60,11 +60,12 @@ Steps:
      SESSION-STATE.md
    ```
 4. Seed each file with the correct header and an example entry marked `Status: example`
-5. Detect the user's platform and offer to wire all three hooks in `~/.claude/settings.json`:
-   - **macOS / Linux / WSL / Git Bash** → bash scripts (`session-end.sh`, `session-start-reminder.sh`) + inline bash PostToolUse; point to `settings.json.example`
-   - **Windows native (PowerShell)** → PS1 scripts (`session-end.ps1`, `session-start-reminder.ps1`) + inline PowerShell PostToolUse; point to `settings-windows.json.example`
+5. Detect the user's platform and offer to wire all three hooks (`SessionStart`, `SessionEnd`, `PostToolUseFailure`) in `~/.claude/settings.json`:
+   - **macOS / Linux / WSL / Git Bash** → `self-improve-hook.sh` with the `session-start`, `session-end` and `tool-failure` subcommands; point to `settings.json.example`
+   - **Windows native (PowerShell)** → `self-improve-hook.ps1`, same three subcommands; point to `settings-windows.json.example`, and have the user replace the literal `C:\Users\alex` with their own profile path
    - **Alpine or minimal Linux** → same as macOS/Linux but remind the user to install bash first: `apk add bash`
-   - All scripts are in `examples/agent-self-improve/scripts/`; PostToolUse hook must use absolute path to `.pending-errors.log` (global setup)
+   - The script is in `examples/agent-self-improve/scripts/`. Keep `"timeout": 10` on `SessionEnd` and `"async": true` on `PostToolUseFailure`
+   - If any settings file still contains `Stop`, `PreToolUse` or `PostToolUse` self-improve entries, point the user at "Migrating from the legacy hooks" in `examples/agent-self-improve/README.md` and do not leave both wirings active
 6. Offer to create `~/.claude/CLAUDE.md` from the template at `examples/agent-self-improve/global-claude.md`
 7. Print bootstrap summary:
    ```
@@ -107,8 +108,8 @@ Steps:
    - **Gitignore** (recommended for personal notes): add `.learnings/` and `memory/` to `.gitignore`
    - **Commit**: leave untracked so the team can share and build on them; note that `memory/` daily notes grow fast
 6. Offer to add hooks to `.claude/settings.json` (this project only):
-   - **PostToolUse** → inline command writing to `.learnings/.pending-errors.log` (relative path is safe here — hooks run from project root)
-   - Note: Stop and PreToolUse session scripts should be wired globally via `~/.claude/settings.json` even for project-local learnings
+   - **PostToolUseFailure** → `self-improve-hook.sh tool-failure` with `"async": true`. The script resolves `.learnings/` itself, so the same command works at either scope
+   - Note: the `SessionStart` and `SessionEnd` hooks should be wired globally via `~/.claude/settings.json` even for project-local learnings
 7. Print bootstrap summary:
    ```
    ✓ .learnings/LEARNINGS.md        — positive learnings
