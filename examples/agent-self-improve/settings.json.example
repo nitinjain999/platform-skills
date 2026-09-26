@@ -32,6 +32,17 @@
           }
         ]
       }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/scripts/self-improve-hook.sh precompact",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   }
 }

@@ -1,12 +1,18 @@
 #!/usr/bin/env bash
 # self-improve-hook.sh — Claude Code lifecycle hooks for the self-improve
-# workspace. One script, three subcommands, each wired to a native event:
+# workspace. One script, four subcommands, each wired to a native event:
 #
 #   session-start  SessionStart. Plain stdout becomes context Claude sees.
+#                  Also fires with source=compact after a compaction, which is
+#                  what restores the workspace pointers; no PostCompact hook is
+#                  needed for that.
 #   session-end    SessionEnd. Cannot block. All SessionEnd hooks share a
 #                  1.5 s budget unless the hook sets a longer "timeout".
 #   tool-failure   PostToolUseFailure, wired with "async": true. PostToolUse
 #                  never fires for a failed tool.
+#   precompact     PreCompact. Drains captured failures, because SessionEnd is
+#                  not guaranteed to run. Must never exit non-zero: on this
+#                  event exit 2 aborts the compaction.
 #
 # Hook input arrives as JSON on stdin; Claude Code sets no CLAUDE_TOOL_* env
 # vars. Every path exits 0: a memory hook must never block a session, a tool
@@ -105,6 +111,122 @@ acquire_lock() {
   return 1
 }
 
+# drain_pending <lrn> <errors> <stamp> [buffer]
+# Consolidate captured tool failures into ERRORS.md under the drain lock.
+# Called from SessionEnd and from PreCompact: SessionEnd never runs if the
+# process is killed, so compaction is a second, safe consolidation point.
+# If a parallel session holds the lock it owns this drain; pending lines stay
+# for the next caller and the banner keeps counting them.
+# Pass <buffer> only from SessionEnd. A PENDING WAL entry is a fault when the
+# session has closed, but at compaction the session is still live.
+drain_pending() {
+  local lrn="$1" errors="$2" stamp="$3" buffer="${4:-}"
+  local pending="$lrn/.pending-errors.log" draining="$lrn/.pending-errors.draining"
+  local lock="$lrn/.drain.lock" tmp n tool session ts use_id count content tab
+  acquire_lock "$lock" || return 0
+  tab="$(printf '\t')"
+  # Rename before reading: an async tool-failure hook that fires mid-drain
+  # appends to a fresh log instead of racing this loop. A .draining file left
+  # behind by an interrupted run is drained here too.
+  if [ -s "$pending" ] && tmp="$(mktemp "$lrn/.pending-errors.XXXXXX" 2>/dev/null)"; then
+    if mv -f "$pending" "$tmp"; then
+      cat "$tmp" >> "$draining" && rm -f "$tmp"
+    else
+      rm -f "$tmp"
+    fi
+  fi
+  n="$(last_err_number "$errors" "$stamp")"
+  if [ -s "$draining" ]; then
+    # One entry per (tool, session): a run of failed Edits is one lesson, not
+    # ten. Fields are whitespace-free by construction (the capture sanitizes
+    # them), so tab-separated records are safe.
+    while IFS="$tab" read -r tool session ts use_id count; do
+      n=$((n + 1))
+      if [ "$count" -gt 1 ]; then
+        content="\`$tool\` failed $count times (session $session, first tool_use_id $use_id)"
+      else
+        content="\`$tool\` failed (session $session, tool_use_id $use_id)"
+      fi
+      append_err "$errors" "$n" "$stamp" \
+        "Tool failure captured by the PostToolUseFailure hook at $ts" "$content" \
+        "Run \`/platform-skills:self-improve review\` to find the root cause in that session's transcript"
+    done < <(awk '
+      /TOOL_FAILURE: / {
+        ts = $1
+        rest = $0
+        sub(/.*TOOL_FAILURE: /, "", rest)
+        nf = split(rest, f, " ")
+        tool = (nf >= 1 && f[1] != "") ? f[1] : "unknown"
+        session = "unknown"; use_id = "unknown"
+        for (i = 2; i <= nf; i++) {
+          if (f[i] ~ /^session=./) session = substr(f[i], 9)
+          else if (f[i] ~ /^tool_use_id=./) use_id = substr(f[i], 13)
+        }
+        key = tool SUBSEP session
+        if (!(key in count)) {
+          order[++keys] = key; name[key] = tool; sess[key] = session
+          first_ts[key] = ts; first_id[key] = use_id
+        }
+        count[key]++
+      }
+      END {
+        for (k = 1; k <= keys; k++) {
+          key = order[k]
+          printf "%s\t%s\t%s\t%s\t%d\n", name[key], sess[key], first_ts[key], first_id[key], count[key]
+        }
+      }' "$draining")
+    rm -f "$draining"
+  fi
+
+  # Match a real WAL status line only. The buffer template's HTML comment
+  # reads "**Status**: PENDING | COMMITTED | ROLLED_BACK" and must not count.
+  if [ -n "$buffer" ] && [ -f "$buffer" ] &&
+     grep -q '^\*\*Status\*\*: PENDING[[:space:]]*$' "$buffer" 2>/dev/null; then
+    n=$((n + 1))
+    append_err "$errors" "$n" "$stamp" \
+      "Session closed with a PENDING WAL entry in working-buffer.md" \
+      "A destructive operation was started but not confirmed as COMMITTED before the session ended" \
+      "Run \`/platform-skills:self-improve resume\` next session to verify and update the WAL status"
+  fi
+  rm -f "$lock"
+}
+
+# session_count <counter> — record this session end and print the total.
+#
+# Append-only: one UTC timestamp line per session end. The old format was a
+# single integer rewritten as read + 1 + write, so two sessions ending together
+# lost an increment. `>>` is O_APPEND, which the kernel makes atomic for writes
+# this small, so nothing here needs a lock.
+#
+# The legacy integer is NOT converted. It is left as line 1 and read as a
+# baseline, so an existing count carries over instead of restarting at 1.
+# Converting it in place was tried and is unsafe: the rewrite truncates, and a
+# truncate racing an append both drops records and can splice an appended
+# timestamp into the integer being re-read (measured: a count of 100 became
+# 10020260926162208). Not rewriting removes the race instead of guarding it,
+# and it keeps the pre-migration number visible in the file.
+#
+# Writing a bare integer to this file is therefore also the supported way to
+# set or reset the count by hand.
+session_count() {
+  local counter="$1"
+  # A legacy file with no trailing newline would splice the first timestamp onto
+  # its integer. Command substitution strips a trailing newline, so a non-empty
+  # result means the last byte is not one. Two racers both adding one leave a
+  # blank line, which the reader below ignores.
+  if [ -s "$counter" ] && [ -n "$(tail -c 1 "$counter" 2>/dev/null)" ]; then
+    printf '\n' >> "$counter" 2>/dev/null
+  fi
+  printf '%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$counter" 2>/dev/null
+  # Interval expressions are avoided: not every POSIX awk supports {4}. Only
+  # line 1 may be a baseline, so a stray integer later is not counted twice.
+  awk '
+    NR == 1 && /^[0-9][0-9]*$/      { n += $1; next }
+    /^[0-9][0-9][0-9][0-9]-[0-9]/   { n += 1 }
+    END { print n + 0 }
+  ' "$counter" 2>/dev/null
+}
+
 cmd_tool_failure() {
   local payload="$1" base tool session use_id
   base="$(resolve_base)"
@@ -123,8 +245,7 @@ cmd_tool_failure() {
 
 cmd_session_end() {
   local payload="$1" base mem lrn today stamp now reason
-  local daily state buffer errors pending draining counter lock tmp lines
-  local n count ts tool session use_id content
+  local daily state buffer errors counter lines count
   base="$(resolve_base)"
   [ -n "$base" ] || return 0
   mem="$base/memory"
@@ -138,10 +259,7 @@ cmd_session_end() {
   state="$mem/SESSION-STATE.md"
   buffer="$mem/working-buffer.md"
   errors="$lrn/ERRORS.md"
-  pending="$lrn/.pending-errors.log"
-  draining="$lrn/.pending-errors.draining"
   counter="$mem/.session-count"
-  lock="$lrn/.drain.lock"
 
   # ── Daily note ──────────────────────────────────────────────────────────────
   [ -f "$daily" ] || printf '# Daily Notes — %s\n\n' "$today" > "$daily"
@@ -156,82 +274,13 @@ cmd_session_end() {
   fi
 
   # ── ERRORS.md writes, under the drain lock ──────────────────────────────────
-  # If a parallel session holds the lock, it owns this drain; pending lines
-  # stay for the next SessionEnd and the banner keeps counting them.
-  if acquire_lock "$lock"; then
-    # Rename before reading: an async tool-failure hook that fires mid-drain
-    # appends to a fresh log instead of racing this loop. A .draining file
-    # left behind by an interrupted run is drained here too.
-    if [ -s "$pending" ] && tmp="$(mktemp "$lrn/.pending-errors.XXXXXX" 2>/dev/null)"; then
-      if mv -f "$pending" "$tmp"; then
-        cat "$tmp" >> "$draining" && rm -f "$tmp"
-      else
-        rm -f "$tmp"
-      fi
-    fi
-    n="$(last_err_number "$errors" "$stamp")"
-    if [ -s "$draining" ]; then
-      # One entry per (tool, session): a run of failed Edits is one lesson,
-      # not ten. Fields are whitespace-free by construction (the capture
-      # sanitizes them), so tab-separated records are safe.
-      while IFS=$'\t' read -r tool session ts use_id count; do
-        n=$((n + 1))
-        if [ "$count" -gt 1 ]; then
-          content="\`$tool\` failed $count times (session $session, first tool_use_id $use_id)"
-        else
-          content="\`$tool\` failed (session $session, tool_use_id $use_id)"
-        fi
-        append_err "$errors" "$n" "$stamp" \
-          "Tool failure captured by the PostToolUseFailure hook at $ts" "$content" \
-          "Run \`/platform-skills:self-improve review\` to find the root cause in that session's transcript"
-      done < <(awk '
-        /TOOL_FAILURE: / {
-          ts = $1
-          rest = $0
-          sub(/.*TOOL_FAILURE: /, "", rest)
-          nf = split(rest, f, " ")
-          tool = (nf >= 1 && f[1] != "") ? f[1] : "unknown"
-          session = "unknown"; use_id = "unknown"
-          for (i = 2; i <= nf; i++) {
-            if (f[i] ~ /^session=./) session = substr(f[i], 9)
-            else if (f[i] ~ /^tool_use_id=./) use_id = substr(f[i], 13)
-          }
-          key = tool SUBSEP session
-          if (!(key in count)) {
-            order[++keys] = key; name[key] = tool; sess[key] = session
-            first_ts[key] = ts; first_id[key] = use_id
-          }
-          count[key]++
-        }
-        END {
-          for (k = 1; k <= keys; k++) {
-            key = order[k]
-            printf "%s\t%s\t%s\t%s\t%d\n", name[key], sess[key], first_ts[key], first_id[key], count[key]
-          }
-        }' "$draining")
-      rm -f "$draining"
-    fi
-
-    # Match a real WAL status line only. The buffer template's HTML comment
-    # reads "**Status**: PENDING | COMMITTED | ROLLED_BACK" and must not count.
-    if [ -f "$buffer" ] && grep -q '^\*\*Status\*\*: PENDING[[:space:]]*$' "$buffer" 2>/dev/null; then
-      n=$((n + 1))
-      append_err "$errors" "$n" "$stamp" \
-        "Session closed with a PENDING WAL entry in working-buffer.md" \
-        "A destructive operation was started but not confirmed as COMMITTED before the session ended" \
-        "Run \`/platform-skills:self-improve resume\` next session to verify and update the WAL status"
-    fi
-    rm -f "$lock"
-  fi
+  drain_pending "$lrn" "$errors" "$stamp" "$buffer"
 
   # The legacy PreToolUse banner keyed off this marker; nothing reads it now.
   rm -f "$mem/.session-active"
 
   # ── Session counter and review reminder ─────────────────────────────────────
-  count=0
-  [ -f "$counter" ] && count="$(tr -cd '0-9' < "$counter")"
-  count=$((10#${count:-0} + 1))
-  printf '%s\n' "$count" > "$counter"
+  count="$(session_count "$counter")"
   if [ $((count % 5)) -eq 0 ]; then
     printf '\n### Review reminder (session %d):\n\nRun `/platform-skills:self-improve review`. 5 sessions have elapsed.\n' \
       "$count" >> "$daily"
@@ -240,6 +289,30 @@ cmd_session_end() {
   if ! grep -q "^### LRN-$stamp" "$lrn/LEARNINGS.md" 2>/dev/null; then
     printf -- '- No learnings logged today. Consider `/platform-skills:self-improve log` before the next session.\n' >> "$daily"
   fi
+}
+
+# PreCompact. Compaction discards context, not disk state, so there is nothing
+# to rescue from the payload: a hook never sees the transcript. What it can do
+# is consolidate, because SessionEnd is not guaranteed to run. A session killed
+# with SIGKILL, or one whose window is closed, leaves .pending-errors.log
+# undrained indefinitely; a long session compacts several times, so this turns
+# the drain into something that happens repeatedly rather than once at the end.
+#
+# Context restoration after compaction needs no hook here: SessionStart fires
+# again with source=compact, and its stdout is added to the new context.
+#
+# This must never block. PreCompact is one of the events where exit 2 stops the
+# operation, and a memory hook that can abort compaction would strand a session
+# with a full context window. Every path returns 0.
+cmd_precompact() {
+  local base lrn stamp
+  base="$(resolve_base)"
+  [ -n "$base" ] || return 0
+  lrn="$base/.learnings"
+  [ -d "$lrn" ] || return 0
+  stamp="$(date +%Y%m%d)"
+  drain_pending "$lrn" "$lrn/ERRORS.md" "$stamp"
+  return 0
 }
 
 cmd_session_start() {
@@ -291,7 +364,8 @@ main() {
     session-start) cmd_session_start "$payload" ;;
     session-end)  cmd_session_end "$payload" ;;
     tool-failure) cmd_tool_failure "$payload" ;;
-    *) echo "usage: self-improve-hook.sh session-start|session-end|tool-failure" >&2 ;;
+    precompact)   cmd_precompact "$payload" ;;
+    *) echo "usage: self-improve-hook.sh session-start|session-end|tool-failure|precompact" >&2 ;;
   esac
 }
 

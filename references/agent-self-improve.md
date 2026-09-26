@@ -376,13 +376,15 @@ All skill modes use `~/.claude/` notation — no platform-specific path changes 
 
 ### Hook scripts by platform
 
-One script serves all three events, selected by subcommand:
+One script serves all four events, selected by subcommand:
 
-| Platform | Hook script | `SessionStart` | `SessionEnd` | `PostToolUseFailure` |
-|---|---|---|---|---|
-| macOS / Linux | `self-improve-hook.sh` | `session-start` | `session-end` | `tool-failure` |
-| Windows — WSL / Git Bash | `self-improve-hook.sh` | `session-start` | `session-end` | `tool-failure` |
-| Windows — native PowerShell | `self-improve-hook.ps1` | `session-start` | `session-end` | `tool-failure` |
+| Platform | Hook script | `SessionStart` | `SessionEnd` | `PostToolUseFailure` | `PreCompact` |
+|---|---|---|---|---|---|
+| macOS / Linux | `self-improve-hook.sh` | `session-start` | `session-end` | `tool-failure` | `precompact` |
+| Windows — WSL / Git Bash | `self-improve-hook.sh` | `session-start` | `session-end` | `tool-failure` | `precompact` |
+| Windows — native PowerShell | `self-improve-hook.ps1` | `session-start` | `session-end` | `tool-failure` | `precompact` |
+
+There is deliberately no `PostCompact` hook. `SessionStart` fires again with `source=compact` after a compaction, and its stdout is added to the rebuilt context, so the workspace pointers are restored by the hook that is already wired.
 
 **Windows recommendation:** WSL or Git Bash is the simpler path — the bash script works identically to macOS/Linux. Use the PowerShell (`.ps1`) script only when WSL or Git Bash is not available.
 
@@ -421,12 +423,19 @@ Add to `~/.claude/settings.json`:
           }
         ]
       }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [{"type": "command", "command": "bash ~/.claude/scripts/self-improve-hook.sh precompact", "timeout": 10}]
+      }
     ]
   }
 }
 ```
 
 `"timeout": 10` on `SessionEnd` is not optional in practice: all `SessionEnd` hooks share a 1.5-second budget by default, and the error drain plus daily-note write can exceed it. `"async": true` on `PostToolUseFailure` keeps the capture off the critical path of a tool call.
+
+`PreCompact` is the safety net for `SessionEnd` never running. A session killed outright, or one whose window is closed, leaves `.pending-errors.log` undrained indefinitely; a long session compacts several times, so the drain becomes recurring rather than once-at-the-end. It takes no `matcher` — the event carries a `trigger` field (`manual` or `auto`) rather than a tool name. It must also never fail: `PreCompact` is one of the events where exit 2 aborts the operation, and a hook that stopped compaction would strand the session with a full context window.
 
 Copy the script:
 ```sh
@@ -462,6 +471,11 @@ Add to `C:\Users\<you>\.claude\settings.json` (see `examples/agent-self-improve/
             "async": true
           }
         ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [{"type": "command", "command": "powershell -NoLogo -NoProfile -NonInteractive -File C:\\Users\\alex\\.claude\\scripts\\self-improve-hook.ps1 precompact", "timeout": 10}]
       }
     ]
   }
