@@ -129,7 +129,7 @@ Load only the files needed for the current request.
 | references/pr-review.md | Cost, drift, ownership, compliance, deprecated APIs, rollback scoring |
 | references/keda.md | ScaledObject, ScaledJob, scalers, TriggerAuthentication, scale-to-zero |
 | references/karpenter.md | NodePool, EC2NodeClass, NodeClaim, IAM, Spot, disruption, private cluster, CA migration |
-| references/agent-self-improve.md | `.learnings/` workspace, WAL, VFM, ADL, status/migrate |
+| references/agent-self-improve.md | `.learnings/` workspace, entry metadata, lint and recall, WAL, VFM, ADL, status/migrate |
 | references/supply-chain.md | Cosign, Syft SBOM, Trivy/Grype, SLSA Level 2, ImageValidatingPolicy |
 | references/trivy.md | Trivy bootstrap, image/fs/repo/secrets/sbom/k8s modes, severity gating, Trivy Operator via Flux HelmRelease |
 | references/runtime-security.md | Falco eBPF, custom rules, Falcosidekick, Kyverno enforcement |
@@ -174,7 +174,7 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:triage` — triage a PR comment (bot or human): classify as ACTIONABLE_FIX / INFORMATIONAL / NOT_APPLICABLE, produce the exact fix if needed, and write the thread reply
 - `/platform-skills:keda` — design, generate, debug, or review KEDA ScaledObject/ScaledJob autoscaling
 - `/platform-skills:karpenter` — install, generate NodePool/EC2NodeClass, debug provisioning, plan capacity before rollout, audit scale history, migrate from Cluster Autoscaler, or upgrade (including v0→v1 CRD migration)
-- `/platform-skills:self-improve` — bootstrap global or project-local `.learnings/` workspace (`init global`/`init local`), log/review/promote learnings and errors, status overview, and migrate between scopes
+- `/platform-skills:self-improve` — bootstrap global or project-local `.learnings/` workspace (`init global`/`init local`), log/recall/review/promote/revoke learnings and errors with provenance, scope and expiry, status overview, and migrate between scopes
 - `/platform-skills:supply-chain` — sign images, generate and attest SBOMs, run CVE severity gates, enforce image signatures in Kubernetes, and generate SLSA Level 2 provenance
 - `/platform-skills:runtime-security` — deploy Falco with eBPF, write custom rules, route alerts, debug why a rule is not firing, and bridge Falco signals to Kyverno admission enforcement
 - `/platform-skills:chaos` — install Litmus Chaos or Chaos Mesh, generate fault experiments, schedule recurring chaos, run structured GameDay, debug stuck experiments, report results
