@@ -184,6 +184,86 @@ t_lint_expired_and_stale() {
   assert_contains "legacy entries are counted" "1 without metadata" "$out"
 }
 
+t_lint_rejects_impossible_calendar_dates() {
+  fresh global
+  entry LEARNINGS.md LRN-20260901-001 resolved Source=user Scope=global Verified=2026-02-31
+  entry LEARNINGS.md LRN-20260901-002 resolved Source=user Scope=global Verified=2025-02-29 Expires=2026-04-31
+  entry LEARNINGS.md LRN-20260901-003 resolved Source=user Scope=global Verified=2024-02-29
+  local rc=0 out
+  out="$(L lint)" || rc=$?
+  assert_eq "an impossible date is an error" "1" "$rc"
+  assert_contains "the 31st of February is rejected" \
+    'ERROR LRN-20260901-001 bad **Verified** date "2026-02-31"' "$out"
+  assert_contains "the 29th of February in a common year is rejected" \
+    'ERROR LRN-20260901-002 bad **Verified** date "2025-02-29"' "$out"
+  assert_contains "the 31st of April is rejected" \
+    'ERROR LRN-20260901-002 bad **Expires** "2026-04-31"' "$out"
+  assert_not_contains "a real leap day is accepted" "LRN-20260901-003 bad" "$out"
+}
+
+t_lint_counts_any_missing_promotion_metadata() {
+  fresh global
+  entry LEARNINGS.md LRN-20260901-001 resolved Source=observed Verified=2026-09-20
+  entry LEARNINGS.md LRN-20260901-002 resolved Source=observed Scope=global
+  entry LEARNINGS.md LRN-20260901-003 resolved Scope=global Verified=2026-09-20
+  entry LEARNINGS.md LRN-20260901-004 resolved Source=observed Scope=global Verified=2026-09-20
+  assert_contains "an entry missing any one of the three is counted" "3 without metadata" "$(L lint)"
+}
+
+t_lint_lists_stale_promoted_first() {
+  fresh global
+  entry LEARNINGS.md LRN-20260101-001 resolved Source=observed Scope=global Verified=2026-01-01
+  entry LEARNINGS.md LRN-20260101-002 promoted Source=observed Scope=global Verified=2026-01-02
+  assert_eq "the promoted entry is reported before the resolved one, not in file order" \
+    "LRN-20260101-002,LRN-20260101-001" \
+    "$(L lint | grep '^STALE' | awk '{print $2}' | paste -sd, -)"
+}
+
+# capped <args...> — run learnings.sh with a CPU-seconds limit. A missing option
+# value used to spin the parse loop forever, which would hang the whole suite
+# rather than fail one case. The limit is inherited by the child, so a
+# regression dies; a usage error costs milliseconds and never reaches it.
+capped() {
+  ( ulimit -t 5; L "$@" >/dev/null 2>&1 )
+}
+
+t_option_without_a_value_is_a_usage_error() {
+  fresh global
+  entry ERRORS.md ERR-20260901-001 resolved Source=user Scope=global Verified=2026-09-01
+  local rc
+  rc=0; capped set-status ERR-20260901-001 revoked --note || rc=$?
+  assert_eq "set-status --note with no value exits 2" "2" "$rc"
+  rc=0; capped promote ERR-20260901-001 --domain || rc=$?
+  assert_eq "promote --domain with no value exits 2" "2" "$rc"
+  rc=0; capped promote ERR-20260901-001 --domain terraform --rule || rc=$?
+  assert_eq "promote --rule with no value exits 2" "2" "$rc"
+  rc=0; capped promote ERR-20260901-001 --domain terraform --rule R --target || rc=$?
+  assert_eq "promote --target with no value exits 2" "2" "$rc"
+  rc=0; capped unpromote ERR-20260901-001 --note || rc=$?
+  assert_eq "unpromote --note with no value exits 2" "2" "$rc"
+  rc=0; capped recall --limit || rc=$?
+  assert_eq "recall --limit with no value exits 2" "2" "$rc"
+  rc=0; capped --base || rc=$?
+  assert_eq "a global option with no value exits 2" "2" "$rc"
+}
+
+t_a_workspace_path_with_a_space() {
+  fresh global
+  local h="$TMP/$CASE/home with space" p="$TMP/$CASE/proj with space"
+  mkdir -p "$h/.claude/.learnings" "$p"
+  T_HOME="$h"; T_PROJ="$p"; W="$h/.claude"
+  entry ERRORS.md ERR-20260920-001 resolved Source=observed Scope=project:proj-with-space Verified=2026-09-20
+  assert_eq "entries reads a store under a path with a space" "1" "$(L entries | grep -c .)"
+  assert_contains "lint reads it too" "lint: 1 entries, 0 errors" "$(L lint)"
+  assert_contains "recall finds it" "ERR-20260920-001" "$(L recall content)"
+  assert_contains "whereami normalises the project name to a valid scope" \
+    "project=proj-with-space" "$(L whereami)"
+  local rc=0
+  L promote ERR-20260920-001 --domain terraform --rule "Scan plans first" --apply >/dev/null 2>&1 || rc=$?
+  assert_eq "promote resolves the entry's file" "0" "$rc"
+  assert_contains "and records the new status" "**Status**: promoted" "$(file_or_empty "$W/.learnings/ERRORS.md")"
+}
+
 t_set_status() {
   fresh global
   entry ERRORS.md ERR-20260901-001 resolved
@@ -213,6 +293,19 @@ t_set_status_refusals() {
   touch -t 202001010000 "$W/.learnings/.drain.lock"
   rc=0; L set-status ERR-20260901-001 revoked >/dev/null 2>&1 || rc=$?
   assert_eq "a stale lock is broken" "0" "$rc"
+  assert_missing "and the lock it replaced is released" "$W/.learnings/.drain.lock"
+}
+
+t_set_status_needs_a_status_line_to_rewrite() {
+  fresh global
+  printf '\n### ERR-20260901-001\n**Context**: c\n**Content**: b\n**Action**: a\n' > "$W/.learnings/ERRORS.md"
+  local rc=0 out before
+  before="$(file_or_empty "$W/.learnings/ERRORS.md")"
+  out="$(L set-status ERR-20260901-001 revoked 2>&1)" || rc=$?
+  assert_eq "an entry with no Status line is not reported as rewritten" "1" "$rc"
+  assert_contains "and says what is wrong with it" "has no **Status** line" "$out"
+  assert_eq "the file is left exactly as it was" "$before" "$(file_or_empty "$W/.learnings/ERRORS.md")"
+  assert_missing "lock released" "$W/.learnings/.drain.lock"
 }
 
 # ── PR 2: promote, unpromote ──────────────────────────────────────────────────
@@ -362,6 +455,46 @@ t_unpromote() {
   assert_eq "--revoke works without a marker" "0" "$rc"
   assert_contains "revoked with the reason" $'**Status**: revoked\n**Status-Note**: 2026-09-26 wrong for EKS 1.35' \
     "$(file_or_empty "$W/.learnings/ERRORS.md")"
+}
+
+t_promote_apply_is_all_or_nothing() {
+  fresh global
+  eligible ERR-20260920-001
+  : > "$W/.learnings/.drain.lock"
+  local rc=0
+  L promote ERR-20260920-001 --domain terraform --rule "Scan plans first" --apply >/dev/null 2>&1 || rc=$?
+  assert_eq "a busy workspace exits 3" "3" "$rc"
+  assert_missing "and installs no rule it cannot record" "$T_PROJ/.claude/rules/terraform.md"
+  assert_contains "the entry still reads resolved" "**Status**: resolved" "$(file_or_empty "$W/.learnings/ERRORS.md")"
+}
+
+t_unpromote_is_all_or_nothing() {
+  fresh global
+  eligible ERR-20260920-001
+  L promote ERR-20260920-001 --domain terraform --rule "Scan plans first" --apply >/dev/null
+  : > "$W/.learnings/.drain.lock"
+  local rc=0
+  L unpromote ERR-20260920-001 >/dev/null 2>&1 || rc=$?
+  assert_eq "a busy workspace exits 3" "3" "$rc"
+  assert_contains "the rule is still loaded" "self-improve:ERR-20260920-001" \
+    "$(file_or_empty "$T_PROJ/.claude/rules/terraform.md")"
+  assert_contains "and the entry still reads promoted" "**Status**: promoted" \
+    "$(file_or_empty "$W/.learnings/ERRORS.md")"
+  assert_eq "no backup is left behind" "0" \
+    "$(find "$T_PROJ/.claude/rules" -name '*.unpromote.*' 2>/dev/null | wc -l | tr -d ' ')"
+}
+
+t_unpromote_a_rule_file_holding_only_the_marker() {
+  fresh global
+  eligible ERR-20260920-001
+  mkdir -p "$T_PROJ/.claude/rules"
+  printf '%s\n' "- Scan plans first <!-- self-improve:ERR-20260920-001 -->" \
+    > "$T_PROJ/.claude/rules/terraform.md"
+  local rc=0
+  L unpromote ERR-20260920-001 >/dev/null 2>&1 || rc=$?
+  assert_eq "removing the only line is not a failure" "0" "$rc"
+  assert_eq "the file is emptied" "" "$(file_or_empty "$T_PROJ/.claude/rules/terraform.md")"
+  assert_contains "status back to resolved" "**Status**: resolved" "$(file_or_empty "$W/.learnings/ERRORS.md")"
 }
 
 # ── PR 3: recall ──────────────────────────────────────────────────────────────
