@@ -118,6 +118,9 @@ bash tests/token-optimizer-script.sh
 echo "Running token-optimizer policy core tests..."
 bash examples/token-optimizer/tests/optimize_test.sh
 
+echo "Running self-improve hook tests..."
+bash examples/agent-self-improve/tests/self_improve_hook_test.sh
+
 echo "Running website coverage checks..."
 bash tests/website-coverage.sh
 
