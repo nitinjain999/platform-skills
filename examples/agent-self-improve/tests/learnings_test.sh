@@ -215,6 +215,155 @@ t_set_status_refusals() {
   assert_eq "a stale lock is broken" "0" "$rc"
 }
 
+# ── PR 2: promote, unpromote ──────────────────────────────────────────────────
+
+# eligible <id> [Field=value ...] — a resolved, verified, project-scoped entry.
+eligible() {
+  local id="$1"
+  shift
+  entry ERRORS.md "$id" resolved Source=observed Scope=project:proj Verified=2026-09-20 "$@"
+}
+
+t_promote_preview_writes_nothing() {
+  fresh global
+  eligible ERR-20260920-001 "Paths=infrastructure/**/*.tf"
+  local rc=0 out
+  out="$(L promote ERR-20260920-001 --domain terraform --rule 'Scan plans for "forces replacement" before apply')" || rc=$?
+  assert_eq "preview exits 0" "0" "$rc"
+  assert_contains "shows a proposal" "PROMOTION PROPOSAL ERR-20260920-001" "$out"
+  assert_contains "shows the evidence" "source=observed scope=project:proj verified=2026-09-20" "$out"
+  assert_contains "diff adds the rule with its marker" \
+    '+- Scan plans for "forces replacement" before apply <!-- self-improve:ERR-20260920-001 -->' "$out"
+  assert_contains "diff adds the paths frontmatter" '+  - "infrastructure/**/*.tf"' "$out"
+  assert_missing "preview writes no rule file" "$T_PROJ/.claude/rules/terraform.md"
+  assert_contains "status unchanged" "**Status**: resolved" "$(file_or_empty "$W/.learnings/ERRORS.md")"
+}
+
+t_promote_apply_new_rules_file() {
+  fresh global
+  eligible ERR-20260920-001 "Paths=modules/**/*.tf, infrastructure/**/*.tf"
+  local rc=0
+  L promote ERR-20260920-001 --domain terraform --rule "Scan plans for forces replacement" --apply >/dev/null || rc=$?
+  assert_eq "apply exits 0" "0" "$rc"
+  assert_eq "rule file with sorted paths frontmatter" \
+    "$(printf '%s\n' '---' 'paths:' '  - "infrastructure/**/*.tf"' '  - "modules/**/*.tf"' '---' '' '# Terraform rules' '' \
+      '- Scan plans for forces replacement <!-- self-improve:ERR-20260920-001 -->')" \
+    "$(file_or_empty "$T_PROJ/.claude/rules/terraform.md")"
+  assert_contains "status promoted with the target" \
+    "**Status-Note**: 2026-09-26 promoted to $T_PROJ/.claude/rules/terraform.md" "$(file_or_empty "$W/.learnings/ERRORS.md")"
+  rc=0
+  L promote ERR-20260920-001 --domain terraform --rule "Scan plans for forces replacement" --apply >/dev/null || rc=$?
+  assert_eq "re-running is a no-op" "1" "$(grep -c 'self-improve:ERR-20260920-001' "$T_PROJ/.claude/rules/terraform.md")"
+}
+
+t_promote_appends_to_matching_rules_file() {
+  fresh global
+  mkdir -p "$T_PROJ/.claude/rules"
+  printf '%s\n' '---' 'paths: "infrastructure/**/*.tf"' '---' '' '# Terraform rules' '' '- Pin provider versions' \
+    > "$T_PROJ/.claude/rules/terraform.md"
+  eligible ERR-20260920-001 "Paths=infrastructure/**/*.tf"
+  L promote ERR-20260920-001 --domain terraform --rule "Scan plans first" --apply >/dev/null
+  assert_contains "appended after the existing rules" \
+    $'- Pin provider versions\n- Scan plans first <!-- self-improve:ERR-20260920-001 -->' \
+    "$(file_or_empty "$T_PROJ/.claude/rules/terraform.md")"
+}
+
+t_promote_refuses_mismatched_paths() {
+  fresh global
+  mkdir -p "$T_PROJ/.claude/rules"
+  printf '# Terraform rules\n\n- Pin provider versions\n' > "$T_PROJ/.claude/rules/terraform.md"
+  eligible ERR-20260920-001 "Paths=infrastructure/**/*.tf"
+  local rc=0 out
+  out="$(L promote ERR-20260920-001 --domain terraform --rule "Scan plans first" --apply 2>&1)" || rc=$?
+  assert_eq "different paths exit 4" "4" "$rc"
+  assert_contains "explains the mismatch" "applies to paths [all files] but ERR-20260920-001 needs [infrastructure/**/*.tf]" "$out"
+  assert_not_contains "file untouched" "Scan plans first" "$(file_or_empty "$T_PROJ/.claude/rules/terraform.md")"
+}
+
+t_promote_global_scope() {
+  fresh global
+  entry LEARNINGS.md LRN-20260920-001 resolved Source=user Scope=global Verified=2026-01-01
+  L promote LRN-20260920-001 --domain workflow --rule "Open draft PRs by default" --apply >/dev/null
+  assert_contains "global scope lands in ~/.claude/rules" \
+    "- Open draft PRs by default <!-- self-improve:LRN-20260920-001 -->" \
+    "$(file_or_empty "$T_HOME/.claude/rules/workflow.md")"
+}
+
+t_promote_claude_md_section() {
+  fresh global
+  printf '%s\n' '# Project' '' '## Agent Rules' '' '- Existing rule' '' '## Other' 'text' > "$T_PROJ/CLAUDE.md"
+  eligible ERR-20260920-001
+  L promote ERR-20260920-001 --domain terraform --rule "Scan plans first" --target CLAUDE.md --apply >/dev/null
+  assert_eq "inserted at the end of the Agent Rules section" \
+    "$(printf '%s\n' '# Project' '' '## Agent Rules' '' '- Existing rule' \
+      '- Scan plans first <!-- self-improve:ERR-20260920-001 -->' '' '## Other' 'text')" \
+    "$(file_or_empty "$T_PROJ/CLAUDE.md")"
+  fresh global
+  printf '# Project\n\nSome text\n' > "$T_PROJ/AGENTS.md"
+  eligible ERR-20260920-001
+  L promote ERR-20260920-001 --domain terraform --rule "Scan plans first" --target AGENTS.md --apply >/dev/null
+  assert_contains "section created when missing" \
+    $'Some text\n\n## Agent Rules\n\n- Scan plans first <!-- self-improve:ERR-20260920-001 -->' \
+    "$(file_or_empty "$T_PROJ/AGENTS.md")"
+}
+
+t_promote_refusals() {
+  fresh global
+  entry ERRORS.md ERR-20260901-001 pending Source=observed Scope=project:proj Verified=2026-09-20
+  entry ERRORS.md ERR-20260901-002 revoked Source=observed Scope=project:proj Verified=2026-09-20
+  entry ERRORS.md ERR-20260901-003 resolved
+  entry ERRORS.md ERR-20260901-004 resolved Source=observed Scope=project:proj Verified=2026-09-20 Expires=2026-09-01
+  entry ERRORS.md ERR-20260901-005 resolved Source=observed Scope=project:proj Verified=2026-05-01
+  entry ERRORS.md ERR-20260901-006 resolved Source=inferred Scope=project:proj Verified=2026-09-20
+  entry ERRORS.md ERR-20260901-007 resolved Source=observed Scope=project:other-repo Verified=2026-09-20
+  entry ERRORS.md ERR-20260901-008 resolved Source=observed Scope=project:proj Verified=2026-09-20 Paths=src/**
+  local id rc out
+  for id in 001 002 003 004 005 006 007; do
+    rc=0; out="$(L promote "ERR-20260901-$id" --domain terraform --rule "Rule" 2>&1)" || rc=$?
+    assert_eq "ERR-20260901-$id is refused with exit 4" "4" "$rc"
+  done
+  out="$(L promote ERR-20260901-001 --domain terraform --rule "Rule" 2>&1)"
+  assert_contains "pending explains itself" "is pending; resolve it before promoting" "$out"
+  out="$(L promote ERR-20260901-003 --domain terraform --rule "Rule" 2>&1)"
+  assert_contains "legacy entries need metadata" "has no **Source**, **Scope** or **Verified**" "$out"
+  out="$(L promote ERR-20260901-005 --domain terraform --rule "Rule" 2>&1)"
+  assert_contains "stale entries need re-verifying" "re-verify it and update **Verified** first" "$out"
+  out="$(L promote ERR-20260901-007 --domain terraform --rule "Rule" 2>&1)"
+  assert_contains "another project's lesson stays there" "is scoped to other-repo, but this project is proj" "$out"
+  rc=0; L promote ERR-20260901-006 --domain terraform --rule "Rule" --allow-inferred >/dev/null 2>&1 || rc=$?
+  assert_eq "--allow-inferred lets a confirmed inference through" "0" "$rc"
+  rc=0; out="$(L promote ERR-20260901-008 --domain terraform --rule "Rule" --target CLAUDE.md 2>&1)" || rc=$?
+  assert_eq "paths cannot go into CLAUDE.md" "4" "$rc"
+  rc=0; L promote ERR-20260901-006 --domain "Terraform!" --rule "Rule" --allow-inferred >/dev/null 2>&1 || rc=$?
+  assert_eq "bad domain exits 2" "2" "$rc"
+  rc=0; L promote ERR-20260901-006 --domain terraform --rule "a <!-- b -->" --allow-inferred >/dev/null 2>&1 || rc=$?
+  assert_eq "a rule cannot carry an HTML comment" "2" "$rc"
+  rc=0; L promote ERR-20260901-006 --domain terraform --rule "$(printf 'x%.0s' $(seq 1 161))" --allow-inferred >/dev/null 2>&1 || rc=$?
+  assert_eq "an overlong rule exits 2" "2" "$rc"
+  rc=0; L promote ERR-20260901-006 --domain terraform --rule "Rule" --target README.md --allow-inferred >/dev/null 2>&1 || rc=$?
+  assert_eq "an unknown target kind exits 2" "2" "$rc"
+}
+
+t_unpromote() {
+  fresh global
+  eligible ERR-20260920-001
+  L promote ERR-20260920-001 --domain terraform --rule "Scan plans first" --apply >/dev/null
+  printf '%s\n' '- Hand-written rule' >> "$T_PROJ/.claude/rules/terraform.md"
+  local rc=0 out
+  out="$(L unpromote ERR-20260920-001)" || rc=$?
+  assert_eq "unpromote exits 0" "0" "$rc"
+  assert_not_contains "the marked line is gone" "self-improve:ERR-20260920-001" "$(file_or_empty "$T_PROJ/.claude/rules/terraform.md")"
+  assert_contains "other lines survive" "- Hand-written rule" "$(file_or_empty "$T_PROJ/.claude/rules/terraform.md")"
+  assert_contains "status back to resolved" $'**Status**: resolved\n**Status-Note**: 2026-09-26 unpromoted (removed from' \
+    "$(file_or_empty "$W/.learnings/ERRORS.md")"
+  rc=0; L unpromote ERR-20260920-001 >/dev/null 2>&1 || rc=$?
+  assert_eq "nothing left to remove exits 4" "4" "$rc"
+  rc=0; L unpromote ERR-20260920-001 --revoke --note "wrong for EKS 1.35" >/dev/null || rc=$?
+  assert_eq "--revoke works without a marker" "0" "$rc"
+  assert_contains "revoked with the reason" $'**Status**: revoked\n**Status-Note**: 2026-09-26 wrong for EKS 1.35' \
+    "$(file_or_empty "$W/.learnings/ERRORS.md")"
+}
+
 
 # ── Runner ────────────────────────────────────────────────────────────────────
 
