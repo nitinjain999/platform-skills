@@ -121,6 +121,9 @@ bash examples/token-optimizer/tests/optimize_test.sh
 echo "Running self-improve hook tests..."
 bash examples/agent-self-improve/tests/self_improve_hook_test.sh
 
+echo "Running self-improve learnings tests..."
+bash examples/agent-self-improve/tests/learnings_test.sh
+
 echo "Running website coverage checks..."
 bash tests/website-coverage.sh
 

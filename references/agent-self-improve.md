@@ -91,15 +91,43 @@ The same block serves project-scoped setup unchanged. The script applies the res
 
 ### Entry format
 
-Every entry uses the same four-field structure regardless of log type:
+Every entry has four required fields, plus optional metadata. `log` writes the metadata for every new entry. Older entries without it stay valid: `lint` counts them as "without metadata". They need `Source`, `Scope` and `Verified` before they can be promoted.
 
 ```markdown
 ### LRN-20260520-001
-**Status**: pending | resolved | promoted
+**Status**: pending | resolved | promoted | superseded | revoked | discarded
 **Context**: One sentence — what was happening
 **Content**: The actual learning, error, or feature request
 **Action**: What was done or should be done
+**Source**: user | observed | ci | repo | vendor-docs | inferred
+**Scope**: global | project:<repo-name>
+**Paths**: infrastructure/**/*.tf, modules/**/*.tf
+**Verified**: 2026-09-26
+**Expires**: 2026-12-31 | never
+**Supersedes**: LRN-20260401-003
 ```
+
+#### Metadata fields
+
+| Field | Meaning | Rules |
+|---|---|---|
+| `Source` | Where the lesson came from | `user` (the user said it), `observed` (live state or tool output), `ci` (a test or pipeline result), `repo` (the repository's own config or docs), `vendor-docs` (official documentation), `inferred` (the agent concluded it) |
+| `Scope` | Where it applies | `global`, or `project:<name>` where `<name>` is the git top-level's directory name. `learnings.sh whereami` prints it |
+| `Paths` | Files it applies to | Optional. Project scope only. Comma-separated globs, no quotes. Becomes the `paths:` frontmatter of a promoted rule |
+| `Verified` | When it was last confirmed true | `YYYY-MM-DD`. Update it whenever the lesson is re-confirmed |
+| `Expires` | When it stops applying | `YYYY-MM-DD` or `never`. Use it for workarounds and exceptions |
+| `Supersedes` | The entry this one replaces | Also set the old entry to `superseded` with `learnings.sh set-status` |
+| `Status-Note` | Why the status last changed | Written by `learnings.sh set-status`. Don't edit it by hand |
+
+#### Staleness and expiry
+
+An active entry (`pending`, `resolved` or `promoted`) is **stale** once its `Verified` date is older than the window for its source, and **expired** after its `Expires` date. `lint` and `review` report both. A stale or expired entry can't be promoted. A stale *promoted* entry is flagged first, because its rule is still loaded into every session.
+
+| Source | Re-verify after |
+|---|---|
+| `user` | Never goes stale |
+| `inferred` | 30 days |
+| `observed`, `ci`, `repo`, `vendor-docs` | 90 days |
 
 #### ID schemes
 
@@ -113,6 +141,7 @@ Every entry uses the same four-field structure regardless of log type:
 
 ```
 pending → resolved → promoted
+              ↘ superseded | revoked | discarded
 ```
 
 | Stage | Meaning | Who acts |
@@ -120,15 +149,41 @@ pending → resolved → promoted
 | `pending` | Logged, not yet addressed | Agent logs automatically |
 | `resolved` | Root cause identified, fix applied | Agent or user confirms |
 | `promoted` | Written to project memory | Agent runs `/platform-skills:self-improve promote` |
+| `superseded` | Replaced by a newer entry that names it in `Supersedes` | `learnings.sh set-status <old-id> superseded` |
+| `revoked` | Found to be wrong. Must stop influencing behaviour | `/platform-skills:self-improve revoke` |
+| `discarded` | Not worth keeping | `review` suggests it for stale resolved entries |
 
-**Promotion targets** — pick the right scope:
+**Promotion targets.** `learnings.sh promote` chooses from the entry's scope:
 
-| Target file | When to promote there |
+| Entry scope | Target | Loaded |
+|---|---|---|
+| `global` | `~/.claude/rules/<domain>.md` | Every session on this machine |
+| `project:<name>` with `Paths` | `.claude/rules/<domain>.md`, with `paths:` frontmatter from the entry's `Paths` | When Claude reads a matching file |
+| `project:<name>` without `Paths` | `.claude/rules/<domain>.md` | Every session in this project |
+| Opt-in, with `--target` | `CLAUDE.md`, `AGENTS.md`, `.github/copilot-instructions.md`, under `## Agent Rules` | For rules other tools must also read |
+| By hand | A `references/` guide | Reusable patterns for the whole team |
+
+Each promoted rule ends in a `<!-- self-improve:<ID> -->` marker, so the rule is traceable to its evidence. `learnings.sh unpromote <ID>` removes exactly that line (add `--revoke` to retire the entry too). Promotion is refused for entries that aren't `resolved`, lack `Source`/`Scope`/`Verified`, are stale or expired, are `inferred` without confirmation, or belong to another project. A rules file whose `paths` differ from the entry's is never widened or narrowed; pick another domain.
+
+### Helper script: `learnings.sh`
+
+The command runs `bash ~/.claude/scripts/learnings.sh <subcommand>` instead of parsing entries or doing date arithmetic itself. It resolves the workspace the same way as the command and the hooks.
+
+| Subcommand | What it does |
 |---|---|
-| `~/.claude/CLAUDE.md` | Global agent-level rules — apply to all projects on this machine |
-| `CLAUDE.md` / `AGENTS.md` | Agent-level rules for this project only |
-| `.github/copilot-instructions.md` | GitHub Copilot workspace rules |
-| `references/` guide | Reusable pattern for the whole team |
+| `whereami` | Prints the workspace, `scope=global` or `project`, the project name for `Scope: project:<name>`, and today's date |
+| `entries` | One tab-separated record per entry |
+| `lint` | Reports `ERROR` (invalid entries), `WARN`, `EXPIRED` and `STALE` lines and a summary. Exits 1 on any error |
+| `set-status ID STATUS [--note TEXT]` | Rewrites one entry's status and `Status-Note`, under the same lock as the `SessionEnd` drain |
+| `promote ID --domain D --rule T [--target F] [--allow-inferred] [--apply]` | Checks eligibility, previews the rule as a diff, and with `--apply` writes it and marks the entry `promoted` |
+| `unpromote ID [--revoke] [--note T]` | Removes the marked rule from every promotion target; resets the entry to `resolved`, or `revoked` |
+| `recall [--all] [--limit N] TERM...` | Read-only search. Ranks by term matches (+2 Content, +1 Context, +5 exact id), excludes revoked, superseded, discarded, expired and other-project entries while counting them, and flags `STALE` and `verify before use` results |
+
+Exit codes: 0 ok, 1 lint errors, 2 usage or no workspace, 3 workspace busy (another session holds the lock; retry), 4 refused.
+
+Install: `cp examples/agent-self-improve/scripts/learnings.sh ~/.claude/scripts/ && chmod +x ~/.claude/scripts/learnings.sh`
+
+**Trusting a recalled lesson.** A result flagged `STALE` hasn't been verified within its source's window. One flagged `verify before use` came from an inference or has no source at all. Treat both as leads, not facts: check the current state first, then update `Verified` if the lesson still holds, or revoke it. Prefer verified current state over remembered assumptions every time.
 
 ### Recurring Pattern Detection
 

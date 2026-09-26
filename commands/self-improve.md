@@ -1,7 +1,7 @@
 ---
 name: self-improve
-description: Bootstrap and operate a self-improving agent workspace. Scaffolds .learnings/ and memory/ directories, captures errors and learnings during a session, detects recurring patterns, and promotes stable entries to project memory (CLAUDE.md, AGENTS.md, or references/). Also implements the Proactive Agent pillars — WAL protocol, working buffer, SESSION-STATE, daily notes, VBR, VFM scoring, ADL decision logic, heartbeat, and reverse prompting. Use when asked to "remember this lesson", "set up agent memory", "log that error", "promote learnings", "capture session state", or "enable proactive mode".
-argument-hint: "[init [global|local]|log [LRN|ERR|FEAT]|promote <ID>|migrate [global|local]|status|resume|review|state]"
+description: Bootstrap and operate a self-improving agent workspace. Scaffolds .learnings/ and memory/ directories, captures errors and learnings during a session, detects recurring patterns, recalls verified lessons, and promotes stable entries to scoped rule files (.claude/rules/ or ~/.claude/rules/). Also implements the Proactive Agent pillars — WAL protocol, working buffer, SESSION-STATE, daily notes, VBR, VFM scoring, ADL decision logic, heartbeat, and reverse prompting. Use when asked to "remember this lesson", "set up agent memory", "log that error", "what did we learn about X", "promote learnings", "revoke that rule", "capture session state", or "enable proactive mode".
+argument-hint: "[init [global|local]|log [LRN|ERR|FEAT]|recall <terms>|promote <ID>|revoke <ID> <reason>|migrate [global|local]|status|resume|review|state]"
 title: "Self-Improve Command"
 sidebar_label: "self-improve"
 custom_edit_url: null
@@ -34,9 +34,15 @@ All path references in every mode below use `LEARNINGS_BASE` as the root:
 | `memory/YYYY-MM-DD.md` | `~/.claude/memory/YYYY-MM-DD.md` | `memory/YYYY-MM-DD.md` |
 | `.learnings/.pending-errors.log` | `~/.claude/.learnings/.pending-errors.log` | `.learnings/.pending-errors.log` |
 
-Promotion targets (`CLAUDE.md`, `AGENTS.md`, `.github/copilot-instructions.md`) always remain project-local regardless of scope — only the capture files follow `LEARNINGS_BASE`.
+Promoted rules follow the **entry's** `Scope`, not `LEARNINGS_BASE`: a global lesson lands in `~/.claude/rules/<domain>.md`, a project lesson in `.claude/rules/<domain>.md`. The opt-in targets (`CLAUDE.md`, `AGENTS.md`, `.github/copilot-instructions.md`) are always project-local. Only the capture files follow `LEARNINGS_BASE`.
 
 Reference: `references/agent-self-improve.md` → Global vs project scope
+
+## Helper Script
+
+Modes below run `bash ~/.claude/scripts/learnings.sh <subcommand>` for anything deterministic: reading entries, validating them, checking dates, changing a status. If the script is missing, say so once, offer to install it (`init global` step 5), and do the step by hand. Exit code 3 means another session holds `.learnings/.drain.lock`. Wait a few seconds and retry once. Exit code 4 means the entry doesn't exist.
+
+Reference: `references/agent-self-improve.md` → Helper script
 
 ## Mode: init global
 
@@ -64,6 +70,7 @@ Steps:
    - **macOS / Linux / WSL / Git Bash** → `self-improve-hook.sh` with the `session-start`, `session-end`, `tool-failure` and `precompact` subcommands; point to `settings.json.example`
    - **Windows native (PowerShell)** → `self-improve-hook.ps1`, same four subcommands; point to `settings-windows.json.example`, and have the user replace the literal `C:\Users\alex` with their own profile path
    - **Alpine or minimal Linux** → same as macOS/Linux but remind the user to install bash first: `apk add bash`
+   - Also copy `examples/agent-self-improve/scripts/learnings.sh` to `~/.claude/scripts/` and `chmod +x` it. `log`, `recall`, `review`, `status`, `promote` and `revoke` call it
    - The script is in `examples/agent-self-improve/scripts/`. Keep `"timeout": 10` on `SessionEnd` and on `PreCompact`, and `"async": true` on `PostToolUseFailure`
    - `PreCompact` takes no `matcher`; it is filtered by its `trigger` field (`manual` or `auto`), not by tool name. Do not wire a `PostCompact` hook: `SessionStart` already fires again with `source=compact`
    - If any settings file still contains `Stop`, `PreToolUse` or `PostToolUse` self-improve entries, point the user at "Migrating from the legacy hooks" in `examples/agent-self-improve/README.md` and do not leave both wirings active
@@ -149,18 +156,25 @@ Steps:
    - **Error** (`ERR`) — a mistake, misunderstanding, or failed assumption
    - **Feature request** (`FEAT`) — a need that was unmet by the current skill or tool set
 2. Generate the ID: `<TYPE>-YYYYMMDD-NNN` where `NNN` is the next sequential number in that file today
-3. Before logging, scan `$LEARNINGS_BASE/.learnings/` for an existing entry with the same context keywords. If one exists, update its **Action** field and keep the existing ID — do not create a duplicate.
-4. Write the entry using the four-field format:
+3. Before logging, run `bash ~/.claude/scripts/learnings.sh recall --all <2-3 keywords from the Context>` to find an existing entry for the same root cause. If one exists, update its **Action**, set **Verified** to today, and keep the existing ID. Don't create a duplicate. If the new lesson *replaces* an older one, write the new entry with `**Supersedes**: <old-id>` and run `bash ~/.claude/scripts/learnings.sh set-status <old-id> superseded --note "replaced by <new-id>"`
+4. Run `bash ~/.claude/scripts/learnings.sh whereami` for the scope and project name, then write the entry:
    ```markdown
    ### LRN-20260520-001
    **Status**: pending
    **Context**: <one sentence — what was happening>
    **Content**: <the learning, error description, or feature request>
    **Action**: <what was done or should be done>
+   **Source**: <user | observed | ci | repo | vendor-docs | inferred>
+   **Scope**: <global | project:<name>>
+   **Verified**: <today, YYYY-MM-DD>
    ```
+   - **Source**: `user` when the user stated it, `observed` or `ci` when a tool result proved it, `repo` or `vendor-docs` when documentation says so, `inferred` when you concluded it yourself. Pick honestly: `inferred` goes stale in 30 days and needs confirmation before promotion
+   - **Scope**: `global` only when the lesson holds in any repository. Otherwise use `project:<name>` from `whereami`. Project-specific details must not leak into global memory
+   - Add `**Paths**: <glob>, <glob>` when the lesson only concerns certain files, and `**Expires**: <date>` for a workaround or exception with a known end
 5. If the fix was applied in this same session, immediately set `Status: resolved` and record what was done in **Action**.
 6. Append to the correct file without modifying any existing entries
-7. Confirm: "Logged as `<ID>` in `$LEARNINGS_BASE/.learnings/<FILE>.md`"
+7. Run `bash ~/.claude/scripts/learnings.sh lint` and fix any `ERROR` line that names the new entry
+8. Confirm: "Logged as `<ID>` in `$LEARNINGS_BASE/.learnings/<FILE>.md`"
 
 Reference: `references/agent-self-improve.md` → Entry format, Recurring Pattern Detection
 
@@ -193,22 +207,23 @@ Scan `$LEARNINGS_BASE/.learnings/` for recurring patterns and surface actionable
 
 Steps:
 1. Read all three `$LEARNINGS_BASE/.learnings/` files
-2. Group entries by context keyword similarity
-3. Report any context that appears three or more times as a **promotion candidate**:
+2. Run `bash ~/.claude/scripts/learnings.sh lint`. Report every `ERROR` (fix it), every `EXPIRED` (ask whether to extend `Expires` or revoke), and every `STALE` (check the current state, then either update `Verified` or revoke). Put a `STALE` line that says "its promoted rule is still loaded" first
+3. Group entries by context keyword similarity
+4. Report any context that appears three or more times as a **promotion candidate**:
    ```
    PROMOTION CANDIDATE — ERR: "missing resource limits"
    Entries: ERR-20260518-001, ERR-20260519-002, ERR-20260520-001
    Suggested target: .github/copilot-instructions.md → "Always add resource limits"
    ```
-4. Report entries still in `pending` state older than 7 days
-5. Report entries in `resolved` state older than 30 days — these are stale and should be either promoted or discarded:
+5. Report entries still in `pending` state older than 7 days
+6. Report entries in `resolved` state older than 30 days — these are stale and should be either promoted or discarded:
    ```
    STALE RESOLVED — LRN-20260410-001: "helm diff before upgrade" (45 days in resolved)
    Action: run /platform-skills:self-improve promote LRN-20260410-001 or set Status: discarded
    ```
-6. Report unresolved `FEAT` entries that could be addressed by an existing platform-skills domain
-7. Process `$LEARNINGS_BASE/.learnings/.pending-errors.log` if it exists and is non-empty — convert each line to a proper `ERR` entry and clear the log
-8. Print totals:
+7. Report unresolved `FEAT` entries that could be addressed by an existing platform-skills domain
+8. Process `$LEARNINGS_BASE/.learnings/.pending-errors.log` if it exists and is non-empty — convert each line to a proper `ERR` entry and clear the log
+9. Print totals:
    ```
    Learnings: 8 total, 3 pending, 5 resolved (1 stale)
    Errors: 5 total, 1 pending, 4 resolved
@@ -218,34 +233,76 @@ Steps:
 
 Reference: `references/agent-self-improve.md` → Recurring Pattern Detection
 
+## Mode: recall
+
+Search learnings without changing anything.
+
+```
+/platform-skills:self-improve recall karpenter pod identity
+```
+
+Steps:
+1. Run `bash ~/.claude/scripts/learnings.sh recall <terms>`. Add `--limit N` to see more than 8 results. Add `--all` to include revoked, superseded, discarded, expired and other-project entries, which are flagged
+2. Relay each result with how far to trust it:
+   - `STALE` or `verify before use`: check the current state (repository, cluster, docs) before relying on it, and say that you're checking
+   - No flag, source `user`, `ci` or `observed`: apply it and cite the ID
+3. If recall reports excluded entries, mention them. A revoked lesson that matches is a warning worth hearing
+4. If nothing matches, say so. Never invent a memory
+
+Reference: `references/agent-self-improve.md` → Helper script
+
 ## Mode: promote
 
 Promote a resolved entry to the correct memory file.
 
 Steps:
-1. Read the entry by ID (e.g. `ERR-20260520-001`)
-2. Determine if this rule applies globally (all projects) or locally (this project only):
-   - **Global** — applies regardless of which project is open → promote to `~/.claude/CLAUDE.md` under `## Agent Rules`
-   - **Project** — applies only in this repo → promote to `CLAUDE.md` / `AGENTS.md` or `.github/copilot-instructions.md`
+1. Read the entry by ID. Promotion changes behaviour in every future session, so `learnings.sh promote` refuses entries that:
+   - aren't `resolved`
+   - lack `Source`, `Scope` or `Verified`
+   - are stale or expired
+   - come from an `inferred` source, unless the user confirms the lesson and you pass `--allow-inferred`
+   - are scoped to another project
 
-3. Identify the correct promotion target:
-   | Target | Scope | When to use |
-   |---|---|---|
-   | `~/.claude/CLAUDE.md` → `## Agent Rules` | Global | Rule applies across all projects (only available for global setup) |
-   | `CLAUDE.md` / `AGENTS.md` | Project | Agent-level rules for this project only |
-   | `.github/copilot-instructions.md` | Project | GitHub Copilot workspace rules |
-   | A `references/` guide | Shared | Reusable pattern for the whole team |
-
-4. Draft the promoted line — imperative voice, ≤ 80 characters:
+   Relay a refusal as-is and help fix its cause. For example, re-verify the lesson and update `Verified`.
+2. Pick the domain: a lowercase topic name (`terraform`, `kubernetes`, `github-actions`). The rule lands in `<domain>.md`
+3. Draft the rule: imperative voice, one line, at most 160 characters:
    - ERR → negative rule: "Never use `kubectl delete` without first capturing the manifest"
    - LRN → positive rule: "Prefer `helm diff upgrade` before `helm upgrade` to preview changes"
-5. Ask the user to confirm the target file and wording before writing
-6. Append to the confirmed target file under `## Agent Rules` or `## Platform Rules`
-7. Update the entry `Status` in `$LEARNINGS_BASE/.learnings/` from `resolved` to `promoted`
-8. Commit with a conventional commit message:
+4. Preview. This prints the evidence, the target and a diff, and writes nothing:
+   ```bash
+   bash ~/.claude/scripts/learnings.sh promote <ID> --domain <domain> --rule "<rule>"
+   ```
+   | Entry scope | Default target | Loaded |
+   |---|---|---|
+   | `global` | `~/.claude/rules/<domain>.md` | Every session on this machine |
+   | `project:<name>` with `Paths` | `.claude/rules/<domain>.md` with `paths:` frontmatter | When Claude reads a matching file |
+   | `project:<name>` without `Paths` | `.claude/rules/<domain>.md` | Every session in this project |
+
+   When the team needs the rule in a file other tools read, pass `--target CLAUDE.md`, `--target AGENTS.md` or `--target .github/copilot-instructions.md`. The rule goes under `## Agent Rules`. A rule with `Paths` can only go to `.claude/rules/`
+5. Show the preview and ask the user to confirm the target and wording
+6. Apply: re-run with `--apply`. The script writes the rule with a `<!-- self-improve:<ID> -->` marker and sets the entry to `promoted`, recording the target in `Status-Note`
+7. For a target inside the repository, commit with a conventional commit message:
    `docs(memory): promote <ID> — <imperative summary>`
 
+Rollback: `bash ~/.claude/scripts/learnings.sh unpromote <ID>` removes the marked line and sets the entry back to `resolved`.
+
 Reference: `references/agent-self-improve.md` → Entry lifecycle, Promotion targets
+
+## Mode: revoke
+
+Stop a lesson from influencing behaviour while keeping its history.
+
+```
+/platform-skills:self-improve revoke ERR-20260520-001 "wrong since EKS 1.35"
+```
+
+Steps:
+1. Ask for the reason if none was given. A revocation without a reason can't be audited later
+2. If a newer entry replaces this one, use `superseded` instead: set `**Supersedes**: <ID>` on the newer entry and run `set-status <ID> superseded`
+3. Retire it. If the entry is `promoted`, run `bash ~/.claude/scripts/learnings.sh unpromote <ID> --revoke --note "<reason>"`. That removes the marked rule from every promotion target and sets `revoked` in one step. If it reports that no rule carries the marker (the rule predates markers), remove the line by hand first. Otherwise run `bash ~/.claude/scripts/learnings.sh set-status <ID> revoked --note "<reason>"`
+4. Confirm: "Revoked `<ID>`: <reason>"
+
+Reference: `references/agent-self-improve.md` → Entry lifecycle
 
 ## Mode: state
 
@@ -282,7 +339,7 @@ Print a one-screen health summary of the self-improve workspace — no changes m
 
 Steps:
 1. Resolve `LEARNINGS_BASE` (same auto-detection as all other modes)
-2. Read all three `$LEARNINGS_BASE/.learnings/` files and `$LEARNINGS_BASE/memory/working-buffer.md`
+2. Read all three `$LEARNINGS_BASE/.learnings/` files and `$LEARNINGS_BASE/memory/working-buffer.md`. Also run `bash ~/.claude/scripts/learnings.sh lint`.
 3. Print the summary:
    ```
    Self-Improve Status
@@ -294,6 +351,7 @@ Steps:
    Feature reqs 2 pending   0 resolved   0 promoted
    
    Pending errors log:  2 unprocessed entries
+   Lint:                0 errors, 2 stale, 1 expired, 5 without metadata
    Working buffer:      active task — "deploy payments service"
    Buffer age:          2 days
    Last session:        2026-05-23 (today)

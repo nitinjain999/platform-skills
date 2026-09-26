@@ -17,6 +17,8 @@ This directory contains ready-to-copy templates for bootstrapping the self-impro
 | `scripts/self-improve-hook.sh` | All four hooks (macOS/Linux/WSL/Git Bash). One script, four subcommands |
 | `scripts/self-improve-hook.ps1` | Same four hooks for Windows native PowerShell 5.1+ |
 | `tests/self_improve_hook_test.sh` | Behavioural suite, run against both implementations |
+| `scripts/learnings.sh` | Deterministic helper the command calls: parse, lint and change the status of `.learnings/` entries |
+| `tests/learnings_test.sh` | Behavioural suite for `learnings.sh` |
 | `global-claude.md` | Template for `~/.claude/CLAUDE.md` — path override, session-start, in-session logging rules |
 | `settings.json.example` | All 4 hooks wired for macOS / Linux / WSL / Git Bash |
 | `settings-windows.json.example` | All 4 hooks wired for Windows native (PowerShell) |
@@ -75,6 +77,8 @@ Commit `.learnings/` only if you want the team to share and build on these learn
 mkdir -p ~/.claude/scripts
 cp examples/agent-self-improve/scripts/self-improve-hook.sh ~/.claude/scripts/
 chmod +x ~/.claude/scripts/self-improve-hook.sh
+cp examples/agent-self-improve/scripts/learnings.sh ~/.claude/scripts/
+chmod +x ~/.claude/scripts/learnings.sh
 
 # Copy settings (merge manually if ~/.claude/settings.json already exists)
 cp examples/agent-self-improve/settings.json.example ~/.claude/settings.json
@@ -89,6 +93,7 @@ cp examples/agent-self-improve/global-claude.md ~/.claude/CLAUDE.md
 # Copy the hook script
 New-Item -ItemType Directory -Force "$env:USERPROFILE\.claude\scripts"
 Copy-Item examples\agent-self-improve\scripts\self-improve-hook.ps1 "$env:USERPROFILE\.claude\scripts\"
+Copy-Item examples\agent-self-improve\scripts\learnings.sh "$env:USERPROFILE\.claude\scripts\"
 
 # Copy settings (merge manually if settings.json already exists)
 Copy-Item examples\agent-self-improve\settings-windows.json.example "$env:USERPROFILE\.claude\settings.json"
@@ -96,6 +101,8 @@ Copy-Item examples\agent-self-improve\settings-windows.json.example "$env:USERPR
 # Copy global CLAUDE.md
 Copy-Item examples\agent-self-improve\global-claude.md "$env:USERPROFILE\.claude\CLAUDE.md"
 ```
+
+`learnings.sh` is a bash script that the command runs through Claude Code's Bash tool (Git Bash on Windows).
 
 Then edit the four `command` strings in `settings.json` and replace `C:\Users\alex` with your own profile directory. The paths are spelled out in full on purpose: a hook `command` is a raw string handed to a shell, so `%USERPROFILE%` is only expanded by `cmd` and `$env:USERPROFILE` only by PowerShell. A literal path works whichever shell Claude Code uses to spawn the hook. `echo $env:USERPROFILE` prints the value to paste in.
 

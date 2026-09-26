@@ -40,7 +40,7 @@ VFM_THRESHOLD=60
 
 ## Agent Rules
 
-Rules promoted from `~/.claude/.learnings/` — add your own as you promote entries.
+Hand-written rules. `/platform-skills:self-improve promote` now writes global lessons to `~/.claude/rules/<topic>.md`, one file per topic, instead of this section.
 
 - Always clarify global vs project scope before scaffolding directories.
 - Dispatch all independent tool calls in a single message block — sequential only when output feeds the next.
