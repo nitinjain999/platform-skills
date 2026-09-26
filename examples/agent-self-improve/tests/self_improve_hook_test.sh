@@ -532,8 +532,17 @@ fi
 IMPLS="bash"
 if command -v pwsh >/dev/null 2>&1; then
   IMPLS="bash pwsh"
+elif [ -n "${CI:-}" ]; then
+  # Never let the PowerShell half degrade to a silent pass on CI. The port is
+  # wrapped in `catch { }` + `exit 0`, so an authoring error there produces no
+  # output rather than a failure — reading it cannot substitute for running it.
+  # GitHub-hosted runners ship pwsh; if one stops, fail loudly instead of
+  # reporting green over 300-odd unexecuted lines.
+  echo "FATAL: pwsh not found and CI is set; the PowerShell port would go untested." >&2
+  exit 1
 else
   echo "SKIP: pwsh not installed; the PowerShell port is untested on this machine"
+  echo "      install it (brew install powershell) before trusting a green run."
 fi
 
 for IMPL in $IMPLS; do
