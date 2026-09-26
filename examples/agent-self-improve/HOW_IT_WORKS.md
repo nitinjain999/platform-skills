@@ -80,6 +80,7 @@ Every entry in `.learnings/` follows the same structure and lifecycle:
 
 ```
 pending → resolved → promoted
+              ↘ superseded | revoked | discarded
 ```
 
 ```markdown
@@ -88,6 +89,10 @@ pending → resolved → promoted
 **Context**: Applying a Terraform plan that replaced an RDS instance
 **Content**: Assumed changing db_subnet_group_name was non-destructive. It forces replacement.
 **Action**: Added lifecycle { prevent_destroy = true }. Promote to references/terraform.md.
+**Source**: observed
+**Scope**: project:platform-infra
+**Paths**: infrastructure/**/*.tf
+**Verified**: 2026-05-20
 ```
 
 | Stage | Meaning | Who acts |
@@ -95,12 +100,15 @@ pending → resolved → promoted
 | `pending` | Logged, not yet addressed | Agent logs automatically |
 | `resolved` | Fix applied — action recorded | Agent sets this in the same session if the fix was applied; otherwise user confirms |
 | `promoted` | Written to project memory | Agent after running `/platform-skills:self-improve promote` |
+| `superseded` | Replaced by a newer entry | Agent, when logging the replacement |
+| `revoked` | Wrong; must stop influencing behaviour | `/platform-skills:self-improve revoke` |
+| `discarded` | Not worth keeping | You, after `review` flags it |
 
 **Key rule:** If the agent logs an error and applies the fix in the same session, it sets `Status: resolved` immediately — no manual step needed.
 
 ---
 
-## The Five Modes
+## The Modes
 
 ### `init global` / `init local` — Bootstrap the workspace
 
@@ -207,6 +215,24 @@ Promotion candidates: 1
 
 ---
 
+### `recall` — Look up what was learned
+
+```text
+/platform-skills:self-improve recall karpenter pod identity
+```
+
+```text
+recall: 2 match(es) for "karpenter pod identity" (1 excluded: 1 revoked; --all shows them)
+[7] ERR-20260910-001 resolved | source=observed verified=2026-09-10 | scope=project:platform-infra
+    Pod Identity association missing for the Karpenter controller
+[1] LRN-20260601-002 resolved | source=inferred verified=2026-06-01 | scope=global STALE | verify before use
+    Prefer Spot diversity across 15 instance types
+```
+
+Recall only reads. It hides lessons that were revoked, superseded, discarded or expired, and lessons from other repositories, and tells you how many it hid. The agent treats flagged results as leads to verify, not as facts.
+
+---
+
 ### `promote` — Write a lesson to project memory
 
 ```text
@@ -215,21 +241,15 @@ Promotion candidates: 1
 
 The agent:
 
-1. Reads the entry
-2. Identifies the right promotion target:
-
-   | Target | When |
-   |---|---|
-   | `CLAUDE.md` / `AGENTS.md` | Agent-level rule for every session in this project |
-   | `.github/copilot-instructions.md` | GitHub Copilot workspace rules |
-   | `references/` guide | Reusable pattern for the whole team |
-
-3. Drafts the promoted line in imperative voice (≤ 80 characters):
+1. Checks the evidence. Only a `resolved` entry with `Source`, `Scope` and `Verified`, not stale or expired, can be promoted. An `inferred` lesson needs your confirmation first
+2. Picks a topic (`terraform`) and drafts one imperative line:
    - ERR → negative rule: `"Never change db_subnet_group_name without a replace plan and snapshot"`
    - LRN → positive rule: `"Run helm diff upgrade before helm upgrade to preview rendered changes"`
-4. Asks you to confirm the target file and wording before writing
-5. Appends to the confirmed file and updates the entry status to `promoted`
-6. Commits with: `docs(memory): promote ERR-20260520-001 — never rename EKS node group in-place`
+3. Shows you a preview diff. A project lesson with `Paths: infrastructure/**/*.tf` becomes `.claude/rules/terraform.md` with that `paths:` frontmatter, so it only loads when Claude touches Terraform files. A global lesson goes to `~/.claude/rules/terraform.md`
+4. After you confirm, writes the rule with a `<!-- self-improve:ERR-20260520-001 -->` marker and sets the entry to `promoted`
+5. Commits repository targets with: `docs(memory): promote ERR-20260520-001 — never rename EKS node group in-place`
+
+Changed your mind? `learnings.sh unpromote ERR-20260520-001` removes exactly that rule.
 
 ---
 
