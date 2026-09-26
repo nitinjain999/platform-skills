@@ -1,33 +1,34 @@
 {
   "hooks": {
-    "Stop": [
+    "SessionStart": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "bash ~/.claude/scripts/session-end.sh"
+            "command": "bash ~/.claude/scripts/self-improve-hook.sh session-start"
           }
         ]
       }
     ],
-    "PreToolUse": [
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/scripts/self-improve-hook.sh session-end",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
       {
         "matcher": ".*",
         "hooks": [
           {
             "type": "command",
-            "command": "bash ~/.claude/scripts/session-start-reminder.sh"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "if [ \"$CLAUDE_TOOL_EXIT_CODE\" -ne 0 ] 2>/dev/null; then echo \"$(date -u +%Y-%m-%dT%H:%M:%SZ) TOOL_FAILURE: $CLAUDE_TOOL_NAME\" >> ~/.claude/.learnings/.pending-errors.log; fi"
+            "command": "bash ~/.claude/scripts/self-improve-hook.sh tool-failure",
+            "async": true
           }
         ]
       }
