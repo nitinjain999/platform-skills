@@ -451,6 +451,15 @@ t_session_start_warns_about_legacy_wiring() {
     "wired in $T_PROJ/.claude/settings.local.json" "$out"
 }
 
+t_session_start_warns_about_global_local_settings() {
+  fresh global
+  printf '{"hooks":{"PreToolUse":[{"hooks":[{"type":"command","command":"if [ \\"$CLAUDE_TOOL_EXIT_CODE\\" -ne 0 ]; then :; fi"}]}]}}\n' \
+    > "$T_HOME/.claude/settings.local.json"
+  assert_contains "flags legacy wiring in global local settings" \
+    "WARNING: legacy self-improve hooks are still wired in ~/.claude/settings.local.json" \
+    "$(run_hook session-start "$START_JSON")"
+}
+
 t_session_start_quiet_for_new_wiring() {
   fresh global
   printf '{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"bash ~/.claude/scripts/self-improve-hook.sh session-start"}]}]}}\n' \

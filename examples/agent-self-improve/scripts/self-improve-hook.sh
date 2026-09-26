@@ -261,9 +261,9 @@ cmd_session_start() {
       "${count:-0}" "$(display_path "$base/.learnings/.pending-errors.log")"
   fi
 
-  for f in "$HOME/.claude/settings.json" "$project/.claude/settings.json" "$project/.claude/settings.local.json"; do
-    # With the project at $HOME the first two paths are the same file.
-    if [ "$f" = "$project/.claude/settings.json" ] && [ "$project" = "$HOME" ]; then continue; fi
+  for f in "$HOME/.claude/settings.json" "$HOME/.claude/settings.local.json" "$project/.claude/settings.json" "$project/.claude/settings.local.json"; do
+    # With the project at $HOME, the last two paths are the same files as the first two.
+    if [ "$project" = "$HOME" ] && { [ "$f" = "$project/.claude/settings.json" ] || [ "$f" = "$project/.claude/settings.local.json" ]; }; then continue; fi
     if [ -f "$f" ] && grep -qE "$LEGACY_HOOK_PATTERN" "$f" 2>/dev/null; then
       printf 'WARNING: legacy self-improve hooks are still wired in %s. Remove its Stop, PreToolUse and PostToolUse self-improve entries (see "Migrating from the legacy hooks" in examples/agent-self-improve/README.md).\n' \
         "$(display_path "$f")"
