@@ -57,8 +57,45 @@ function Show-Path([string]$Path) {
     return $Path
 }
 
+# One mutex serialises every append. Without it concurrent writers silently
+# lose records: .NET opens an append handle by seeking to the current end and
+# writing at that remembered offset, so two hooks that open the same file
+# together overwrite each other's bytes. Nothing throws - the records just
+# vanish. Measured on macOS pwsh 7, twelve concurrent tool-failure hooks wrote
+# 7 of 12 lines. The bash port needs no guard because ">>" is O_APPEND, which
+# the kernel makes atomic for writes this small.
+#
+# A named mutex beats a lock file here: the OS releases it when the holder
+# dies, and tool-failure runs with "async": true, so it can be killed
+# mid-write when the session ends. A stale lock file would instead stall every
+# later append. The name is unprefixed, so on Windows it lives in the session
+# namespace - every hook for one user runs in that session.
+$script:AppendMutex = $null
+function Get-AppendMutex {
+    if ($null -eq $script:AppendMutex) {
+        # $false records "tried and failed", so creation is attempted once.
+        try { $script:AppendMutex = New-Object System.Threading.Mutex($false, 'platform-skills-self-improve-append') }
+        catch { $script:AppendMutex = $false }
+    }
+    if ($script:AppendMutex -is [Threading.Mutex]) { return $script:AppendMutex }
+    return $null
+}
+
 function Add-Text([string]$Path, [string]$Text) {
-    [IO.File]::AppendAllText($Path, $Text, $Utf8)
+    $mutex = Get-AppendMutex
+    if ($null -eq $mutex) {
+        # No mutex available: a possibly interleaved write still beats no write.
+        [IO.File]::AppendAllText($Path, $Text, $Utf8)
+        return
+    }
+    $held = $false
+    # AbandonedMutexException means an earlier holder died and ownership has
+    # passed to us. That is a success path, not an error.
+    try { $held = $mutex.WaitOne(5000) }
+    catch [Threading.AbandonedMutexException] { $held = $true }
+    catch { $held = $false }
+    try { [IO.File]::AppendAllText($Path, $Text, $Utf8) }
+    finally { if ($held) { $mutex.ReleaseMutex() } }
 }
 
 function Get-LastErrNumber([string]$File, [string]$Stamp) {

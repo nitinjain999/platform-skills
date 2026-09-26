@@ -144,6 +144,22 @@ t_tool_failure_sanitizes_payload() {
     "$(file_or_empty "$BASE/.learnings/.pending-errors.log")"
 }
 
+t_tool_failure_concurrent_writes() {
+  fresh global
+  local n=0
+  # tool-failure is wired with "async": true, so a burst of failing tools puts
+  # several hooks in the append path at once. Twelve is enough to catch a lost
+  # update: the PowerShell port kept 7 of 12 before Add-Text took a mutex, and
+  # lost them silently -- no exception, no stderr, exit 0.
+  while [ "$n" -lt 12 ]; do
+    run_hook tool-failure "$FAIL_JSON" >/dev/null &
+    n=$((n + 1))
+  done
+  wait
+  assert_eq "concurrent appends lose no record" "12" \
+    "$(line_count "$BASE/.learnings/.pending-errors.log")"
+}
+
 t_tool_failure_malformed_json() {
   fresh global
   local rc=0
