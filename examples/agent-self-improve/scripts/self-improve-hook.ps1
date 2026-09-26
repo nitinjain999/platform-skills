@@ -25,11 +25,13 @@ $LegacyHookPattern = 'session-start-reminder|session-end\.(sh|ps1)|CLAUDE_TOOL_E
 
 function Resolve-Base {
     $globalBase = [IO.Path]::Combine($UserHome, '.claude')
-    # -Force: on Unix, .NET marks any dotfile/dot-directory Hidden, and the
-    # PowerShell provider layer silently treats a hidden item as absent
-    # unless -Force is passed. ".learnings" is a dot-directory.
-    if (Test-Path -LiteralPath ([IO.Path]::Combine($globalBase, '.learnings')) -PathType Container -Force) { return $globalBase }
-    if (Test-Path -LiteralPath ([IO.Path]::Combine($Project, '.learnings')) -PathType Container -Force) { return $Project }
+    # No -Force here: Test-Path has no such parameter, and passing one throws
+    # a binding error that the outer catch swallows into a silent no-op.
+    # Test-Path ignores the Hidden attribute anyway, so it sees a
+    # dot-directory like ".learnings" unaided. Get-Item and Get-ChildItem do
+    # need -Force; see Enter-Lock.
+    if (Test-Path -LiteralPath ([IO.Path]::Combine($globalBase, '.learnings')) -PathType Container) { return $globalBase }
+    if (Test-Path -LiteralPath ([IO.Path]::Combine($Project, '.learnings')) -PathType Container) { return $Project }
     return $null
 }
 
@@ -86,12 +88,13 @@ function Add-Err([string]$File, [int]$Number, [string]$Stamp, [string]$Context, 
 # since a second racer's own claim attempt might land after we already
 # replaced the lock with a live one -- if so, put it back rather than
 # destroying an active lock.
-# -Force on Test-Path/Get-Item: on Unix, .NET marks a dotfile Hidden, and
-# the PowerShell provider layer silently treats a hidden item as absent
-# unless -Force is passed. The lock file (".drain.lock") is a dotfile.
+# -Force on Get-Item: on Unix, .NET marks a dotfile Hidden, and Get-Item
+# treats a hidden item as absent without -Force. The lock file
+# (".drain.lock") is a dotfile. Test-Path is exempt -- it ignores the
+# attribute and rejects -Force outright.
 function Enter-Lock([string]$Path) {
     try { [IO.File]::Open($Path, [IO.FileMode]::CreateNew).Dispose(); return $true } catch { }
-    if ((Test-Path -LiteralPath $Path -Force) -and ((Get-Item -LiteralPath $Path -Force).LastWriteTime -lt (Get-Date).AddMinutes(-10))) {
+    if ((Test-Path -LiteralPath $Path) -and ((Get-Item -LiteralPath $Path -Force).LastWriteTime -lt (Get-Date).AddMinutes(-10))) {
         $claim = "$Path.claim.$PID"
         try { [IO.File]::Move($Path, $claim) } catch { return $false }
         if ((Get-Item -LiteralPath $claim -Force).LastWriteTime -lt (Get-Date).AddMinutes(-10)) {
@@ -163,10 +166,10 @@ function Invoke-SessionEnd {
       try {
         # Rename before reading so an async tool-failure hook that fires
         # mid-drain appends to a fresh log.
-        # -Force: ".pending-errors.log" and ".pending-errors.draining" are
-        # dotfiles, hidden on Unix, and skipped by Test-Path/Get-Item
-        # without -Force.
-        if ((Test-Path -LiteralPath $pending -Force) -and (Get-Item -LiteralPath $pending -Force).Length -gt 0) {
+        # -Force on Get-Item: ".pending-errors.log" and
+        # ".pending-errors.draining" are dotfiles, hidden on Unix, and
+        # Get-Item reports a hidden file as absent without it.
+        if ((Test-Path -LiteralPath $pending) -and (Get-Item -LiteralPath $pending -Force).Length -gt 0) {
             $tmp = Join-Path $lrn ('.pending-errors.' + [Guid]::NewGuid().ToString('N'))
             try {
                 [IO.File]::Move($pending, $tmp)
@@ -175,7 +178,7 @@ function Invoke-SessionEnd {
             } catch { }
         }
         $n = Get-LastErrNumber $errors $stamp
-        if ((Test-Path -LiteralPath $draining -Force) -and (Get-Item -LiteralPath $draining -Force).Length -gt 0) {
+        if ((Test-Path -LiteralPath $draining) -and (Get-Item -LiteralPath $draining -Force).Length -gt 0) {
             # One entry per (tool, session), in first-seen order.
             $groups = [ordered]@{}
             foreach ($line in [IO.File]::ReadAllLines($draining)) {
@@ -226,10 +229,8 @@ function Invoke-SessionEnd {
     Remove-Item -LiteralPath (Join-Path $mem '.session-active') -Force
 
     # Session counter and review reminder
-    # -Force: ".session-count" is a dotfile, hidden on Unix, and skipped by
-    # Test-Path without -Force.
     $count = 0
-    if (Test-Path -LiteralPath $counter -Force) {
+    if (Test-Path -LiteralPath $counter) {
         $digits = [IO.File]::ReadAllText($counter) -replace '[^0-9]', ''
         if ($digits) { $count = [int]$digits }
     }
@@ -277,9 +278,9 @@ function Invoke-SessionStart {
     }
 
     $pendingLog = [IO.Path]::Combine($base, '.learnings', '.pending-errors.log')
-    # -Force: ".pending-errors.log" is a dotfile, hidden on Unix, and skipped
-    # by Test-Path/Get-Item without -Force.
-    if ((Test-Path -LiteralPath $pendingLog -Force) -and (Get-Item -LiteralPath $pendingLog -Force).Length -gt 0) {
+    # -Force on Get-Item: ".pending-errors.log" is a dotfile, hidden on Unix,
+    # and Get-Item reports a hidden file as absent without it.
+    if ((Test-Path -LiteralPath $pendingLog) -and (Get-Item -LiteralPath $pendingLog -Force).Length -gt 0) {
         $count = @([IO.File]::ReadAllLines($pendingLog) | Where-Object { $_ -match 'TOOL_FAILURE' }).Count
         $out.Add("WARNING: $count unprocessed tool failure(s) in $(Show-Path $pendingLog). Run /platform-skills:self-improve review.")
     }
