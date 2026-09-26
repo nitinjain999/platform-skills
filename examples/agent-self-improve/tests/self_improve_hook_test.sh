@@ -166,6 +166,203 @@ t_tool_failure_without_jq() {
   assert_eq "sed fallback still skips interrupts" "1" "$(line_count "$BASE/.learnings/.pending-errors.log")"
 }
 
+# ── session-end ───────────────────────────────────────────────────────────────
+
+END_JSON='{"session_id":"sess-9","hook_event_name":"SessionEnd","reason":"prompt_input_exit"}'
+
+t_session_end_drains_pending() {
+  fresh global
+  # Header-only ERRORS.md is the case where the legacy `grep -c || echo 0`
+  # produced "0\n0" and crashed the id arithmetic. An older day's id must
+  # not affect today's numbering.
+  printf '# Errors\n\n### ERR-20200101-007\n**Status**: resolved\n' > "$BASE/.learnings/ERRORS.md"
+  printf '%s\n%s\n' \
+    "2026-09-26T10:00:00Z TOOL_FAILURE: Bash session=s1 tool_use_id=t1" \
+    "2026-09-26T10:01:00Z TOOL_FAILURE: Edit session=s1 tool_use_id=t2" \
+    > "$BASE/.learnings/.pending-errors.log"
+  local rc=0 errors
+  run_hook session-end "$END_JSON" >/dev/null || rc=$?
+  assert_eq "session-end exits 0" "0" "$rc"
+  errors="$(file_or_empty "$BASE/.learnings/ERRORS.md")"
+  assert_contains "first drained failure is -001" "### ERR-$STAMP-001" "$errors"
+  assert_contains "second drained failure is -002" "### ERR-$STAMP-002" "$errors"
+  assert_contains "content names the tool and ids" '`Edit` failed (session s1, tool_use_id t2)' "$errors"
+  assert_contains "entry is pending" "**Status**: pending" "$errors"
+  assert_missing "pending log removed" "$BASE/.learnings/.pending-errors.log"
+  assert_missing "draining file removed" "$BASE/.learnings/.pending-errors.draining"
+}
+
+t_session_end_continues_after_highest_id() {
+  fresh global
+  printf '### ERR-%s-001\n**Status**: resolved\n\n### ERR-%s-003\n**Status**: pending\n' \
+    "$STAMP" "$STAMP" > "$BASE/.learnings/ERRORS.md"
+  printf '2026-09-26T10:00:00Z TOOL_FAILURE: Bash session=s tool_use_id=t\n' > "$BASE/.learnings/.pending-errors.log"
+  run_hook session-end "$END_JSON" >/dev/null
+  assert_contains "next id follows the highest, not the count" "### ERR-$STAMP-004" \
+    "$(file_or_empty "$BASE/.learnings/ERRORS.md")"
+  assert_eq "no id reused" "1" "$(grep -c "^### ERR-$STAMP-003" "$BASE/.learnings/ERRORS.md")"
+}
+
+t_session_end_leading_zero_ids() {
+  fresh global
+  printf '### ERR-%s-008\n\n### ERR-%s-009\n' "$STAMP" "$STAMP" > "$BASE/.learnings/ERRORS.md"
+  printf '2026-09-26T10:00:00Z TOOL_FAILURE: Bash session=s tool_use_id=t\n' > "$BASE/.learnings/.pending-errors.log"
+  run_hook session-end "$END_JSON" >/dev/null
+  assert_contains "008/009 are decimal, not octal" "### ERR-$STAMP-010" \
+    "$(file_or_empty "$BASE/.learnings/ERRORS.md")"
+}
+
+t_session_end_legacy_line_format() {
+  fresh global
+  printf '2026-09-26T10:00:00Z TOOL_FAILURE: Bash\n' > "$BASE/.learnings/.pending-errors.log"
+  run_hook session-end "$END_JSON" >/dev/null
+  assert_contains "a line without ids still drains" '`Bash` failed (session unknown, tool_use_id unknown)' \
+    "$(file_or_empty "$BASE/.learnings/ERRORS.md")"
+}
+
+t_session_end_drains_leftover_draining() {
+  fresh global
+  printf '2026-09-26T09:00:00Z TOOL_FAILURE: Read session=old tool_use_id=t0\n' > "$BASE/.learnings/.pending-errors.draining"
+  printf '2026-09-26T10:00:00Z TOOL_FAILURE: Bash session=new tool_use_id=t1\n' > "$BASE/.learnings/.pending-errors.log"
+  run_hook session-end "$END_JSON" >/dev/null
+  local errors
+  errors="$(file_or_empty "$BASE/.learnings/ERRORS.md")"
+  assert_contains "leftover from an interrupted drain is kept" '`Read` failed (session old' "$errors"
+  assert_contains "fresh pending line is drained too" '`Bash` failed (session new' "$errors"
+  assert_eq "each line drained exactly once" "2" "$(grep -c '^### ERR-' "$BASE/.learnings/ERRORS.md")"
+  assert_missing "draining file removed" "$BASE/.learnings/.pending-errors.draining"
+}
+
+t_session_end_aggregates_repeats() {
+  fresh global
+  printf '%s\n%s\n%s\n%s\n' \
+    "2026-09-26T10:00:00Z TOOL_FAILURE: Edit session=s1 tool_use_id=t1" \
+    "2026-09-26T10:01:00Z TOOL_FAILURE: Edit session=s1 tool_use_id=t2" \
+    "2026-09-26T10:02:00Z TOOL_FAILURE: Edit session=s1 tool_use_id=t3" \
+    "2026-09-26T10:03:00Z TOOL_FAILURE: Edit session=s2 tool_use_id=t4" \
+    > "$BASE/.learnings/.pending-errors.log"
+  run_hook session-end "$END_JSON" >/dev/null
+  local errors
+  errors="$(file_or_empty "$BASE/.learnings/ERRORS.md")"
+  assert_eq "repeats of one tool in one session become one entry" "2" "$(grep -c '^### ERR-' "$BASE/.learnings/ERRORS.md")"
+  assert_contains "the entry carries the count and first id" \
+    '`Edit` failed 3 times (session s1, first tool_use_id t1)' "$errors"
+  assert_contains "the same tool in another session stays separate" \
+    '`Edit` failed (session s2, tool_use_id t4)' "$errors"
+  assert_contains "context keeps the first timestamp" "hook at 2026-09-26T10:00:00Z" "$errors"
+}
+
+t_session_end_respects_drain_lock() {
+  fresh global
+  : > "$BASE/.learnings/.drain.lock"
+  printf '2026-09-26T10:00:00Z TOOL_FAILURE: Bash session=s tool_use_id=t\n' > "$BASE/.learnings/.pending-errors.log"
+  local rc=0
+  run_hook session-end "$END_JSON" >/dev/null || rc=$?
+  assert_eq "a held lock still exits 0" "0" "$rc"
+  assert_missing "a parallel session holding the lock owns the drain" "$BASE/.learnings/ERRORS.md"
+  assert_eq "pending line left for the next drain" "1" "$(line_count "$BASE/.learnings/.pending-errors.log")"
+  assert_contains "the daily note is still written" "## Session closed: " "$(file_or_empty "$BASE/memory/$TODAY.md")"
+  assert_eq "someone else's lock is not removed" "0" "$(line_count "$BASE/.learnings/.drain.lock")"
+  [ -e "$BASE/.learnings/.drain.lock" ] && pass || fail "fresh lock left in place"
+}
+
+t_session_end_breaks_stale_lock() {
+  fresh global
+  : > "$BASE/.learnings/.drain.lock"
+  touch -t 202001010000 "$BASE/.learnings/.drain.lock"
+  printf '2026-09-26T10:00:00Z TOOL_FAILURE: Bash session=s tool_use_id=t\n' > "$BASE/.learnings/.pending-errors.log"
+  run_hook session-end "$END_JSON" >/dev/null
+  assert_contains "a lock left by a killed session is broken" "### ERR-$STAMP-001" \
+    "$(file_or_empty "$BASE/.learnings/ERRORS.md")"
+  assert_missing "the lock is released after the drain" "$BASE/.learnings/.drain.lock"
+}
+
+t_session_end_one_heading_per_session() {
+  fresh global
+  run_hook session-end "$END_JSON" >/dev/null
+  run_hook session-end "$END_JSON" >/dev/null
+  local daily="$BASE/memory/$TODAY.md"
+  assert_eq "one Session closed heading per SessionEnd" "2" "$(grep -c '^## Session closed: ' "$daily" 2>/dev/null)"
+  assert_contains "heading records the end reason" "(prompt_input_exit)" "$(file_or_empty "$daily")"
+  assert_contains "daily note title keeps the em dash" "# Daily Notes — $TODAY" "$(file_or_empty "$daily")"
+  assert_eq "daily note has no BOM" "#" "$(head -c1 "$daily" 2>/dev/null)"
+  assert_eq "counter counts sessions" "2" "$(tr -cd '0-9' < "$BASE/memory/.session-count" 2>/dev/null)"
+}
+
+t_session_end_review_reminder() {
+  fresh global
+  printf '4\n' > "$BASE/memory/.session-count"
+  run_hook session-end "$END_JSON" >/dev/null
+  assert_contains "reminder on every fifth session" "### Review reminder (session 5):" \
+    "$(file_or_empty "$BASE/memory/$TODAY.md")"
+}
+
+t_session_end_pending_wal() {
+  fresh global
+  printf '## WAL Entry — 2026-09-26 10:00\n**Operation**: delete namespace payments-canary\n**Status**: PENDING\n' \
+    > "$BASE/memory/working-buffer.md"
+  run_hook session-end "$END_JSON" >/dev/null
+  assert_contains "a PENDING WAL entry is logged" "Session closed with a PENDING WAL entry" \
+    "$(file_or_empty "$BASE/.learnings/ERRORS.md")"
+}
+
+t_session_end_ignores_wal_template() {
+  fresh global
+  cp "$DIR/memory/working-buffer.md" "$BASE/memory/working-buffer.md"
+  run_hook session-end "$END_JSON" >/dev/null
+  assert_not_contains "the template's commented Status line is not a pending WAL" "PENDING WAL" \
+    "$(file_or_empty "$BASE/.learnings/ERRORS.md")"
+}
+
+t_session_end_incomplete_steps() {
+  fresh global
+  printf '## Progress\n\n- [x] snapshot etcd\n- [ ] roll back payments-canary\n' > "$BASE/memory/working-buffer.md"
+  run_hook session-end "$END_JSON" >/dev/null
+  local daily
+  daily="$(file_or_empty "$BASE/memory/$TODAY.md")"
+  assert_contains "incomplete step carried into the daily note" "- [ ] roll back payments-canary" "$daily"
+  assert_not_contains "completed step not carried" "snapshot etcd" "$daily"
+}
+
+t_session_end_project_local() {
+  fresh local
+  run_hook session-end "$END_JSON" >/dev/null
+  assert_contains "project workspace gets the daily note" "## Session closed: " \
+    "$(file_or_empty "$T_PROJ/memory/$TODAY.md")"
+  assert_missing "no global workspace created" "$T_HOME/.claude"
+}
+
+t_session_end_no_workspace() {
+  fresh none
+  local rc=0
+  run_hook session-end "$END_JSON" >/dev/null || rc=$?
+  assert_eq "no workspace still exits 0" "0" "$rc"
+  assert_missing "creates no global workspace" "$T_HOME/.claude"
+  assert_missing "creates no project memory" "$T_PROJ/memory"
+}
+
+t_session_end_empty_stdin() {
+  fresh global
+  run_hook session-end "" >/dev/null
+  assert_contains "missing reason is recorded as unknown" "(unknown)" "$(file_or_empty "$BASE/memory/$TODAY.md")"
+}
+
+t_session_end_clears_legacy_marker() {
+  fresh global
+  : > "$BASE/memory/.session-active"
+  run_hook session-end "$END_JSON" >/dev/null
+  assert_missing "legacy banner marker removed" "$BASE/memory/.session-active"
+}
+
+t_session_end_without_jq() {
+  [ "$IMPL" = "bash" ] || return 0
+  fresh global
+  printf '2026-09-26T10:00:00Z TOOL_FAILURE: Bash session=s tool_use_id=t\n' > "$BASE/.learnings/.pending-errors.log"
+  run_hook_without_jq session-end "$END_JSON" >/dev/null
+  assert_contains "reason parsed without jq" "(prompt_input_exit)" "$(file_or_empty "$BASE/memory/$TODAY.md")"
+  assert_contains "drain works without jq" "### ERR-$STAMP-001" "$(file_or_empty "$BASE/.learnings/ERRORS.md")"
+}
+
 # ── static checks ─────────────────────────────────────────────────────────────
 
 s_hook_sh_syntax() {

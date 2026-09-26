@@ -49,6 +49,34 @@ sanitize() {
   tr -cd 'A-Za-z0-9_.:-' | cut -c1-128
 }
 
+# last_err_number <errors-file> <yyyymmdd> — highest ERR number used today,
+# or 0. Counting headings would reuse an id after a deletion, and the legacy
+# `grep -c ... || echo 0` produced "0\n0" whenever nothing matched.
+last_err_number() {
+  local n
+  [ -f "$1" ] || { echo 0; return; }
+  n="$(grep -o "^### ERR-$2-[0-9][0-9]*" "$1" 2>/dev/null | sed 's/.*-//' | sort -n | tail -1)"
+  echo $((10#${n:-0}))
+}
+
+# append_err <errors-file> <number> <yyyymmdd> <context> <content> <action>
+append_err() {
+  printf '\n### ERR-%s-%03d\n**Status**: pending\n**Context**: %s\n**Content**: %s\n**Action**: %s\n' \
+    "$3" "$2" "$4" "$5" "$6" >> "$1"
+}
+
+# acquire_lock <file> — exclusive create (noclobber is O_EXCL), so two
+# sessions ending together never both drain or both pick the same ERR id.
+# A lock older than 10 minutes is presumed left by a killed session.
+acquire_lock() {
+  if ( set -C; : > "$1" ) 2>/dev/null; then return 0; fi
+  if [ -n "$(find "$1" -mmin +10 2>/dev/null)" ]; then
+    rm -f "$1"
+    ( set -C; : > "$1" ) 2>/dev/null && return 0
+  fi
+  return 1
+}
+
 cmd_tool_failure() {
   local payload="$1" base tool session use_id
   base="$(resolve_base)"
@@ -65,10 +93,132 @@ cmd_tool_failure() {
     >> "$base/.learnings/.pending-errors.log" 2>/dev/null
 }
 
+cmd_session_end() {
+  local payload="$1" base mem lrn today stamp now reason
+  local daily state buffer errors pending draining counter lock tmp lines
+  local n count ts tool session use_id content
+  base="$(resolve_base)"
+  [ -n "$base" ] || return 0
+  mem="$base/memory"
+  lrn="$base/.learnings"
+  mkdir -p "$mem" 2>/dev/null
+  today="$(date +%Y-%m-%d)"
+  stamp="$(date +%Y%m%d)"
+  now="$(date +%H:%M)"
+  reason="$(json_field "$payload" reason | sanitize)"
+  daily="$mem/$today.md"
+  state="$mem/SESSION-STATE.md"
+  buffer="$mem/working-buffer.md"
+  errors="$lrn/ERRORS.md"
+  pending="$lrn/.pending-errors.log"
+  draining="$lrn/.pending-errors.draining"
+  counter="$mem/.session-count"
+  lock="$lrn/.drain.lock"
+
+  # ── Daily note ──────────────────────────────────────────────────────────────
+  [ -f "$daily" ] || printf '# Daily Notes — %s\n\n' "$today" > "$daily"
+  printf '\n## Session closed: %s (%s)\n\n' "$now" "${reason:-unknown}" >> "$daily"
+  if [ -f "$state" ]; then
+    lines="$(grep "^- $today" "$state" 2>/dev/null)"
+    [ -n "$lines" ] && printf '### State captured today:\n\n%s\n' "$lines" >> "$daily"
+  fi
+  if [ -f "$buffer" ]; then
+    lines="$(grep '^- \[ \]' "$buffer" 2>/dev/null)"
+    [ -n "$lines" ] && printf '\n### Incomplete steps (resume next session):\n\n%s\n' "$lines" >> "$daily"
+  fi
+
+  # ── ERRORS.md writes, under the drain lock ──────────────────────────────────
+  # If a parallel session holds the lock, it owns this drain; pending lines
+  # stay for the next SessionEnd and the banner keeps counting them.
+  if acquire_lock "$lock"; then
+    # Rename before reading: an async tool-failure hook that fires mid-drain
+    # appends to a fresh log instead of racing this loop. A .draining file
+    # left behind by an interrupted run is drained here too.
+    if [ -s "$pending" ] && tmp="$(mktemp "$lrn/.pending-errors.XXXXXX" 2>/dev/null)"; then
+      if mv -f "$pending" "$tmp"; then
+        cat "$tmp" >> "$draining" && rm -f "$tmp"
+      else
+        rm -f "$tmp"
+      fi
+    fi
+    n="$(last_err_number "$errors" "$stamp")"
+    if [ -s "$draining" ]; then
+      # One entry per (tool, session): a run of failed Edits is one lesson,
+      # not ten. Fields are whitespace-free by construction (the capture
+      # sanitizes them), so tab-separated records are safe.
+      while IFS=$'\t' read -r tool session ts use_id count; do
+        n=$((n + 1))
+        if [ "$count" -gt 1 ]; then
+          content="\`$tool\` failed $count times (session $session, first tool_use_id $use_id)"
+        else
+          content="\`$tool\` failed (session $session, tool_use_id $use_id)"
+        fi
+        append_err "$errors" "$n" "$stamp" \
+          "Tool failure captured by the PostToolUseFailure hook at $ts" "$content" \
+          "Run \`/platform-skills:self-improve review\` to find the root cause in that session's transcript"
+      done < <(awk '
+        /TOOL_FAILURE: / {
+          ts = $1
+          rest = $0
+          sub(/.*TOOL_FAILURE: /, "", rest)
+          nf = split(rest, f, " ")
+          tool = (nf >= 1 && f[1] != "") ? f[1] : "unknown"
+          session = "unknown"; use_id = "unknown"
+          for (i = 2; i <= nf; i++) {
+            if (f[i] ~ /^session=./) session = substr(f[i], 9)
+            else if (f[i] ~ /^tool_use_id=./) use_id = substr(f[i], 13)
+          }
+          key = tool SUBSEP session
+          if (!(key in count)) {
+            order[++keys] = key; name[key] = tool; sess[key] = session
+            first_ts[key] = ts; first_id[key] = use_id
+          }
+          count[key]++
+        }
+        END {
+          for (k = 1; k <= keys; k++) {
+            key = order[k]
+            printf "%s\t%s\t%s\t%s\t%d\n", name[key], sess[key], first_ts[key], first_id[key], count[key]
+          }
+        }' "$draining")
+      rm -f "$draining"
+    fi
+
+    # Match a real WAL status line only. The buffer template's HTML comment
+    # reads "**Status**: PENDING | COMMITTED | ROLLED_BACK" and must not count.
+    if [ -f "$buffer" ] && grep -q '^\*\*Status\*\*: PENDING[[:space:]]*$' "$buffer" 2>/dev/null; then
+      n=$((n + 1))
+      append_err "$errors" "$n" "$stamp" \
+        "Session closed with a PENDING WAL entry in working-buffer.md" \
+        "A destructive operation was started but not confirmed as COMMITTED before the session ended" \
+        "Run \`/platform-skills:self-improve resume\` next session to verify and update the WAL status"
+    fi
+    rm -f "$lock"
+  fi
+
+  # The legacy PreToolUse banner keyed off this marker; nothing reads it now.
+  rm -f "$mem/.session-active"
+
+  # ── Session counter and review reminder ─────────────────────────────────────
+  count=0
+  [ -f "$counter" ] && count="$(tr -cd '0-9' < "$counter")"
+  count=$((10#${count:-0} + 1))
+  printf '%s\n' "$count" > "$counter"
+  if [ $((count % 5)) -eq 0 ]; then
+    printf '\n### Review reminder (session %d):\n\nRun `/platform-skills:self-improve review`. 5 sessions have elapsed.\n' \
+      "$count" >> "$daily"
+  fi
+
+  if ! grep -q "^### LRN-$stamp" "$lrn/LEARNINGS.md" 2>/dev/null; then
+    printf -- '- No learnings logged today. Consider `/platform-skills:self-improve log` before the next session.\n' >> "$daily"
+  fi
+}
+
 main() {
   local payload=""
   [ -t 0 ] || payload="$(cat)"
   case "${1:-}" in
+    session-end)  cmd_session_end "$payload" ;;
     tool-failure) cmd_tool_failure "$payload" ;;
     *) echo "usage: self-improve-hook.sh session-start|session-end|tool-failure" >&2 ;;
   esac
