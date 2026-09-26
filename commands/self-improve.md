@@ -40,7 +40,7 @@ Reference: `references/agent-self-improve.md` → Global vs project scope
 
 ## Helper Script
 
-Modes below run `bash ~/.claude/scripts/learnings.sh <subcommand>` for anything deterministic: reading entries, validating them, checking dates, changing a status. If the script is missing, say so once, offer to install it (`init global` step 5), and do the step by hand. Exit code 3 means another session holds `.learnings/.drain.lock`. Wait a few seconds and retry once. Exit code 4 means the entry doesn't exist.
+Modes below run `bash ~/.claude/scripts/learnings.sh <subcommand>` for anything deterministic: reading entries, validating them, checking dates, changing a status. If the script is missing, say so once, offer to install it (`init global` step 5), and do the step by hand. Exit code 3 means another session holds `.learnings/.drain.lock`. Wait a few seconds and retry once. Exit code 4 means the helper refused: the entry doesn't exist, or it exists and is not eligible. `promote` also refuses on the wrong status, missing or invalid provenance, a stale or expired entry, an inferred source without `--allow-inferred`, another project's scope, a `Paths` conflict with the target, and an entry already promoted elsewhere; `unpromote` refuses when no rule carries the entry's marker. Never guess which one it was: the helper prints the reason on stderr, so relay that line.
 
 Reference: `references/agent-self-improve.md` → Helper script
 

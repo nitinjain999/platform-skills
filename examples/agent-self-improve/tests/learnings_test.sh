@@ -437,6 +437,84 @@ t_promote_refusals() {
   assert_eq "an unknown target kind exits 2" "2" "$rc"
 }
 
+t_promote_refuses_a_target_outside_the_project() {
+  fresh global
+  eligible ERR-20260920-001
+  local rc=0 out
+  out="$(L promote ERR-20260920-001 --domain terraform --rule R --target "$T_HOME/CLAUDE.md" --apply 2>&1)" || rc=$?
+  assert_eq "an absolute target exits 2" "2" "$rc"
+  assert_contains "and says a target is project-relative" "project-relative" "$out"
+  assert_missing "no rule is written outside the project" "$T_HOME/CLAUDE.md"
+  rc=0; L promote ERR-20260920-001 --domain terraform --rule R --target ../CLAUDE.md --apply >/dev/null 2>&1 || rc=$?
+  assert_eq "a traversing target exits 2" "2" "$rc"
+  assert_missing "and escapes nothing" "$TMP/$CASE/CLAUDE.md"
+  assert_contains "the entry is untouched" "**Status**: resolved" "$(file_or_empty "$W/.learnings/ERRORS.md")"
+  rc=0; L promote ERR-20260920-001 --domain terraform --rule R --target .github/copilot-instructions.md --apply >/dev/null 2>&1 || rc=$?
+  assert_eq "a documented relative target still works" "0" "$rc"
+  assert_contains "and lands in the project" "self-improve:ERR-20260920-001" \
+    "$(file_or_empty "$T_PROJ/.github/copilot-instructions.md")"
+}
+
+t_promote_refuses_a_second_target_for_one_entry() {
+  fresh global
+  eligible ERR-20260920-001
+  L promote ERR-20260920-001 --domain terraform --rule "Scan plans first" --apply >/dev/null
+  local rc=0 out
+  out="$(L promote ERR-20260920-001 --domain kubernetes --rule "Scan plans first" --apply 2>&1)" || rc=$?
+  assert_eq "a second domain for one entry exits 4" "4" "$rc"
+  assert_contains "and says to unpromote first" "run unpromote ERR-20260920-001 first" "$out"
+  assert_missing "no second rule file is written" "$T_PROJ/.claude/rules/kubernetes.md"
+  rc=0; out="$(L promote ERR-20260920-001 --domain terraform --rule "Scan plans first" --apply 2>&1)" || rc=$?
+  assert_eq "the target that holds the marker is still idempotent" "0" "$rc"
+  assert_contains "and says so" "is already promoted to" "$out"
+}
+
+t_promote_validates_metadata_values() {
+  fresh global
+  entry ERRORS.md ERR-20260920-001 resolved Source=guessed Scope=project:proj Verified=2026-09-20
+  entry ERRORS.md ERR-20260920-002 resolved Source=observed Scope=projectproj Verified=2026-09-20
+  entry ERRORS.md ERR-20260920-003 resolved Source=observed Scope=project:proj Verified=2026-02-30
+  entry ERRORS.md ERR-20260920-004 resolved Source=observed Scope=project:proj Verified=2026-09-20 Expires=2026-13-01
+  entry ERRORS.md ERR-20260920-005 resolved Source=observed Scope=global Verified=2026-09-20 "Paths=infrastructure/**/*.tf"
+  local rc out id want
+  # A value lint rejects must not reach a rule file through promote either.
+  while IFS='|' read -r id want; do
+    rc=0
+    out="$(L promote "$id" --domain terraform --rule R --apply 2>&1 </dev/null)" || rc=$?
+    assert_eq "$id is refused" "4" "$rc"
+    assert_contains "$id says which field" "$want" "$out"
+  done <<'CASES'
+ERR-20260920-001|**Source** is "guessed"
+ERR-20260920-002|**Scope** is "projectproj"
+ERR-20260920-003|**Verified** is "2026-02-30"
+ERR-20260920-004|**Expires** is "2026-13-01"
+ERR-20260920-005|**Paths** needs a project:<name> scope
+CASES
+  assert_missing "no project rule file is written" "$T_PROJ/.claude/rules/terraform.md"
+  assert_missing "and none globally either" "$T_HOME/.claude/rules/terraform.md"
+}
+
+t_unpromote_refuses_a_markerless_promoted_entry() {
+  fresh global
+  # A rule promoted before markers existed: the entry says promoted, but no rule
+  # file carries its marker, so unpromote cannot find the rule to remove.
+  entry ERRORS.md ERR-20260920-001 promoted Source=observed Scope=project:proj Verified=2026-09-20
+  mkdir -p "$T_PROJ/.claude/rules"
+  printf '%s\n' '# Terraform rules' '' '- Scan plans first' > "$T_PROJ/.claude/rules/terraform.md"
+  local rc=0 out
+  out="$(L unpromote ERR-20260920-001 --revoke --note "wrong" 2>&1)" || rc=$?
+  assert_eq "--revoke cannot retire a rule it did not remove" "4" "$rc"
+  assert_contains "and says to remove it by hand" "remove its pre-marker rule by hand" "$out"
+  assert_contains "the entry still reads promoted" "**Status**: promoted" "$(file_or_empty "$W/.learnings/ERRORS.md")"
+  assert_contains "and the rule is untouched" "- Scan plans first" \
+    "$(file_or_empty "$T_PROJ/.claude/rules/terraform.md")"
+  assert_missing "the lock is released" "$W/.learnings/.drain.lock"
+  # Once the entry no longer claims a rule, revoking it directly is fine.
+  L set-status ERR-20260920-001 resolved >/dev/null
+  rc=0; L unpromote ERR-20260920-001 --revoke --note "wrong for EKS 1.35" >/dev/null 2>&1 || rc=$?
+  assert_eq "a markerless resolved entry can still be revoked" "0" "$rc"
+}
+
 t_unpromote() {
   fresh global
   eligible ERR-20260920-001

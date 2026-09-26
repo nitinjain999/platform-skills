@@ -422,6 +422,28 @@ cmd_promote() {
   if [ -z "$source" ] || [ -z "$scope" ] || [ -z "$verified" ]; then
     die 4 "$id has no **Source**, **Scope** or **Verified**; add them before promoting"
   fi
+  # Non-empty is not enough. lint rejects an unknown source, a malformed scope,
+  # an impossible **Verified** date and **Paths** on a global entry; promotion
+  # has to apply the same rules or it becomes the way around them. One reason at
+  # a time, because the first is what has to be fixed anyway.
+  local bad
+  bad="$(printf '%s\n' "$REC" | awk -F'\t' "$AWK_LIB"'
+    function has(list, word) { return index(" " list " ", " " word " ") > 0 }
+    {
+      if (!has("user observed ci repo vendor-docs inferred", $5))
+        print "**Source** is \"" $5 "\"; use user, observed, ci, repo, vendor-docs or inferred"
+      else if ($6 != "global" && $6 !~ /^project:[A-Za-z0-9._-]+$/)
+        print "**Scope** is \"" $6 "\"; use global or project:<name>"
+      else if (!valid_date($8))
+        print "**Verified** is \"" $8 "\"; use a real YYYY-MM-DD date"
+      else if ($9 != "" && $9 != "never" && !valid_date($9))
+        print "**Expires** is \"" $9 "\"; use a real YYYY-MM-DD date or never"
+      else if ($7 != "" && $6 !~ /^project:/)
+        print "**Paths** needs a project:<name> scope"
+      else if ($7 != "" && ($7 ~ /"/ || $7 ~ /(^|,)[[:space:]]*(,|$)/))
+        print "**Paths** is \"" $7 "\"; use comma-separated globs, no quotes"
+    }')"
+  [ -z "$bad" ] || die 4 "$id: $bad (learnings.sh lint reports it too)"
   if [ "$source" = "inferred" ] && [ "$allow_inferred" -eq 0 ]; then
     die 4 "$id comes from an inference; confirm it with the user and re-run with --allow-inferred"
   fi
@@ -442,16 +464,23 @@ cmd_promote() {
   esac
 
   # ── Target ────────────────────────────────────────────────────────────────
-  if [ -z "$target" ]; then
-    if [ "$scope" = "global" ]; then target="$HOME/.claude/rules/$domain.md"; else target="$PROJECT/.claude/rules/$domain.md"; fi
-  fi
-  case "$target" in /*) ;; *) target="$PROJECT/$target" ;; esac
+  # A rule file path is derived from scope and domain, never taken from the
+  # command line, and an explicit --target names one of exactly three
+  # project-local instruction files, matched literally. Matching a suffix
+  # pattern against "$PROJECT/$target" instead accepted both an absolute path
+  # and one containing "..", which writes a rule outside the project that
+  # unpromote can never find: rule_candidates only searches the two rules
+  # directories and those instruction files.
   local kind
-  case "$target" in
-    */.claude/rules/*.md) kind="rules" ;;
-    */CLAUDE.md|*/AGENTS.md|*/.github/copilot-instructions.md) kind="section" ;;
-    *) die 2 "--target must be a .claude/rules/*.md file, CLAUDE.md, AGENTS.md or .github/copilot-instructions.md" ;;
-  esac
+  if [ -z "$target" ]; then
+    kind="rules"
+    if [ "$scope" = "global" ]; then target="$HOME/.claude/rules/$domain.md"; else target="$PROJECT/.claude/rules/$domain.md"; fi
+  else
+    case "$target" in
+      CLAUDE.md|AGENTS.md|.github/copilot-instructions.md) kind="section"; target="$PROJECT/$target" ;;
+      *) die 2 "--target must be CLAUDE.md, AGENTS.md or .github/copilot-instructions.md as a project-relative path; omit it to write .claude/rules/$domain.md" ;;
+    esac
+  fi
   [ "$kind" = "rules" ] || [ -z "$paths" ] || die 4 "$id has **Paths**; only a .claude/rules/ target can scope a rule to paths"
 
   # Applying takes the workspace lock before reading the target and keeps it
@@ -470,6 +499,13 @@ cmd_promote() {
     fi
     unlock_workspace
     return 0
+  fi
+  # Past that point the marker is not in this target, so an entry that already
+  # says `promoted` is promoted somewhere else. Writing here would leave one
+  # entry owning two active rules while **Status-Note** recorded only the last,
+  # and unpromoting would then remove whichever the note did not name.
+  if [ "$status" = "promoted" ]; then
+    die 4 "$id is already promoted, and $target does not carry its marker; run unpromote $id first"
   fi
 
   # ── Proposed file content ─────────────────────────────────────────────────
@@ -579,7 +615,10 @@ cmd_unpromote() {
       *) die 2 "unpromote: unknown option $1" ;;
     esac
   done
-  [ -n "$(entry_file "$id")" ] || die 4 "no entry $id"
+  REC="$(entry_record "$id")"
+  [ -n "$REC" ] || die 4 "no entry $id"
+  local status
+  status="$(col 4)"
   marker="<!-- self-improve:$id -->"
   lock_workspace
   # Newline-separated, because a rule file under $HOME or the project can sit in
@@ -601,8 +640,17 @@ cmd_unpromote() {
 "
   done < <(rule_candidates | sort -u)
   rc=0
-  if [ -z "$changed" ] && [ "$revoke" -eq 0 ]; then
-    die 4 "no rule carries $marker; a rule promoted before markers existed must be removed by hand"
+  if [ -z "$changed" ]; then
+    # An entry still reading `promoted` with no marker anywhere owns a rule this
+    # command cannot find, so --revoke would record it as gone while sessions
+    # keep loading it. Refuse until the pre-marker rule is removed by hand. A
+    # markerless entry in any other status owns no rule, so --revoke is fine.
+    if [ "$status" = "promoted" ]; then
+      die 4 "no rule carries $marker but $id still reads promoted; remove its pre-marker rule by hand, then re-run"
+    fi
+    if [ "$revoke" -eq 0 ]; then
+      die 4 "no rule carries $marker; a rule promoted before markers existed must be removed by hand"
+    fi
   fi
   [ "$revoke" -eq 1 ] && new="revoked"
   list="$(printf '%s' "$changed" | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
