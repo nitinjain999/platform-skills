@@ -9,6 +9,7 @@
 #   set-status ID STATUS [--note T]  rewrite one entry's Status line
 #   promote ID --domain D --rule T [--target F] [--allow-inferred] [--apply]
 #   unpromote ID [--revoke] [--note T]
+#   recall [--all] [--limit N] TERM...
 #
 # Global options, before the subcommand: --base DIR (skip resolution),
 # --today YYYY-MM-DD (tests pin the date).
@@ -473,6 +474,80 @@ cmd_unpromote() {
   echo "$id: status $new"
 }
 
+# ── recall ────────────────────────────────────────────────────────────────────
+# Read-only search. Excludes what should no longer influence behaviour
+# (revoked, superseded, discarded, expired, another project's lessons) and
+# says how many it excluded, so a hidden memory is never a silent one.
+# Scoring is deliberately simple and explainable: +2 per term found in the
+# Content, +1 in the Context, +5 for an exact id.
+cmd_recall() {
+  local all=0 limit=8 terms="" ranked summary matched nexcl reasons tab
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --all) all=1; shift ;;
+      --limit) limit="${2:-}"; shift 2 ;;
+      *) terms="$terms $1"; shift ;;
+    esac
+  done
+  case "$limit" in ""|*[!0-9]*) die 2 "--limit must be a number" ;; esac
+  terms="$(printf '%s' "$terms" | tr '[:upper:]' '[:lower:]' | tr -s ' \t' '  ' | sed 's/^ //; s/ $//')"
+  [ -n "$terms" ] || die 2 "usage: recall [--all] [--limit N] TERM..."
+  ranked="$(mktemp "${TMPDIR:-/tmp}/learnings-recall.XXXXXX")" || die 1 "mktemp failed"
+  summary="$(cmd_entries | TODAY="$TODAY" TERMS="$terms" ALL="$all" HERE="$(project_name)" OUT="$ranked" \
+    awk -F'\t' "$AWK_LIB"'
+    BEGIN {
+      today = ENVIRON["TODAY"]; all = ENVIRON["ALL"] + 0; here = ENVIRON["HERE"]; out = ENVIRON["OUT"]
+      nt = split(ENVIRON["TERMS"], t, " ")
+    }
+    {
+      id = $1; status = $4; source = $5; scope = $6
+      if (status == "example") next
+      ctx = tolower($11); body = tolower($12); score = 0
+      for (i = 1; i <= nt; i++) {
+        if (length(t[i]) < 2) continue
+        if (index(body, t[i])) score += 2
+        if (index(ctx, t[i])) score += 1
+        if (tolower(id) == t[i]) score += 5
+      }
+      if (score == 0) next
+      reason = ""
+      if (status == "revoked" || status == "superseded" || status == "discarded") reason = status
+      else if (is_expired($9, today)) reason = "expired"
+      else if (scope ~ /^project:/ && substr(scope, 9) != here) reason = "other-project"
+      if (reason != "" && !all) { excluded[reason]++; nexcl++; next }
+      flags = (reason != "") ? " " toupper(reason) : ""
+      if (stale_age($8, source, today) >= 0) flags = flags " STALE"
+      if (source == "" || source == "inferred") flags = flags " | verify before use"
+      content = $12
+      if (length(content) > 160) content = substr(content, 1, 157) "..."
+      key = id; sub(/^[A-Z]+-/, "", key)
+      printf "%d\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n", score, key, id, status,
+        (source == "" ? "unknown" : source), ($8 == "" ? "unknown" : $8),
+        (scope == "" ? "unknown" : scope), flags, content > out
+      matched++
+    }
+    END {
+      split("revoked superseded discarded expired other-project", order, " ")
+      s = ""
+      for (i = 1; i <= 5; i++) if (excluded[order[i]]) s = s (s == "" ? "" : ", ") excluded[order[i]] " " order[i]
+      printf "%d\t%d\t%s\n", matched, nexcl, s
+    }')"
+  matched="$(printf '%s' "$summary" | cut -f1)"
+  nexcl="$(printf '%s' "$summary" | cut -f2)"
+  reasons="$(printf '%s' "$summary" | cut -f3)"
+  local note=""
+  [ "${nexcl:-0}" -gt 0 ] && note=" ($nexcl excluded: $reasons; --all shows them)"
+  if [ "${matched:-0}" -eq 0 ]; then
+    printf 'recall: no matches for "%s"%s\n' "$terms" "$note"
+  else
+    printf 'recall: %s match(es) for "%s"%s\n' "$matched" "$terms" "$note"
+    tab="$(printf '\t')"
+    sort -t "$tab" -k1,1nr -k2,2r "$ranked" | head -n "$limit" | awk -F'\t' '
+      { printf "[%s] %s %s | source=%s verified=%s | scope=%s%s\n    %s\n", $1, $3, $4, $5, $6, $7, $8, $9 }'
+  fi
+  rm -f "$ranked"
+}
+
 # ── whereami ──────────────────────────────────────────────────────────────────
 cmd_whereami() {
   local scope="project"
@@ -499,6 +574,7 @@ main() {
     set-status) cmd_set_status "$@" ;;
     promote)    cmd_promote "$@" ;;
     unpromote)  cmd_unpromote "$@" ;;
+    recall)     cmd_recall "$@" ;;
     *) die 2 "usage: learnings.sh [--base DIR] [--today D] <subcommand> (see the header of this script)" ;;
   esac
 }
