@@ -502,6 +502,13 @@ s_hook_sh_shellcheck() {
   fi
 }
 
+s_ps1_is_ascii() {
+  local n
+  n="$(LC_ALL=C tr -d '\000-\177' < "$DIR/scripts/self-improve-hook.ps1" 2>/dev/null | wc -c | tr -d ' ')"
+  assert_eq "self-improve-hook.ps1 is ASCII-only (PowerShell 5.1 reads BOM-less scripts as ANSI)" "0" "$n"
+  [ -f "$DIR/scripts/self-improve-hook.ps1" ] && pass || fail "self-improve-hook.ps1 exists"
+}
+
 # ── Runner ────────────────────────────────────────────────────────────────────
 
 if ! command -v jq >/dev/null 2>&1; then
@@ -510,6 +517,11 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 IMPLS="bash"
+if command -v pwsh >/dev/null 2>&1; then
+  IMPLS="bash pwsh"
+else
+  echo "SKIP: pwsh not installed; the PowerShell port is untested on this machine"
+fi
 
 for IMPL in $IMPLS; do
   echo "== implementation: $IMPL =="
