@@ -42,10 +42,15 @@ resolve_base() {
 
 # project_name — the git top-level's basename, else the project dir's.
 # `log` writes it into **Scope**: project:<name>, so both must agree.
+# Normalised to what lint accepts ([A-Za-z0-9._-]+), because a directory name
+# may contain a space or anything else. self-improve-hook.sh normalises
+# identically when it writes a scope, so promote's comparison still matches.
 project_name() {
-  local top
+  local top name
   top="$(git -C "$PROJECT" rev-parse --show-toplevel 2>/dev/null)" || top=""
-  basename "${top:-$PROJECT}"
+  name="$(basename "${top:-$PROJECT}")"
+  name="$(printf '%s' "$name" | tr -c 'A-Za-z0-9._-' '-' | tr -s '-')"
+  printf '%s\n' "${name:-project}"
 }
 
 learning_files() {
@@ -55,16 +60,26 @@ learning_files() {
   done
 }
 
+# set_learning_files — put the store's files in "$@". `set --` is local to the
+# function that runs it, so each consumer repeats these three lines rather than
+# calling a helper. Passing the list unquoted would split it on spaces, and
+# $BASE derives from $HOME or $CLAUDE_PROJECT_DIR, either of which can contain
+# one: "/Users/Alex Smith/repo" then reaches awk as two missing files.
+# Positional parameters, not an array: bash 3.2 treats an empty "${arr[@]}"
+# as unbound under set -u.
+
 # ── entries ───────────────────────────────────────────────────────────────────
 # TSV columns: 1 id, 2 file, 3 line, 4 status, 5 source, 6 scope, 7 paths,
 # 8 verified, 9 expires, 10 supersedes, 11 context, 12 content, 13 action.
 # Empty columns are real empties, so consume this with awk -F'\t', never
 # with `read`: IFS whitespace would collapse adjacent tabs.
 cmd_entries() {
-  local files
-  files="$(learning_files)"
-  [ -n "$files" ] || return 0
-  # shellcheck disable=SC2086  # file paths never contain spaces here
+  local f
+  set --
+  while IFS= read -r f; do
+    [ -z "$f" ] || set -- "$@" "$f"
+  done < <(learning_files)
+  [ $# -gt 0 ] || return 0
   awk '
     function flush() {
       if (id != "")
@@ -89,17 +104,23 @@ cmd_entries() {
       f[last] = f[last] " " v; next
     }
     END { flush() }
-  ' $files
+  ' "$@"
 }
 
 # Shared awk: date helpers and the staleness policy. A verified date older
 # than the window for its source needs re-verifying. User statements don't
 # go stale; inferences go stale fastest.
 AWK_LIB='
-  function valid_date(s,   m, d) {
+  function valid_date(s,   y, m, d, limit) {
     if (s !~ /^[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]$/) return 0
-    m = substr(s, 6, 2) + 0; d = substr(s, 9, 2) + 0
-    return m >= 1 && m <= 12 && d >= 1 && d <= 31
+    y = substr(s, 1, 4) + 0; m = substr(s, 6, 2) + 0; d = substr(s, 9, 2) + 0
+    if (m < 1 || m > 12 || d < 1) return 0
+    # A day limit of 31 for every month accepted 2026-02-31, which then took
+    # part in staleness and expiry arithmetic as though it were a real date.
+    limit = 31
+    if (m == 4 || m == 6 || m == 9 || m == 11) limit = 30
+    else if (m == 2) limit = (y % 4 == 0 && (y % 100 != 0 || y % 400 == 0)) ? 29 : 28
+    return d <= limit
   }
   function days(s,   y, m, d) {
     y = substr(s, 1, 4) + 0; m = substr(s, 6, 2) + 0; d = substr(s, 9, 2) + 0
@@ -155,13 +176,22 @@ cmd_lint() {
       if (verified != "" && !valid_date(verified)) err(id, "bad **Verified** date \"" verified "\"")
       if (expires != "" && expires != "never" && !valid_date(expires)) err(id, "bad **Expires** \"" expires "\" (YYYY-MM-DD or never)")
       if (supersedes != "") { sup_of[id] = supersedes }
-      if (source == "" && verified == "") legacy++
+      # Promotion needs all three of Source, Scope and Verified, so an entry
+      # missing any one of them is one that promote will refuse. Counting only
+      # the entries missing both Source and Verified hid the rest.
+      if (source == "" || scope == "" || verified == "") legacy++
       if (!has(active, status)) next
       if (is_expired(expires, today)) { printf "EXPIRED %s expired %s\n", id, expires; expired++ }
       age = stale_age(verified, source, today)
       if (age >= 0) {
-        printf "STALE %s verified %d days ago (limit %d for source %s)%s\n", id, age, window(source),
-          (source == "" ? "unknown" : source), (status == "promoted" ? "; its promoted rule is still loaded" : "")
+        # Buffered rather than printed here, so a stale promoted entry is
+        # reported before the others however the store happens to be ordered.
+        # Its rule is loaded into every session, which makes it the one to
+        # re-verify first.
+        line = sprintf("STALE %s verified %d days ago (limit %d for source %s)%s\n", id, age, window(source),
+          (source == "" ? "unknown" : source), (status == "promoted" ? "; its promoted rule is still loaded" : ""))
+        if (status == "promoted") stale_promoted = stale_promoted line
+        else stale_other = stale_other line
         stale++
       }
     }
@@ -171,6 +201,7 @@ cmd_lint() {
         if (!(old in state)) err(id, "supersedes unknown id " old)
         else if (state[old] != "superseded") warn(id, "supersedes " old ", which is still " state[old])
       }
+      printf "%s%s", stale_promoted, stale_other
       printf "lint: %d entries, %d errors, %d warnings, %d expired, %d stale, %d without metadata\n",
         total, errors, warnings, expired, stale, legacy
       exit errors > 0 ? 1 : 0
@@ -184,13 +215,34 @@ in_list() {
   case " $2 " in *" $1 "*) return 0 ;; *) return 1 ;; esac
 }
 
-# acquire_lock <file> — same exclusive-create lock as self-improve-hook.sh,
-# so a rewrite here never races the SessionEnd drain appending to ERRORS.md.
+# need_arg <remaining-argc> <option> — an option that takes a value must have
+# one. Without this check `shift 2` on a single remaining argument fails and,
+# because the script does not use set -e, leaves the same option at $1: the
+# parse loop then spins forever instead of reporting a usage error.
+need_arg() {
+  [ "$1" -ge 2 ] || die 2 "$2 needs a value"
+}
+
+# acquire_lock <file> — the same exclusive-create lock as
+# self-improve-hook.sh, so a rewrite here never races the SessionEnd drain
+# appending to ERRORS.md. Reclaiming a stale lock with `rm` then recreate is
+# not safe: between this process's staleness check and its `rm`, another
+# process can reclaim the same stale lock and start work, and the `rm` then
+# deletes that live lock. Claim by rename instead — only one racer can move
+# the lock aside — and re-check the claim's age, putting it back if what we
+# moved turned out to be a live lock created inside that window.
 acquire_lock() {
   if ( set -C; : > "$1" ) 2>/dev/null; then return 0; fi
   if [ -n "$(find "$1" -mmin +10 2>/dev/null)" ]; then
-    rm -f "$1"
-    ( set -C; : > "$1" ) 2>/dev/null && return 0
+    local claim="$1.claim.$$"
+    if mv "$1" "$claim" 2>/dev/null; then
+      if [ -n "$(find "$claim" -mmin +10 2>/dev/null)" ]; then
+        rm -f "$claim"
+        ( set -C; : > "$1" ) 2>/dev/null && return 0
+      else
+        mv "$claim" "$1" 2>/dev/null
+      fi
+    fi
   fi
   return 1
 }
@@ -205,21 +257,44 @@ acquire_lock_wait() {
   return 1
 }
 
+# Workspace lock ownership. A command that mutates a rule file and then the
+# entry that owns it must hold one lock across both, so held state lives here
+# rather than in the command that happens to take it first. The EXIT trap in
+# main() releases it, so a `die` on any path cannot leak the lock.
+LOCK=""
+
+lock_workspace() {
+  [ -z "$LOCK" ] || return 0
+  local l="$BASE/.learnings/.drain.lock"
+  acquire_lock_wait "$l" || die 3 "workspace busy: $l is held"
+  LOCK="$l"
+}
+
+unlock_workspace() {
+  [ -n "$LOCK" ] || return 0
+  rm -f "$LOCK"
+  LOCK=""
+}
+
 entry_file() {
-  local files
-  files="$(learning_files)"
-  [ -n "$files" ] || return 0
-  # shellcheck disable=SC2086
-  grep -lx "### $1" $files 2>/dev/null | head -1
+  local id="$1" f
+  set --
+  while IFS= read -r f; do
+    [ -z "$f" ] || set -- "$@" "$f"
+  done < <(learning_files)
+  [ $# -gt 0 ] || return 0
+  grep -lx "### $id" "$@" 2>/dev/null | head -1
 }
 
 # rewrite_entry <file> <id> <status> <note> — replace the entry's Status line
 # and its Status-Note (dropped when <note> is empty). Temp file + mv, so a
-# reader never sees half a file.
+# reader never sees half a file. An entry with no **Status** line would
+# otherwise be copied through unchanged and reported as rewritten, so the awk
+# exits 3 when it never matched one and the file is left alone.
 rewrite_entry() {
-  local tmp
+  local tmp rc
   tmp="$(mktemp "$1.XXXXXX")" || return 1
-  if ID="$2" STATUS="$3" NOTE="$4" TODAY="$TODAY" awk '
+  ID="$2" STATUS="$3" NOTE="$4" TODAY="$TODAY" awk '
     BEGIN { id = ENVIRON["ID"]; status = ENVIRON["STATUS"]; note = ENVIRON["NOTE"]; today = ENVIRON["TODAY"] }
     $0 == "### " id { inside = 1; print; next }
     inside && (/^#/ || /^---[[:space:]]*$/) { inside = 0 }
@@ -227,36 +302,48 @@ rewrite_entry() {
     inside && /^\*\*Status\*\*:/ {
       print "**Status**: " status
       if (note != "") print "**Status-Note**: " today " " note
+      done = 1
       next
     }
     { print }
-  ' "$1" > "$tmp"; then
-    mv -f "$tmp" "$1"
-  else
-    rm -f "$tmp"
-    return 1
-  fi
+    END { if (!done) exit 3 }
+  ' "$1" > "$tmp"
+  rc=$?
+  [ "$rc" -eq 0 ] || { rm -f "$tmp"; return "$rc"; }
+  mv -f "$tmp" "$1" || { rm -f "$tmp"; return 1; }
+}
+
+# set_status <id> <status> <note> — the lock-free core, so a command that
+# already holds the workspace lock can rewrite an entry without deadlocking
+# against itself and can act on the failure instead of exiting. Returns 4 for
+# an unknown id, 3 for an entry with no Status line, 1 for a write failure.
+set_status() {
+  local file
+  file="$(entry_file "$1")"
+  [ -n "$file" ] || return 4
+  rewrite_entry "$file" "$1" "$2" "$3"
 }
 
 cmd_set_status() {
-  local id="${1:-}" status="${2:-}" note="" file lock
+  local id="${1:-}" status="${2:-}" note="" rc=0
   [ -n "$id" ] && [ -n "$status" ] || die 2 "usage: set-status ID STATUS [--note TEXT]"
   shift 2
   while [ $# -gt 0 ]; do
     case "$1" in
-      --note) note="$(printf '%s' "${2:-}" | tr '\t\r\n' '   ')"; shift 2 ;;
+      --note) need_arg $# "$1"; note="$(printf '%s' "$2" | tr '\t\r\n' '   ')"; shift 2 ;;
       *) die 2 "set-status: unknown option $1" ;;
     esac
   done
   in_list "$status" "$ALL_STATUSES" && [ "$status" != "example" ] || die 2 "unknown status $status"
-  file="$(entry_file "$id")"
-  [ -n "$file" ] || die 4 "no entry $id"
-  lock="$BASE/.learnings/.drain.lock"
-  acquire_lock_wait "$lock" || die 3 "workspace busy: $lock is held"
-  rewrite_entry "$file" "$id" "$status" "$note"
-  local rc=$?
-  rm -f "$lock"
-  [ "$rc" -eq 0 ] || die 1 "could not rewrite $file"
+  lock_workspace
+  set_status "$id" "$status" "$note" || rc=$?
+  unlock_workspace
+  case "$rc" in
+    0) ;;
+    4) die 4 "no entry $id" ;;
+    3) die 1 "$id has no **Status** line to rewrite" ;;
+    *) die 1 "could not rewrite the file holding $id" ;;
+  esac
   echo "$id: status $status"
 }
 
@@ -311,9 +398,9 @@ cmd_promote() {
   shift
   while [ $# -gt 0 ]; do
     case "$1" in
-      --domain) domain="${2:-}"; shift 2 ;;
-      --rule) rule="$(printf '%s' "${2:-}" | tr '\t\r\n' '   ' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"; shift 2 ;;
-      --target) target="${2:-}"; shift 2 ;;
+      --domain) need_arg $# "$1"; domain="$2"; shift 2 ;;
+      --rule) need_arg $# "$1"; rule="$(printf '%s' "$2" | tr '\t\r\n' '   ' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"; shift 2 ;;
+      --target) need_arg $# "$1"; target="$2"; shift 2 ;;
       --allow-inferred) allow_inferred=1; shift ;;
       --apply) apply=1; shift ;;
       *) die 2 "promote: unknown option $1" ;;
@@ -367,13 +454,21 @@ cmd_promote() {
   esac
   [ "$kind" = "rules" ] || [ -z "$paths" ] || die 4 "$id has **Paths**; only a .claude/rules/ target can scope a rule to paths"
 
+  # Applying takes the workspace lock before reading the target and keeps it
+  # until the entry is rewritten. Writing the rule first and locking afterwards
+  # left two failure modes: a busy workspace installed the rule and then exited
+  # 3 with the entry still `resolved`, and two promotions reading the same
+  # target could each overwrite the other's rule while both entries said
+  # `promoted`.
   local marker="<!-- self-improve:$id -->" line
   line="- $rule $marker"
+  [ "$apply" -eq 0 ] || lock_workspace
   if [ -f "$target" ] && grep -qF "$marker" "$target"; then
     echo "$id is already promoted to $target"
     if [ "$apply" -eq 1 ] && [ "$status" != "promoted" ]; then
-      cmd_set_status "$id" promoted --note "promoted to $target" >/dev/null
+      set_status "$id" promoted "promoted to $target" || die 1 "could not record the status of $id"
     fi
+    unlock_workspace
     return 0
   fi
 
@@ -436,41 +531,91 @@ cmd_promote() {
     return 0
   fi
 
-  local tmp
+  # Back the target up first, so a failure to record the status un-installs the
+  # rule rather than leaving it loaded under an entry that never says promoted.
+  # An absent backup means the target did not exist, so rolling back deletes it.
+  local tmp backup="" rc=0
   mkdir -p "$(dirname "$target")" || { rm -f "$proposed"; die 1 "cannot create $(dirname "$target")"; }
-  tmp="$(mktemp "$target.XXXXXX")" || { rm -f "$proposed"; die 1 "cannot write next to $target"; }
-  cat "$proposed" > "$tmp" && mv -f "$tmp" "$target"
+  if [ -f "$target" ]; then
+    backup="$(mktemp "$target.bak.XXXXXX")" || { rm -f "$proposed"; die 1 "cannot write next to $target"; }
+    cp "$target" "$backup" || { rm -f "$proposed" "$backup"; die 1 "cannot back up $target"; }
+  fi
+  tmp="$(mktemp "$target.XXXXXX")" || { rm -f "$proposed" ${backup:+"$backup"}; die 1 "cannot write next to $target"; }
+  if ! cat "$proposed" > "$tmp" || ! mv -f "$tmp" "$target"; then
+    rm -f "$proposed" "$tmp" ${backup:+"$backup"}
+    die 1 "could not write $target"
+  fi
   rm -f "$proposed"
-  cmd_set_status "$id" promoted --note "promoted to $target" >/dev/null
+  set_status "$id" promoted "promoted to $target" || rc=$?
+  if [ "$rc" -ne 0 ]; then
+    if [ -n "$backup" ]; then mv -f "$backup" "$target"; else rm -f "$target"; fi
+    die 1 "could not record the status of $id; $target was left unchanged"
+  fi
+  rm -f ${backup:+"$backup"}
+  unlock_workspace
   echo "promoted $id -> $target"
 }
 
+# restore_targets <newline-separated files> — put every already-rewritten rule
+# file back from its .unpromote backup. Marking an entry revoked while a rule it
+# installed is still loaded is the one outcome worth unwinding for: the entry
+# then says the rule is gone when a session still reads it.
+restore_targets() {
+  local f
+  [ -n "$1" ] || return 0
+  printf '%s' "$1" | while IFS= read -r f; do
+    [ -z "$f" ] || mv -f "$f.unpromote.$$" "$f" 2>/dev/null
+  done
+}
+
 cmd_unpromote() {
-  local id="${1:-}" revoke=0 note="unpromoted" marker f tmp changed="" new="resolved"
+  local id="${1:-}" revoke=0 note="unpromoted" marker f tmp changed="" new="resolved" rc=0 list
   [ -n "$id" ] || die 2 "usage: unpromote ID [--revoke] [--note TEXT]"
   shift
   while [ $# -gt 0 ]; do
     case "$1" in
       --revoke) revoke=1; shift ;;
-      --note) note="${2:-}"; shift 2 ;;
+      --note) need_arg $# "$1"; note="$2"; shift 2 ;;
       *) die 2 "unpromote: unknown option $1" ;;
     esac
   done
   [ -n "$(entry_file "$id")" ] || die 4 "no entry $id"
   marker="<!-- self-improve:$id -->"
+  lock_workspace
+  # Newline-separated, because a rule file under $HOME or the project can sit in
+  # a directory whose name contains a space.
   while IFS= read -r f; do
     if [ ! -f "$f" ] || ! grep -qF "$marker" "$f"; then continue; fi
-    tmp="$(mktemp "$f.XXXXXX")" || continue
+    cp "$f" "$f.unpromote.$$" || { restore_targets "$changed"; die 1 "cannot back up $f"; }
+    tmp="$(mktemp "$f.XXXXXX")" || { rm -f "$f.unpromote.$$"; restore_targets "$changed"; die 1 "cannot write next to $f"; }
+    # grep -v exits 1 when it selects no lines, which is a rule file that held
+    # nothing but the marker. Only 2 and above is a real failure.
     grep -vF "$marker" "$f" > "$tmp"
-    mv -f "$tmp" "$f"
-    changed="$changed $f"
+    rc=$?
+    if [ "$rc" -gt 1 ] || ! mv -f "$tmp" "$f"; then
+      rm -f "$tmp" "$f.unpromote.$$"
+      restore_targets "$changed"
+      die 1 "could not rewrite $f"
+    fi
+    changed="$changed$f
+"
   done < <(rule_candidates | sort -u)
+  rc=0
   if [ -z "$changed" ] && [ "$revoke" -eq 0 ]; then
     die 4 "no rule carries $marker; a rule promoted before markers existed must be removed by hand"
   fi
   [ "$revoke" -eq 1 ] && new="revoked"
-  cmd_set_status "$id" "$new" --note "$note${changed:+ (removed from$changed)}" >/dev/null
-  [ -z "$changed" ] || echo "removed $id from:$changed"
+  list="$(printf '%s' "$changed" | tr '\n' ' ' | sed 's/[[:space:]]*$//')"
+  set_status "$id" "$new" "$note${list:+ (removed from $list)}" || rc=$?
+  if [ "$rc" -ne 0 ]; then
+    restore_targets "$changed"
+    die 1 "could not record the status of $id; no rule was removed"
+  fi
+  printf '%s' "$changed" | while IFS= read -r f; do
+    [ -z "$f" ] || rm -f "$f.unpromote.$$"
+  done
+  unlock_workspace
+  [ -z "$list" ] || echo "removed $id from: $list"
   echo "$id: status $new"
 }
 
@@ -485,7 +630,7 @@ cmd_recall() {
   while [ $# -gt 0 ]; do
     case "$1" in
       --all) all=1; shift ;;
-      --limit) limit="${2:-}"; shift 2 ;;
+      --limit) need_arg $# "$1"; limit="$2"; shift 2 ;;
       *) terms="$terms $1"; shift ;;
     esac
   done
@@ -556,10 +701,15 @@ cmd_whereami() {
 }
 
 main() {
+  # The lock is released however the script leaves, so no `die` path can leave
+  # the workspace looking busy to the next command.
+  trap 'unlock_workspace' EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
   while [ $# -gt 0 ]; do
     case "$1" in
-      --base) BASE="${2:-}"; shift 2 ;;
-      --today) TODAY="${2:-}"; shift 2 ;;
+      --base) need_arg $# "$1"; BASE="$2"; shift 2 ;;
+      --today) need_arg $# "$1"; TODAY="$2"; shift 2 ;;
       *) break ;;
     esac
   done
