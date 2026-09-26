@@ -363,6 +363,24 @@ t_session_end_without_jq() {
   assert_contains "drain works without jq" "### ERR-$STAMP-001" "$(file_or_empty "$BASE/.learnings/ERRORS.md")"
 }
 
+t_session_end_stale_lock_break_is_exclusive() {
+  [ "$IMPL" = "bash" ] || return 0
+  fresh global
+  local lock="$BASE/.learnings/.drain.lock" out="$TMP/race-$$"
+  : > "$lock"
+  touch -t 202001010000 "$lock"
+  mkdir -p "$out"
+  # Race two real subshells against the same stale lock via the script's own
+  # acquire_lock, by sourcing the function directly (not by starting a second
+  # SessionEnd, which would also touch ERRORS.md and complicate the assertion).
+  ( . "$DIR/scripts/self-improve-hook.sh" --source-only 2>/dev/null; acquire_lock "$lock" && echo win > "$out/a" ) &
+  ( . "$DIR/scripts/self-improve-hook.sh" --source-only 2>/dev/null; acquire_lock "$lock" && echo win > "$out/b" ) &
+  wait
+  local wins
+  wins=$(ls "$out" 2>/dev/null | wc -l | tr -d ' ')
+  assert_eq "at most one racer breaks the same stale lock" "1" "$wins"
+}
+
 # ── static checks ─────────────────────────────────────────────────────────────
 
 s_hook_sh_syntax() {

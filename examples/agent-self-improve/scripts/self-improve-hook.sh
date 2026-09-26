@@ -68,11 +68,16 @@ append_err() {
 # acquire_lock <file> — exclusive create (noclobber is O_EXCL), so two
 # sessions ending together never both drain or both pick the same ERR id.
 # A lock older than 10 minutes is presumed left by a killed session.
+# Stale-lock recovery uses atomic rename to prevent TOCTOU: only one process
+# can successfully mv the lock to its private name.
 acquire_lock() {
   if ( set -C; : > "$1" ) 2>/dev/null; then return 0; fi
   if [ -n "$(find "$1" -mmin +10 2>/dev/null)" ]; then
-    rm -f "$1"
-    ( set -C; : > "$1" ) 2>/dev/null && return 0
+    local claim="$1.claim.$$"
+    if mv "$1" "$claim" 2>/dev/null; then
+      rm -f "$claim"
+      ( set -C; : > "$1" ) 2>/dev/null && return 0
+    fi
   fi
   return 1
 }
@@ -224,5 +229,8 @@ main() {
   esac
 }
 
-main "$@"
-exit 0
+# Allow the script to be sourced for testing without executing main.
+if [ "${1:-}" != "--source-only" ]; then
+  main "$@"
+  exit 0
+fi
