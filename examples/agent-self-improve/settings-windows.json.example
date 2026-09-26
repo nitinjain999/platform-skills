@@ -32,6 +32,17 @@
           }
         ]
       }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoLogo -NoProfile -NonInteractive -File C:\\Users\\alex\\.claude\\scripts\\self-improve-hook.ps1 precompact",
+            "timeout": 10
+          }
+        ]
+      }
     ]
   }
 }

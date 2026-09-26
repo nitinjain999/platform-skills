@@ -42,12 +42,32 @@ After running `/platform-skills:self-improve init`, your project gains:
   .pending-errors.log   # Scratch file written by the PostToolUseFailure hook (gitignored)
 memory/
   working-buffer.md     # Live task state and WAL log
+  .session-count        # One appended timestamp per session end (gitignored)
+  .session-reminder.<n> # Marker claiming the last review reminder (gitignored)
 ```
+
+### `.session-count`
+
+Every session end appends one UTC timestamp line. The count is the number of those lines, and the review reminder fires once per five sessions.
+
+The reminder claims the threshold it crossed rather than testing whether the total is a multiple of five. Appending is atomic but append-then-read is not, so from a baseline of 4 two sessions ending together can both read 6 and a `% 5` test would emit nothing, dropping the session-5 reminder. Claiming is an exclusive file create, so exactly one of them reminds.
+
+It is append-only on purpose. It used to hold a single integer rewritten as read, add one, write, so two sessions ending at the same moment lost an increment. `>>` is `O_APPEND`, which the kernel makes atomic for a write this small, so appending needs no lock.
+
+If your file still holds a bare integer from the old format, nothing needs to be done. Line 1 is read as a baseline and the count carries on from there, so the file looks like this after one more session:
+
+```
+1704
+2026-09-26T16:21:51Z
+```
+
+That is also how you set the count by hand: write a bare integer to the file and the next session end continues from it. `echo 0 > ~/.claude/memory/.session-count` restarts the cadence.
 
 Add to `.gitignore` for personal/local notes:
 ```
 .learnings/
 memory/working-buffer.md
+memory/.session-*
 ```
 
 Commit the directories if you want the team to share and build on them.
@@ -90,7 +110,7 @@ Two explicit subcommands — no interactive prompt:
 /platform-skills:self-improve init global
 ```
 
-Creates `~/.claude/.learnings/` and `~/.claude/memory/`. Learnings persist across **all projects** on your machine. Recommended for individuals. Offers to wire all three hooks in `~/.claude/settings.json` and create `~/.claude/CLAUDE.md` from the template.
+Creates `~/.claude/.learnings/` and `~/.claude/memory/`. Learnings persist across **all projects** on your machine. Recommended for individuals. Offers to wire all four hooks in `~/.claude/settings.json` and create `~/.claude/CLAUDE.md` from the template.
 
 ```text
 /platform-skills:self-improve init local
@@ -329,6 +349,8 @@ Two things the hook deliberately does not do:
 Each captured line is one short `printf`, so concurrent async writers cannot interleave mid-record.
 
 On `/platform-skills:self-improve review`, the agent reads `.pending-errors.log`, converts each line into a proper `ERR` entry in `ERRORS.md`, and clears the log. `SessionEnd` does the same conversion unattended, grouping repeats so a run of ten failed `Edit` calls in one session becomes one `ERR` entry rather than ten.
+
+`PreCompact` runs that same drain before each compaction. `SessionEnd` is not guaranteed to fire: kill the process or close the window and it never runs, leaving the log undrained indefinitely. Wiring the drain to compaction as well makes it recurring within a long session instead of a single chance at the end. It skips the parts that only make sense at a close: no daily-note heading, no session recorded, and no `PENDING` WAL entry flagged, because mid-session that operation may simply be in flight.
 
 For project-local setup, add to `.gitignore`:
 ```

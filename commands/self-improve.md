@@ -60,11 +60,12 @@ Steps:
      SESSION-STATE.md
    ```
 4. Seed each file with the correct header and an example entry marked `Status: example`
-5. Detect the user's platform and offer to wire all three hooks (`SessionStart`, `SessionEnd`, `PostToolUseFailure`) in `~/.claude/settings.json`:
-   - **macOS / Linux / WSL / Git Bash** → `self-improve-hook.sh` with the `session-start`, `session-end` and `tool-failure` subcommands; point to `settings.json.example`
-   - **Windows native (PowerShell)** → `self-improve-hook.ps1`, same three subcommands; point to `settings-windows.json.example`, and have the user replace the literal `C:\Users\alex` with their own profile path
+5. Detect the user's platform and offer to wire all four hooks (`SessionStart`, `SessionEnd`, `PostToolUseFailure`, `PreCompact`) in `~/.claude/settings.json`:
+   - **macOS / Linux / WSL / Git Bash** → `self-improve-hook.sh` with the `session-start`, `session-end`, `tool-failure` and `precompact` subcommands; point to `settings.json.example`
+   - **Windows native (PowerShell)** → `self-improve-hook.ps1`, same four subcommands; point to `settings-windows.json.example`, and have the user replace the literal `C:\Users\alex` with their own profile path
    - **Alpine or minimal Linux** → same as macOS/Linux but remind the user to install bash first: `apk add bash`
-   - The script is in `examples/agent-self-improve/scripts/`. Keep `"timeout": 10` on `SessionEnd` and `"async": true` on `PostToolUseFailure`
+   - The script is in `examples/agent-self-improve/scripts/`. Keep `"timeout": 10` on `SessionEnd` and on `PreCompact`, and `"async": true` on `PostToolUseFailure`
+   - `PreCompact` takes no `matcher`; it is filtered by its `trigger` field (`manual` or `auto`), not by tool name. Do not wire a `PostCompact` hook: `SessionStart` already fires again with `source=compact`
    - If any settings file still contains `Stop`, `PreToolUse` or `PostToolUse` self-improve entries, point the user at "Migrating from the legacy hooks" in `examples/agent-self-improve/README.md` and do not leave both wirings active
 6. Offer to create `~/.claude/CLAUDE.md` from the template at `examples/agent-self-improve/global-claude.md`
 7. Print bootstrap summary:
@@ -109,6 +110,7 @@ Steps:
    - **Commit**: leave untracked so the team can share and build on them; note that `memory/` daily notes grow fast
 6. Offer to add hooks to `.claude/settings.json` (this project only):
    - **PostToolUseFailure** → `self-improve-hook.sh tool-failure` with `"async": true`. The script resolves `.learnings/` itself, so the same command works at either scope
+   - **PreCompact** → `self-improve-hook.sh precompact` with `"timeout": 10`. This drains captured failures at each compaction, which is the only consolidation that still happens when a session is killed rather than closed
    - Note: the `SessionStart` and `SessionEnd` hooks should be wired globally via `~/.claude/settings.json` even for project-local learnings
 7. Print bootstrap summary:
    ```

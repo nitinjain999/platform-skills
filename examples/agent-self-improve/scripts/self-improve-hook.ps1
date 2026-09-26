@@ -2,8 +2,14 @@
 # Same subcommands, same files, same line formats:
 #
 #   session-start  SessionStart. Plain stdout becomes context Claude sees.
+#                  Also fires with source=compact after a compaction, which is
+#                  what restores the workspace pointers; no PostCompact hook is
+#                  needed for that.
 #   session-end    SessionEnd. Cannot block; 1.5 s budget unless "timeout" is set.
 #   tool-failure   PostToolUseFailure, wired with "async": true.
+#   precompact     PreCompact. Drains captured failures, because SessionEnd is
+#                  not guaranteed to run. Must never exit non-zero: on this
+#                  event exit 2 aborts the compaction.
 #
 # Hook input arrives as JSON on stdin. Every path exits 0.
 #
@@ -98,6 +104,26 @@ function Add-Text([string]$Path, [string]$Text) {
     finally { if ($held) { $mutex.ReleaseMutex() } }
 }
 
+# New-ReminderClaim <mem> <threshold>: true for exactly one caller per
+# threshold. See claim_reminder in the shell port for the race. The mutex makes
+# each append atomic, but Get-SessionCount reads outside that critical section,
+# so two sessions crossing a boundary can both observe 6 and a test of `% 5`
+# would emit nothing. CreateNew is O_EXCL, throwing when the file exists, so the
+# threshold is claimed by exactly one caller and reminds exactly once.
+function New-ReminderClaim([string]$Mem, [long]$Threshold) {
+    $name   = ".session-reminder.$Threshold"
+    $marker = Join-Path $Mem $name
+    try {
+        $fs = [IO.File]::Open($marker, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
+        $fs.Close()
+    } catch { return $false }
+    # Prune lower thresholds so one marker remains, not one per five sessions.
+    Get-ChildItem -LiteralPath $Mem -Filter '.session-reminder.*' -Force -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -ne $name } |
+        ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue }
+    return $true
+}
+
 function Get-LastErrNumber([string]$File, [string]$Stamp) {
     $max = 0
     if (Test-Path -LiteralPath $File) {
@@ -146,75 +172,39 @@ function Enter-Lock([string]$Path) {
     return $false
 }
 
-function Invoke-ToolFailure {
-    $base = Resolve-Base
-    if (-not $base) { return }
-    # A user interrupt is not a failure worth learning from.
-    if ((Get-Field 'is_interrupt') -eq 'true') { return }
-    $tool    = Protect-Field (Get-Field 'tool_name');   if (-not $tool)    { $tool = 'unknown' }
-    $session = Protect-Field (Get-Field 'session_id');  if (-not $session) { $session = 'unknown' }
-    $useId   = Protect-Field (Get-Field 'tool_use_id'); if (-not $useId)   { $useId = 'unknown' }
-    # Never persist "error" or "tool_input": either can carry credentials.
-    $ts  = [DateTime]::UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", $Inv)
-    $log = [IO.Path]::Combine($base, '.learnings', '.pending-errors.log')
-    Add-Text $log "$ts TOOL_FAILURE: $tool session=$session tool_use_id=$useId`n"
-}
-
-function Invoke-SessionEnd {
-    $base = Resolve-Base
-    if (-not $base) { return }
-    $mem = Join-Path $base 'memory'
-    $lrn = Join-Path $base '.learnings'
-    [void](New-Item -ItemType Directory -Force -Path $mem)
-    $now    = Get-Date
-    $today  = $now.ToString('yyyy-MM-dd', $Inv)
-    $stamp  = $now.ToString('yyyyMMdd', $Inv)
-    $time   = $now.ToString('HH:mm', $Inv)
-    $reason = Protect-Field (Get-Field 'reason'); if (-not $reason) { $reason = 'unknown' }
-
-    $daily    = Join-Path $mem "$today.md"
-    $state    = Join-Path $mem 'SESSION-STATE.md'
-    $buffer   = Join-Path $mem 'working-buffer.md'
-    $errors   = Join-Path $lrn 'ERRORS.md'
-    $pending  = Join-Path $lrn '.pending-errors.log'
-    $draining = Join-Path $lrn '.pending-errors.draining'
-    $counter  = Join-Path $mem '.session-count'
-    $lock     = Join-Path $lrn '.drain.lock'
-
-    # Daily note
-    if (-not (Test-Path -LiteralPath $daily)) { Add-Text $daily "# Daily Notes $Dash $today`n`n" }
-    Add-Text $daily "`n## Session closed: $time ($reason)`n`n"
-    if (Test-Path -LiteralPath $state) {
-        $lines = @([IO.File]::ReadAllLines($state) | Where-Object { $_.StartsWith("- $today") })
-        if ($lines.Count -gt 0) { Add-Text $daily ("### State captured today:`n`n" + ($lines -join "`n") + "`n") }
-    }
-    if (Test-Path -LiteralPath $buffer) {
-        $lines = @([IO.File]::ReadAllLines($buffer) | Where-Object { $_.StartsWith('- [ ]') })
-        if ($lines.Count -gt 0) { Add-Text $daily ("`n### Incomplete steps (resume next session):`n`n" + ($lines -join "`n") + "`n") }
-    }
-
-    # ERRORS.md writes, under the drain lock. If a parallel session holds it,
-    # that session owns this drain; pending lines wait for the next one.
-    # The locked section runs in its own try/finally so the lock is always
-    # released, even on an exception -- the outer try/catch at the bottom of
-    # this script would otherwise swallow the error and leave the lock held
-    # for up to 10 minutes.
-    if (Enter-Lock $lock) {
-      try {
+# Consolidate captured tool failures into ERRORS.md under the drain lock.
+# Called from SessionEnd and from PreCompact: SessionEnd never runs if the
+# process is killed, so compaction is a second, safe consolidation point.
+# If a parallel session holds the lock it owns this drain; pending lines stay
+# for the next caller and the SessionStart banner keeps counting them.
+#
+# Pass -Buffer only from SessionEnd. A PENDING WAL entry is a fault when the
+# session has closed, but at compaction the session is still live.
+#
+# The locked section runs in its own try/finally so the lock is always
+# released, even on an exception -- the outer try/catch at the bottom of this
+# script would otherwise swallow the error and leave the lock held for up to
+# 10 minutes.
+function Invoke-Drain([string]$Lrn, [string]$Errors, [string]$Stamp, [string]$Buffer = '') {
+    $pending  = Join-Path $Lrn '.pending-errors.log'
+    $draining = Join-Path $Lrn '.pending-errors.draining'
+    $lock     = Join-Path $Lrn '.drain.lock'
+    if (-not (Enter-Lock $lock)) { return }
+    try {
         # Rename before reading so an async tool-failure hook that fires
         # mid-drain appends to a fresh log.
         # -Force on Get-Item: ".pending-errors.log" and
         # ".pending-errors.draining" are dotfiles, hidden on Unix, and
         # Get-Item reports a hidden file as absent without it.
         if ((Test-Path -LiteralPath $pending) -and (Get-Item -LiteralPath $pending -Force).Length -gt 0) {
-            $tmp = Join-Path $lrn ('.pending-errors.' + [Guid]::NewGuid().ToString('N'))
+            $tmp = Join-Path $Lrn ('.pending-errors.' + [Guid]::NewGuid().ToString('N'))
             try {
                 [IO.File]::Move($pending, $tmp)
                 Add-Text $draining ([IO.File]::ReadAllText($tmp, $Utf8))
                 [IO.File]::Delete($tmp)
             } catch { }
         }
-        $n = Get-LastErrNumber $errors $stamp
+        $n = Get-LastErrNumber $Errors $Stamp
         if ((Test-Path -LiteralPath $draining) -and (Get-Item -LiteralPath $draining -Force).Length -gt 0) {
             # One entry per (tool, session), in first-seen order.
             $groups = [ordered]@{}
@@ -246,35 +236,99 @@ function Invoke-SessionEnd {
                 } else {
                     $content = "``$($g.Tool)`` failed (session $($g.Session), tool_use_id $($g.UseId))"
                 }
-                Add-Err $errors $n $stamp "Tool failure captured by the PostToolUseFailure hook at $($g.Ts)" $content "Run ``/platform-skills:self-improve review`` to find the root cause in that session's transcript"
+                Add-Err $Errors $n $Stamp "Tool failure captured by the PostToolUseFailure hook at $($g.Ts)" $content "Run ``/platform-skills:self-improve review`` to find the root cause in that session's transcript"
             }
             Remove-Item -LiteralPath $draining -Force
         }
 
         # Match a real WAL status line only; the template's HTML comment reads
         # "**Status**: PENDING | COMMITTED | ROLLED_BACK" and must not count.
-        if ((Test-Path -LiteralPath $buffer) -and (@([IO.File]::ReadAllLines($buffer) | Where-Object { $_ -match '^\*\*Status\*\*: PENDING\s*$' }).Count -gt 0)) {
+        if ($Buffer -and (Test-Path -LiteralPath $Buffer) -and (@([IO.File]::ReadAllLines($Buffer) | Where-Object { $_ -match '^\*\*Status\*\*: PENDING\s*$' }).Count -gt 0)) {
             $n++
-            Add-Err $errors $n $stamp 'Session closed with a PENDING WAL entry in working-buffer.md' 'A destructive operation was started but not confirmed as COMMITTED before the session ended' 'Run `/platform-skills:self-improve resume` next session to verify and update the WAL status'
+            Add-Err $Errors $n $Stamp 'Session closed with a PENDING WAL entry in working-buffer.md' 'A destructive operation was started but not confirmed as COMMITTED before the session ended' 'Run `/platform-skills:self-improve resume` next session to verify and update the WAL status'
         }
-      } finally {
+    } finally {
         Remove-Item -LiteralPath $lock -Force -ErrorAction SilentlyContinue
-      }
     }
+}
+
+# Record this session end and return the total. See session_count in the bash
+# port for the full reasoning; in short, appends are atomic and rewrites are
+# not, so a legacy single-integer file is left as line 1 and read as a
+# baseline rather than converted in place.
+function Get-SessionCount([string]$Counter) {
+    if (Test-Path -LiteralPath $Counter) {
+        # A legacy file with no trailing newline would splice the first
+        # timestamp onto its integer. 10 is LF.
+        $bytes = [IO.File]::ReadAllBytes($Counter)
+        if ($bytes.Length -gt 0 -and $bytes[$bytes.Length - 1] -ne 10) { Add-Text $Counter "`n" }
+    }
+    Add-Text $Counter ([DateTime]::UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", $Inv) + "`n")
+    [long]$count = 0
+    $lines = @([IO.File]::ReadAllLines($Counter))
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        # Bounded to 18 digits so the parse always fits a long and cannot throw.
+        if ($i -eq 0 -and $lines[0] -match '^[0-9]{1,18}$') { $count += [long]$lines[0]; continue }
+        if ($lines[$i] -match '^[0-9]{4}-[0-9]') { $count++ }
+    }
+    return $count
+}
+
+function Invoke-ToolFailure {
+    $base = Resolve-Base
+    if (-not $base) { return }
+    # A user interrupt is not a failure worth learning from.
+    if ((Get-Field 'is_interrupt') -eq 'true') { return }
+    $tool    = Protect-Field (Get-Field 'tool_name');   if (-not $tool)    { $tool = 'unknown' }
+    $session = Protect-Field (Get-Field 'session_id');  if (-not $session) { $session = 'unknown' }
+    $useId   = Protect-Field (Get-Field 'tool_use_id'); if (-not $useId)   { $useId = 'unknown' }
+    # Never persist "error" or "tool_input": either can carry credentials.
+    $ts  = [DateTime]::UtcNow.ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", $Inv)
+    $log = [IO.Path]::Combine($base, '.learnings', '.pending-errors.log')
+    Add-Text $log "$ts TOOL_FAILURE: $tool session=$session tool_use_id=$useId`n"
+}
+
+function Invoke-SessionEnd {
+    $base = Resolve-Base
+    if (-not $base) { return }
+    $mem = Join-Path $base 'memory'
+    $lrn = Join-Path $base '.learnings'
+    [void](New-Item -ItemType Directory -Force -Path $mem)
+    $now    = Get-Date
+    $today  = $now.ToString('yyyy-MM-dd', $Inv)
+    $stamp  = $now.ToString('yyyyMMdd', $Inv)
+    $time   = $now.ToString('HH:mm', $Inv)
+    $reason = Protect-Field (Get-Field 'reason'); if (-not $reason) { $reason = 'unknown' }
+
+    $daily    = Join-Path $mem "$today.md"
+    $state    = Join-Path $mem 'SESSION-STATE.md'
+    $buffer   = Join-Path $mem 'working-buffer.md'
+    $errors   = Join-Path $lrn 'ERRORS.md'
+    $counter  = Join-Path $mem '.session-count'
+
+    # Daily note
+    if (-not (Test-Path -LiteralPath $daily)) { Add-Text $daily "# Daily Notes $Dash $today`n`n" }
+    Add-Text $daily "`n## Session closed: $time ($reason)`n`n"
+    if (Test-Path -LiteralPath $state) {
+        $lines = @([IO.File]::ReadAllLines($state) | Where-Object { $_.StartsWith("- $today") })
+        if ($lines.Count -gt 0) { Add-Text $daily ("### State captured today:`n`n" + ($lines -join "`n") + "`n") }
+    }
+    if (Test-Path -LiteralPath $buffer) {
+        $lines = @([IO.File]::ReadAllLines($buffer) | Where-Object { $_.StartsWith('- [ ]') })
+        if ($lines.Count -gt 0) { Add-Text $daily ("`n### Incomplete steps (resume next session):`n`n" + ($lines -join "`n") + "`n") }
+    }
+
+    # ERRORS.md writes, under the drain lock.
+    Invoke-Drain $lrn $errors $stamp $buffer
 
     # The legacy PreToolUse banner keyed off this marker; nothing reads it now.
     Remove-Item -LiteralPath (Join-Path $mem '.session-active') -Force
 
     # Session counter and review reminder
-    $count = 0
-    if (Test-Path -LiteralPath $counter) {
-        $digits = [IO.File]::ReadAllText($counter) -replace '[^0-9]', ''
-        if ($digits) { $count = [int]$digits }
-    }
-    $count++
-    [IO.File]::WriteAllText($counter, "$count`n", $Utf8)
-    if ($count % 5 -eq 0) {
-        Add-Text $daily "`n### Review reminder (session $count):`n`nRun ``/platform-skills:self-improve review``. 5 sessions have elapsed.`n"
+    $count = Get-SessionCount $counter
+    $threshold = $count - ($count % 5)
+    if ($threshold -ge 5 -and (New-ReminderClaim $mem $threshold)) {
+        Add-Text $daily "`n### Review reminder (session $threshold):`n`nRun ``/platform-skills:self-improve review``. 5 sessions have elapsed.`n"
     }
 
     $learnings = Join-Path $lrn 'LEARNINGS.md'
@@ -282,6 +336,28 @@ function Invoke-SessionEnd {
     if (-not $logged) {
         Add-Text $daily "- No learnings logged today. Consider ``/platform-skills:self-improve log`` before the next session.`n"
     }
+}
+
+# PreCompact. Compaction discards context, not disk state, so there is nothing
+# to rescue from the payload: a hook never sees the transcript. What it can do
+# is consolidate, because SessionEnd is not guaranteed to run. A session killed
+# outright, or one whose window is closed, leaves .pending-errors.log undrained
+# indefinitely; a long session compacts several times, so this turns the drain
+# into something that happens repeatedly rather than once at the end.
+#
+# Context restoration after compaction needs no hook here: SessionStart fires
+# again with source=compact, and its stdout is added to the new context.
+#
+# This must never block. PreCompact is one of the events where exit 2 stops the
+# operation, and a memory hook that can abort compaction would strand a session
+# with a full context window. The outer try/catch plus "exit 0" cover that.
+function Invoke-PreCompact {
+    $base = Resolve-Base
+    if (-not $base) { return }
+    $lrn = Join-Path $base '.learnings'
+    if (-not (Test-Path -LiteralPath $lrn -PathType Container)) { return }
+    $stamp = (Get-Date).ToString('yyyyMMdd', $Inv)
+    Invoke-Drain $lrn (Join-Path $lrn 'ERRORS.md') $stamp
 }
 
 function Invoke-SessionStart {
@@ -357,7 +433,8 @@ try {
         'session-start' { Invoke-SessionStart }
         'session-end'   { Invoke-SessionEnd }
         'tool-failure'  { Invoke-ToolFailure }
-        default         { [Console]::Error.WriteLine('usage: self-improve-hook.ps1 session-start|session-end|tool-failure') }
+        'precompact'    { Invoke-PreCompact }
+        default         { [Console]::Error.WriteLine('usage: self-improve-hook.ps1 session-start|session-end|tool-failure|precompact') }
     }
 } catch { }
 exit 0

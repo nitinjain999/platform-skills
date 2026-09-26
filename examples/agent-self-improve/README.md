@@ -14,12 +14,12 @@ This directory contains ready-to-copy templates for bootstrapping the self-impro
 | `memory/working-buffer.md` | WAL scratchpad and task state template |
 | `memory/SESSION-STATE.md` | Always-on capture of corrections, preferences, decisions, proper nouns |
 | `memory/YYYY-MM-DD.md` | Daily notes template — rename to actual date on first use |
-| `scripts/self-improve-hook.sh` | All three hooks (macOS/Linux/WSL/Git Bash). One script, three subcommands |
-| `scripts/self-improve-hook.ps1` | Same three hooks for Windows native PowerShell 5.1+ |
+| `scripts/self-improve-hook.sh` | All four hooks (macOS/Linux/WSL/Git Bash). One script, four subcommands |
+| `scripts/self-improve-hook.ps1` | Same four hooks for Windows native PowerShell 5.1+ |
 | `tests/self_improve_hook_test.sh` | Behavioural suite, run against both implementations |
 | `global-claude.md` | Template for `~/.claude/CLAUDE.md` — path override, session-start, in-session logging rules |
-| `settings.json.example` | All 3 hooks wired for macOS / Linux / WSL / Git Bash |
-| `settings-windows.json.example` | All 3 hooks wired for Windows native (PowerShell) |
+| `settings.json.example` | All 4 hooks wired for macOS / Linux / WSL / Git Bash |
+| `settings-windows.json.example` | All 4 hooks wired for Windows native (PowerShell) |
 
 ## Platform support
 
@@ -97,7 +97,7 @@ Copy-Item examples\agent-self-improve\settings-windows.json.example "$env:USERPR
 Copy-Item examples\agent-self-improve\global-claude.md "$env:USERPROFILE\.claude\CLAUDE.md"
 ```
 
-Then edit the three `command` strings in `settings.json` and replace `C:\Users\alex` with your own profile directory. The paths are spelled out in full on purpose: a hook `command` is a raw string handed to a shell, so `%USERPROFILE%` is only expanded by `cmd` and `$env:USERPROFILE` only by PowerShell. A literal path works whichever shell Claude Code uses to spawn the hook. `echo $env:USERPROFILE` prints the value to paste in.
+Then edit the four `command` strings in `settings.json` and replace `C:\Users\alex` with your own profile directory. The paths are spelled out in full on purpose: a hook `command` is a raw string handed to a shell, so `%USERPROFILE%` is only expanded by `cmd` and `$env:USERPROFILE` only by PowerShell. A literal path works whichever shell Claude Code uses to spawn the hook. `echo $env:USERPROFILE` prints the value to paste in.
 
 If you see an execution policy error when the hooks run, allow local scripts once:
 ```powershell
@@ -109,14 +109,18 @@ What the hooks do:
 | Hook | Subcommand | Trigger | What it does |
 |---|---|---|---|
 | `SessionStart` | `session-start` | Startup, resume, clear, compact, fork | Prints the memory-load banner. Plain stdout becomes context Claude sees |
-| `SessionEnd` | `session-end` | Session close | Saves daily notes, drains `.pending-errors.log` into ERR entries, increments the counter, nudges if no LRN was logged today |
+| `SessionEnd` | `session-end` | Session close | Saves daily notes, drains `.pending-errors.log` into ERR entries, records the session, nudges if no LRN was logged today |
 | `PostToolUseFailure` | `tool-failure` | Every failed tool call | Appends one line to `.pending-errors.log` for batch processing at session end |
+| `PreCompact` | `precompact` | Before each auto or manual compaction | Drains `.pending-errors.log` again, so a long session consolidates repeatedly instead of only at close |
 
-Three details in the settings files are deliberate:
+Four details in the settings files are deliberate:
 
 - `SessionEnd` sets `"timeout": 10`. Every `SessionEnd` hook shares a 1.5-second budget by default, which the drain can exceed on a busy day.
 - `PostToolUseFailure` sets `"async": true` so a failing tool call is never slowed by the capture.
-- Every path exits 0. A memory hook must never block a session, a tool call, or compaction.
+- `PreCompact` is wired because `SessionEnd` is not guaranteed to run. Close the window or kill the process and `.pending-errors.log` is never drained; a long session compacts several times, so the drain becomes recurring rather than once-at-the-end. This narrows the window, it does not close it: a session killed before it ever compacts, or one that fails a tool call after its last compaction, still leaves lines pending. Those lines are not lost. `SessionStart` counts them and warns, and the next `review` or `SessionEnd` drains them. `PreCompact` takes no `matcher` — its filter is the `trigger` field (`manual` or `auto`), not a tool name.
+- Every path exits 0. A memory hook must never block a session, a tool call, or compaction. That matters most on `PreCompact`, which is one of the events where exit 2 aborts the operation: a hook that failed there would strand the session with a full context window.
+
+`PreCompact` does not write a daily note and does not record a session. Compaction is not the end of a session. It also does not flag a `PENDING` WAL entry, which is a fault only once the session has closed — mid-session the operation may simply be in flight.
 
 The capture records the tool name, session id and `tool_use_id` only. The `error` and `tool_input` fields are deliberately never persisted, because either can carry a credential.
 

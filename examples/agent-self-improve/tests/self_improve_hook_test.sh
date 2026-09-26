@@ -34,6 +34,19 @@ assert_missing() { if [ ! -e "$2" ]; then pass; else fail "$1" "should not exist
 file_or_empty() { if [ -f "$1" ]; then cat "$1"; fi; }
 line_count() { if [ -f "$1" ]; then wc -l < "$1" | tr -d ' '; else echo 0; fi; }
 
+# counter_value — read .session-count the way the hook does: line 1 may be a
+# legacy integer baseline, and every timestamp line after it is one session.
+# Deliberately a second implementation of the rule rather than a call into the
+# hook, so a change to the format has to be made in two places on purpose.
+counter_value() {
+  [ -f "$BASE/memory/.session-count" ] || { echo 0; return; }
+  awk '
+    NR == 1 && /^[0-9][0-9]*$/    { n += $1; next }
+    /^[0-9][0-9][0-9][0-9]-[0-9]/ { n += 1 }
+    END { print n + 0 }
+  ' "$BASE/memory/.session-count"
+}
+
 # fresh <global|local|both|none> — new sandboxed HOME and project dir.
 # BASE is where the hook should write: global wins when both exist.
 fresh() {
@@ -301,15 +314,80 @@ t_session_end_one_heading_per_session() {
   assert_contains "heading records the end reason" "(prompt_input_exit)" "$(file_or_empty "$daily")"
   assert_contains "daily note title keeps the em dash" "# Daily Notes — $TODAY" "$(file_or_empty "$daily")"
   assert_eq "daily note has no BOM" "#" "$(head -c1 "$daily" 2>/dev/null)"
-  assert_eq "counter counts sessions" "2" "$(tr -cd '0-9' < "$BASE/memory/.session-count" 2>/dev/null)"
+  assert_eq "counter counts sessions" "2" "$(counter_value)"
+  assert_eq "counter appends one line per session, never rewrites" "2" \
+    "$(line_count "$BASE/memory/.session-count")"
 }
 
 t_session_end_review_reminder() {
   fresh global
+  # A bare integer is also the legacy on-disk format, so this doubles as proof
+  # that an existing count is carried over rather than restarting at 1.
   printf '4\n' > "$BASE/memory/.session-count"
   run_hook session-end "$END_JSON" >/dev/null
   assert_contains "reminder on every fifth session" "### Review reminder (session 5):" \
     "$(file_or_empty "$BASE/memory/$TODAY.md")"
+  assert_eq "a legacy integer counter is read as a baseline, not reset" "5" "$(counter_value)"
+  assert_eq "the legacy integer is left in place on line 1" "4" \
+    "$(head -1 "$BASE/memory/.session-count")"
+}
+
+t_session_end_counter_legacy_without_newline() {
+  fresh global
+  # An integer with no trailing newline: appending blindly would splice the
+  # timestamp onto it and turn 7 into 72026-09-26T...
+  printf '7' > "$BASE/memory/.session-count"
+  run_hook session-end "$END_JSON" >/dev/null
+  assert_eq "a counter with no trailing newline is not spliced" "8" "$(counter_value)"
+  assert_eq "the baseline line stays intact" "7" "$(head -1 "$BASE/memory/.session-count")"
+}
+
+t_session_end_counter_concurrent() {
+  fresh global
+  local n=0
+  # The old counter was read + 1 + write, so two sessions ending together lost
+  # an increment. The in-place migration this replaced was worse: its truncate
+  # could splice an appended timestamp back into the integer being re-read,
+  # turning a count of 100 into 10020260926162208.
+  printf '100\n' > "$BASE/memory/.session-count"
+  while [ "$n" -lt 12 ]; do
+    run_hook session-end "$END_JSON" >/dev/null &
+    n=$((n + 1))
+  done
+  wait
+  assert_eq "12 concurrent session ends lose no increment" "112" "$(counter_value)"
+}
+
+t_session_end_reminder_boundary_race() {
+  fresh global
+  # Copilot's 4→6 case on PR #195. Both sessions append, then both read the
+  # total; whichever each one sees, 5 or 6, the threshold crossed is 5, so one
+  # claims it and one does not. Testing `count % 5` instead let both read 6 and
+  # emit nothing, which lost the session-5 reminder with both records intact.
+  printf '4\n' > "$BASE/memory/.session-count"
+  run_hook session-end "$END_JSON" >/dev/null &
+  run_hook session-end "$END_JSON" >/dev/null &
+  wait
+  assert_eq "crossing the reminder boundary concurrently reminds exactly once" "1" \
+    "$(grep -c '### Review reminder' "$BASE/memory/$TODAY.md" 2>/dev/null)"
+  assert_eq "both session ends are still recorded" "6" "$(counter_value)"
+}
+
+t_session_end_reminder_claimed_per_threshold() {
+  fresh global
+  local n=0 daily
+  printf '4\n' > "$BASE/memory/.session-count"
+  while [ "$n" -lt 6 ]; do
+    run_hook session-end "$END_JSON" >/dev/null
+    n=$((n + 1))
+  done
+  daily="$BASE/memory/$TODAY.md"
+  assert_eq "one reminder per five sessions, not one per session end" "2" \
+    "$(grep -c '### Review reminder' "$daily" 2>/dev/null)"
+  assert_contains "the fifth session reminds" "### Review reminder (session 5):" "$(file_or_empty "$daily")"
+  assert_contains "the tenth session reminds" "### Review reminder (session 10):" "$(file_or_empty "$daily")"
+  assert_eq "lower thresholds are pruned, so one marker remains" "1" \
+    "$(find "$BASE/memory" -name '.session-reminder.*' | wc -l | tr -d ' ')"
 }
 
 t_session_end_pending_wal() {
@@ -408,6 +486,65 @@ t_session_end_stale_lock_break_is_exclusive() {
 # deliberately; verified by code trace during review instead. The test above
 # still covers the property this fix preserves: at most one racer ever
 # breaks the same stale lock.
+
+# ── precompact ────────────────────────────────────────────────────────────────
+
+PRECOMPACT_JSON='{"session_id":"sess-9","hook_event_name":"PreCompact","trigger":"auto","custom_instructions":""}'
+
+t_precompact_drains_pending() {
+  fresh global
+  local rc=0
+  run_hook tool-failure "$FAIL_JSON" >/dev/null
+  run_hook precompact "$PRECOMPACT_JSON" >/dev/null || rc=$?
+  assert_eq "precompact exits 0" "0" "$rc"
+  assert_contains "a captured failure is consolidated at compaction" "### ERR-$STAMP-001" \
+    "$(file_or_empty "$BASE/.learnings/ERRORS.md")"
+  assert_missing "the pending log is consumed" "$BASE/.learnings/.pending-errors.log"
+  assert_missing "the drain file is removed" "$BASE/.learnings/.pending-errors.draining"
+  assert_missing "the lock is released" "$BASE/.learnings/.drain.lock"
+}
+
+t_precompact_leaves_the_session_alone() {
+  fresh global
+  run_hook tool-failure "$FAIL_JSON" >/dev/null
+  run_hook precompact "$PRECOMPACT_JSON" >/dev/null
+  # Compaction is not the end of a session: no closing heading, no increment.
+  assert_missing "precompact writes no daily note" "$BASE/memory/$TODAY.md"
+  assert_eq "precompact does not bump the session counter" "0" "$(counter_value)"
+}
+
+t_precompact_ignores_pending_wal() {
+  fresh global
+  printf '## WAL Entry %s 2026-09-26 10:00\n**Status**: PENDING\n' '--' \
+    > "$BASE/memory/working-buffer.md"
+  run_hook precompact "$PRECOMPACT_JSON" >/dev/null
+  # A PENDING WAL entry is a fault once the session has closed. At compaction
+  # the session is still live and the operation may simply be in flight.
+  assert_not_contains "an in-flight WAL entry is not an error at compaction" \
+    "PENDING WAL" "$(file_or_empty "$BASE/.learnings/ERRORS.md")"
+}
+
+t_precompact_without_workspace() {
+  fresh none
+  local rc=0
+  run_hook precompact "$PRECOMPACT_JSON" >/dev/null || rc=$?
+  assert_eq "precompact exits 0 with no workspace" "0" "$rc"
+  assert_missing "precompact creates no global workspace" "$T_HOME/.claude/.learnings"
+  assert_missing "precompact creates no project workspace" "$T_PROJ/.learnings"
+}
+
+t_precompact_yields_to_a_live_lock() {
+  fresh global
+  run_hook tool-failure "$FAIL_JSON" >/dev/null
+  : > "$BASE/.learnings/.drain.lock"
+  local rc=0
+  run_hook precompact "$PRECOMPACT_JSON" >/dev/null || rc=$?
+  assert_eq "precompact exits 0 when another session holds the lock" "0" "$rc"
+  assert_contains "pending lines wait for the next drain" "TOOL_FAILURE: Bash" \
+    "$(file_or_empty "$BASE/.learnings/.pending-errors.log")"
+  assert_not_contains "nothing is consolidated behind the lock" "### ERR-$STAMP" \
+    "$(file_or_empty "$BASE/.learnings/ERRORS.md")"
+}
 
 # ── session-start ─────────────────────────────────────────────────────────────
 
