@@ -21,6 +21,9 @@
 
 set -u
 
+# Strings that only the legacy Stop/PreToolUse/PostToolUse wiring contained.
+LEGACY_HOOK_PATTERN='session-start-reminder|session-end\.(sh|ps1)|CLAUDE_TOOL_EXIT_CODE'
+
 resolve_base() {
   local project="${CLAUDE_PROJECT_DIR:-$PWD}"
   if [ -d "$HOME/.claude/.learnings" ]; then
@@ -47,6 +50,13 @@ json_field() {
 # Markdown heading. Tool names, session ids and end reasons all fit.
 sanitize() {
   tr -cd 'A-Za-z0-9_.:-' | cut -c1-128
+}
+
+display_path() {
+  case "$1" in
+    "$HOME"/*) printf '~%s\n' "${1#"$HOME"}" ;;
+    *) printf '%s\n' "$1" ;;
+  esac
 }
 
 # last_err_number <errors-file> <yyyymmdd> — highest ERR number used today,
@@ -219,10 +229,53 @@ cmd_session_end() {
   fi
 }
 
+cmd_session_start() {
+  local base mem today scope task count f project
+  base="$(resolve_base)"
+  [ -n "$base" ] || return 0
+  mem="$base/memory"
+  today="$(date +%Y-%m-%d)"
+  project="${CLAUDE_PROJECT_DIR:-$PWD}"
+  if [ "$base" = "$HOME/.claude" ]; then scope="global"; else scope="project"; fi
+
+  printf 'Self-improve workspace: %s (%s)\n' "$(display_path "$base")" "$scope"
+  printf 'Read these before starting work:\n'
+  printf '  1. %s (active task, WAL)\n' "$(display_path "$mem/working-buffer.md")"
+  printf '  2. %s (corrections, preferences, decisions)\n' "$(display_path "$mem/SESSION-STATE.md")"
+  if [ -f "$mem/$today.md" ]; then
+    printf '  3. %s (today)\n' "$(display_path "$mem/$today.md")"
+  fi
+
+  if [ -f "$mem/working-buffer.md" ]; then
+    task="$(awk '/^## Current Task/{found=1; next} found && /^[^#]/{print; exit}' \
+      "$mem/working-buffer.md" | cut -c1-120)"
+    case "$task" in
+      ""|*"No active task"*) ;;
+      *) printf 'Active task: %s\n' "$task" ;;
+    esac
+  fi
+
+  if [ -s "$base/.learnings/.pending-errors.log" ]; then
+    count="$(grep -c 'TOOL_FAILURE' "$base/.learnings/.pending-errors.log" 2>/dev/null)"
+    printf 'WARNING: %s unprocessed tool failure(s) in %s. Run /platform-skills:self-improve review.\n' \
+      "${count:-0}" "$(display_path "$base/.learnings/.pending-errors.log")"
+  fi
+
+  for f in "$HOME/.claude/settings.json" "$project/.claude/settings.json" "$project/.claude/settings.local.json"; do
+    # With the project at $HOME the first two paths are the same file.
+    if [ "$f" = "$project/.claude/settings.json" ] && [ "$project" = "$HOME" ]; then continue; fi
+    if [ -f "$f" ] && grep -qE "$LEGACY_HOOK_PATTERN" "$f" 2>/dev/null; then
+      printf 'WARNING: legacy self-improve hooks are still wired in %s. Remove its Stop, PreToolUse and PostToolUse self-improve entries (see "Migrating from the legacy hooks" in examples/agent-self-improve/README.md).\n' \
+        "$(display_path "$f")"
+    fi
+  done
+}
+
 main() {
   local payload=""
   [ -t 0 ] || payload="$(cat)"
   case "${1:-}" in
+    session-start) cmd_session_start "$payload" ;;
     session-end)  cmd_session_end "$payload" ;;
     tool-failure) cmd_tool_failure "$payload" ;;
     *) echo "usage: self-improve-hook.sh session-start|session-end|tool-failure" >&2 ;;

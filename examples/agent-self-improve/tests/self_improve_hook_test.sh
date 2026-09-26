@@ -381,6 +381,97 @@ t_session_end_stale_lock_break_is_exclusive() {
   assert_eq "at most one racer breaks the same stale lock" "1" "$wins"
 }
 
+# ── session-start ─────────────────────────────────────────────────────────────
+
+START_JSON='{"session_id":"sess-2","hook_event_name":"SessionStart","source":"startup"}'
+
+t_session_start_lists_files() {
+  fresh global
+  local rc=0 out
+  out="$(run_hook session-start "$START_JSON")" || rc=$?
+  assert_eq "session-start exits 0" "0" "$rc"
+  assert_contains "names the global workspace" "Self-improve workspace: ~/.claude (global)" "$out"
+  assert_contains "points at the working buffer" "1. ~/.claude/memory/working-buffer.md (active task, WAL)" "$out"
+  assert_contains "points at session state" "2. ~/.claude/memory/SESSION-STATE.md" "$out"
+  assert_not_contains "no today line without a daily note" "(today)" "$out"
+}
+
+t_session_start_project_scope() {
+  fresh local
+  local out
+  out="$(run_hook session-start "$START_JSON")"
+  assert_contains "names the project workspace" "Self-improve workspace: $T_PROJ (project)" "$out"
+  assert_contains "project paths are absolute" "$T_PROJ/memory/working-buffer.md" "$out"
+}
+
+t_session_start_today_note() {
+  fresh global
+  printf '# Daily Notes\n' > "$BASE/memory/$TODAY.md"
+  assert_contains "lists today's note when present" "3. ~/.claude/memory/$TODAY.md (today)" \
+    "$(run_hook session-start "$START_JSON")"
+}
+
+t_session_start_active_task_with_quote() {
+  fresh global
+  printf '# Working Buffer\n\n## Current Task\n\nDon'"'"'t touch the payments-prod cluster until the canary is green\n\n## Progress\n' \
+    > "$BASE/memory/working-buffer.md"
+  assert_contains "an apostrophe in the task survives (the legacy xargs choked on it)" \
+    "Active task: Don't touch the payments-prod cluster until the canary is green" \
+    "$(run_hook session-start "$START_JSON")"
+}
+
+t_session_start_template_has_no_task() {
+  fresh global
+  cp "$DIR/memory/working-buffer.md" "$BASE/memory/working-buffer.md"
+  assert_not_contains "the shipped template reports no active task" "Active task:" \
+    "$(run_hook session-start "$START_JSON")"
+}
+
+t_session_start_pending_warning() {
+  fresh global
+  printf '%s\n%s\n' "2026-09-26T10:00:00Z TOOL_FAILURE: Bash session=s tool_use_id=t1" \
+    "2026-09-26T10:01:00Z TOOL_FAILURE: Bash session=s tool_use_id=t2" > "$BASE/.learnings/.pending-errors.log"
+  assert_contains "warns about undrained failures" \
+    "WARNING: 2 unprocessed tool failure(s) in ~/.claude/.learnings/.pending-errors.log" \
+    "$(run_hook session-start "$START_JSON")"
+}
+
+t_session_start_warns_about_legacy_wiring() {
+  fresh global
+  printf '{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"bash ~/.claude/scripts/session-end.sh"}]}]}}\n' \
+    > "$T_HOME/.claude/settings.json"
+  mkdir -p "$T_PROJ/.claude"
+  printf '{"hooks":{"PostToolUse":[{"hooks":[{"type":"command","command":"if [ \\"$CLAUDE_TOOL_EXIT_CODE\\" -ne 0 ]; then :; fi"}]}]}}\n' \
+    > "$T_PROJ/.claude/settings.local.json"
+  local out
+  out="$(run_hook session-start "$START_JSON")"
+  assert_contains "flags legacy wiring in user settings" \
+    "WARNING: legacy self-improve hooks are still wired in ~/.claude/settings.json" "$out"
+  assert_contains "flags legacy wiring in project local settings" \
+    "wired in $T_PROJ/.claude/settings.local.json" "$out"
+}
+
+t_session_start_quiet_for_new_wiring() {
+  fresh global
+  printf '{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"bash ~/.claude/scripts/self-improve-hook.sh session-start"}]}]}}\n' \
+    > "$T_HOME/.claude/settings.json"
+  assert_not_contains "no warning for the new wiring" "legacy" "$(run_hook session-start "$START_JSON")"
+}
+
+t_session_start_no_workspace() {
+  fresh none
+  local rc=0 out
+  out="$(run_hook session-start "$START_JSON")" || rc=$?
+  assert_eq "no workspace exits 0" "0" "$rc"
+  assert_eq "no workspace prints nothing" "" "$out"
+}
+
+t_session_start_no_marker() {
+  fresh global
+  run_hook session-start "$START_JSON" >/dev/null
+  assert_missing "no legacy marker file is created" "$BASE/memory/.session-active"
+}
+
 # ── static checks ─────────────────────────────────────────────────────────────
 
 s_hook_sh_syntax() {
