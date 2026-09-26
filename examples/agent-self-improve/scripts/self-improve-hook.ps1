@@ -104,6 +104,26 @@ function Add-Text([string]$Path, [string]$Text) {
     finally { if ($held) { $mutex.ReleaseMutex() } }
 }
 
+# New-ReminderClaim <mem> <threshold>: true for exactly one caller per
+# threshold. See claim_reminder in the shell port for the race. The mutex makes
+# each append atomic, but Get-SessionCount reads outside that critical section,
+# so two sessions crossing a boundary can both observe 6 and a test of `% 5`
+# would emit nothing. CreateNew is O_EXCL, throwing when the file exists, so the
+# threshold is claimed by exactly one caller and reminds exactly once.
+function New-ReminderClaim([string]$Mem, [long]$Threshold) {
+    $name   = ".session-reminder.$Threshold"
+    $marker = Join-Path $Mem $name
+    try {
+        $fs = [IO.File]::Open($marker, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
+        $fs.Close()
+    } catch { return $false }
+    # Prune lower thresholds so one marker remains, not one per five sessions.
+    Get-ChildItem -LiteralPath $Mem -Filter '.session-reminder.*' -Force -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -ne $name } |
+        ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue }
+    return $true
+}
+
 function Get-LastErrNumber([string]$File, [string]$Stamp) {
     $max = 0
     if (Test-Path -LiteralPath $File) {
@@ -306,8 +326,9 @@ function Invoke-SessionEnd {
 
     # Session counter and review reminder
     $count = Get-SessionCount $counter
-    if ($count % 5 -eq 0) {
-        Add-Text $daily "`n### Review reminder (session $count):`n`nRun ``/platform-skills:self-improve review``. 5 sessions have elapsed.`n"
+    $threshold = $count - ($count % 5)
+    if ($threshold -ge 5 -and (New-ReminderClaim $mem $threshold)) {
+        Add-Text $daily "`n### Review reminder (session $threshold):`n`nRun ``/platform-skills:self-improve review``. 5 sessions have elapsed.`n"
     }
 
     $learnings = Join-Path $lrn 'LEARNINGS.md'

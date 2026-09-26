@@ -111,13 +111,13 @@ What the hooks do:
 | `SessionStart` | `session-start` | Startup, resume, clear, compact, fork | Prints the memory-load banner. Plain stdout becomes context Claude sees |
 | `SessionEnd` | `session-end` | Session close | Saves daily notes, drains `.pending-errors.log` into ERR entries, records the session, nudges if no LRN was logged today |
 | `PostToolUseFailure` | `tool-failure` | Every failed tool call | Appends one line to `.pending-errors.log` for batch processing at session end |
-| `PreCompact` | `precompact` | Before each auto or manual compaction | Drains `.pending-errors.log` again, so a session that is killed rather than closed still gets its captures consolidated |
+| `PreCompact` | `precompact` | Before each auto or manual compaction | Drains `.pending-errors.log` again, so a long session consolidates repeatedly instead of only at close |
 
 Four details in the settings files are deliberate:
 
 - `SessionEnd` sets `"timeout": 10`. Every `SessionEnd` hook shares a 1.5-second budget by default, which the drain can exceed on a busy day.
 - `PostToolUseFailure` sets `"async": true` so a failing tool call is never slowed by the capture.
-- `PreCompact` is wired because `SessionEnd` is not guaranteed to run. Close the window or kill the process and `.pending-errors.log` is never drained; a long session compacts several times, so the drain becomes recurring rather than once-at-the-end. `PreCompact` takes no `matcher` — its filter is the `trigger` field (`manual` or `auto`), not a tool name.
+- `PreCompact` is wired because `SessionEnd` is not guaranteed to run. Close the window or kill the process and `.pending-errors.log` is never drained; a long session compacts several times, so the drain becomes recurring rather than once-at-the-end. This narrows the window, it does not close it: a session killed before it ever compacts, or one that fails a tool call after its last compaction, still leaves lines pending. Those lines are not lost. `SessionStart` counts them and warns, and the next `review` or `SessionEnd` drains them. `PreCompact` takes no `matcher` — its filter is the `trigger` field (`manual` or `auto`), not a tool name.
 - Every path exits 0. A memory hook must never block a session, a tool call, or compaction. That matters most on `PreCompact`, which is one of the events where exit 2 aborts the operation: a hook that failed there would strand the session with a full context window.
 
 `PreCompact` does not write a daily note and does not record a session. Compaction is not the end of a session. It also does not flag a `PENDING` WAL entry, which is a fault only once the session has closed — mid-session the operation may simply be in flight.

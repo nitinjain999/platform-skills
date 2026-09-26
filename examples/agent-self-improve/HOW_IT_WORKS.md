@@ -43,11 +43,14 @@ After running `/platform-skills:self-improve init`, your project gains:
 memory/
   working-buffer.md     # Live task state and WAL log
   .session-count        # One appended timestamp per session end (gitignored)
+  .session-reminder.<n> # Marker claiming the last review reminder (gitignored)
 ```
 
 ### `.session-count`
 
-Every session end appends one UTC timestamp line. The count is the number of those lines, and the review reminder fires when it is a multiple of five.
+Every session end appends one UTC timestamp line. The count is the number of those lines, and the review reminder fires once per five sessions.
+
+The reminder claims the threshold it crossed rather than testing whether the total is a multiple of five. Appending is atomic but append-then-read is not, so from a baseline of 4 two sessions ending together can both read 6 and a `% 5` test would emit nothing, dropping the session-5 reminder. Claiming is an exclusive file create, so exactly one of them reminds.
 
 It is append-only on purpose. It used to hold a single integer rewritten as read, add one, write, so two sessions ending at the same moment lost an increment. `>>` is `O_APPEND`, which the kernel makes atomic for a write this small, so appending needs no lock.
 
@@ -64,6 +67,7 @@ Add to `.gitignore` for personal/local notes:
 ```
 .learnings/
 memory/working-buffer.md
+memory/.session-*
 ```
 
 Commit the directories if you want the team to share and build on them.

@@ -358,6 +358,38 @@ t_session_end_counter_concurrent() {
   assert_eq "12 concurrent session ends lose no increment" "112" "$(counter_value)"
 }
 
+t_session_end_reminder_boundary_race() {
+  fresh global
+  # Copilot's 4→6 case on PR #195. Both sessions append, then both read the
+  # total; whichever each one sees, 5 or 6, the threshold crossed is 5, so one
+  # claims it and one does not. Testing `count % 5` instead let both read 6 and
+  # emit nothing, which lost the session-5 reminder with both records intact.
+  printf '4\n' > "$BASE/memory/.session-count"
+  run_hook session-end "$END_JSON" >/dev/null &
+  run_hook session-end "$END_JSON" >/dev/null &
+  wait
+  assert_eq "crossing the reminder boundary concurrently reminds exactly once" "1" \
+    "$(grep -c '### Review reminder' "$BASE/memory/$TODAY.md" 2>/dev/null)"
+  assert_eq "both session ends are still recorded" "6" "$(counter_value)"
+}
+
+t_session_end_reminder_claimed_per_threshold() {
+  fresh global
+  local n=0 daily
+  printf '4\n' > "$BASE/memory/.session-count"
+  while [ "$n" -lt 6 ]; do
+    run_hook session-end "$END_JSON" >/dev/null
+    n=$((n + 1))
+  done
+  daily="$BASE/memory/$TODAY.md"
+  assert_eq "one reminder per five sessions, not one per session end" "2" \
+    "$(grep -c '### Review reminder' "$daily" 2>/dev/null)"
+  assert_contains "the fifth session reminds" "### Review reminder (session 5):" "$(file_or_empty "$daily")"
+  assert_contains "the tenth session reminds" "### Review reminder (session 10):" "$(file_or_empty "$daily")"
+  assert_eq "lower thresholds are pruned, so one marker remains" "1" \
+    "$(find "$BASE/memory" -name '.session-reminder.*' | wc -l | tr -d ' ')"
+}
+
 t_session_end_pending_wal() {
   fresh global
   printf '## WAL Entry — 2026-09-26 10:00\n**Operation**: delete namespace payments-canary\n**Status**: PENDING\n' \

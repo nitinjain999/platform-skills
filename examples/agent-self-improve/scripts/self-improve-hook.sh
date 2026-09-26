@@ -111,6 +111,29 @@ acquire_lock() {
   return 1
 }
 
+# claim_reminder <memdir> <threshold> — true for exactly one caller per
+# threshold. The counter append is atomic, but append-then-read is not: from a
+# baseline of 4, two sessions ending together both append and can then both read
+# 6, so a test of `count % 5` emits nothing and the session-5 reminder is lost
+# even though both records persist. Claiming the threshold that was crossed
+# decouples the reminder from whichever total a racer happens to observe, and
+# exclusive create is O_EXCL, so a second racer's create fails and the same
+# threshold can never remind twice either.
+#
+# Markers below the one just claimed are pruned, so one file remains rather than
+# one per five sessions. The first claim on a counter that predates this
+# function may emit one extra reminder, because no marker yet exists for a
+# threshold already passed.
+claim_reminder() {
+  local mem="$1" threshold="$2" marker f
+  marker="$mem/.session-reminder.$threshold"
+  ( set -C; : > "$marker" ) 2>/dev/null || return 1
+  for f in "$mem"/.session-reminder.*; do
+    [ "$f" = "$marker" ] || rm -f "$f"
+  done
+  return 0
+}
+
 # drain_pending <lrn> <errors> <stamp> [buffer]
 # Consolidate captured tool failures into ERRORS.md under the drain lock.
 # Called from SessionEnd and from PreCompact: SessionEnd never runs if the
@@ -245,7 +268,7 @@ cmd_tool_failure() {
 
 cmd_session_end() {
   local payload="$1" base mem lrn today stamp now reason
-  local daily state buffer errors counter lines count
+  local daily state buffer errors counter lines count threshold
   base="$(resolve_base)"
   [ -n "$base" ] || return 0
   mem="$base/memory"
@@ -281,9 +304,10 @@ cmd_session_end() {
 
   # ── Session counter and review reminder ─────────────────────────────────────
   count="$(session_count "$counter")"
-  if [ $((count % 5)) -eq 0 ]; then
+  threshold=$((count - count % 5))
+  if [ "$threshold" -ge 5 ] && claim_reminder "$mem" "$threshold"; then
     printf '\n### Review reminder (session %d):\n\nRun `/platform-skills:self-improve review`. 5 sessions have elapsed.\n' \
-      "$count" >> "$daily"
+      "$threshold" >> "$daily"
   fi
 
   if ! grep -q "^### LRN-$stamp" "$lrn/LEARNINGS.md" 2>/dev/null; then
