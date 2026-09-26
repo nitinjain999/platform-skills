@@ -25,8 +25,11 @@ $LegacyHookPattern = 'session-start-reminder|session-end\.(sh|ps1)|CLAUDE_TOOL_E
 
 function Resolve-Base {
     $globalBase = [IO.Path]::Combine($UserHome, '.claude')
-    if (Test-Path -LiteralPath ([IO.Path]::Combine($globalBase, '.learnings')) -PathType Container) { return $globalBase }
-    if (Test-Path -LiteralPath ([IO.Path]::Combine($Project, '.learnings')) -PathType Container) { return $Project }
+    # -Force: on Unix, .NET marks any dotfile/dot-directory Hidden, and the
+    # PowerShell provider layer silently treats a hidden item as absent
+    # unless -Force is passed. ".learnings" is a dot-directory.
+    if (Test-Path -LiteralPath ([IO.Path]::Combine($globalBase, '.learnings')) -PathType Container -Force) { return $globalBase }
+    if (Test-Path -LiteralPath ([IO.Path]::Combine($Project, '.learnings')) -PathType Container -Force) { return $Project }
     return $null
 }
 
@@ -76,12 +79,29 @@ function Add-Err([string]$File, [int]$Number, [string]$Stamp, [string]$Context, 
 
 # Exclusive create (FileMode.CreateNew), so two sessions ending together
 # never both drain or both pick the same ERR id. A lock older than
-# 10 minutes is presumed left by a killed session.
+# 10 minutes is presumed left by a killed session. Atomic claim via rename
+# closes the two-party race where both processes see the same stale lock:
+# only one process can successfully move the lock to its own private name.
+# After claiming, re-verify the claim was actually stale before recreating,
+# since a second racer's own claim attempt might land after we already
+# replaced the lock with a live one -- if so, put it back rather than
+# destroying an active lock.
+# -Force on Test-Path/Get-Item: on Unix, .NET marks a dotfile Hidden, and
+# the PowerShell provider layer silently treats a hidden item as absent
+# unless -Force is passed. The lock file (".drain.lock") is a dotfile.
 function Enter-Lock([string]$Path) {
     try { [IO.File]::Open($Path, [IO.FileMode]::CreateNew).Dispose(); return $true } catch { }
-    if ((Test-Path -LiteralPath $Path) -and ((Get-Item -LiteralPath $Path).LastWriteTime -lt (Get-Date).AddMinutes(-10))) {
-        Remove-Item -LiteralPath $Path -Force
-        try { [IO.File]::Open($Path, [IO.FileMode]::CreateNew).Dispose(); return $true } catch { }
+    if ((Test-Path -LiteralPath $Path -Force) -and ((Get-Item -LiteralPath $Path -Force).LastWriteTime -lt (Get-Date).AddMinutes(-10))) {
+        $claim = "$Path.claim.$PID"
+        try { [IO.File]::Move($Path, $claim) } catch { return $false }
+        if ((Get-Item -LiteralPath $claim -Force).LastWriteTime -lt (Get-Date).AddMinutes(-10)) {
+            Remove-Item -LiteralPath $claim -Force
+            try { [IO.File]::Open($Path, [IO.FileMode]::CreateNew).Dispose(); return $true } catch { }
+        } else {
+            # What we claimed turned out to be a live lock someone else just
+            # created between our staleness check and our move; give it back.
+            try { [IO.File]::Move($claim, $Path) } catch { }
+        }
     }
     return $false
 }
@@ -135,10 +155,18 @@ function Invoke-SessionEnd {
 
     # ERRORS.md writes, under the drain lock. If a parallel session holds it,
     # that session owns this drain; pending lines wait for the next one.
+    # The locked section runs in its own try/finally so the lock is always
+    # released, even on an exception -- the outer try/catch at the bottom of
+    # this script would otherwise swallow the error and leave the lock held
+    # for up to 10 minutes.
     if (Enter-Lock $lock) {
+      try {
         # Rename before reading so an async tool-failure hook that fires
         # mid-drain appends to a fresh log.
-        if ((Test-Path -LiteralPath $pending) -and (Get-Item -LiteralPath $pending).Length -gt 0) {
+        # -Force: ".pending-errors.log" and ".pending-errors.draining" are
+        # dotfiles, hidden on Unix, and skipped by Test-Path/Get-Item
+        # without -Force.
+        if ((Test-Path -LiteralPath $pending -Force) -and (Get-Item -LiteralPath $pending -Force).Length -gt 0) {
             $tmp = Join-Path $lrn ('.pending-errors.' + [Guid]::NewGuid().ToString('N'))
             try {
                 [IO.File]::Move($pending, $tmp)
@@ -147,7 +175,7 @@ function Invoke-SessionEnd {
             } catch { }
         }
         $n = Get-LastErrNumber $errors $stamp
-        if ((Test-Path -LiteralPath $draining) -and (Get-Item -LiteralPath $draining).Length -gt 0) {
+        if ((Test-Path -LiteralPath $draining -Force) -and (Get-Item -LiteralPath $draining -Force).Length -gt 0) {
             # One entry per (tool, session), in first-seen order.
             $groups = [ordered]@{}
             foreach ($line in [IO.File]::ReadAllLines($draining)) {
@@ -189,15 +217,19 @@ function Invoke-SessionEnd {
             $n++
             Add-Err $errors $n $stamp 'Session closed with a PENDING WAL entry in working-buffer.md' 'A destructive operation was started but not confirmed as COMMITTED before the session ended' 'Run `/platform-skills:self-improve resume` next session to verify and update the WAL status'
         }
-        Remove-Item -LiteralPath $lock -Force
+      } finally {
+        Remove-Item -LiteralPath $lock -Force -ErrorAction SilentlyContinue
+      }
     }
 
     # The legacy PreToolUse banner keyed off this marker; nothing reads it now.
     Remove-Item -LiteralPath (Join-Path $mem '.session-active') -Force
 
     # Session counter and review reminder
+    # -Force: ".session-count" is a dotfile, hidden on Unix, and skipped by
+    # Test-Path without -Force.
     $count = 0
-    if (Test-Path -LiteralPath $counter) {
+    if (Test-Path -LiteralPath $counter -Force) {
         $digits = [IO.File]::ReadAllText($counter) -replace '[^0-9]', ''
         if ($digits) { $count = [int]$digits }
     }
@@ -245,15 +277,22 @@ function Invoke-SessionStart {
     }
 
     $pendingLog = [IO.Path]::Combine($base, '.learnings', '.pending-errors.log')
-    if ((Test-Path -LiteralPath $pendingLog) -and (Get-Item -LiteralPath $pendingLog).Length -gt 0) {
+    # -Force: ".pending-errors.log" is a dotfile, hidden on Unix, and skipped
+    # by Test-Path/Get-Item without -Force.
+    if ((Test-Path -LiteralPath $pendingLog -Force) -and (Get-Item -LiteralPath $pendingLog -Force).Length -gt 0) {
         $count = @([IO.File]::ReadAllLines($pendingLog) | Where-Object { $_ -match 'TOOL_FAILURE' }).Count
         $out.Add("WARNING: $count unprocessed tool failure(s) in $(Show-Path $pendingLog). Run /platform-skills:self-improve review.")
     }
 
-    $settingsFiles = @([IO.Path]::Combine($UserHome, '.claude', 'settings.json'))
-    # With the project at home the user and project settings.json are one file.
-    if ($Project -ne $UserHome) { $settingsFiles += [IO.Path]::Combine($Project, '.claude', 'settings.json') }
-    $settingsFiles += [IO.Path]::Combine($Project, '.claude', 'settings.local.json')
+    $settingsFiles = @(
+        [IO.Path]::Combine($UserHome, '.claude', 'settings.json'),
+        [IO.Path]::Combine($UserHome, '.claude', 'settings.local.json')
+    )
+    # With the project at home, the project paths are the same files as the two above.
+    if ($Project -ne $UserHome) {
+        $settingsFiles += [IO.Path]::Combine($Project, '.claude', 'settings.json')
+        $settingsFiles += [IO.Path]::Combine($Project, '.claude', 'settings.local.json')
+    }
     foreach ($f in $settingsFiles) {
         if ((Test-Path -LiteralPath $f) -and (Select-String -LiteralPath $f -Pattern $LegacyHookPattern -Quiet)) {
             $out.Add("WARNING: legacy self-improve hooks are still wired in $(Show-Path $f). Remove its Stop, PreToolUse and PostToolUse self-improve entries (see `"Migrating from the legacy hooks`" in examples/agent-self-improve/README.md).")
