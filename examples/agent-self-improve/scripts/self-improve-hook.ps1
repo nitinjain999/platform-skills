@@ -137,9 +137,34 @@ function Get-LastErrNumber([string]$File, [string]$Stamp) {
     return $max
 }
 
+# Get-EntryScope: the **Scope** value for an entry this hook writes. Mirrors
+# project_name in learnings.sh, including the normalisation to what lint
+# accepts, because promote compares a project-scoped entry against that name.
+# Cached, since a drain writes several entries and git is not cheap to start.
+$script:EntryScope = $null
+function Get-EntryScope {
+    if ($null -eq $script:EntryScope) {
+        $top = ''
+        try { $top = (& git -C $Project rev-parse --show-toplevel 2>$null | Select-Object -First 1) } catch { $top = '' }
+        if (-not $top) { $top = $Project }
+        $name = Split-Path -Leaf ([string]$top).Trim()
+        $name = ($name -replace '[^A-Za-z0-9._-]', '-') -replace '-+', '-'
+        if (-not $name) { $name = 'project' }
+        $script:EntryScope = "project:$name"
+    }
+    return $script:EntryScope
+}
+
+# The promotion metadata is written here too. Source is "observed": a captured
+# failure is live tool output. Verified comes from the same stamp as the id, so
+# the entry is dated the day it was captured. Without these three fields every
+# entry the hooks create would be one that lint counts as "without metadata"
+# and promote refuses until someone fills them in by hand.
 function Add-Err([string]$File, [int]$Number, [string]$Stamp, [string]$Context, [string]$Content, [string]$Action) {
     $id = 'ERR-{0}-{1:D3}' -f $Stamp, $Number
-    Add-Text $File ("`n### $id`n**Status**: pending`n**Context**: $Context`n**Content**: $Content`n**Action**: $Action`n")
+    $verified = '{0}-{1}-{2}' -f $Stamp.Substring(0, 4), $Stamp.Substring(4, 2), $Stamp.Substring(6, 2)
+    Add-Text $File ("`n### $id`n**Status**: pending`n**Context**: $Context`n**Content**: $Content`n**Action**: $Action`n" +
+        "**Source**: observed`n**Scope**: $(Get-EntryScope)`n**Verified**: $verified`n")
 }
 
 # Exclusive create (FileMode.CreateNew), so two sessions ending together

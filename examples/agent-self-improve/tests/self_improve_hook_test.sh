@@ -220,6 +220,53 @@ t_session_end_drains_pending() {
   assert_missing "draining file removed" "$BASE/.learnings/.pending-errors.draining"
 }
 
+# A drained entry has to carry the same promotion metadata `log` writes, or
+# every failure the hooks capture is one `lint` counts as "without metadata"
+# and `promote` refuses. Source is observed, Verified is the capture date, and
+# Scope names the project the way learnings.sh computes it.
+t_session_end_drains_with_promotion_metadata() {
+  fresh global
+  printf '2026-09-26T10:00:00Z TOOL_FAILURE: Bash session=s1 tool_use_id=t1\n' \
+    > "$BASE/.learnings/.pending-errors.log"
+  run_hook session-end "$END_JSON" >/dev/null
+  local errors
+  errors="$(file_or_empty "$BASE/.learnings/ERRORS.md")"
+  assert_contains "source is observed" "**Source**: observed" "$errors"
+  assert_contains "scope names the sandbox project" "**Scope**: project:proj" "$errors"
+  assert_contains "verified is the capture date" "**Verified**: $TODAY" "$errors"
+  assert_eq "the metadata follows Action, in the documented order" \
+    "$(printf '%s\n' '**Action**: x' '**Source**: observed' "**Scope**: project:proj" "**Verified**: $TODAY")" \
+    "$(printf '%s\n' "$errors" | sed 's/^\*\*Action\*\*: .*/**Action**: x/' | grep '^\*\*\(Action\|Source\|Scope\|Verified\)\*\*:')"
+}
+
+t_session_end_pending_wal_carries_metadata() {
+  fresh global
+  printf '**Status**: PENDING\n' > "$BASE/memory/working-buffer.md"
+  run_hook session-end "$END_JSON" >/dev/null
+  assert_contains "the WAL entry is promotable too" "**Source**: observed" \
+    "$(file_or_empty "$BASE/.learnings/ERRORS.md")"
+}
+
+# The scope the hook writes has to satisfy lint's project:[A-Za-z0-9._-]+ and
+# match what promote compares against, so a project directory holding a space
+# is normalised rather than written through.
+t_session_end_normalises_a_project_name_with_a_space() {
+  fresh global
+  local spaced="$TMP/$IMPL-$CASE/a proj dir"
+  mkdir -p "$spaced"
+  printf '2026-09-26T10:00:00Z TOOL_FAILURE: Bash session=s1 tool_use_id=t1\n' \
+    > "$BASE/.learnings/.pending-errors.log"
+  case "$IMPL" in
+    bash) printf '%s' "$END_JSON" | (cd "$spaced" && env -u USERPROFILE HOME="$T_HOME" \
+      CLAUDE_PROJECT_DIR="$spaced" bash "$DIR/scripts/self-improve-hook.sh" session-end) >/dev/null 2>&1 ;;
+    pwsh) printf '%s' "$END_JSON" | (cd "$spaced" && env -u USERPROFILE HOME="$T_HOME" \
+      CLAUDE_PROJECT_DIR="$spaced" POWERSHELL_TELEMETRY_OPTOUT=1 POWERSHELL_UPDATECHECK=Off \
+      pwsh -NoLogo -NoProfile -NonInteractive -File "$DIR/scripts/self-improve-hook.ps1" session-end) >/dev/null 2>&1 ;;
+  esac
+  assert_contains "spaces become dashes" "**Scope**: project:a-proj-dir" \
+    "$(file_or_empty "$BASE/.learnings/ERRORS.md")"
+}
+
 t_session_end_continues_after_highest_id() {
   fresh global
   printf '### ERR-%s-001\n**Status**: resolved\n\n### ERR-%s-003\n**Status**: pending\n' \

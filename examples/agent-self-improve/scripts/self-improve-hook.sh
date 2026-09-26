@@ -75,10 +75,38 @@ last_err_number() {
   echo $((10#${n:-0}))
 }
 
+# entry_scope — the **Scope** value for an entry this hook writes. Mirrors
+# project_name() in learnings.sh, including the normalisation to what lint
+# accepts, because promote compares a project-scoped entry against that name.
+# Cached: a drain writes several entries and each would otherwise fork git
+# inside SessionEnd's 1.5 s budget.
+ENTRY_SCOPE=""
+entry_scope() {
+  local project top name
+  if [ -z "$ENTRY_SCOPE" ]; then
+    project="${CLAUDE_PROJECT_DIR:-$PWD}"
+    top="$(git -C "$project" rev-parse --show-toplevel 2>/dev/null)" || top=""
+    # Parameter expansion, not basename: the drain has to keep working on the
+    # reduced PATH the no-jq path runs with, which holds no more than the
+    # handful of tools this script already needs.
+    name="${top:-$project}"
+    name="${name%/}"
+    name="${name##*/}"
+    name="$(printf '%s' "$name" | tr -c 'A-Za-z0-9._-' '-' | tr -s '-')"
+    ENTRY_SCOPE="project:${name:-project}"
+  fi
+  printf '%s\n' "$ENTRY_SCOPE"
+}
+
 # append_err <errors-file> <number> <yyyymmdd> <context> <content> <action>
+# The promotion metadata is written here too. Source is `observed`: a captured
+# failure is live tool output. Verified comes from the same stamp as the id, so
+# the entry is dated the day it was captured. Without these three fields every
+# entry the hooks create would be one `lint` counts as "without metadata" and
+# `promote` refuses until someone fills them in by hand.
 append_err() {
-  printf '\n### ERR-%s-%03d\n**Status**: pending\n**Context**: %s\n**Content**: %s\n**Action**: %s\n' \
-    "$3" "$2" "$4" "$5" "$6" >> "$1"
+  printf '\n### ERR-%s-%03d\n**Status**: pending\n**Context**: %s\n**Content**: %s\n**Action**: %s\n**Source**: observed\n**Scope**: %s\n**Verified**: %s-%s-%s\n' \
+    "$3" "$2" "$4" "$5" "$6" "$(entry_scope)" "${3:0:4}" "${3:4:2}" "${3:6:2}" >> "$1"
 }
 
 # acquire_lock <file> — exclusive create (noclobber is O_EXCL), so two
