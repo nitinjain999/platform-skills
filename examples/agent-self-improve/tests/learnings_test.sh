@@ -364,6 +364,74 @@ t_unpromote() {
     "$(file_or_empty "$W/.learnings/ERRORS.md")"
 }
 
+# ── PR 3: recall ──────────────────────────────────────────────────────────────
+
+t_recall_ranks_and_formats() {
+  fresh global
+  entry ERRORS.md ERR-20260910-001 resolved Source=observed Scope=project:proj Verified=2026-09-10 \
+    "Context=Karpenter nodes failed to join" "Content=Pod Identity association missing for the Karpenter controller"
+  entry LEARNINGS.md LRN-20260915-001 resolved Source=user Scope=global Verified=2026-09-15 \
+    "Context=Reviewing Karpenter NodePool" "Content=Prefer Spot diversity across 15 instance types"
+  local rc=0 out
+  out="$(L recall Karpenter pod identity)" || rc=$?
+  assert_eq "recall exits 0" "0" "$rc"
+  assert_contains "header counts matches" 'recall: 2 match(es) for "karpenter pod identity"' "$out"
+  assert_eq "best match first" "[7] ERR-20260910-001 resolved | source=observed verified=2026-09-10 | scope=project:proj" \
+    "$(printf '%s\n' "$out" | sed -n 2p)"
+  assert_eq "content shown indented" "    Pod Identity association missing for the Karpenter controller" \
+    "$(printf '%s\n' "$out" | sed -n 3p)"
+  assert_contains "weaker match second" "[1] LRN-20260915-001" "$(printf '%s\n' "$out" | sed -n 4p)"
+}
+
+t_recall_exclusions() {
+  fresh global
+  entry ERRORS.md ERR-20260901-001 revoked Source=observed Scope=global Verified=2026-09-01 "Content=helm rollback steps"
+  entry ERRORS.md ERR-20260901-002 superseded Source=observed Scope=global Verified=2026-09-01 "Content=helm rollback old"
+  entry ERRORS.md ERR-20260901-003 resolved Source=observed Scope=global Verified=2026-09-01 Expires=2026-09-02 "Content=helm rollback temp"
+  entry ERRORS.md ERR-20260901-004 resolved Source=observed Scope=project:other-repo Verified=2026-09-01 "Content=helm rollback there"
+  entry ERRORS.md ERR-20260901-005 example "Content=helm rollback example"
+  local out
+  out="$(L recall helm rollback)"
+  assert_contains "nothing active matches, and exclusions are counted" \
+    'recall: no matches for "helm rollback" (4 excluded: 1 revoked, 1 superseded, 1 expired, 1 other-project; --all shows them)' "$out"
+  out="$(L recall --all helm rollback)"
+  assert_contains "--all shows excluded entries, flagged" "ERR-20260901-001 revoked" "$out"
+  assert_contains "the flag names the reason" "scope=project:other-repo OTHER-PROJECT" "$out"
+  assert_not_contains "example entries never appear" "ERR-20260901-005" "$out"
+}
+
+t_recall_trust_flags() {
+  fresh global
+  entry LEARNINGS.md LRN-20260601-001 resolved Source=observed Scope=global Verified=2026-06-01 "Content=flux suspend before manual edits"
+  entry LEARNINGS.md LRN-20260920-001 resolved Source=inferred Scope=global Verified=2026-09-20 "Content=flux reconcile is idempotent"
+  entry LEARNINGS.md LRN-20260921-001 resolved "Content=flux legacy note"
+  local out
+  out="$(L recall flux)"
+  assert_contains "stale entries are flagged" "LRN-20260601-001 resolved | source=observed verified=2026-06-01 | scope=global STALE" "$out"
+  assert_contains "inferences say verify before use" "scope=global | verify before use" "$out"
+  assert_contains "legacy entries show unknown metadata" "source=unknown verified=unknown | scope=unknown | verify before use" "$out"
+}
+
+t_recall_limit_and_ties() {
+  fresh global
+  entry LEARNINGS.md LRN-20260901-001 resolved Source=user Scope=global Verified=2026-09-01 "Content=kyverno audit first"
+  entry LEARNINGS.md LRN-20260902-001 resolved Source=user Scope=global Verified=2026-09-02 "Content=kyverno exceptions"
+  entry ERRORS.md ERR-20260903-001 resolved Source=user Scope=global Verified=2026-09-03 "Content=kyverno deny broke CI"
+  local out
+  out="$(L recall --limit 2 kyverno)"
+  assert_eq "limit caps the list (header + 2 x 2 lines)" "5" "$(printf '%s\n' "$out" | grep -c .)"
+  assert_contains "ties go to the newest id, across types" "[2] ERR-20260903-001" "$(printf '%s\n' "$out" | sed -n 2p)"
+}
+
+t_recall_usage() {
+  fresh global
+  local rc=0
+  L recall >/dev/null 2>&1 || rc=$?
+  assert_eq "no terms exits 2" "2" "$rc"
+  rc=0; L recall --limit x flux >/dev/null 2>&1 || rc=$?
+  assert_eq "a bad limit exits 2" "2" "$rc"
+}
+
 
 # ── Runner ────────────────────────────────────────────────────────────────────
 
