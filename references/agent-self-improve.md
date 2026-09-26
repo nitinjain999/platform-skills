@@ -91,7 +91,7 @@ The same block serves project-scoped setup unchanged. The script applies the res
 
 ### Entry format
 
-Every entry has four required fields, plus optional metadata. `log` writes the metadata for every new entry. Older entries without it stay valid: `lint` counts them as "without metadata". They need `Source`, `Scope` and `Verified` before they can be promoted.
+Every entry has four required fields, plus optional metadata. `log` writes the metadata for every new entry, and so does the lifecycle hook when it consolidates a captured tool failure into `ERRORS.md`, so a drained entry is promotable without hand-editing. Older entries without it stay valid: `lint` counts them as "without metadata". They need `Source`, `Scope` and `Verified` before they can be promoted.
 
 ```markdown
 ### LRN-20260520-001
@@ -121,7 +121,7 @@ Every entry has four required fields, plus optional metadata. `log` writes the m
 
 #### Staleness and expiry
 
-An active entry (`pending`, `resolved` or `promoted`) is **stale** once its `Verified` date is older than the window for its source, and **expired** after its `Expires` date. `lint` and `review` report both. A stale or expired entry can't be promoted. A stale *promoted* entry is flagged first, because its rule is still loaded into every session.
+An active entry (`pending`, `resolved` or `promoted`) is **stale** once its `Verified` date is older than the window for its source, and **expired** after its `Expires` date. `lint` and `review` report both. A stale or expired entry can't be promoted. `lint` lists every stale *promoted* entry ahead of the other stale entries, because a promoted rule is still loaded into every session.
 
 | Source | Re-verify after |
 |---|---|
