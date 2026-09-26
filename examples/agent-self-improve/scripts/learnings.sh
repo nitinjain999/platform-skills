@@ -7,6 +7,8 @@
 #   entries                          one TSV record per entry
 #   lint                             validate entries; report expired and stale
 #   set-status ID STATUS [--note T]  rewrite one entry's Status line
+#   promote ID --domain D --rule T [--target F] [--allow-inferred] [--apply]
+#   unpromote ID [--revoke] [--note T]
 #
 # Global options, before the subcommand: --base DIR (skip resolution),
 # --today YYYY-MM-DD (tests pin the date).
@@ -257,6 +259,220 @@ cmd_set_status() {
   echo "$id: status $status"
 }
 
+# ── promote / unpromote ───────────────────────────────────────────────────────
+# A promoted rule is one line ending in a marker comment naming its entry:
+#   - Never apply a plan that says "forces replacement" on RDS <!-- self-improve:ERR-20260901-001 -->
+# The marker makes a promotion traceable and removable (unpromote) without
+# guessing which line came from which lesson.
+REC=""
+
+# entry_record <id> — that entry's TSV record, or nothing.
+entry_record() {
+  cmd_entries | ID="$1" awk -F'\t' '$1 == ENVIRON["ID"] { print; exit }'
+}
+
+# col <n> — column n of the record in REC.
+col() {
+  printf '%s\n' "$REC" | awk -F'\t' -v n="$1" '{ print $n }'
+}
+
+# norm_paths — comma list on stdin to sorted, trimmed, comma-joined.
+norm_paths() {
+  tr ',' '\n' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | grep -v '^$' | sort | paste -sd, -
+}
+
+# frontmatter_paths <file> — the rule file's `paths:` as norm_paths output.
+# Reads the YAML list form and the comma-separated string form.
+frontmatter_paths() {
+  awk '
+    NR == 1 { if ($0 != "---") exit; fm = 1; next }
+    fm && /^---[[:space:]]*$/ { exit }
+    fm && /^paths:[[:space:]]*$/ { inlist = 1; next }
+    fm && /^paths:[[:space:]]*[^[:space:]]/ {
+      v = $0; sub(/^paths:[[:space:]]*/, "", v); gsub(/"/, "", v); print v; inlist = 0; next
+    }
+    fm && inlist && /^[[:space:]]*-/ {
+      v = $0; sub(/^[[:space:]]*-[[:space:]]*/, "", v); gsub(/^"|"$/, "", v); print v; next
+    }
+    fm && /^[^[:space:]]/ { inlist = 0 }
+  ' "$1" | norm_paths
+}
+
+rule_candidates() {
+  find "$HOME/.claude/rules" "$PROJECT/.claude/rules" -type f -name '*.md' 2>/dev/null
+  printf '%s\n' "$HOME/.claude/CLAUDE.md" "$PROJECT/CLAUDE.md" "$PROJECT/AGENTS.md" \
+    "$PROJECT/.github/copilot-instructions.md"
+}
+
+cmd_promote() {
+  local id="${1:-}" domain="" rule="" target="" allow_inferred=0 apply=0
+  [ -n "$id" ] || die 2 "usage: promote ID --domain D --rule TEXT [--target FILE] [--allow-inferred] [--apply]"
+  shift
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --domain) domain="${2:-}"; shift 2 ;;
+      --rule) rule="$(printf '%s' "${2:-}" | tr '\t\r\n' '   ' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//')"; shift 2 ;;
+      --target) target="${2:-}"; shift 2 ;;
+      --allow-inferred) allow_inferred=1; shift ;;
+      --apply) apply=1; shift ;;
+      *) die 2 "promote: unknown option $1" ;;
+    esac
+  done
+
+  REC="$(entry_record "$id")"
+  [ -n "$REC" ] || die 4 "no entry $id"
+  local status source scope paths verified expires verdict project
+  status="$(col 4)"; source="$(col 5)"; scope="$(col 6)"; paths="$(col 7)"
+  verified="$(col 8)"; expires="$(col 9)"
+
+  # ── Eligibility: promotion changes agent behaviour, so it needs evidence ──
+  case "$status" in
+    resolved|promoted) ;;
+    pending) die 4 "$id is pending; resolve it before promoting" ;;
+    *) die 4 "$id is $status; only resolved entries can be promoted" ;;
+  esac
+  if [ -z "$source" ] || [ -z "$scope" ] || [ -z "$verified" ]; then
+    die 4 "$id has no **Source**, **Scope** or **Verified**; add them before promoting"
+  fi
+  if [ "$source" = "inferred" ] && [ "$allow_inferred" -eq 0 ]; then
+    die 4 "$id comes from an inference; confirm it with the user and re-run with --allow-inferred"
+  fi
+  verdict="$(printf '%s\n' "$REC" | TODAY="$TODAY" awk -F'\t' "$AWK_LIB"'
+    { if (is_expired($9, ENVIRON["TODAY"])) print "expired"
+      else if (stale_age($8, $5, ENVIRON["TODAY"]) >= 0) print "stale" }')"
+  [ "$verdict" != "expired" ] || die 4 "$id expired on $expires"
+  [ "$verdict" != "stale" ] || die 4 "$id was last verified $verified; re-verify it and update **Verified** first"
+  case "$domain" in
+    ""|-*|*[!a-z0-9-]*) die 2 "--domain must be lowercase letters, digits and dashes, e.g. terraform" ;;
+  esac
+  [ -n "$rule" ] || die 2 "--rule is required: one imperative line"
+  [ "${#rule}" -le 160 ] || die 2 "--rule is ${#rule} characters; keep it to 160"
+  case "$rule" in *"<!--"*|*"-->"*) die 2 "--rule must not contain an HTML comment" ;; esac
+  project="$(project_name)"
+  case "$scope" in
+    project:*) [ "${scope#project:}" = "$project" ] || die 4 "$id is scoped to ${scope#project:}, but this project is $project" ;;
+  esac
+
+  # ── Target ────────────────────────────────────────────────────────────────
+  if [ -z "$target" ]; then
+    if [ "$scope" = "global" ]; then target="$HOME/.claude/rules/$domain.md"; else target="$PROJECT/.claude/rules/$domain.md"; fi
+  fi
+  case "$target" in /*) ;; *) target="$PROJECT/$target" ;; esac
+  local kind
+  case "$target" in
+    */.claude/rules/*.md) kind="rules" ;;
+    */CLAUDE.md|*/AGENTS.md|*/.github/copilot-instructions.md) kind="section" ;;
+    *) die 2 "--target must be a .claude/rules/*.md file, CLAUDE.md, AGENTS.md or .github/copilot-instructions.md" ;;
+  esac
+  [ "$kind" = "rules" ] || [ -z "$paths" ] || die 4 "$id has **Paths**; only a .claude/rules/ target can scope a rule to paths"
+
+  local marker="<!-- self-improve:$id -->" line
+  line="- $rule $marker"
+  if [ -f "$target" ] && grep -qF "$marker" "$target"; then
+    echo "$id is already promoted to $target"
+    if [ "$apply" -eq 1 ] && [ "$status" != "promoted" ]; then
+      cmd_set_status "$id" promoted --note "promoted to $target" >/dev/null
+    fi
+    return 0
+  fi
+
+  # ── Proposed file content ─────────────────────────────────────────────────
+  local proposed want have
+  proposed="$(mktemp "${TMPDIR:-/tmp}/learnings-promote.XXXXXX")" || die 1 "mktemp failed"
+  if [ "$kind" = "rules" ]; then
+    want="$(printf '%s' "$paths" | norm_paths)"
+    if [ -f "$target" ]; then
+      have="$(frontmatter_paths "$target")"
+      if [ "$have" != "$want" ]; then
+        rm -f "$proposed"
+        die 4 "$target applies to paths [${have:-all files}] but $id needs [${want:-all files}]; choose another --domain"
+      fi
+      { cat "$target"; [ -z "$(tail -c1 "$target")" ] || echo; printf '%s\n' "$line"; } > "$proposed"
+    else
+      {
+        if [ -n "$want" ]; then
+          printf -- '---\npaths:\n'
+          printf '%s\n' "$want" | tr ',' '\n' | sed 's/.*/  - "&"/'
+          printf -- '---\n\n'
+        fi
+        printf '# %s rules\n\n%s\n' "$(printf '%s' "$domain" | awk '{ print toupper(substr($0, 1, 1)) substr($0, 2) }')" "$line"
+      } > "$proposed"
+    fi
+  elif [ -f "$target" ]; then
+    # Insert at the end of the "## Agent Rules" section, creating it if absent.
+    LINE="$line" awk '
+      { lines[NR] = $0 }
+      /^## Agent Rules[[:space:]]*$/ && !start { start = NR }
+      END {
+        if (!start) {
+          for (i = 1; i <= NR; i++) print lines[i]
+          if (NR > 0 && lines[NR] != "") print ""
+          print "## Agent Rules"; print ""; print ENVIRON["LINE"]
+          exit
+        }
+        stop = NR + 1
+        for (i = start + 1; i <= NR; i++) if (lines[i] ~ /^# / || lines[i] ~ /^## /) { stop = i; break }
+        at = stop - 1
+        while (at > start && lines[at] == "") at--
+        for (i = 1; i <= at; i++) print lines[i]
+        if (at == start) print ""
+        print ENVIRON["LINE"]
+        for (i = at + 1; i <= NR; i++) print lines[i]
+      }' "$target" > "$proposed"
+  else
+    printf '## Agent Rules\n\n%s\n' "$line" > "$proposed"
+  fi
+
+  if [ "$apply" -eq 0 ]; then
+    local old="/dev/null"
+    [ -f "$target" ] && old="$target"
+    printf 'PROMOTION PROPOSAL %s\n' "$id"
+    printf 'source=%s scope=%s verified=%s paths=%s\n' "$source" "$scope" "$verified" "${paths:-all files}"
+    printf 'target=%s\n' "$target"
+    diff -u "$old" "$proposed" | tail -n +3
+    rm -f "$proposed"
+    echo "Re-run with --apply to write it."
+    return 0
+  fi
+
+  local tmp
+  mkdir -p "$(dirname "$target")" || { rm -f "$proposed"; die 1 "cannot create $(dirname "$target")"; }
+  tmp="$(mktemp "$target.XXXXXX")" || { rm -f "$proposed"; die 1 "cannot write next to $target"; }
+  cat "$proposed" > "$tmp" && mv -f "$tmp" "$target"
+  rm -f "$proposed"
+  cmd_set_status "$id" promoted --note "promoted to $target" >/dev/null
+  echo "promoted $id -> $target"
+}
+
+cmd_unpromote() {
+  local id="${1:-}" revoke=0 note="unpromoted" marker f tmp changed="" new="resolved"
+  [ -n "$id" ] || die 2 "usage: unpromote ID [--revoke] [--note TEXT]"
+  shift
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --revoke) revoke=1; shift ;;
+      --note) note="${2:-}"; shift 2 ;;
+      *) die 2 "unpromote: unknown option $1" ;;
+    esac
+  done
+  [ -n "$(entry_file "$id")" ] || die 4 "no entry $id"
+  marker="<!-- self-improve:$id -->"
+  while IFS= read -r f; do
+    if [ ! -f "$f" ] || ! grep -qF "$marker" "$f"; then continue; fi
+    tmp="$(mktemp "$f.XXXXXX")" || continue
+    grep -vF "$marker" "$f" > "$tmp"
+    mv -f "$tmp" "$f"
+    changed="$changed $f"
+  done < <(rule_candidates | sort -u)
+  if [ -z "$changed" ] && [ "$revoke" -eq 0 ]; then
+    die 4 "no rule carries $marker; a rule promoted before markers existed must be removed by hand"
+  fi
+  [ "$revoke" -eq 1 ] && new="revoked"
+  cmd_set_status "$id" "$new" --note "$note${changed:+ (removed from$changed)}" >/dev/null
+  [ -z "$changed" ] || echo "removed $id from:$changed"
+  echo "$id: status $new"
+}
+
 # ── whereami ──────────────────────────────────────────────────────────────────
 cmd_whereami() {
   local scope="project"
@@ -281,6 +497,8 @@ main() {
     entries)    cmd_entries ;;
     lint)       cmd_lint ;;
     set-status) cmd_set_status "$@" ;;
+    promote)    cmd_promote "$@" ;;
+    unpromote)  cmd_unpromote "$@" ;;
     *) die 2 "usage: learnings.sh [--base DIR] [--today D] <subcommand> (see the header of this script)" ;;
   esac
 }
