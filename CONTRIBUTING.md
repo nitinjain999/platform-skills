@@ -314,7 +314,7 @@ See [AWS IAM docs](https://docs.aws.amazon.com/iam/) for reference.
 
 ## Development Setup
 
-Before contributing, read `CLAUDE.md` for the design philosophy, content structure, and writing principles that all patterns in this repository follow.
+Before contributing, read `CLAUDE.md` for the design philosophy and writing principles that all patterns in this repository follow. The repository layout is in the "Repository structure" section of `README.md`.
 
 ### Prerequisites
 
