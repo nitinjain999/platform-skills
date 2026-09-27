@@ -999,7 +999,10 @@ class TestNormalizeGitUrl(unittest.TestCase):
             ("git@github.com:owner/repo.git", "github.com"),
             ("ssh://git@ghes.example.com/owner/repo.git", "ghes.example.com"),
             ("https://x-access-token:ghs_SECRET@github.com/owner/repo.git", "github.com"),
-            ("https://github.com:8443/owner/repo.git", "github.com"),
+            # An explicit port is part of the destination, not noise to drop:
+            # a different port on the same hostname is a different endpoint.
+            ("https://github.com:8443/owner/repo.git", "github.com:8443"),
+            ("ssh://git@ghes.example.com:2222/owner/repo.git", "ghes.example.com:2222"),
             ("file:///tmp/x/owner/repo", None),
             ("/tmp/x/owner/repo.git", None),
             ("../owner/repo", None),
@@ -1035,6 +1038,18 @@ class TestPublishDestinationMatch(unittest.TestCase):
             with self.subTest(given=given):
                 self.assertFalse(self._matches(given, "acme/repo", "https://github.com/acme/repo.git"))
 
+    def test_same_owner_repo_on_a_different_port_is_never_a_match(self):
+        # Regression: urlsplit(...).hostname drops an explicit port, so
+        # ssh://git@github.com:2222/acme/repo.git used to compare equal to
+        # https://github.com/acme/repo.git even though git contacts a
+        # different endpoint for each.
+        for given in (
+            "ssh://git@github.com:2222/acme/repo.git",
+            "https://github.com:8443/acme/repo.git",
+        ):
+            with self.subTest(given=given):
+                self.assertFalse(self._matches(given, "acme/repo", "https://github.com/acme/repo.git"))
+
     def test_a_local_or_relative_path_never_matches_a_hosted_head_repo(self):
         for given in ("file:///tmp/x/acme/repo", "/tmp/x/acme/repo.git", "../acme/repo", "./acme/repo"):
             with self.subTest(given=given):
@@ -1060,6 +1075,37 @@ class TestPublishDestinationMatch(unittest.TestCase):
         self.assertFalse(self._matches(
             "https://github.com/acme/other.git", "acme/repo", "https://github.com/acme/repo.git",
         ))
+
+
+class TestPushAuthFailureRegex(unittest.TestCase):
+    # A real GitHub permission denial never reaches a pre-receive hook (the
+    # transport layer refuses before hooks run at all), so it can't be
+    # reproduced through a local bare repo the way a policy rejection can.
+    # Test the classifier's regex directly instead of through a real push.
+    def test_matches_gits_own_authorization_failure_phrasing(self):
+        regex = helper_module().PUSH_AUTH_FAILURE_RE
+        for stderr in (
+            "Permission denied (publickey).\nfatal: Could not read from remote repository.",
+            "remote: Permission to acme/widgets.git denied to bob.\nfatal: unable to access ...",
+            "fatal: Authentication failed for 'https://github.com/acme/widgets.git/'",
+            "fatal: unable to access 'https://github.com/acme/widgets.git/': The requested URL returned error: 403",
+        ):
+            with self.subTest(stderr=stderr):
+                self.assertIsNotNone(regex.search(stderr))
+
+    def test_does_not_match_a_destination_name_alone(self):
+        # The exact stderr git produces for a nonexistent remote path named
+        # permission-403-widgets.git: no authorization response occurred, but
+        # the path itself contains both "permission" and "403".
+        regex = helper_module().PUSH_AUTH_FAILURE_RE
+        for stderr in (
+            "fatal: '/tmp/x/permission-403-widgets.git' does not appear to be a git repository\n"
+            "fatal: Could not read from remote repository.\n\n"
+            "Please make sure you have the correct access rights\nand the repository exists.",
+            "error: failed to push some refs to 'permission-service.git'",
+        ):
+            with self.subTest(stderr=stderr):
+                self.assertIsNone(regex.search(stderr))
 
 
 class TestPublish(unittest.TestCase):
@@ -1278,6 +1324,30 @@ class TestPublish(unittest.TestCase):
         self.assertIn("permission", stderr.lower())
         self.assertIn("403", stderr)
         self.assertEqual(data["error"]["code"], "PUSH_REJECTED_NON_FASTFORWARD")
+
+    def test_unreachable_remote_with_permission_like_name_is_not_misclassified(self):
+        # Regression: a bare "permission"/"403" substring check over the whole
+        # stderr also matches those words when they are part of the remote
+        # path itself. git's own "does not appear to be a git repository /
+        # Could not read from remote repository" text for a nonexistent path
+        # never claims an authorization failure, so a path like
+        # permission-403-widgets.git must not be read as one.
+        tmp_path = Path(tempfile.mkdtemp())
+        remote, wt, head_sha, commit_sha = self._remote_and_worktree(tmp_path)
+        bad_remote = tmp_path / "permission-403-widgets.git"
+        rules = [{"contains": ["pulls/42"], "stdout": self._pr(head_sha, bad_remote)}]
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper([
+            "publish", "--repo", "acme/widgets", "--pr", "42", "--worktree", wt,
+            "--expected-head-sha", head_sha, "--commit-sha", commit_sha,
+            "--head-remote-url", str(bad_remote), "--head-ref", "fix-branch",
+        ], env=env)
+        data = json.loads(result.stdout)
+        self.assertFalse(data["ok"])
+        stderr = data["error"]["stderr"]
+        self.assertIn("permission", stderr.lower())
+        self.assertIn("403", stderr)
+        self.assertEqual(data["error"]["code"], "UNKNOWN_TRANSPORT_FAILURE")
 
     def test_policy_rejection_is_not_reported_as_non_fast_forward(self):
         tmp_path = Path(tempfile.mkdtemp())
@@ -1570,6 +1640,94 @@ class TestPublish(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertNotIn("ghs_SUPERSECRETVALUE", result.stdout)
         self.assertNotIn("x-access-token", result.stdout)
+
+
+class TestCheckStatus(unittest.TestCase):
+    SHA = "3c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d"
+
+    def _run(self, tmp_path, status_rule=None, checks_rule=None):
+        rules = []
+        if status_rule is not None:
+            rules.append({"contains": [f"commits/{self.SHA}/status"], **status_rule})
+        if checks_rule is not None:
+            rules.append({"contains": [f"commits/{self.SHA}/check-runs"], **checks_rule})
+        env, _ = gh_env(tmp_path, rules)
+        result = run_helper(["check-status", "--repo", "acme/widgets", "--commit-sha", self.SHA], env=env)
+        return json.loads(result.stdout)
+
+    def test_all_contexts_successful_is_overall_success(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        data = self._run(
+            tmp_path,
+            status_rule={"stdout": {"statuses": [{"context": "ci/lint", "state": "success"}]}},
+            checks_rule={"stdout": {"check_runs": [{"name": "build", "status": "completed", "conclusion": "success"}]}},
+        )
+        self.assertTrue(data["ok"])
+        self.assertEqual(data["overall_state"], "success")
+        self.assertEqual(data["total_count"], 2)
+
+    def test_an_in_progress_check_run_is_pending_regardless_of_conclusion(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        data = self._run(
+            tmp_path,
+            status_rule={"stdout": {"statuses": [{"context": "ci/lint", "state": "success"}]}},
+            checks_rule={"stdout": {"check_runs": [{"name": "build", "status": "in_progress", "conclusion": None}]}},
+        )
+        self.assertEqual(data["overall_state"], "pending")
+
+    def test_a_failing_context_wins_over_success_and_pending(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        data = self._run(
+            tmp_path,
+            status_rule={"stdout": {"statuses": [{"context": "ci/lint", "state": "pending"}]}},
+            checks_rule={"stdout": {"check_runs": [
+                {"name": "build", "status": "completed", "conclusion": "success"},
+                {"name": "test", "status": "completed", "conclusion": "failure"},
+            ]}},
+        )
+        self.assertEqual(data["overall_state"], "failure")
+
+    def test_neutral_and_skipped_conclusions_are_not_blocking(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        data = self._run(
+            tmp_path,
+            status_rule=None,
+            checks_rule={"stdout": {"check_runs": [
+                {"name": "a", "status": "completed", "conclusion": "neutral"},
+                {"name": "b", "status": "completed", "conclusion": "skipped"},
+            ]}},
+        )
+        self.assertEqual(data["overall_state"], "success")
+
+    def test_both_reads_failing_is_undiscoverable_not_success(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        data = self._run(
+            tmp_path,
+            status_rule={"returncode": 1, "stderr": "HTTP 404"},
+            checks_rule={"returncode": 1, "stderr": "HTTP 404"},
+        )
+        self.assertTrue(data["ok"])
+        self.assertEqual(data["overall_state"], "undiscoverable")
+        self.assertEqual(data["total_count"], 0)
+
+    def test_both_reads_succeeding_with_no_contexts_is_success_not_undiscoverable(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        data = self._run(
+            tmp_path,
+            status_rule={"stdout": {"statuses": []}},
+            checks_rule={"stdout": {"check_runs": []}},
+        )
+        self.assertEqual(data["overall_state"], "success")
+        self.assertEqual(data["total_count"], 0)
+
+    def test_an_unrecognized_classic_status_state_is_treated_as_failure(self):
+        tmp_path = Path(tempfile.mkdtemp())
+        data = self._run(
+            tmp_path,
+            status_rule={"stdout": {"statuses": [{"context": "ci/lint", "state": "error"}]}},
+            checks_rule={"stdout": {"check_runs": []}},
+        )
+        self.assertEqual(data["overall_state"], "failure")
 
 
 class TestReply(unittest.TestCase):

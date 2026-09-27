@@ -134,14 +134,13 @@ containers:
         cpu: "100m"
         memory: "128Mi"
       limits:
-        cpu: "500m"
         memory: "256Mi"
 ```
 
 **Commit message:** `fix(kubernetes): add resource requests and limits to orders Deployment`
 
 **Reply posted:**
-> Added resource requests (`100m` CPU, `128Mi` memory) and limits (`500m` CPU, `256Mi` memory) to the `orders` container. Adjust values to match your profiling data before merging to production.
+> Added resource requests (`100m` CPU, `128Mi` memory) and a memory limit (`256Mi`) to the `orders` container. CPU limit omitted deliberately — it causes throttling. Adjust values to match your profiling data before merging to production.
 >
 > ✅ Fixed
 

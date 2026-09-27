@@ -19,6 +19,18 @@ URL_USERINFO_RE = re.compile(r"://[^@/\s]*@")
 GIT_URL_REPO_RE = re.compile(r"[:/]([^/:]+/[^/:]+?)(?:\.git)?/?$")
 GIT_URL_SCP_RE = re.compile(r"^(?:[^@/:]+@)?(?P<host>[^@/:]+):(?P<path>[^:]+)$")
 GIT_URL_DOT_GIT_RE = re.compile(r"\.git$")
+# Git's own fixed diagnostic phrasing for an authorization failure, never the
+# arbitrary text a repository or branch name can carry. A bare "permission" or
+# "403" substring check also matches those inside the URL/ref git echoes back
+# on any push failure (a repo named "permission-service", a branch containing
+# "403"), misclassifying an unrelated transport failure as this one.
+PUSH_AUTH_FAILURE_RE = re.compile(
+    r"permission denied \(publickey\)"
+    r"|remote:\s*permission to \S+ denied to \S+"
+    r"|fatal:\s*authentication failed for"
+    r"|returned error:\s*403",
+    re.IGNORECASE,
+)
 
 _NULL_HOOKS_DIR = None
 
@@ -92,7 +104,20 @@ def _split_git_url(url):
         return None, None
     if "://" in url:
         parts = urllib.parse.urlsplit(url)
-        return (parts.hostname or None), parts.path
+        host = parts.hostname
+        try:
+            port = parts.port
+        except ValueError:
+            # A non-numeric port is not a host we can safely compare; fail
+            # closed (no host at all) rather than silently ignore it.
+            return None, parts.path
+        # Two different ports on the same hostname are two different
+        # destinations. Folding the port into the host string here means
+        # every comparison downstream (_publish_destination_matches,
+        # _git_url_host) gets this for free rather than needing its own fix.
+        if host and port:
+            host = f"{host}:{port}"
+        return (host or None), parts.path
     scp = GIT_URL_SCP_RE.match(url)
     if scp:
         return scp.group("host").lower(), scp.group("path")
@@ -603,15 +628,17 @@ def cmd_publish(args):
     push = run(
         ["git", "-c", f"core.hooksPath={_null_hooks_dir()}", "push", args.head_remote_url, refspec],
         cwd=args.worktree, check=False,
+        env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
     )
     if push.returncode != 0:
         stderr = redact(push.stderr)
         lowered = stderr.lower()
-        # Order matters: unambiguous tokens first, then the loose "permission"
-        # substring check, then the loosest "rejected" fallback last. git push
-        # stderr always echoes the remote URL and ref name, so a branch or repo
-        # name containing "permission" or "403" (e.g. fix/permissions-audit)
-        # must not short-circuit a genuine non-fast-forward into NO_PUSH_PERMISSION.
+        # Order matters: unambiguous tokens first, then the anchored auth-failure
+        # check, then the loosest "rejected" fallback last. git push stderr
+        # always echoes the remote URL and ref name, so a branch or repo name
+        # containing "permission" or "403" (e.g. fix/permissions-audit, or a
+        # nonexistent remote path like permission-403-widgets.git) must not be
+        # read as evidence of an authorization failure that never happened.
         if "non-fast-forward" in lowered or "fetch first" in lowered:
             raise HelperError("PUSH_REJECTED_NON_FASTFORWARD", "remote head moved; refresh before retrying", stderr=stderr)
         if "protected branch" in lowered or "hook declined" in lowered or "gh013" in lowered or "rule violation" in lowered:
@@ -621,7 +648,7 @@ def cmd_publish(args):
                 "a server-side hook); this is not a non-fast-forward and retrying after a refresh will not clear it",
                 stderr=stderr,
             )
-        if "permission" in lowered or "403" in stderr or "authentication failed" in lowered:
+        if PUSH_AUTH_FAILURE_RE.search(stderr):
             raise HelperError("NO_PUSH_PERMISSION", "no write access to the head repository", stderr=stderr)
         if "rejected" in lowered:
             raise HelperError("PUSH_REJECTED_NON_FASTFORWARD", "remote head moved; refresh before retrying", stderr=stderr)
@@ -639,6 +666,71 @@ def cmd_publish(args):
         "push_landed": after == args.commit_sha,
         "matches_pushed_commit": (not verification_incomplete) and after == args.commit_sha and pr_head_after == args.commit_sha,
         "verification_incomplete": verification_incomplete,
+    })
+
+
+# CI_STATE_RANK — ascending severity, so combining many contexts into one
+# overall verdict is just "the worst one wins".
+CI_STATE_RANK = {"success": 0, "pending": 1, "failure": 2}
+
+
+def cmd_check_status(args):
+    host = args.host or "github.com"
+    status_read = run(
+        ["gh", "api", f"repos/{args.repo}/commits/{args.commit_sha}/status", "--hostname", host], check=False,
+    )
+    checks_read = run(
+        ["gh", "api", f"repos/{args.repo}/commits/{args.commit_sha}/check-runs", "--hostname", host], check=False,
+    )
+    try:
+        status_data = json.loads(status_read.stdout) if status_read.returncode == 0 else None
+    except ValueError:
+        status_data = None
+    try:
+        checks_data = json.loads(checks_read.stdout) if checks_read.returncode == 0 else None
+    except ValueError:
+        checks_data = None
+
+    # Both reads failing outright is a read failure ("undiscoverable"), not
+    # the same fact as both reads succeeding and finding nothing to report
+    # (a commit with no CI configured at all is not blocked by anything).
+    if not isinstance(status_data, dict) and not isinstance(checks_data, dict):
+        emit({
+            "ok": True, "commit_sha": args.commit_sha, "overall_state": "undiscoverable",
+            "total_count": 0, "contexts": [],
+        })
+        return
+
+    contexts = []
+    if isinstance(status_data, dict):
+        # Classic Status API: state is one of success/pending/error/failure.
+        # error and failure are both blocking, so anything unrecognized also
+        # counts as failure rather than being silently dropped.
+        for s in status_data.get("statuses") or []:
+            state = {"success": "success", "pending": "pending"}.get(s.get("state"), "failure")
+            contexts.append({"name": s.get("context"), "state": state, "source": "status"})
+    if isinstance(checks_data, dict):
+        # Check Runs API (GitHub Actions and most modern CI): status "queued"
+        # or "in_progress" is pending regardless of conclusion; a completed
+        # run is success only for a conclusion that is not itself a failure
+        # signal (neutral and skipped are non-blocking by GitHub's own design).
+        for c in checks_data.get("check_runs") or []:
+            if c.get("status") != "completed":
+                state = "pending"
+            elif c.get("conclusion") in ("success", "neutral", "skipped"):
+                state = "success"
+            else:
+                state = "failure"
+            contexts.append({"name": c.get("name"), "state": state, "source": "check_run", "conclusion": c.get("conclusion")})
+
+    overall = "success"
+    for c in contexts:
+        if CI_STATE_RANK[c["state"]] > CI_STATE_RANK[overall]:
+            overall = c["state"]
+
+    emit({
+        "ok": True, "commit_sha": args.commit_sha, "overall_state": overall,
+        "total_count": len(contexts), "contexts": contexts,
     })
 
 
@@ -1024,6 +1116,12 @@ def build_parser():
     p.add_argument("--head-ref", required=True)
     p.add_argument("--host")
     p.set_defaults(func=cmd_publish)
+
+    p = sub.add_parser("check-status")
+    p.add_argument("--repo", required=True)
+    p.add_argument("--commit-sha", required=True)
+    p.add_argument("--host")
+    p.set_defaults(func=cmd_check_status)
 
     p = sub.add_parser("reply")
     p.add_argument("--repo", required=True)

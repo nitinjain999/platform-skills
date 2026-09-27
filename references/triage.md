@@ -78,7 +78,7 @@ Operational security notes that apply for the whole run, not just Phase A: never
 
 One credential path is easy to miss because the token is never typed: `--head-remote-url` in Phase F. In CI, `git remote get-url origin` can return `https://x-access-token:<token>@github.com/owner/repo.git` verbatim, and that string then sits in the helper's own argv. Every failure message the helper emits runs URL userinfo (`user:pass@`) through a redaction pass first, so a `SUBPROCESS_FAILED` or push-classification error prints `https://github.com/owner/repo.git` with the credential stripped, in the `message`, the captured `stdout`, and the captured `stderr` alike. Do not undo that by echoing the raw URL yourself: never paste `--head-remote-url` into a reply body, a report, a state record, or a log line, and prefer an SSH remote or a named remote resolved inside the worktree when either is available.
 
-On a GitHub Enterprise Server host, pass `--host <ghes.example.com>` to every subcommand that reaches the API: `resolve-identity`, `resolve-comment`, `snapshot`, `patch-context`, `publish`, `reply`, `resolve-thread`. There is no auto-detection and no inheritance between calls; each omission silently targets `github.com`, which on a GHES-only comment ID looks exactly like a 404 for a comment that does not exist.
+On a GitHub Enterprise Server host, pass `--host <ghes.example.com>` to every subcommand that reaches the API: `resolve-identity`, `resolve-comment`, `snapshot`, `patch-context`, `publish`, `check-status`, `reply`, `resolve-thread`. There is no auto-detection and no inheritance between calls; each omission silently targets `github.com`, which on a GHES-only comment ID looks exactly like a 404 for a comment that does not exist.
 
 ---
 
@@ -170,7 +170,9 @@ A failed push is classified, not just surfaced raw, and the order of those check
 
 Both of those reads run after an irreversible mutation, so neither is allowed to fail the call. A network blip on `ls-remote`, or a rate limit, a 502, or replication lag on the post-push `pulls/{pr}` read, produces `ok: true` with the unanswered field set to `null`, `verification_incomplete: true`, and `matches_pushed_commit: false` — the concrete facts are reported as facts, and the unanswered question is reported as unanswered rather than as a `SUBPROCESS_FAILED` that hides a completed push behind a generic error. `push_landed` reflects only what `ls-remote` said, so it is `false` when that read is the one that failed; read `verification_incomplete` before drawing any conclusion from it. That distinction matters for what happens next: "the push failed" invites a retry, while "the push succeeded and could not be verified" does not, because the commit is already on the remote and retrying `publish` would come back `HEAD_MOVED`. Resolve that state by reading the head yourself, never by re-pushing, and never by any automatic retry.
 
-Keep local validation and remote CI as two separate facts. When a required check is pending, a truthful reply says the fix was pushed and CI is pending, and the thread stays open; that is a complete, honest state, not a failure to close out. When a required check fails, do not resolve. If required-check discovery itself is unavailable, report that uncertainty explicitly; "no visible checks" is not the same fact as "checks passed," and treating it as equivalent is exactly the shortcut this phase exists to forbid.
+`check-status --repo "$REPO" --commit-sha <published sha> [--host <host>]` is the mechanism behind the CI policy below, and it belongs here, immediately after `publish` confirms `matches_pushed_commit: true` and before Phase G composes any reply: a required-check verdict is only meaningful against the commit that actually landed, never one that was merely staged. It reads both of GitHub's check surfaces for that SHA (combined-status contexts and check runs) and folds every context it finds into one `overall_state` by taking the worst of `success`, `pending`, `failure`. `undiscoverable` is reserved for neither read returning anything usable at all; both reads succeeding and finding zero contexts is `success`, because a commit with no CI configured against it has nothing gating it.
+
+Keep local validation and remote CI as two separate facts. When `overall_state` is `pending`, a truthful reply says the fix was pushed and CI is pending, and the thread stays open; that is a complete, honest state, not a failure to close out. When it is `failure`, do not resolve. When it is `undiscoverable`, report that uncertainty explicitly; "no visible checks" is not the same fact as "checks passed," and treating it as equivalent is exactly the shortcut this phase exists to forbid.
 
 ---
 
@@ -300,7 +302,7 @@ The dedup marker embedded in a reply body is a fingerprint tied to this run's sn
 
 ## Helper invocation reference
 
-The helper exposes 11 top-level subcommands. The 13 headings below give one worked example per subcommand, except `worktree`, whose three verbs (`prepare`, `cleanup`, `preserve`) each get their own numbered heading since they run at different phases; `state`'s four verbs (`lock`, `unlock`, `read`, `write`) are grouped under a single heading with one example apiece, since they share the same identity flags and run together as one bookkeeping step. Every example gives exact flags and the exact JSON shape `emit(...)` produces on success. All of them follow one worked scenario for continuity: PR #482 in `atg/platform-skills`, a Copilot review comment (database ID `1928374650`) on `src/worker.py` line 118 flagging a missing timeout on a `requests.get()` call, root of thread `PRRT_kwDOJz9x1s5abcdef`.
+The helper exposes 12 top-level subcommands. The 14 headings below give one worked example per subcommand, except `worktree`, whose three verbs (`prepare`, `cleanup`, `preserve`) each get their own numbered heading since they run at different phases; `state`'s four verbs (`lock`, `unlock`, `read`, `write`) are grouped under a single heading with one example apiece, since they share the same identity flags and run together as one bookkeeping step. Every example gives exact flags and the exact JSON shape `emit(...)` produces on success. All of them follow one worked scenario for continuity: PR #482 in `atg/platform-skills`, a Copilot review comment (database ID `1928374650`) on `src/worker.py` line 118 flagging a missing timeout on a `requests.get()` call, root of thread `PRRT_kwDOJz9x1s5abcdef`.
 
 ### 1. `resolve-identity`
 
@@ -552,7 +554,29 @@ Treat the fix as published only when `matches_pushed_commit` is `true`; it requi
 
 Five refusals fire before any push is attempted, all from one pre-push `pulls/{pr}` read: `PR_READ_UNUSABLE` when that read is not a JSON object at all, `PR_NOT_OPEN` (with `state`), `HEAD_MOVED` (with `expected`/`actual`) when the current head no longer matches `--expected-head-sha`, `HEAD_REPO_UNAVAILABLE` when `head.repo` is `null`, and `PUBLISH_DESTINATION_MISMATCH` (with `expected_repo`, `given_repo`, `expected_host`, `given_host`, `expected_ref`, `given_ref`, and redacted `given_url`/`expected_url`) when `--head-remote-url` does not resolve to both the host and the `owner/repo` of the PR's real head repository, or `--head-ref` is not its real head branch. A push failure after that comes back as one of `PUSH_REJECTED_BY_POLICY`, `NO_PUSH_PERMISSION`, `PUSH_REJECTED_NON_FASTFORWARD`, or `UNKNOWN_TRANSPORT_FAILURE`, each with the push's `stderr` attached and URL credentials stripped from it. If `--head-remote-url` is an HTTPS URL with an embedded token, that token never appears in the helper's output; keep it out of yours too.
 
-### 11. `reply`
+### 11. `check-status`
+
+```bash
+python3 "$CLAUDE_PLUGIN_ROOT/examples/triage/scripts/triage_helper.py" check-status \
+  --repo atg/platform-skills --commit-sha 3c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d
+```
+
+```json
+{
+  "ok": true,
+  "commit_sha": "3c9d8e7f6a5b4c3d2e1f0a9b8c7d6e5f4a3b2c1d",
+  "overall_state": "pending",
+  "total_count": 2,
+  "contexts": [
+    {"name": "ci/lint", "state": "success", "source": "status"},
+    {"name": "build", "state": "pending", "source": "check_run", "conclusion": null}
+  ]
+}
+```
+
+Called once, after `publish` confirms `matches_pushed_commit: true` and before composing the Phase H reply — a required-check verdict is only meaningful against the commit that actually landed, never one that was merely staged. It reads both of GitHub's check surfaces for the published SHA — the classic combined-status contexts (`repos/{repo}/commits/{sha}/status`) and check runs (`repos/{repo}/commits/{sha}/check-runs`, what GitHub Actions and most modern CI report through) — and folds every context into one `overall_state` by taking the worst: `success` < `pending` < `failure`. A check run that has not reached `status: "completed"` is `pending` regardless of its `conclusion`; a completed run is `success` only for a `conclusion` of `success`, `neutral`, or `skipped`, and `failure` for anything else, including `cancelled` and `timed_out`. `overall_state` is `undiscoverable` only when *neither* read returned a usable JSON object at all — a true read failure, not the same fact as both reads succeeding and finding zero contexts, which is `success`: a commit with no CI configured against it has nothing gating it.
+
+### 12. `reply`
 
 Review thread:
 
@@ -594,7 +618,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/examples/triage/scripts/triage_helper.py" reply \
 
 If the dedup marker was already found in the supplied `--snapshot`, the response is `{"ok": true, "status": "ALREADY_REPLIED", "thread_node_id": "PRRT_kwDOJz9x1s5abcdef", "comment_node_id": null, "comment_id": null, "url": null}` and nothing is posted; the three identity keys are present and null so one parser handles both outcomes. That short-circuit exists only on the thread path. Two argument combinations are rejected with `INVALID_ARGUMENTS` before any `gh` call: neither `--thread-node-id` nor `--pr` (there is no destination), and `--dedup-marker`/`--snapshot` without `--thread-node-id` (nothing on the conversation path reads them, and accepting them would imply a dedup guarantee that does not exist).
 
-### 12. `resolve-thread`
+### 13. `resolve-thread`
 
 ```bash
 python3 "$CLAUDE_PLUGIN_ROOT/examples/triage/scripts/triage_helper.py" resolve-thread \
@@ -615,7 +639,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/examples/triage/scripts/triage_helper.py" resolve-t
 
 An already-resolved thread returns `{"ok": true, "status": "ALREADY_RESOLVED", "thread_node_id": "..."}` with no mutation attempted, and that short-circuit runs *before* the drift comparison, so a second `resolve-thread` call with the same snapshot is still safe even though the first call's reply has by then changed the live comment set. `viewerCanResolve: false` raises `NOT_AUTHORIZED` instead of emitting. The pre-check is checked before it is trusted: GraphQL `errors` raise `RESOLVE_PRECHECK_FAILED`, and a node that resolves to nothing reviewable (a deleted thread, or a comment node ID passed by mistake) raises `THREAD_NOT_FOUND` rather than crashing on a missing field.
 
-### 13. `state` (lock, unlock, read, write)
+### 14. `state` (lock, unlock, read, write)
 
 Acquire the run lock, once, at the start of Phase A:
 
