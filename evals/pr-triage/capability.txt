@@ -1,1 +1,1 @@
-PR triage: classify review comments as ACTIONABLE_FIX, INFORMATIONAL, or NOT_APPLICABLE, apply fixes, and reply with evidence.
+PR triage: classify review comments as ACTIONABLE_FIX, ALREADY_FIXED, INFORMATIONAL, NOT_APPLICABLE, NEEDS_CLARIFICATION, OUT_OF_SCOPE, or DUPLICATE, apply fixes, and reply with evidence; tracks fix execution and discussion-resolution state separately from the classification verdict.
