@@ -32,61 +32,9 @@ Platform engineering spans multiple tools. This skill maintains coherence by:
 - **Preventing overlap** - Don't recreate in GitOps what Terraform manages
 - **Standardizing patterns** - Same approach across AWS and Azure where applicable
 
-## Architecture
+## Writing Principles
 
-### Skill Activation
-
-The skill activates when users work with:
-- Flux CD or Argo CD reconciliation or GitOps repository design
-- Kubernetes or OpenShift platform patterns
-- AWS/Azure infrastructure or IAM/RBAC configuration
-- Terraform modules or state management
-- GitHub Actions workflows or CI/CD security
-- Linkerd service mesh, mTLS, or traffic management
-- Linux system administration, DNS, load balancing, or VPC/VNet networking
-- Developer experience, platform product thinking, or cross-team communication
-- Multi-cloud platform architecture decisions
-
-Activation is automatic based on context, and users can also ask for platform-skills guidance explicitly in conversation.
-
-### Content Structure
-
-```
-SKILL.md                      # Core skill definition
-├── Activation triggers       # When to use this skill
-├── Problem classification    # How to categorize issues
-├── Troubleshooting framework # Consistent diagnostic approach
-└── Best practices summary    # Quick reference patterns
-
-references/                   # Deep-dive guides
-├── platform-operating-model.md  # Cross-cutting architecture
-├── kubernetes.md                # Cluster baseline patterns
-├── openshift.md                 # OpenShift-specific guidance
-├── argocd.md                    # Argo CD patterns
-├── flux.md                      # GitOps patterns
-├── aws.md                       # AWS-specific guidance
-├── azure.md                     # Azure-specific guidance
-├── terraform.md                 # IaC patterns
-├── github-actions.md            # CI/CD patterns
-├── secrets.md                   # Secrets management patterns
-├── linkerd.md                   # Service mesh and mTLS
-├── linux-networking.md          # Linux admin, DNS, LB, VPC/VNet
-└── platform-mindset.md          # DevEx, RFC/ADR, post-mortems, capacity
-
-examples/                     # Working implementations
-├── flux/                     # GitOps repo structures
-├── kubernetes/               # Kubernetes platform patterns
-├── openshift/                # OpenShift operating patterns
-├── argocd/                   # Argo CD examples
-├── aws/                      # AWS service patterns
-├── azure/                    # Azure resource patterns
-├── terraform/                # Module examples
-└── github-actions/           # Workflow templates
-```
-
-### Writing Principles
-
-#### 1. Start with the Problem
+### 1. Start with the Problem
 
 Bad:
 > Use `flux reconcile kustomization` to sync changes.
@@ -100,7 +48,7 @@ Good:
 > 
 > **Prevention:** Reduce `.spec.interval` for faster automatic syncs
 
-#### 2. Make Security Explicit
+### 2. Make Security Explicit
 
 Bad:
 ```yaml
@@ -123,7 +71,7 @@ Resource:
   - "arn:aws:s3:::my-bucket/*"
 ```
 
-#### 3. Document Blast Radius
+### 3. Document Blast Radius
 
 Every risky operation needs:
 - **What it affects** - Scope of changes
@@ -138,7 +86,7 @@ Example:
 > 
 > **Rollback:** Flux will recreate from Git on next sync (default 10m) or force with `flux reconcile`
 
-#### 4. Use Concrete Examples
+### 4. Use Concrete Examples
 
 Avoid abstract placeholders:
 
@@ -156,7 +104,7 @@ namespace: ingress-system
 value: production
 ```
 
-#### 5. Explain Non-Obvious Choices
+### 5. Explain Non-Obvious Choices
 
 When configuration isn't self-evident, add comments:
 
@@ -253,13 +201,6 @@ Before submitting:
 
 ## Skill Maintenance
 
-### Version Strategy
-
-Follow semantic versioning:
-- **Major (2.0.0)** - Breaking changes to skill interface
-- **Minor (1.1.0)** - New patterns or significant enhancements
-- **Patch (1.0.1)** - Bug fixes or clarifications
-
 ### Deprecation Policy
 
 When removing patterns:
@@ -276,37 +217,6 @@ Skill changes are tested by:
 3. **User feedback** - Issues and discussions inform improvements
 4. **Tool version tracking** - Note when tool updates require changes
 
-## Integration with Claude Code
-
-### Skill Discovery
-
-Claude Code discovers this skill via:
-- **Marketplace registration** - `.claude-plugin/marketplace.json`
-- **Keyword matching** - Activates on relevant terms
-- **Context awareness** - File types, commands, error messages
-
-### Skill Invocation
-
-Users can invoke via:
-- **Automatic activation** - Working with relevant files
-- **Explicit request** - Ask for platform-skills guidance in context
-- **Slash commands** - Explicit entry points for repeatable workflows:
-  - `/platform-skills:debug` - structured troubleshooting for any platform symptom
-  - `/platform-skills:preflight` - production-readiness review of manifests, Terraform, or workflows
-  - `/platform-skills:terraform` - full fmt/validate/tflint/security pipeline + blast radius review
-  - `/platform-skills:gitops` - Flux CD and Argo CD reconciliation troubleshooting
-  - `/platform-skills:linkerd` - Linkerd mTLS, injection, policy, and multi-cluster diagnostics
-  - `/platform-skills:linux` - Linux admin, DNS, load balancing, VPC/VNet, and connectivity troubleshooting
-  - `/platform-skills:product` - product thinking, friction audits, DevEx, RFC/ADR, incident updates, post-mortems
-
-### Response Format
-
-Claude Code expects:
-- **Structured guidance** - Clear steps, not walls of text
-- **Actionable commands** - Copy-paste ready
-- **File references** - Links to relevant docs
-- **Follow-up prompts** - Suggest next steps
-
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for:
@@ -315,23 +225,11 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for:
 - Review process
 - Release workflow
 
-## Skill Quality Principles
-
-1. **Correctness** - Technical accuracy is non-negotiable
-2. **Safety** - Never suggest risky operations without warnings
-3. **Clarity** - Platform engineers should understand immediately
-4. **Completeness** - Include validation and rollback
-5. **Maintainability** - Keep patterns up to date with tool changes
-
 ## Questions?
 
 - **Skill design questions**: Open a discussion on GitHub
 - **Content issues**: Open an issue on GitHub
 - **Security concerns**: Use GitHub Security Advisories
-
----
-
-Built with ❤️ by platform engineers, for platform engineers.
 
 ## Agent Rules
 
@@ -341,7 +239,7 @@ Rules promoted from `.learnings/` — apply to every session in this project.
 - Dispatch all independent tool calls in a single message block — sequential calls only when output feeds the next.
 - Run `bash tests/handbook-consistency.sh` locally before every push to catch version/status/path check failures.
 - Use `repos/{owner}/{repo}/pulls/{pr}/comments/{id}/replies` for PR thread replies — omitting the PR number returns 404.
-- At the end of every session, append notable exchanges, decisions, and outcomes to `memory/YYYY-MM-DD.md` (today's date, created if missing). One file per day, append-only.
+- Never create `.learnings/` or `memory/` inside this repo. At the end of every session, append notable exchanges, decisions, and outcomes to `~/.claude/projects/<slug>/memory/YYYY-MM-DD.md` (today's date, created if missing). One file per day, append-only.
 - Before every release commit, verify: (1) `SKILL.md` matches `skills/platform-skills/SKILL.md`, (2) `INSTALLATION.md` version matches plugin version, (3) all example READMEs have `Status:` label, (4) `marketplace.json` `source.sha` is the current main HEAD SHA.
 - Never write SDK method names, parameter names, or env vars for external tools (Datadog, LLMObs, etc.) without fetching actual SDK source or docs first.
 - Lambda@Edge child module: declaring `configuration_aliases = [aws.us_east_1]` requires a matching `provider "aws" { alias = "us_east_1" }` block inside the module or `terraform validate` fails (ERR-20260522-003)

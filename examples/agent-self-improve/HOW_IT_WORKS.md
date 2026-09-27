@@ -39,15 +39,35 @@ After running `/platform-skills:self-improve init`, your project gains:
   LEARNINGS.md          # Positive learnings — what worked, useful techniques
   ERRORS.md             # Mistakes and wrong assumptions — what broke and why
   FEATURE_REQUESTS.md   # Recurring needs the current tool set couldn't meet
-  .pending-errors.log   # Scratch file written by the PostToolUse hook (gitignored)
+  .pending-errors.log   # Scratch file written by the PostToolUseFailure hook (gitignored)
 memory/
   working-buffer.md     # Live task state and WAL log
+  .session-count        # One appended timestamp per session end (gitignored)
+  .session-reminder.<n> # Marker claiming the last review reminder (gitignored)
 ```
+
+### `.session-count`
+
+Every session end appends one UTC timestamp line. The count is the number of those lines, and the review reminder fires once per five sessions.
+
+The reminder claims the threshold it crossed rather than testing whether the total is a multiple of five. Appending is atomic but append-then-read is not, so from a baseline of 4 two sessions ending together can both read 6 and a `% 5` test would emit nothing, dropping the session-5 reminder. Claiming is an exclusive file create, so exactly one of them reminds.
+
+It is append-only on purpose. It used to hold a single integer rewritten as read, add one, write, so two sessions ending at the same moment lost an increment. `>>` is `O_APPEND`, which the kernel makes atomic for a write this small, so appending needs no lock.
+
+If your file still holds a bare integer from the old format, nothing needs to be done. Line 1 is read as a baseline and the count carries on from there, so the file looks like this after one more session:
+
+```
+1704
+2026-09-26T16:21:51Z
+```
+
+That is also how you set the count by hand: write a bare integer to the file and the next session end continues from it. `echo 0 > ~/.claude/memory/.session-count` restarts the cadence.
 
 Add to `.gitignore` for personal/local notes:
 ```
 .learnings/
 memory/working-buffer.md
+memory/.session-*
 ```
 
 Commit the directories if you want the team to share and build on them.
@@ -60,6 +80,7 @@ Every entry in `.learnings/` follows the same structure and lifecycle:
 
 ```
 pending → resolved → promoted
+              ↘ superseded | revoked | discarded
 ```
 
 ```markdown
@@ -68,6 +89,10 @@ pending → resolved → promoted
 **Context**: Applying a Terraform plan that replaced an RDS instance
 **Content**: Assumed changing db_subnet_group_name was non-destructive. It forces replacement.
 **Action**: Added lifecycle { prevent_destroy = true }. Promote to references/terraform.md.
+**Source**: observed
+**Scope**: project:platform-infra
+**Paths**: infrastructure/**/*.tf
+**Verified**: 2026-05-20
 ```
 
 | Stage | Meaning | Who acts |
@@ -75,12 +100,15 @@ pending → resolved → promoted
 | `pending` | Logged, not yet addressed | Agent logs automatically |
 | `resolved` | Fix applied — action recorded | Agent sets this in the same session if the fix was applied; otherwise user confirms |
 | `promoted` | Written to project memory | Agent after running `/platform-skills:self-improve promote` |
+| `superseded` | Replaced by a newer entry | Agent, when logging the replacement |
+| `revoked` | Wrong; must stop influencing behaviour | `/platform-skills:self-improve revoke` |
+| `discarded` | Not worth keeping | You, after `review` flags it |
 
 **Key rule:** If the agent logs an error and applies the fix in the same session, it sets `Status: resolved` immediately — no manual step needed.
 
 ---
 
-## The Five Modes
+## The Modes
 
 ### `init global` / `init local` — Bootstrap the workspace
 
@@ -90,13 +118,13 @@ Two explicit subcommands — no interactive prompt:
 /platform-skills:self-improve init global
 ```
 
-Creates `~/.claude/.learnings/` and `~/.claude/memory/`. Learnings persist across **all projects** on your machine. Recommended for individuals. Offers to wire all three hooks in `~/.claude/settings.json` and create `~/.claude/CLAUDE.md` from the template.
+Creates `~/.claude/.learnings/` and `~/.claude/memory/`. Learnings persist across **all projects** on your machine. Recommended for individuals. Offers to wire all four hooks in `~/.claude/settings.json` and create `~/.claude/CLAUDE.md` from the template.
 
 ```text
 /platform-skills:self-improve init local
 ```
 
-Creates `.learnings/` and `memory/` in the **current project directory**. Learnings live in the repo and can be committed and shared with the team. Asks whether to gitignore or commit. Offers to add the PostToolUse hook to `.claude/settings.json`.
+Creates `.learnings/` and `memory/` in the **current project directory**. Learnings live in the repo and can be committed and shared with the team. Asks whether to gitignore or commit. Offers to add the `PostToolUseFailure` hook to `.claude/settings.json`.
 
 ```text
 /platform-skills:self-improve init
@@ -187,6 +215,24 @@ Promotion candidates: 1
 
 ---
 
+### `recall` — Look up what was learned
+
+```text
+/platform-skills:self-improve recall karpenter pod identity
+```
+
+```text
+recall: 2 match(es) for "karpenter pod identity" (1 excluded: 1 revoked; --all shows them)
+[7] ERR-20260910-001 resolved | source=observed verified=2026-09-10 | scope=project:platform-infra
+    Pod Identity association missing for the Karpenter controller
+[1] LRN-20260601-002 resolved | source=inferred verified=2026-06-01 | scope=global STALE | verify before use
+    Prefer Spot diversity across 15 instance types
+```
+
+Recall only reads. It hides lessons that were revoked, superseded, discarded or expired, and lessons from other repositories, and tells you how many it hid. The agent treats flagged results as leads to verify, not as facts.
+
+---
+
 ### `promote` — Write a lesson to project memory
 
 ```text
@@ -195,21 +241,15 @@ Promotion candidates: 1
 
 The agent:
 
-1. Reads the entry
-2. Identifies the right promotion target:
-
-   | Target | When |
-   |---|---|
-   | `CLAUDE.md` / `AGENTS.md` | Agent-level rule for every session in this project |
-   | `.github/copilot-instructions.md` | GitHub Copilot workspace rules |
-   | `references/` guide | Reusable pattern for the whole team |
-
-3. Drafts the promoted line in imperative voice (≤ 80 characters):
+1. Checks the evidence. Only a `resolved` entry with `Source`, `Scope` and `Verified`, not stale or expired, can be promoted. An `inferred` lesson needs your confirmation first
+2. Picks a topic (`terraform`) and drafts one imperative line:
    - ERR → negative rule: `"Never change db_subnet_group_name without a replace plan and snapshot"`
    - LRN → positive rule: `"Run helm diff upgrade before helm upgrade to preview rendered changes"`
-4. Asks you to confirm the target file and wording before writing
-5. Appends to the confirmed file and updates the entry status to `promoted`
-6. Commits with: `docs(memory): promote ERR-20260520-001 — never rename EKS node group in-place`
+3. Shows you a preview diff. A project lesson with `Paths: infrastructure/**/*.tf` becomes `.claude/rules/terraform.md` with that `paths:` frontmatter, so it only loads when Claude touches Terraform files. A global lesson goes to `~/.claude/rules/terraform.md`
+4. After you confirm, writes the rule with a `<!-- self-improve:ERR-20260520-001 -->` marker and sets the entry to `promoted`
+5. Commits repository targets with: `docs(memory): promote ERR-20260520-001 — never rename EKS node group in-place`
+
+Changed your mind? `learnings.sh unpromote ERR-20260520-001` removes exactly that rule.
 
 ---
 
@@ -296,20 +336,21 @@ Next session start
 
 ## Automatic Error Capture via Hook
 
-With the PostToolUse hook configured, tool failures are automatically appended to `$LEARNINGS_BASE/.learnings/.pending-errors.log`.
+With the `PostToolUseFailure` hook configured, failed tool calls are appended to `$LEARNINGS_BASE/.learnings/.pending-errors.log`.
 
-**Global setup** (`~/.claude/settings.json` — applies to all projects):
+`PostToolUse` is the wrong event for this: it fires only when a tool **succeeds**. Failures go to `PostToolUseFailure`, whose payload carries `tool_name`, `tool_input`, `tool_use_id`, `error` and `is_interrupt` as JSON on stdin.
 
 ```json
 {
   "hooks": {
-    "PostToolUse": [
+    "PostToolUseFailure": [
       {
         "matcher": ".*",
         "hooks": [
           {
             "type": "command",
-            "command": "if [ \"$CLAUDE_TOOL_EXIT_CODE\" -ne 0 ]; then echo \"$(date -u +%Y-%m-%dT%H:%M:%SZ) TOOL_FAILURE: $CLAUDE_TOOL_NAME\" >> ~/.claude/.learnings/.pending-errors.log; fi"
+            "command": "bash ~/.claude/scripts/self-improve-hook.sh tool-failure",
+            "async": true
           }
         ]
       }
@@ -318,29 +359,18 @@ With the PostToolUse hook configured, tool failures are automatically appended t
 }
 ```
 
-**Project-local setup** (`.claude/settings.json` in the project root):
+The same block works for global (`~/.claude/settings.json`) and project-local (`.claude/settings.json`) setup. The script resolves the workspace itself on each invocation — `~/.claude/.learnings` wins, then `$CLAUDE_PROJECT_DIR/.learnings` — so the log always lands next to the `.learnings` directory that is actually in use, and there is no relative-path trap to fall into.
 
-```json
-{
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "if [ \"$CLAUDE_TOOL_EXIT_CODE\" -ne 0 ]; then echo \"$(date -u +%Y-%m-%dT%H:%M:%SZ) TOOL_FAILURE: $CLAUDE_TOOL_NAME\" >> .learnings/.pending-errors.log; fi"
-          }
-        ]
-      }
-    ]
-  }
-}
-```
+Two things the hook deliberately does not do:
 
-Global setup must use the absolute `~/.claude/` path. Relative paths resolve from the project root and will write to the wrong place when global setup is active.
+- It never persists `error` or `tool_input`. A failed `Bash` call can carry a token in its command line and a failed `Edit` can carry file contents; neither belongs in a notes file that may be committed.
+- It ignores a failure whose `is_interrupt` is true. You pressing escape is not a lesson.
 
-On `/platform-skills:self-improve review`, the agent reads `.pending-errors.log`, converts each line into a proper `ERR` entry in `ERRORS.md`, and clears the log.
+Each captured line is one short `printf`, so concurrent async writers cannot interleave mid-record.
+
+On `/platform-skills:self-improve review`, the agent reads `.pending-errors.log`, converts each line into a proper `ERR` entry in `ERRORS.md`, and clears the log. `SessionEnd` does the same conversion unattended, grouping repeats so a run of ten failed `Edit` calls in one session becomes one `ERR` entry rather than ten.
+
+`PreCompact` runs that same drain before each compaction. `SessionEnd` is not guaranteed to fire: kill the process or close the window and it never runs, leaving the log undrained indefinitely. Wiring the drain to compaction as well makes it recurring within a long session instead of a single chance at the end. It skips the parts that only make sense at a close: no daily-note heading, no session recorded, and no `PENDING` WAL entry flagged, because mid-session that operation may simply be in flight.
 
 For project-local setup, add to `.gitignore`:
 ```

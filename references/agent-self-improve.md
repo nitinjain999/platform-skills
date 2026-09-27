@@ -66,18 +66,19 @@ The `init` mode asks which scope to use before creating anything:
 
 **Promotion targets are always project-local** regardless of scope. `CLAUDE.md`, `AGENTS.md`, and `.github/copilot-instructions.md` live in the project repo — only the capture files (`.learnings/`, `memory/`) follow `LEARNINGS_BASE`.
 
-**Hook paths must be absolute** when using global setup. The PostToolUse hook in `~/.claude/settings.json` must reference the full path:
+**Hook script paths must be absolute** when using global setup, so that the hook resolves the same way from any project:
 
 ```json
 {
   "hooks": {
-    "PostToolUse": [
+    "PostToolUseFailure": [
       {
         "matcher": ".*",
         "hooks": [
           {
             "type": "command",
-            "command": "if [ \"$CLAUDE_TOOL_EXIT_CODE\" -ne 0 ]; then echo \"$(date -u +%Y-%m-%dT%H:%M:%SZ) TOOL_FAILURE: $CLAUDE_TOOL_NAME\" >> ~/.claude/.learnings/.pending-errors.log; fi"
+            "command": "bash ~/.claude/scripts/self-improve-hook.sh tool-failure",
+            "async": true
           }
         ]
       }
@@ -86,19 +87,47 @@ The `init` mode asks which scope to use before creating anything:
 }
 ```
 
-For project-scoped setup, replace `~/.claude/.learnings/` with `.learnings/` (relative path works because the hook runs from the project root).
+The same block serves project-scoped setup unchanged. The script applies the resolution order above on every invocation, so the log lands next to whichever `.learnings/` is in use rather than wherever the hook happened to be launched from.
 
 ### Entry format
 
-Every entry uses the same four-field structure regardless of log type:
+Every entry has four required fields, plus optional metadata. `log` writes the metadata for every new entry, and so does the lifecycle hook when it consolidates a captured tool failure into `ERRORS.md`, so a drained entry is promotable without hand-editing. Older entries without it stay valid: `lint` counts them as "without metadata". They need `Source`, `Scope` and `Verified` before they can be promoted.
 
 ```markdown
 ### LRN-20260520-001
-**Status**: pending | resolved | promoted
+**Status**: pending | resolved | promoted | superseded | revoked | discarded
 **Context**: One sentence — what was happening
 **Content**: The actual learning, error, or feature request
 **Action**: What was done or should be done
+**Source**: user | observed | ci | repo | vendor-docs | inferred
+**Scope**: global | project:<repo-name>
+**Paths**: infrastructure/**/*.tf, modules/**/*.tf
+**Verified**: 2026-09-26
+**Expires**: 2026-12-31 | never
+**Supersedes**: LRN-20260401-003
 ```
+
+#### Metadata fields
+
+| Field | Meaning | Rules |
+|---|---|---|
+| `Source` | Where the lesson came from | `user` (the user said it), `observed` (live state or tool output), `ci` (a test or pipeline result), `repo` (the repository's own config or docs), `vendor-docs` (official documentation), `inferred` (the agent concluded it) |
+| `Scope` | Where it applies | `global`, or `project:<name>` where `<name>` is the git top-level's directory name. `learnings.sh whereami` prints it |
+| `Paths` | Files it applies to | Optional. Project scope only. Comma-separated globs, no quotes. Becomes the `paths:` frontmatter of a promoted rule |
+| `Verified` | When it was last confirmed true | `YYYY-MM-DD`. Update it whenever the lesson is re-confirmed |
+| `Expires` | When it stops applying | `YYYY-MM-DD` or `never`. Use it for workarounds and exceptions |
+| `Supersedes` | The entry this one replaces | Also set the old entry to `superseded` with `learnings.sh set-status` |
+| `Status-Note` | Why the status last changed | Written by `learnings.sh set-status`. Don't edit it by hand |
+
+#### Staleness and expiry
+
+An active entry (`pending`, `resolved` or `promoted`) is **stale** once its `Verified` date is older than the window for its source, and **expired** after its `Expires` date. `lint` and `review` report both. A stale or expired entry can't be promoted. `lint` lists every stale *promoted* entry ahead of the other stale entries, because a promoted rule is still loaded into every session.
+
+| Source | Re-verify after |
+|---|---|
+| `user` | Never goes stale |
+| `inferred` | 30 days |
+| `observed`, `ci`, `repo`, `vendor-docs` | 90 days |
 
 #### ID schemes
 
@@ -112,6 +141,7 @@ Every entry uses the same four-field structure regardless of log type:
 
 ```
 pending → resolved → promoted
+              ↘ superseded | revoked | discarded
 ```
 
 | Stage | Meaning | Who acts |
@@ -119,15 +149,41 @@ pending → resolved → promoted
 | `pending` | Logged, not yet addressed | Agent logs automatically |
 | `resolved` | Root cause identified, fix applied | Agent or user confirms |
 | `promoted` | Written to project memory | Agent runs `/platform-skills:self-improve promote` |
+| `superseded` | Replaced by a newer entry that names it in `Supersedes` | `learnings.sh set-status <old-id> superseded` |
+| `revoked` | Found to be wrong. Must stop influencing behaviour | `/platform-skills:self-improve revoke` |
+| `discarded` | Not worth keeping | `review` suggests it for stale resolved entries |
 
-**Promotion targets** — pick the right scope:
+**Promotion targets.** `learnings.sh promote` chooses from the entry's scope:
 
-| Target file | When to promote there |
+| Entry scope | Target | Loaded |
+|---|---|---|
+| `global` | `~/.claude/rules/<domain>.md` | Every session on this machine |
+| `project:<name>` with `Paths` | `.claude/rules/<domain>.md`, with `paths:` frontmatter from the entry's `Paths` | When Claude reads a matching file |
+| `project:<name>` without `Paths` | `.claude/rules/<domain>.md` | Every session in this project |
+| Opt-in, with `--target` | `CLAUDE.md`, `AGENTS.md`, `.github/copilot-instructions.md`, under `## Agent Rules` | For rules other tools must also read |
+| By hand | A `references/` guide | Reusable patterns for the whole team |
+
+Each promoted rule ends in a `<!-- self-improve:<ID> -->` marker, so the rule is traceable to its evidence. `learnings.sh unpromote <ID>` removes exactly that line (add `--revoke` to retire the entry too). Promotion is refused for entries that aren't `resolved`, lack `Source`/`Scope`/`Verified`, are stale or expired, are `inferred` without confirmation, or belong to another project. A rules file whose `paths` differ from the entry's is never widened or narrowed; pick another domain.
+
+### Helper script: `learnings.sh`
+
+The command runs `bash ~/.claude/scripts/learnings.sh <subcommand>` instead of parsing entries or doing date arithmetic itself. It resolves the workspace the same way as the command and the hooks.
+
+| Subcommand | What it does |
 |---|---|
-| `~/.claude/CLAUDE.md` | Global agent-level rules — apply to all projects on this machine |
-| `CLAUDE.md` / `AGENTS.md` | Agent-level rules for this project only |
-| `.github/copilot-instructions.md` | GitHub Copilot workspace rules |
-| `references/` guide | Reusable pattern for the whole team |
+| `whereami` | Prints the workspace, `scope=global` or `project`, the project name for `Scope: project:<name>`, and today's date |
+| `entries` | One tab-separated record per entry |
+| `lint` | Reports `ERROR` (invalid entries), `WARN`, `EXPIRED` and `STALE` lines and a summary. Exits 1 on any error |
+| `set-status ID STATUS [--note TEXT]` | Rewrites one entry's status and `Status-Note`, under the same lock as the `SessionEnd` drain |
+| `promote ID --domain D --rule T [--target F] [--allow-inferred] [--apply]` | Checks eligibility, previews the rule as a diff, and with `--apply` writes it and marks the entry `promoted` |
+| `unpromote ID [--revoke] [--note T]` | Removes the marked rule from every promotion target; resets the entry to `resolved`, or `revoked` |
+| `recall [--all] [--limit N] TERM...` | Read-only search. Ranks by term matches (+2 Content, +1 Context, +5 exact id), excludes revoked, superseded, discarded, expired and other-project entries while counting them, and flags `STALE` and `verify before use` results |
+
+Exit codes: 0 ok, 1 lint errors, 2 usage or no workspace, 3 workspace busy (another session holds the lock; retry), 4 refused.
+
+Install: `cp examples/agent-self-improve/scripts/learnings.sh ~/.claude/scripts/ && chmod +x ~/.claude/scripts/learnings.sh`
+
+**Trusting a recalled lesson.** A result flagged `STALE` hasn't been verified within its source's window. One flagged `verify before use` came from an inference or has no source at all. Treat both as leads, not facts: check the current state first, then update `Verified` if the lesson still holds, or revoke it. Prefer verified current state over remembered assumptions every time.
 
 ### Recurring Pattern Detection
 
@@ -142,7 +198,7 @@ Auto-capture errors after failed tool calls. The hook appends a timestamped line
 Hook setup varies by platform — see the **Platform Compatibility** section (below Part 2) for per-platform `settings.json` snippets and script copy commands.
 
 Key rules regardless of platform:
-- Global setup must use absolute paths in the PostToolUse hook — relative paths resolve from the project root and write to the wrong directory.
+- Global setup must use an absolute path to the hook script. The workspace itself is resolved by the script, not by the settings file.
 - For project-local setup, add `.learnings/.pending-errors.log` to `.gitignore`.
 
 ---
@@ -375,18 +431,24 @@ All skill modes use `~/.claude/` notation — no platform-specific path changes 
 
 ### Hook scripts by platform
 
-| Platform | Stop hook | PreToolUse hook | PostToolUse |
-|---|---|---|---|
-| macOS / Linux | `session-end.sh` | `session-start-reminder.sh` | inline bash (see below) |
-| Windows — WSL / Git Bash | `session-end.sh` | `session-start-reminder.sh` | inline bash (see below) |
-| Windows — native PowerShell | `session-end.ps1` | `session-start-reminder.ps1` | inline PowerShell (see below) |
+One script serves all four events, selected by subcommand:
 
-**Windows recommendation:** WSL or Git Bash is the simpler path — bash scripts work identically to macOS/Linux. Use the PowerShell (`.ps1`) scripts only when WSL or Git Bash is not available.
+| Platform | Hook script | `SessionStart` | `SessionEnd` | `PostToolUseFailure` | `PreCompact` |
+|---|---|---|---|---|---|
+| macOS / Linux | `self-improve-hook.sh` | `session-start` | `session-end` | `tool-failure` | `precompact` |
+| Windows — WSL / Git Bash | `self-improve-hook.sh` | `session-start` | `session-end` | `tool-failure` | `precompact` |
+| Windows — native PowerShell | `self-improve-hook.ps1` | `session-start` | `session-end` | `tool-failure` | `precompact` |
 
-**Alpine Linux / busybox-only containers:** The bash scripts require bash. Install it first:
+There is deliberately no `PostCompact` hook. `SessionStart` fires again with `source=compact` after a compaction, and its stdout is added to the rebuilt context, so the workspace pointers are restored by the hook that is already wired.
+
+**Windows recommendation:** WSL or Git Bash is the simpler path — the bash script works identically to macOS/Linux. Use the PowerShell (`.ps1`) script only when WSL or Git Bash is not available.
+
+**Alpine Linux / busybox-only containers:** The bash script requires bash 3.2+. Install it first:
 ```sh
 apk add bash
 ```
+
+`jq` is optional. Without it, a `sed` fallback reads the few scalar payload fields the hooks use; that fallback takes the last match of a key anywhere in the payload, so a nested key of the same name can win. Install `jq` if you want the strict reading.
 
 ### Hook setup — macOS / Linux / WSL / Git Bash
 
@@ -395,72 +457,89 @@ Add to `~/.claude/settings.json`:
 ```json
 {
   "hooks": {
-    "Stop": [
+    "SessionStart": [
       {
-        "hooks": [{"type": "command", "command": "bash ~/.claude/scripts/session-end.sh"}]
+        "hooks": [{"type": "command", "command": "bash ~/.claude/scripts/self-improve-hook.sh session-start"}]
       }
     ],
-    "PreToolUse": [
+    "SessionEnd": [
       {
-        "matcher": ".*",
-        "hooks": [{"type": "command", "command": "bash ~/.claude/scripts/session-start-reminder.sh"}]
+        "hooks": [{"type": "command", "command": "bash ~/.claude/scripts/self-improve-hook.sh session-end", "timeout": 10}]
       }
     ],
-    "PostToolUse": [
+    "PostToolUseFailure": [
       {
         "matcher": ".*",
         "hooks": [
           {
             "type": "command",
-            "command": "if [ \"$CLAUDE_TOOL_EXIT_CODE\" -ne 0 ] 2>/dev/null; then echo \"$(date -u +%Y-%m-%dT%H:%M:%SZ) TOOL_FAILURE: $CLAUDE_TOOL_NAME\" >> ~/.claude/.learnings/.pending-errors.log; fi"
+            "command": "bash ~/.claude/scripts/self-improve-hook.sh tool-failure",
+            "async": true
           }
         ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [{"type": "command", "command": "bash ~/.claude/scripts/self-improve-hook.sh precompact", "timeout": 10}]
       }
     ]
   }
 }
 ```
 
-Copy scripts:
+`"timeout": 10` on `SessionEnd` is not optional in practice: all `SessionEnd` hooks share a 1.5-second budget by default, and the error drain plus daily-note write can exceed it. `"async": true` on `PostToolUseFailure` keeps the capture off the critical path of a tool call.
+
+`PreCompact` is the safety net for `SessionEnd` never running. A session killed outright, or one whose window is closed, leaves `.pending-errors.log` undrained indefinitely; a long session compacts several times, so the drain becomes recurring rather than once-at-the-end. It takes no `matcher` — the event carries a `trigger` field (`manual` or `auto`) rather than a tool name. It must also never fail: `PreCompact` is one of the events where exit 2 aborts the operation, and a hook that stopped compaction would strand the session with a full context window.
+
+Copy the script:
 ```sh
 mkdir -p ~/.claude/scripts
-cp examples/agent-self-improve/scripts/session-end.sh ~/.claude/scripts/
-cp examples/agent-self-improve/scripts/session-start-reminder.sh ~/.claude/scripts/
-chmod +x ~/.claude/scripts/*.sh
+cp examples/agent-self-improve/scripts/self-improve-hook.sh ~/.claude/scripts/
+chmod +x ~/.claude/scripts/self-improve-hook.sh
 ```
 
 ### Hook setup — Windows native (PowerShell)
 
-Add to `%USERPROFILE%\.claude\settings.json` (see `examples/agent-self-improve/settings-windows.json.example`):
+Add to `C:\Users\<you>\.claude\settings.json` (see `examples/agent-self-improve/settings-windows.json.example`):
 
 ```json
 {
   "hooks": {
-    "Stop": [
+    "SessionStart": [
       {
-        "hooks": [{"type": "command", "command": "powershell -NonInteractive -File %USERPROFILE%\\.claude\\scripts\\session-end.ps1"}]
+        "hooks": [{"type": "command", "command": "powershell -NoLogo -NoProfile -NonInteractive -File C:\\Users\\alex\\.claude\\scripts\\self-improve-hook.ps1 session-start"}]
       }
     ],
-    "PreToolUse": [
+    "SessionEnd": [
       {
-        "matcher": ".*",
-        "hooks": [{"type": "command", "command": "powershell -NonInteractive -File %USERPROFILE%\\.claude\\scripts\\session-start-reminder.ps1"}]
+        "hooks": [{"type": "command", "command": "powershell -NoLogo -NoProfile -NonInteractive -File C:\\Users\\alex\\.claude\\scripts\\self-improve-hook.ps1 session-end", "timeout": 10}]
       }
     ],
-    "PostToolUse": [
+    "PostToolUseFailure": [
       {
         "matcher": ".*",
         "hooks": [
           {
             "type": "command",
-            "command": "powershell -NonInteractive -Command \"$code=$env:CLAUDE_TOOL_EXIT_CODE; if ($code -and $code -ne '0') { $ts=(Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ'); $name=$env:CLAUDE_TOOL_NAME; \\\"$ts TOOL_FAILURE: $name\\\" | Add-Content -Encoding UTF8 \\\"$env:USERPROFILE\\.claude\\.learnings\\.pending-errors.log\\\" }\""
+            "command": "powershell -NoLogo -NoProfile -NonInteractive -File C:\\Users\\alex\\.claude\\scripts\\self-improve-hook.ps1 tool-failure",
+            "async": true
           }
         ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [{"type": "command", "command": "powershell -NoLogo -NoProfile -NonInteractive -File C:\\Users\\alex\\.claude\\scripts\\self-improve-hook.ps1 precompact", "timeout": 10}]
       }
     ]
   }
 }
 ```
+
+Replace `C:\Users\alex` with your own profile directory. The path is written out in full deliberately. A hook `command` is a raw string handed to a shell, so `%USERPROFILE%` expands only under `cmd` and `$env:USERPROFILE` only under PowerShell; earlier versions of this example used `%USERPROFILE%` and failed silently when the hook was not spawned through `cmd`. A literal path cannot be misexpanded.
+
+`-NoProfile` matters beyond speed: a user profile that writes to stdout would otherwise corrupt the `SessionStart` banner, since that hook's stdout becomes context.
 
 If PowerShell blocks script execution, allow local scripts: `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`
 
@@ -542,4 +621,4 @@ VFM_THRESHOLD=70   # default 50; raise to require stronger justification
 
 ### Agent is not logging errors
 
-Check that the PostToolUse hook is configured in `.claude/settings.json`. Alternatively, ask the agent to log manually: "Log that error to `.learnings/ERRORS.md`."
+Check that the `PostToolUseFailure` hook is configured in `.claude/settings.json`. If it is still wired to `PostToolUse`, that is the cause: `PostToolUse` fires only for tool calls that succeed. Alternatively, ask the agent to log manually: "Log that error to `.learnings/ERRORS.md`."

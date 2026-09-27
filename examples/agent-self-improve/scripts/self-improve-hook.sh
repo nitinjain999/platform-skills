@@ -1,0 +1,460 @@
+#!/usr/bin/env bash
+# self-improve-hook.sh — Claude Code lifecycle hooks for the self-improve
+# workspace. One script, four subcommands, each wired to a native event:
+#
+#   session-start  SessionStart. Plain stdout becomes context Claude sees.
+#                  Also fires with source=compact after a compaction, which is
+#                  what restores the workspace pointers; no PostCompact hook is
+#                  needed for that.
+#   session-end    SessionEnd. Cannot block. All SessionEnd hooks share a
+#                  1.5 s budget unless the hook sets a longer "timeout".
+#   tool-failure   PostToolUseFailure, wired with "async": true. PostToolUse
+#                  never fires for a failed tool.
+#   precompact     PreCompact. Drains captured failures, because SessionEnd is
+#                  not guaranteed to run. Must never exit non-zero: on this
+#                  event exit 2 aborts the compaction.
+#
+# Hook input arrives as JSON on stdin; Claude Code sets no CLAUDE_TOOL_* env
+# vars. Every path exits 0: a memory hook must never block a session, a tool
+# call, or compaction.
+#
+# Workspace resolution matches commands/self-improve.md: ~/.claude/.learnings
+# wins, then $CLAUDE_PROJECT_DIR/.learnings. With neither, the hook does
+# nothing and creates nothing.
+#
+# Requires bash 3.2+. jq is optional; without it a sed fallback reads the few
+# scalar fields used here.
+
+set -u
+
+# Strings that only the legacy Stop/PreToolUse/PostToolUse wiring contained.
+LEGACY_HOOK_PATTERN='session-start-reminder|session-end\.(sh|ps1)|CLAUDE_TOOL_EXIT_CODE'
+
+resolve_base() {
+  local project="${CLAUDE_PROJECT_DIR:-$PWD}"
+  if [ -d "$HOME/.claude/.learnings" ]; then
+    printf '%s\n' "$HOME/.claude"
+  elif [ -d "$project/.learnings" ]; then
+    printf '%s\n' "$project"
+  fi
+}
+
+# json_field <json> <key> — print a top-level scalar, or nothing. The sed
+# fallback takes the last match of the key anywhere in the payload, so a
+# nested key of the same name can win; that is why jq is preferred.
+json_field() {
+  if command -v jq >/dev/null 2>&1; then
+    printf '%s' "$1" | jq -r --arg k "$2" \
+      'if type == "object" and has($k) then .[$k] | tostring else empty end' 2>/dev/null
+  else
+    printf '%s' "$1" | tr -d '\n' |
+      sed -n "s/.*\"$2\"[[:space:]]*:[[:space:]]*\"\{0,1\}\([^\",}]*\).*/\1/p"
+  fi
+}
+
+# sanitize — keep only characters that cannot forge a log line or break a
+# Markdown heading. Tool names, session ids and end reasons all fit.
+sanitize() {
+  tr -cd 'A-Za-z0-9_.:-' | cut -c1-128
+}
+
+display_path() {
+  case "$1" in
+    "$HOME"/*) printf '~%s\n' "${1#"$HOME"}" ;;
+    *) printf '%s\n' "$1" ;;
+  esac
+}
+
+# hooks_text <file> — that settings file's "hooks" value as JSON text, or
+# nothing. Checking the legacy pattern against the whole file matches a path
+# mentioned anywhere, including a permissions.allow entry that merely
+# references the old script; scoping to "hooks" first avoids that.
+hooks_text() {
+  if command -v jq >/dev/null 2>&1; then
+    jq -c '.hooks // empty' "$1" 2>/dev/null
+  else
+    # No jq: brace-depth text extraction. A hook command string containing a
+    # literal "{" or "}" can still throw the depth count off, so treat a
+    # match here as a lead worth a manual look, not a certainty.
+    awk '
+      { buf = buf $0 "\n" }
+      END {
+        if (!match(buf, /"hooks"[[:space:]]*:[[:space:]]*\{/)) exit
+        start = RSTART + RLENGTH - 1
+        depth = 1
+        for (i = start + 1; i <= length(buf); i++) {
+          c = substr(buf, i, 1)
+          if (c == "{") depth++
+          else if (c == "}") {
+            depth--
+            if (depth == 0) { print substr(buf, start, i - start + 1); exit }
+          }
+        }
+      }' "$1" 2>/dev/null
+  fi
+}
+
+# last_err_number <errors-file> <yyyymmdd> — highest ERR number used today,
+# or 0. Counting headings would reuse an id after a deletion, and the legacy
+# `grep -c ... || echo 0` produced "0\n0" whenever nothing matched.
+last_err_number() {
+  local n
+  [ -f "$1" ] || { echo 0; return; }
+  n="$(grep -o "^### ERR-$2-[0-9][0-9]*" "$1" 2>/dev/null | sed 's/.*-//' | sort -n | tail -1)"
+  echo $((10#${n:-0}))
+}
+
+# entry_scope — the **Scope** value for an entry this hook writes. Mirrors
+# project_name() in learnings.sh, including the normalisation to what lint
+# accepts, because promote compares a project-scoped entry against that name.
+# Cached: a drain writes several entries and each would otherwise fork git
+# inside SessionEnd's 1.5 s budget.
+ENTRY_SCOPE=""
+entry_scope() {
+  local project top name
+  if [ -z "$ENTRY_SCOPE" ]; then
+    project="${CLAUDE_PROJECT_DIR:-$PWD}"
+    top="$(git -C "$project" rev-parse --show-toplevel 2>/dev/null)" || top=""
+    # Parameter expansion, not basename: the drain has to keep working on the
+    # reduced PATH the no-jq path runs with, which holds no more than the
+    # handful of tools this script already needs.
+    name="${top:-$project}"
+    name="${name%/}"
+    name="${name##*/}"
+    name="$(printf '%s' "$name" | tr -c 'A-Za-z0-9._-' '-' | tr -s '-')"
+    ENTRY_SCOPE="project:${name:-project}"
+  fi
+  printf '%s\n' "$ENTRY_SCOPE"
+}
+
+# append_err <errors-file> <number> <yyyymmdd> <context> <content> <action>
+# The promotion metadata is written here too. Source is `observed`: a captured
+# failure is live tool output. Verified comes from the same stamp as the id, so
+# the entry is dated the day it was captured. Without these three fields every
+# entry the hooks create would be one `lint` counts as "without metadata" and
+# `promote` refuses until someone fills them in by hand.
+append_err() {
+  printf '\n### ERR-%s-%03d\n**Status**: pending\n**Context**: %s\n**Content**: %s\n**Action**: %s\n**Source**: observed\n**Scope**: %s\n**Verified**: %s-%s-%s\n' \
+    "$3" "$2" "$4" "$5" "$6" "$(entry_scope)" "${3:0:4}" "${3:4:2}" "${3:6:2}" >> "$1"
+}
+
+# acquire_lock <file> — exclusive create (noclobber is O_EXCL), so two
+# sessions ending together never both drain or both pick the same ERR id.
+# A lock older than 10 minutes is presumed left by a killed session. Atomic
+# claim via rename closes the two-party race where both processes see the
+# same stale lock: only one process can successfully mv the lock to its own
+# private name. After claiming, re-verify the claim was actually stale
+# before recreating, since a second racer's own claim attempt might land
+# after we already replaced the lock with a live one — if so, put it back
+# rather than destroying an active lock.
+acquire_lock() {
+  if ( set -C; : > "$1" ) 2>/dev/null; then return 0; fi
+  if [ -n "$(find "$1" -mmin +10 2>/dev/null)" ]; then
+    local claim="$1.claim.$$"
+    if mv "$1" "$claim" 2>/dev/null; then
+      if [ -n "$(find "$claim" -mmin +10 2>/dev/null)" ]; then
+        rm -f "$claim"
+        ( set -C; : > "$1" ) 2>/dev/null && return 0
+      else
+        # What we claimed turned out to be a live lock someone else just
+        # created between our staleness check and our mv; give it back.
+        # (A third racer landing in this exact window could still clobber
+        # this restore — accepted residual risk; see the comment this
+        # replaces for the two-party race this DOES close.)
+        mv "$claim" "$1" 2>/dev/null
+      fi
+    fi
+  fi
+  return 1
+}
+
+# claim_reminder <memdir> <threshold> — true for exactly one caller per
+# threshold. The counter append is atomic, but append-then-read is not: from a
+# baseline of 4, two sessions ending together both append and can then both read
+# 6, so a test of `count % 5` emits nothing and the session-5 reminder is lost
+# even though both records persist. Claiming the threshold that was crossed
+# decouples the reminder from whichever total a racer happens to observe, and
+# exclusive create is O_EXCL, so a second racer's create fails and the same
+# threshold can never remind twice either.
+#
+# Markers below the one just claimed are pruned, so one file remains rather than
+# one per five sessions. The first claim on a counter that predates this
+# function may emit one extra reminder, because no marker yet exists for a
+# threshold already passed.
+claim_reminder() {
+  local mem="$1" threshold="$2" marker f
+  marker="$mem/.session-reminder.$threshold"
+  ( set -C; : > "$marker" ) 2>/dev/null || return 1
+  for f in "$mem"/.session-reminder.*; do
+    [ "$f" = "$marker" ] || rm -f "$f"
+  done
+  return 0
+}
+
+# drain_pending <lrn> <errors> <stamp> [buffer]
+# Consolidate captured tool failures into ERRORS.md under the drain lock.
+# Called from SessionEnd and from PreCompact: SessionEnd never runs if the
+# process is killed, so compaction is a second, safe consolidation point.
+# If a parallel session holds the lock it owns this drain; pending lines stay
+# for the next caller and the banner keeps counting them.
+# Pass <buffer> only from SessionEnd. A PENDING WAL entry is a fault when the
+# session has closed, but at compaction the session is still live.
+drain_pending() {
+  local lrn="$1" errors="$2" stamp="$3" buffer="${4:-}"
+  local pending="$lrn/.pending-errors.log" draining="$lrn/.pending-errors.draining"
+  local lock="$lrn/.drain.lock" tmp n tool session ts use_id count content tab
+  acquire_lock "$lock" || return 0
+  tab="$(printf '\t')"
+  # Rename before reading: an async tool-failure hook that fires mid-drain
+  # appends to a fresh log instead of racing this loop. A .draining file left
+  # behind by an interrupted run is drained here too.
+  if [ -s "$pending" ] && tmp="$(mktemp "$lrn/.pending-errors.XXXXXX" 2>/dev/null)"; then
+    if mv -f "$pending" "$tmp"; then
+      cat "$tmp" >> "$draining" && rm -f "$tmp"
+    else
+      rm -f "$tmp"
+    fi
+  fi
+  n="$(last_err_number "$errors" "$stamp")"
+  if [ -s "$draining" ]; then
+    # One entry per (tool, session): a run of failed Edits is one lesson, not
+    # ten. Fields are whitespace-free by construction (the capture sanitizes
+    # them), so tab-separated records are safe.
+    while IFS="$tab" read -r tool session ts use_id count; do
+      n=$((n + 1))
+      if [ "$count" -gt 1 ]; then
+        content="\`$tool\` failed $count times (session $session, first tool_use_id $use_id)"
+      else
+        content="\`$tool\` failed (session $session, tool_use_id $use_id)"
+      fi
+      append_err "$errors" "$n" "$stamp" \
+        "Tool failure captured by the PostToolUseFailure hook at $ts" "$content" \
+        "Run \`/platform-skills:self-improve review\` to find the root cause in that session's transcript"
+    done < <(awk '
+      /TOOL_FAILURE: / {
+        ts = $1
+        rest = $0
+        sub(/.*TOOL_FAILURE: /, "", rest)
+        nf = split(rest, f, " ")
+        tool = (nf >= 1 && f[1] != "") ? f[1] : "unknown"
+        session = "unknown"; use_id = "unknown"
+        for (i = 2; i <= nf; i++) {
+          if (f[i] ~ /^session=./) session = substr(f[i], 9)
+          else if (f[i] ~ /^tool_use_id=./) use_id = substr(f[i], 13)
+        }
+        key = tool SUBSEP session
+        if (!(key in count)) {
+          order[++keys] = key; name[key] = tool; sess[key] = session
+          first_ts[key] = ts; first_id[key] = use_id
+        }
+        count[key]++
+      }
+      END {
+        for (k = 1; k <= keys; k++) {
+          key = order[k]
+          printf "%s\t%s\t%s\t%s\t%d\n", name[key], sess[key], first_ts[key], first_id[key], count[key]
+        }
+      }' "$draining")
+    rm -f "$draining"
+  fi
+
+  # Match a real WAL status line only. The buffer template's HTML comment
+  # reads "**Status**: PENDING | COMMITTED | ROLLED_BACK" and must not count.
+  if [ -n "$buffer" ] && [ -f "$buffer" ] &&
+     grep -q '^\*\*Status\*\*: PENDING[[:space:]]*$' "$buffer" 2>/dev/null; then
+    n=$((n + 1))
+    append_err "$errors" "$n" "$stamp" \
+      "Session closed with a PENDING WAL entry in working-buffer.md" \
+      "A destructive operation was started but not confirmed as COMMITTED before the session ended" \
+      "Run \`/platform-skills:self-improve resume\` next session to verify and update the WAL status"
+  fi
+  rm -f "$lock"
+}
+
+# session_count <counter> — record this session end and print the total.
+#
+# Append-only: one UTC timestamp line per session end. The old format was a
+# single integer rewritten as read + 1 + write, so two sessions ending together
+# lost an increment. `>>` is O_APPEND, which the kernel makes atomic for writes
+# this small, so nothing here needs a lock.
+#
+# The legacy integer is NOT converted. It is left as line 1 and read as a
+# baseline, so an existing count carries over instead of restarting at 1.
+# Converting it in place was tried and is unsafe: the rewrite truncates, and a
+# truncate racing an append both drops records and can splice an appended
+# timestamp into the integer being re-read (measured: a count of 100 became
+# 10020260926162208). Not rewriting removes the race instead of guarding it,
+# and it keeps the pre-migration number visible in the file.
+#
+# Writing a bare integer to this file is therefore also the supported way to
+# set or reset the count by hand.
+session_count() {
+  local counter="$1"
+  # A legacy file with no trailing newline would splice the first timestamp onto
+  # its integer. Command substitution strips a trailing newline, so a non-empty
+  # result means the last byte is not one. Two racers both adding one leave a
+  # blank line, which the reader below ignores.
+  if [ -s "$counter" ] && [ -n "$(tail -c 1 "$counter" 2>/dev/null)" ]; then
+    printf '\n' >> "$counter" 2>/dev/null
+  fi
+  printf '%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$counter" 2>/dev/null
+  # Interval expressions are avoided: not every POSIX awk supports {4}. Only
+  # line 1 may be a baseline, so a stray integer later is not counted twice.
+  awk '
+    NR == 1 && /^[0-9][0-9]*$/      { n += $1; next }
+    /^[0-9][0-9][0-9][0-9]-[0-9]/   { n += 1 }
+    END { print n + 0 }
+  ' "$counter" 2>/dev/null
+}
+
+cmd_tool_failure() {
+  local payload="$1" base tool session use_id
+  base="$(resolve_base)"
+  [ -n "$base" ] || return 0
+  # A user interrupt is not a failure worth learning from.
+  if [ "$(json_field "$payload" is_interrupt)" = "true" ]; then return 0; fi
+  tool="$(json_field "$payload" tool_name | sanitize)"
+  session="$(json_field "$payload" session_id | sanitize)"
+  use_id="$(json_field "$payload" tool_use_id | sanitize)"
+  # Never persist "error" or "tool_input": either can carry credentials. One
+  # short line per append keeps concurrent async writers from interleaving.
+  printf '%s TOOL_FAILURE: %s session=%s tool_use_id=%s\n' \
+    "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${tool:-unknown}" "${session:-unknown}" "${use_id:-unknown}" \
+    >> "$base/.learnings/.pending-errors.log" 2>/dev/null
+}
+
+cmd_session_end() {
+  local payload="$1" base mem lrn today stamp now reason
+  local daily state buffer errors counter lines count threshold
+  base="$(resolve_base)"
+  [ -n "$base" ] || return 0
+  mem="$base/memory"
+  lrn="$base/.learnings"
+  mkdir -p "$mem" 2>/dev/null
+  today="$(date +%Y-%m-%d)"
+  stamp="$(date +%Y%m%d)"
+  now="$(date +%H:%M)"
+  reason="$(json_field "$payload" reason | sanitize)"
+  daily="$mem/$today.md"
+  state="$mem/SESSION-STATE.md"
+  buffer="$mem/working-buffer.md"
+  errors="$lrn/ERRORS.md"
+  counter="$mem/.session-count"
+
+  # ── Daily note ──────────────────────────────────────────────────────────────
+  [ -f "$daily" ] || printf '# Daily Notes — %s\n\n' "$today" > "$daily"
+  printf '\n## Session closed: %s (%s)\n\n' "$now" "${reason:-unknown}" >> "$daily"
+  if [ -f "$state" ]; then
+    lines="$(grep "^- $today" "$state" 2>/dev/null)"
+    [ -n "$lines" ] && printf '### State captured today:\n\n%s\n' "$lines" >> "$daily"
+  fi
+  if [ -f "$buffer" ]; then
+    lines="$(grep '^- \[ \]' "$buffer" 2>/dev/null)"
+    [ -n "$lines" ] && printf '\n### Incomplete steps (resume next session):\n\n%s\n' "$lines" >> "$daily"
+  fi
+
+  # ── ERRORS.md writes, under the drain lock ──────────────────────────────────
+  drain_pending "$lrn" "$errors" "$stamp" "$buffer"
+
+  # The legacy PreToolUse banner keyed off this marker; nothing reads it now.
+  rm -f "$mem/.session-active"
+
+  # ── Session counter and review reminder ─────────────────────────────────────
+  count="$(session_count "$counter")"
+  threshold=$((count - count % 5))
+  if [ "$threshold" -ge 5 ] && claim_reminder "$mem" "$threshold"; then
+    printf '\n### Review reminder (session %d):\n\nRun `/platform-skills:self-improve review`. 5 sessions have elapsed.\n' \
+      "$threshold" >> "$daily"
+  fi
+
+  if ! grep -q "^### LRN-$stamp" "$lrn/LEARNINGS.md" 2>/dev/null; then
+    printf -- '- No learnings logged today. Consider `/platform-skills:self-improve log` before the next session.\n' >> "$daily"
+  fi
+}
+
+# PreCompact. Compaction discards context, not disk state, so there is nothing
+# to rescue from the payload: a hook never sees the transcript. What it can do
+# is consolidate, because SessionEnd is not guaranteed to run. A session killed
+# with SIGKILL, or one whose window is closed, leaves .pending-errors.log
+# undrained indefinitely; a long session compacts several times, so this turns
+# the drain into something that happens repeatedly rather than once at the end.
+#
+# Context restoration after compaction needs no hook here: SessionStart fires
+# again with source=compact, and its stdout is added to the new context.
+#
+# This must never block. PreCompact is one of the events where exit 2 stops the
+# operation, and a memory hook that can abort compaction would strand a session
+# with a full context window. Every path returns 0.
+cmd_precompact() {
+  local base lrn stamp
+  base="$(resolve_base)"
+  [ -n "$base" ] || return 0
+  lrn="$base/.learnings"
+  [ -d "$lrn" ] || return 0
+  stamp="$(date +%Y%m%d)"
+  drain_pending "$lrn" "$lrn/ERRORS.md" "$stamp"
+  return 0
+}
+
+cmd_session_start() {
+  local base mem today scope task count f project hj
+  base="$(resolve_base)"
+  [ -n "$base" ] || return 0
+  mem="$base/memory"
+  today="$(date +%Y-%m-%d)"
+  project="${CLAUDE_PROJECT_DIR:-$PWD}"
+  if [ "$base" = "$HOME/.claude" ]; then scope="global"; else scope="project"; fi
+
+  printf 'Self-improve workspace: %s (%s)\n' "$(display_path "$base")" "$scope"
+  printf 'Read these before starting work:\n'
+  printf '  1. %s (active task, WAL)\n' "$(display_path "$mem/working-buffer.md")"
+  printf '  2. %s (corrections, preferences, decisions)\n' "$(display_path "$mem/SESSION-STATE.md")"
+  if [ -f "$mem/$today.md" ]; then
+    printf '  3. %s (today)\n' "$(display_path "$mem/$today.md")"
+  fi
+
+  if [ -f "$mem/working-buffer.md" ]; then
+    task="$(awk '/^## Current Task/{found=1; next} found && /^[^#]/{print; exit}' \
+      "$mem/working-buffer.md" | cut -c1-120)"
+    case "$task" in
+      ""|*"No active task"*) ;;
+      *) printf 'Active task: %s\n' "$task" ;;
+    esac
+  fi
+
+  if [ -s "$base/.learnings/.pending-errors.log" ]; then
+    count="$(grep -c 'TOOL_FAILURE' "$base/.learnings/.pending-errors.log" 2>/dev/null)"
+    printf 'WARNING: %s unprocessed tool failure(s) in %s. Run /platform-skills:self-improve review.\n' \
+      "${count:-0}" "$(display_path "$base/.learnings/.pending-errors.log")"
+  fi
+
+  for f in "$HOME/.claude/settings.json" "$HOME/.claude/settings.local.json" "$project/.claude/settings.json" "$project/.claude/settings.local.json"; do
+    # With the project at $HOME, the last two paths are the same files as the first two.
+    if [ "$project" = "$HOME" ] && { [ "$f" = "$project/.claude/settings.json" ] || [ "$f" = "$project/.claude/settings.local.json" ]; }; then continue; fi
+    if [ -f "$f" ]; then
+      hj="$(hooks_text "$f")"
+      if [ -n "$hj" ] && printf '%s' "$hj" | grep -qE "$LEGACY_HOOK_PATTERN"; then
+        printf 'WARNING: legacy self-improve hooks are still wired in %s. Remove its Stop, PreToolUse and PostToolUse self-improve entries (see "Migrating from the legacy hooks" in examples/agent-self-improve/README.md).\n' \
+          "$(display_path "$f")"
+      fi
+    fi
+  done
+}
+
+main() {
+  local payload=""
+  [ -t 0 ] || payload="$(cat)"
+  case "${1:-}" in
+    session-start) cmd_session_start "$payload" ;;
+    session-end)  cmd_session_end "$payload" ;;
+    tool-failure) cmd_tool_failure "$payload" ;;
+    precompact)   cmd_precompact "$payload" ;;
+    *) echo "usage: self-improve-hook.sh session-start|session-end|tool-failure|precompact" >&2 ;;
+  esac
+}
+
+# Allow the script to be sourced for testing without executing main.
+if [ "${1:-}" != "--source-only" ]; then
+  main "$@"
+  exit 0
+fi
