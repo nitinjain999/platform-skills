@@ -65,6 +65,35 @@ display_path() {
   esac
 }
 
+# hooks_text <file> — that settings file's "hooks" value as JSON text, or
+# nothing. Checking the legacy pattern against the whole file matches a path
+# mentioned anywhere, including a permissions.allow entry that merely
+# references the old script; scoping to "hooks" first avoids that.
+hooks_text() {
+  if command -v jq >/dev/null 2>&1; then
+    jq -c '.hooks // empty' "$1" 2>/dev/null
+  else
+    # No jq: brace-depth text extraction. A hook command string containing a
+    # literal "{" or "}" can still throw the depth count off, so treat a
+    # match here as a lead worth a manual look, not a certainty.
+    awk '
+      { buf = buf $0 "\n" }
+      END {
+        if (!match(buf, /"hooks"[[:space:]]*:[[:space:]]*\{/)) exit
+        start = RSTART + RLENGTH - 1
+        depth = 1
+        for (i = start + 1; i <= length(buf); i++) {
+          c = substr(buf, i, 1)
+          if (c == "{") depth++
+          else if (c == "}") {
+            depth--
+            if (depth == 0) { print substr(buf, start, i - start + 1); exit }
+          }
+        }
+      }' "$1" 2>/dev/null
+  fi
+}
+
 # last_err_number <errors-file> <yyyymmdd> — highest ERR number used today,
 # or 0. Counting headings would reuse an id after a deletion, and the legacy
 # `grep -c ... || echo 0` produced "0\n0" whenever nothing matched.
@@ -368,7 +397,7 @@ cmd_precompact() {
 }
 
 cmd_session_start() {
-  local base mem today scope task count f project
+  local base mem today scope task count f project hj
   base="$(resolve_base)"
   [ -n "$base" ] || return 0
   mem="$base/memory"
@@ -402,9 +431,12 @@ cmd_session_start() {
   for f in "$HOME/.claude/settings.json" "$HOME/.claude/settings.local.json" "$project/.claude/settings.json" "$project/.claude/settings.local.json"; do
     # With the project at $HOME, the last two paths are the same files as the first two.
     if [ "$project" = "$HOME" ] && { [ "$f" = "$project/.claude/settings.json" ] || [ "$f" = "$project/.claude/settings.local.json" ]; }; then continue; fi
-    if [ -f "$f" ] && grep -qE "$LEGACY_HOOK_PATTERN" "$f" 2>/dev/null; then
-      printf 'WARNING: legacy self-improve hooks are still wired in %s. Remove its Stop, PreToolUse and PostToolUse self-improve entries (see "Migrating from the legacy hooks" in examples/agent-self-improve/README.md).\n' \
-        "$(display_path "$f")"
+    if [ -f "$f" ]; then
+      hj="$(hooks_text "$f")"
+      if [ -n "$hj" ] && printf '%s' "$hj" | grep -qE "$LEGACY_HOOK_PATTERN"; then
+        printf 'WARNING: legacy self-improve hooks are still wired in %s. Remove its Stop, PreToolUse and PostToolUse self-improve entries (see "Migrating from the legacy hooks" in examples/agent-self-improve/README.md).\n' \
+          "$(display_path "$f")"
+      fi
     fi
   done
 }

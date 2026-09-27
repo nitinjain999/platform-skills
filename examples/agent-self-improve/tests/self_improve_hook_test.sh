@@ -679,6 +679,14 @@ t_session_start_quiet_for_new_wiring() {
   assert_not_contains "no warning for the new wiring" "legacy" "$(run_hook session-start "$START_JSON")"
 }
 
+t_session_start_ignores_pattern_outside_hooks() {
+  fresh global
+  printf '%s\n' '{"permissions":{"allow":["Bash(cp examples/agent-self-improve/scripts/session-end.sh ~/.claude/scripts/)"]}}' \
+    > "$T_HOME/.claude/settings.json"
+  assert_not_contains "a legacy script path outside hooks is not a warning" "legacy" \
+    "$(run_hook session-start "$START_JSON")"
+}
+
 t_session_start_no_workspace() {
   fresh none
   local rc=0 out

@@ -63,6 +63,20 @@ function Show-Path([string]$Path) {
     return $Path
 }
 
+# Get-HooksText <file> - that settings file's "hooks" value as compact JSON
+# text, or empty. Checking the legacy pattern against the whole file matches
+# a path mentioned anywhere, including a permissions.allow entry that merely
+# references the old script; scoping to "hooks" first avoids that.
+function Get-HooksText([string]$Path) {
+    try {
+        $json = Get-Content -LiteralPath $Path -Raw -ErrorAction Stop | ConvertFrom-Json -ErrorAction Stop
+    } catch {
+        return ''
+    }
+    if ($null -eq $json.hooks) { return '' }
+    return ($json.hooks | ConvertTo-Json -Depth 20 -Compress)
+}
+
 # One mutex serialises every append. Without it concurrent writers silently
 # lose records: .NET opens an append handle by seeking to the current end and
 # writing at that remembered offset, so two hooks that open the same file
@@ -433,8 +447,11 @@ function Invoke-SessionStart {
         $settingsFiles += [IO.Path]::Combine($Project, '.claude', 'settings.local.json')
     }
     foreach ($f in $settingsFiles) {
-        if ((Test-Path -LiteralPath $f) -and (Select-String -LiteralPath $f -Pattern $LegacyHookPattern -Quiet)) {
-            $out.Add("WARNING: legacy self-improve hooks are still wired in $(Show-Path $f). Remove its Stop, PreToolUse and PostToolUse self-improve entries (see `"Migrating from the legacy hooks`" in examples/agent-self-improve/README.md).")
+        if (Test-Path -LiteralPath $f) {
+            $hooksText = Get-HooksText $f
+            if ($hooksText -and ($hooksText -match $LegacyHookPattern)) {
+                $out.Add("WARNING: legacy self-improve hooks are still wired in $(Show-Path $f). Remove its Stop, PreToolUse and PostToolUse self-improve entries (see `"Migrating from the legacy hooks`" in examples/agent-self-improve/README.md).")
+            }
         }
     }
     [Console]::Out.Write(($out -join "`n") + "`n")
