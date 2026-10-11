@@ -129,6 +129,7 @@ REQUIRED_REFERENCES=(
   references/trivy.md
   references/zizmor.md
   references/kingfisher.md
+  references/gateway-api.md
 )
 
 for ref in "${REQUIRED_REFERENCES[@]}"; do

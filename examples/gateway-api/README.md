@@ -39,7 +39,7 @@ ingress2gateway print --providers=ingress-nginx --emitter=envoy-gateway \
 ingress2gateway print --providers=ingress-nginx --emitter=envoy-gateway -A > converted.yaml
 ```
 
-Review `converted.yaml` before applying it. The tool emits its own `Gateway` per input; in a shared-Gateway model, delete it and point each route's `parentRefs` at `platform-gateway`.
+Review `converted.yaml` before applying it. The tool emits its own `Gateway` objects; in a shared-Gateway model, delete them and point each route's `parentRefs` at `platform-gateway`.
 
 ## Validate
 

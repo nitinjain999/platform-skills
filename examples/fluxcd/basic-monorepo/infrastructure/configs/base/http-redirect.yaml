@@ -16,4 +16,4 @@ spec:
         - type: RequestRedirect
           requestRedirect:
             scheme: https
-            statusCode: 301
+            statusCode: 308  # Keeps the previous controller's code; unlike 301, a POST stays a POST

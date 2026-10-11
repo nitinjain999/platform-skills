@@ -178,7 +178,8 @@ Ownership is split the way Gateway API intends:
 
 - **TLS:** the Gateway carries `cert-manager.io/cluster-issuer: letsencrypt-prod`. cert-manager creates one Certificate per HTTPS listener and solves HTTP-01 through the same Gateway.
 - **Access:** the HTTPS listener only accepts routes from namespaces labelled `gateway-access: "true"`. A route from any other namespace is rejected with `NotAllowedByListeners`.
-- **Redirect:** a platform-owned `HTTPRoute` on port 80 sends everything to HTTPS. ACME challenge routes use an `Exact` path match, which takes precedence over it.
+- **Redirect:** a platform-owned `HTTPRoute` on port 80 sends everything to HTTPS with a 308, the same code ingress-nginx used. ACME challenge routes use an `Exact` path match, which takes precedence over it.
+- **CRDs:** a separate `gateway-crds` HelmRelease installs the Gateway API CRDs on the **standard** channel and marks them `helm.sh/resource-policy: keep`. Deleting a CRD deletes every Gateway and HTTPRoute in the cluster, so removing the release must never take them with it.
 - **Availability:** `EnvoyProxy` runs two proxy replicas with a PodDisruptionBudget in production. Staging runs one and removes the PDB, because `minAvailable: 1` on a single replica blocks every node drain.
 
 
