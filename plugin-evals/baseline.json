@@ -3,11 +3,20 @@
     "flux-helmrelease": {
       "score": 1
     },
+    "kyverno-trigger": {
+      "score": 1.0
+    },
     "opa-policy": {
       "score": 1
     },
+    "openshift-trigger": {
+      "score": 1.0
+    },
     "pr-triage": {
       "score": 1
+    },
+    "secrets-trigger": {
+      "score": 1.0
     }
   },
   "floor": 0.7,

@@ -13,9 +13,23 @@ const pluginManifest = require('../.claude-plugin/plugin.json');
 // nobody updated on release.
 const fs = require('fs');
 const path = require('path');
-const commandCount = fs
-  .readdirSync(path.join(__dirname, '..', 'commands'))
-  .filter((f) => f.endsWith('.md')).length;
+
+// Each domain is a skill at skills/<name>/SKILL.md (skills/platform-skills is the
+// router, not a command page). Docusaurus would give skills/<name>/SKILL.md the
+// doc id "<name>/SKILL", so copy each skill to .generated/commands/<name>.md:
+// the site keeps its /commands/<name> URLs and sidebar ids unchanged.
+const skillsDir = path.join(__dirname, '..', 'skills');
+const commandNames = fs
+  .readdirSync(skillsDir)
+  .filter((d) => d !== 'platform-skills' && fs.existsSync(path.join(skillsDir, d, 'SKILL.md')))
+  .sort();
+const generatedCommandsDir = path.join(__dirname, '.generated', 'commands');
+fs.rmSync(generatedCommandsDir, { recursive: true, force: true });
+fs.mkdirSync(generatedCommandsDir, { recursive: true });
+for (const name of commandNames) {
+  fs.copyFileSync(path.join(skillsDir, name, 'SKILL.md'), path.join(generatedCommandsDir, `${name}.md`));
+}
+const commandCount = commandNames.length;
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -35,16 +49,16 @@ const config = {
   projectName: 'platform-skills',
   trailingSlash: false,
 
-  // Cross-plugin refs (commands/ → references/) and examples/ paths are intentional
+  // Cross-plugin refs (skills/ → references/) and examples/ paths are intentional
   // agent-skill cross-references for the CLI — not web links. Ignore at build time.
   onBrokenLinks: 'ignore',
 
   markdown: {
     // Process .md files as CommonMark (not MDX) — tolerates raw HTML tags and
-    // angle-bracket constructs present in the existing references/ and commands/ files.
+    // angle-bracket constructs present in the existing references/ and skills/ files.
     format: 'detect',
     hooks: {
-      // Cross-plugin refs (commands/ → references/) and examples/ links are
+      // Cross-plugin refs (skills/ → references/) and examples/ links are
       // agent-skill cross-references, not web links — suppress broken-link noise.
       onBrokenMarkdownLinks: 'ignore',
     },
@@ -85,7 +99,7 @@ const config = {
       '@docusaurus/plugin-content-docs',
       {
         id: 'commands',
-        path: '../commands',
+        path: './.generated/commands',
         routeBasePath: 'commands',
         sidebarPath: require.resolve('./sidebars-commands.js'),
         sidebarCollapsible: true,

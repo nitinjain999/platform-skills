@@ -169,7 +169,7 @@ module "eks" {
 
 # Platform domains
 references/                @platform-team
-commands/                  @platform-team
+skills/                    @platform-team
 examples/kubernetes/       @kubernetes-team
 examples/terraform/        @infra-team
 

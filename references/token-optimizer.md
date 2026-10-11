@@ -1,6 +1,6 @@
 # Token Optimizer
 
-Deep reference for `/platform-skills:token-optimizer`. Read `commands/token-optimizer.md` first for the wizard; this covers the mechanics behind it.
+Deep reference for `/platform-skills:token-optimizer`. Read `skills/token-optimizer/SKILL.md` first for the wizard; this covers the mechanics behind it.
 
 ## Config schema
 

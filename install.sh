@@ -9,6 +9,7 @@ INSTALL_CLAUDE=0
 INSTALL_CODEX=0
 INSTALL_CURSOR=0
 INSTALL_COPILOT=0
+INSTALL_SKILLS=0
 
 usage() {
   cat <<'EOF'
@@ -17,17 +18,20 @@ Usage: ./install.sh [options]
 Install platform-skills integrations from this local clone.
 
 Options:
-  --all                 Install Claude, Codex, Cursor, and Copilot integrations
+  --all                 Install Claude, Codex, Cursor, Copilot, and portable skills
   --claude              Install as a Claude plugin when the claude CLI is available
   --codex               Link this repo into ${CODEX_HOME:-$HOME/.codex}/skills
   --cursor              Copy Cursor rules into the target project
   --copilot             Copy GitHub Copilot instructions into the target project
+  --skills              Render every skill into the target's .agents/skills/ as
+                        platform-skills-<name> (read by Copilot in VS Code, Cursor, Codex)
   --target PATH         Project path for Cursor and Copilot files (default: current directory)
   -h, --help            Show this help
 
 Examples:
   ./install.sh --codex
   ./install.sh --cursor --copilot --target ../your-project
+  ./install.sh --skills --target ../your-project
   ./install.sh --all --target ../your-project
 EOF
 }
@@ -109,6 +113,11 @@ install_copilot() {
   copy_file "$ROOT_DIR/.github/copilot-instructions.md" "$TARGET_DIR/.github/copilot-instructions.md"
 }
 
+install_skills() {
+  bash "$ROOT_DIR/scripts/render-skills.sh" "$TARGET_DIR/.agents/skills"
+  log "Installed skills into .agents/skills/ (platform-skills-<name>)"
+}
+
 if [ "$#" -eq 0 ]; then
   usage
   exit 0
@@ -121,6 +130,7 @@ while [ "$#" -gt 0 ]; do
       INSTALL_CODEX=1
       INSTALL_CURSOR=1
       INSTALL_COPILOT=1
+      INSTALL_SKILLS=1
       ;;
     --claude)
       INSTALL_CLAUDE=1
@@ -133,6 +143,9 @@ while [ "$#" -gt 0 ]; do
       ;;
     --copilot)
       INSTALL_COPILOT=1
+      ;;
+    --skills)
+      INSTALL_SKILLS=1
       ;;
     --target)
       if [ "${2:-}" = "" ]; then
@@ -159,7 +172,7 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 
-if [ "$INSTALL_CLAUDE" -eq 0 ] && [ "$INSTALL_CODEX" -eq 0 ] && [ "$INSTALL_CURSOR" -eq 0 ] && [ "$INSTALL_COPILOT" -eq 0 ]; then
+if [ "$INSTALL_CLAUDE" -eq 0 ] && [ "$INSTALL_CODEX" -eq 0 ] && [ "$INSTALL_CURSOR" -eq 0 ] && [ "$INSTALL_COPILOT" -eq 0 ] && [ "$INSTALL_SKILLS" -eq 0 ]; then
   usage
   exit 0
 fi
@@ -168,6 +181,7 @@ fi
 [ "$INSTALL_CODEX" -eq 1 ] && install_codex
 [ "$INSTALL_CURSOR" -eq 1 ] && install_cursor
 [ "$INSTALL_COPILOT" -eq 1 ] && install_copilot
+[ "$INSTALL_SKILLS" -eq 1 ] && install_skills
 
 cat <<EOF
 

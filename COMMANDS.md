@@ -2008,7 +2008,7 @@ Triage a PR review or issue comment from a bot, CI tool, or human reviewer. Ever
 
 A mixed thread stays open while any substantive concern remains, and a PR conversation comment has no thread to resolve at all. Classification, fix execution state, and discussion state are reported as three separate facts, so "fixed, pushed, thread open pending CI" is a complete outcome rather than a partial failure.
 
-Reference: `commands/triage.md` (router), `references/triage.md` (evidence rules, helper contract, failure recovery), and `examples/triage/README.md`
+Reference: `skills/triage/SKILL.md` (router), `references/triage.md` (evidence rules, helper contract, failure recovery), and `examples/triage/README.md`
 
 ---
 
@@ -2049,7 +2049,7 @@ Reference: `commands/triage.md` (router), `references/triage.md` (evidence rules
 /platform-skills:gateway-api why does cert-manager not create a certificate for my Gateway listener?
 ```
 
-Reference: `commands/gateway-api.md`, `references/gateway-api.md`, `examples/gateway-api/README.md`, and the full layout in `examples/fluxcd/basic-monorepo`
+Reference: `skills/gateway-api/SKILL.md`, `references/gateway-api.md`, `examples/gateway-api/README.md`, and the full layout in `examples/fluxcd/basic-monorepo`
 
 ---
 
@@ -2116,7 +2116,7 @@ The debug mode works through this checklist in order:
 - Never overlap Cron windows
 - Set `restoreToOriginalReplicaCount: true`
 
-Reference: `commands/keda.md`, `references/keda.md`, and `examples/keda/`
+Reference: `skills/keda/SKILL.md`, `references/keda.md`, and `examples/keda/`
 
 ---
 
@@ -2178,7 +2178,7 @@ When invoked with no arguments, the command asks two questions before proceeding
 - OCI chart only (`oci://public.ecr.aws/karpenter/karpenter`) — `charts.karpenter.sh` is deprecated and unmaintained
 - CA and Karpenter must not coexist on the same nodes — scale CA to 0 before Karpenter takes over
 
-Reference: `commands/karpenter.md`, `references/karpenter.md`, and `examples/karpenter/`
+Reference: `skills/karpenter/SKILL.md`, `references/karpenter.md`, and `examples/karpenter/`
 
 ---
 
@@ -2229,7 +2229,7 @@ Reference: `commands/karpenter.md`, `references/karpenter.md`, and `examples/kar
 - VFM scoring: Velocity × Frequency × Magnitude determines promotion priority
 - ADL protocol: decide Adopt / Defer / Reject for each promotion candidate
 
-Reference: `commands/self-improve.md`, `references/agent-self-improve.md`, and `examples/agent-self-improve/`
+Reference: `skills/self-improve/SKILL.md`, `references/agent-self-improve.md`, and `examples/agent-self-improve/`
 
 ---
 
@@ -2504,7 +2504,7 @@ Reference: `references/awesome-docs.md` and `examples/awesome-docs/`
 /platform-skills:aws terraform — generate a CloudFront + S3 + WAF module for a static site
 ```
 
-Reference: `commands/aws.md`, `references/aws-cloudfront.md`, `references/aws-waf.md`, and `examples/aws/`
+Reference: `skills/aws/SKILL.md`, `references/aws-cloudfront.md`, `references/aws-waf.md`, and `examples/aws/`
 
 ---
 
@@ -2534,7 +2534,7 @@ Reference: `commands/aws.md`, `references/aws-cloudfront.md`, `references/aws-wa
 /platform-skills:composite-actions publish — set up semantic versioning and a release.yml workflow
 ```
 
-Reference: `commands/composite-actions.md`, `references/composite-actions.md`, and `examples/github-actions/composite-actions/`
+Reference: `skills/composite-actions/SKILL.md`, `references/composite-actions.md`, and `examples/github-actions/composite-actions/`
 
 ---
 
@@ -2569,7 +2569,7 @@ Reference: `commands/composite-actions.md`, `references/composite-actions.md`, a
 /platform-skills:fluxcd — review this Chart.yaml and values.yaml for security issues
 ```
 
-Reference: `commands/fluxcd.md`, `references/fluxcd.md`, `references/fluxcd-sources.md`, `references/fluxcd-operator.md`, and `examples/fluxcd/`
+Reference: `skills/fluxcd/SKILL.md`, `references/fluxcd.md`, `references/fluxcd-sources.md`, `references/fluxcd-operator.md`, and `examples/fluxcd/`
 
 ---
 

@@ -23,10 +23,13 @@ Common variants:
 ./install.sh --codex
 ./install.sh --cursor --target /path/to/your-project
 ./install.sh --copilot --target /path/to/your-project
+./install.sh --skills --target /path/to/your-project   # every skill as a portable Agent Skill
 ./install.sh --claude
 ```
 
 The installer links the local clone for Codex, copies Cursor and Copilot files into the target project, and installs the Claude plugin when the `claude` CLI is available. Existing target files are backed up with a `.bak` suffix before they are replaced.
+
+`--skills` renders each skill into the target's `.agents/skills/` as `platform-skills-<name>/SKILL.md`, with the reference docs it uses copied beside it. GitHub Copilot in VS Code, Cursor and Codex read that directory, so the same 46 skills the Claude plugin ships (45 domains plus the `platform-skills` router) are available there, by name (`/platform-skills-fluxcd`) or picked automatically from their descriptions. The names carry the `platform-skills-` prefix because these tools do not namespace skills the way the Claude plugin does, and a bare `debug` or `commit` would collide with your own. Re-running replaces only `platform-skills*` directories.
 
 ---
 

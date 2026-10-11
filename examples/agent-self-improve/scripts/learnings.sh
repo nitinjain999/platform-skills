@@ -14,7 +14,7 @@
 # Global options, before the subcommand: --base DIR (skip resolution),
 # --today YYYY-MM-DD (tests pin the date).
 #
-# Workspace resolution matches commands/self-improve.md and
+# Workspace resolution matches skills/self-improve/SKILL.md and
 # self-improve-hook.sh: ~/.claude/.learnings wins, then
 # ${CLAUDE_PROJECT_DIR:-$PWD}/.learnings.
 #

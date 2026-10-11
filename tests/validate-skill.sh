@@ -196,31 +196,22 @@ for ref in "${REQUIRED_REFERENCES[@]}"; do
 done
 
 echo ""
-echo "=== Command files declared in plugin.json exist ==="
+echo "=== Domain skills load from skills/ ==="
 
 PLUGIN_JSON=".claude-plugin/plugin.json"
+# Every domain is skills/<name>/SKILL.md; skills/platform-skills is the router.
+DOMAIN_SKILLS="$(find skills -mindepth 2 -maxdepth 2 -name SKILL.md | grep -v '^skills/platform-skills/' | sort)"
 if [ -f "$PLUGIN_JSON" ]; then
-  # Every command path in plugin.json must point to a real file
-  while IFS= read -r cmd_path; do
-    cmd_file="${cmd_path#./}"
-    if [ -f "$cmd_file" ]; then
-      pass "$cmd_file exists"
-    else
-      fail "$cmd_file declared in plugin.json but not found"
-    fi
-  done < <(grep -o '"./commands/[^"]*"' "$PLUGIN_JSON" | tr -d '"')
-
-  # Every commands/*.md file must be registered in plugin.json
-  for cmd_file in commands/*.md; do
-    cmd_path="./$cmd_file"
-    if grep -q "\"$cmd_path\"" "$PLUGIN_JSON"; then
-      pass "$cmd_file registered in plugin.json"
-    else
-      fail "$cmd_file exists but is not registered in plugin.json"
-    fi
-  done
+  if jq -e 'has("commands") or has("skills")' "$PLUGIN_JSON" >/dev/null; then
+    fail "$PLUGIN_JSON declares commands or skills; skills/ is scanned by default"
+  else
+    pass "$PLUGIN_JSON leaves skills/ to the default scan"
+  fi
 else
   fail "$PLUGIN_JSON not found"
+fi
+if [ -z "$DOMAIN_SKILLS" ]; then
+  fail "no domain skills under skills/"
 fi
 
 echo ""
@@ -241,7 +232,7 @@ NAME_ONLY_DOCS=(
   GETTING_STARTED.md
 )
 
-for cmd_file in commands/*.md; do
+for cmd_file in $DOMAIN_SKILLS; do
   cmd_name="$(awk '/^name:/{print $2; exit}' "$cmd_file")"
 
   if [ -z "$cmd_name" ]; then
@@ -280,7 +271,7 @@ done
 echo ""
 echo "=== Commands with example directories: README.md present ==="
 
-for cmd_file in commands/*.md; do
+for cmd_file in $DOMAIN_SKILLS; do
   cmd_name="$(awk '/^name:/{print $2; exit}' "$cmd_file")"
   [ -z "$cmd_name" ] && continue
 

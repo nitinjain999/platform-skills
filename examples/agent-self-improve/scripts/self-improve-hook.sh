@@ -18,7 +18,7 @@
 # vars. Every path exits 0: a memory hook must never block a session, a tool
 # call, or compaction.
 #
-# Workspace resolution matches commands/self-improve.md: ~/.claude/.learnings
+# Workspace resolution matches skills/self-improve/SKILL.md: ~/.claude/.learnings
 # wins, then $CLAUDE_PROJECT_DIR/.learnings. With neither, the hook does
 # nothing and creates nothing.
 #

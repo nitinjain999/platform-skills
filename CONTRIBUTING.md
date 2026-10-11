@@ -195,9 +195,9 @@ Follow this checklist when adding a net-new domain (e.g. a new command + referen
 - [ ] References related domains with relative links
 - [ ] Added to `REQUIRED_REFERENCES` array in `tests/validate-skill.sh`
 
-### 2. Command file — `commands/<domain>.md`
+### 2. Skill — `skills/<domain>/SKILL.md`
 
-- [ ] File exists at `commands/<domain>.md`
+- [ ] File exists at `skills/<domain>/SKILL.md` (one directory per skill; supporting files can sit beside it)
 - [ ] Has YAML frontmatter: `name:`, `description:`, `argument-hint:`
 - [ ] Defines at least one `## Mode:` section
 - [ ] Registered in `.claude-plugin/plugin.json` commands array

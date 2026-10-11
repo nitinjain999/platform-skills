@@ -391,6 +391,6 @@ For project-local setup, add to `.gitignore`:
 ## Further Reading
 
 - [references/agent-self-improve.md](../../references/agent-self-improve.md) — full reference for all protocols
-- [commands/self-improve.md](../../commands/self-improve.md) — slash command specification
+- [skills/self-improve/SKILL.md](../../commands/self-improve.md) — slash command specification
 - [HOW_IT_WORKS.md](../../HOW_IT_WORKS.md) — how the platform-skills skill works in general
 - [GETTING_STARTED.md](../../GETTING_STARTED.md) — install and first session

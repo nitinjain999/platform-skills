@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-v1.43.0-0e1117)](CHANGELOG.md)
 [![Domains](https://img.shields.io/badge/Domains-64-4c8eda)](references/)
-[![Commands](https://img.shields.io/badge/Commands-45-e87c2b)](commands/)
+[![Commands](https://img.shields.io/badge/Commands-45-e87c2b)](skills/)
 [![Examples](https://img.shields.io/badge/Examples-28-6f42c1)](examples/)
 [![Editors](https://img.shields.io/badge/Editors-VSCode%20%7C%20Cursor%20%7C%20Copilot-2ea44f)](EDITOR_INTEGRATIONS.md)
 [![GitHub Stars](https://img.shields.io/github/stars/nitinjain999/platform-skills?style=flat&label=Stars&color=0e1117)](https://github.com/nitinjain999/platform-skills/stargazers)
@@ -149,7 +149,7 @@ All layers work independently. Agent integrations are optional.
 | <img src="https://cdn.simpleicons.org/git/F05032" width="16" height="16" alt="Git"> Conventional Commits | [references/conventional-commits.md](references/conventional-commits.md) | Message structure, type classification, atomic staging, commitlint/husky/semantic-release tooling |
 | 📋 OPA / Conftest | [references/opa.md](references/opa.md) | Rego v1 syntax, rule types, unit tests, fmt/regal/verify validation pipeline, GitHub Actions integration |
 | 🔍 PR Review | [references/pr-review.md](references/pr-review.md) | Cost impact, environment drift, ownership gaps, SOC 2 compliance, deprecated API / version hygiene, rollback feasibility |
-| 🧵 PR Comment Triage | [commands/triage.md](commands/triage.md), [references/triage.md](references/triage.md) | `/platform-skills:triage` classifies a PR comment across seven finding types, applies a validated fix in an isolated worktree, replies on the thread, and resolves it only when that finding is eligible for closure |
+| 🧵 PR Comment Triage | [skills/triage/SKILL.md](skills/triage/SKILL.md), [references/triage.md](references/triage.md) | `/platform-skills:triage` classifies a PR comment across seven finding types, applies a validated fix in an isolated worktree, replies on the thread, and resolves it only when that finding is eligible for closure |
 | ⚡ KEDA | [references/keda.md](references/keda.md) | ScaledObject, ScaledJob, TriggerAuthentication, Prometheus/SQS/Kafka/Redis/Cron/HTTP/Azure scalers, scale-to-zero, IRSA, GitOps integration, troubleshooting — `/platform-skills:keda` |
 | 🚪 Gateway API | [references/gateway-api.md](references/gateway-api.md) | Ingress on Gateway API with Envoy Gateway, migration off the retired ingress-nginx controller, ingress2gateway annotation coverage, cert-manager listener TLS, Flux layering, parallel-run cutover and rollback — `/platform-skills:gateway-api` |
 | ⚙️ Karpenter | [references/karpenter.md](references/karpenter.md) | EKS node autoscaling — NodePool, EC2NodeClass, NodeClaim, Spot diversity, disruption budgets, ODCR, private clusters, Fargate coexistence, FinOps, CA migration, v0→v1 upgrades — `/platform-skills:karpenter` |

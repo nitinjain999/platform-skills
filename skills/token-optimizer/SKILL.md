@@ -201,7 +201,7 @@ Steps:
 
 9. Register the PreToolUse hook by **appending**, never overwriting. Existing hooks for other features (e.g., `ai-governance`) must remain intact.
 
-   **For Claude Code**, use the three-level matcher-group structure and the `jq` idiom from `commands/ai-governance.md:142-151`:
+   **For Claude Code**, use the three-level matcher-group structure and the `jq` idiom from `skills/ai-governance/SKILL.md:142-151`:
    ```bash
    PRE_CMD='.token-optimizer/optimize.sh --mode=hook --platform=claude'
 

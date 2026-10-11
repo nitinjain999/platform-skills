@@ -6,7 +6,7 @@ on:
     paths:
       - 'website/**'
       - 'references/**'
-      - 'commands/**'
+      - 'skills/**'
       - 'examples/**'
       - 'README.md'
       - 'CHANGELOG.md'

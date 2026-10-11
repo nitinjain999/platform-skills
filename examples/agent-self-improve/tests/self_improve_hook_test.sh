@@ -134,7 +134,7 @@ t_tool_failure_project_local() {
 t_tool_failure_global_wins() {
   fresh both
   run_hook tool-failure "$FAIL_JSON" >/dev/null
-  assert_contains "global workspace wins, as in commands/self-improve.md" \
+  assert_contains "global workspace wins, as in skills/self-improve/SKILL.md" \
     "TOOL_FAILURE: Bash" "$(file_or_empty "$T_HOME/.claude/.learnings/.pending-errors.log")"
   assert_missing "project log untouched when global exists" "$T_PROJ/.learnings/.pending-errors.log"
 }

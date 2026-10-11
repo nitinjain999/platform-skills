@@ -30,7 +30,12 @@ check_coverage() {
   fi
 
   listed="$(grep -oE "id: '[a-z0-9-]+'" "$sidebar" | sed "s/id: '//;s/'//" | sort -u)"
-  files="$(find "$dir" -maxdepth 1 -name '*.md' -exec basename {} .md \; | sort)"
+  if [ "$dir" = skills ]; then
+    # One page per domain skill; skills/platform-skills is the router, not a command page.
+    files="$(find skills -mindepth 2 -maxdepth 2 -name SKILL.md | sed 's|^skills/||; s|/SKILL.md$||' | grep -vx platform-skills | sort)"
+  else
+    files="$(find "$dir" -maxdepth 1 -name '*.md' -exec basename {} .md \; | sort)"
+  fi
 
   missing="$(comm -13 <(printf '%s\n' "$listed") <(printf '%s\n' "$files"))"
   orphans="$(comm -23 <(printf '%s\n' "$listed") <(printf '%s\n' "$files"))"
@@ -54,7 +59,7 @@ check_coverage() {
 
 echo ""
 echo "=== Docs site covers every command and reference ==="
-check_coverage "commands" "commands" "website/sidebars-commands.js"
+check_coverage "commands" "skills" "website/sidebars-commands.js"
 check_coverage "references" "references" "website/sidebars-references.js"
 
 # ---------------------------------------------------------------------------
@@ -92,7 +97,7 @@ else
 fi
 
 if grep -qE "commandCount:[[:space:]]*['\"]?[0-9]" website/docusaurus.config.js; then
-  fail "docusaurus.config.js assigns commandCount a literal — derive it by reading commands/"
+  fail "docusaurus.config.js assigns commandCount a literal — derive it by reading skills/"
 else
   pass "commandCount is not a literal in customFields"
 fi
@@ -100,13 +105,15 @@ fi
 # Assert the INITIALIZER CHAIN, not just that a readdirSync exists somewhere.
 # `const commandCount = 44` alongside an unrelated readdirSync passed both of the
 # previous independent checks. Flatten newlines so the multi-line chain is one
-# statement, then require readdirSync and the commands directory to appear inside
-# commandCount's own initializer, before its terminating semicolon.
-if tr '\n' ' ' < website/docusaurus.config.js \
-  | grep -qE "const[[:space:]]+commandCount[[:space:]]*=[^;]*readdirSync[^;]*'commands'[^;]*;"; then
-  pass "commandCount's initializer reads the commands/ directory"
+# statement, then require the count to come from a readdirSync of the skills
+# directory: commandNames is read from skillsDir, and commandCount is its length.
+flat="$(tr '\n' ' ' < website/docusaurus.config.js)"
+if printf '%s' "$flat" | grep -qE "const[[:space:]]+skillsDir[[:space:]]*=[^;]*'skills'[^;]*;" \
+  && printf '%s' "$flat" | grep -qE "const[[:space:]]+commandNames[[:space:]]*=[^;]*readdirSync\(skillsDir\)[^;]*;" \
+  && printf '%s' "$flat" | grep -qE "const[[:space:]]+commandCount[[:space:]]*=[[:space:]]*commandNames\.length;"; then
+  pass "commandCount is derived from a readdirSync of skills/"
 else
-  fail "commandCount must be initialized by reading the commands/ directory, e.g. fs.readdirSync(path.join(__dirname, '..', 'commands'))"
+  fail "commandCount must be commandNames.length, with commandNames read by fs.readdirSync(skillsDir) and skillsDir = path.join(__dirname, '..', 'skills')"
 fi
 
 # Strongest available check: evaluate the config and compare against the real
@@ -115,7 +122,7 @@ fi
 # the static assertions above are what run everywhere.
 if command -v node >/dev/null 2>&1 && [ -d website/node_modules ]; then
   want_version="$(node -e "process.stdout.write(require('./.claude-plugin/plugin.json').version)")"
-  want_count="$(find commands -maxdepth 1 -name '*.md' | wc -l | tr -d ' ')"
+  want_count="$(find skills -mindepth 2 -maxdepth 2 -name SKILL.md | grep -vc '^skills/platform-skills/' | tr -d ' ')"
   got="$(cd website && node -e "
     const c = require('./docusaurus.config.js');
     process.stdout.write(c.customFields.pluginVersion + '|' + c.customFields.commandCount);

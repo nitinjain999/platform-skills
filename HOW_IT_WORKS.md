@@ -33,7 +33,7 @@ When you install `platform-skills`, the agent gets access to:
 | `agents/openai.yaml` | Codex UI metadata and default prompt |
 | `references/*.md` | Deep-dive guides loaded on demand when relevant to the question |
 | `examples/` | Working code the agent can point to or adapt |
-| `commands/*.md` | Claude slash command definitions — predefined prompt templates for repeatable workflows |
+| `skills/<name>/SKILL.md` | One skill per domain. Each runs as `/platform-skills:<name>` and Claude can also load it on its own when its description matches the task. `skills/platform-skills/` is the cross-domain router |
 | `.cursorrules` and `.cursor/rules/*.mdc` | Cursor project and scoped file rules |
 
 ### When a Skill Activates
@@ -422,7 +422,7 @@ Informational:
 You: /platform-skills:pr-review compliance [paste diff]
 
 Claude:
-  1. Reads commands/pr-review.md → loads compliance mode definition
+  1. Reads skills/pr-review/SKILL.md → loads compliance mode definition
   2. Reads references/pr-review.md → loads SOC 2 control mapping table
   3. Reads references/compliance.md → loads Terraform patterns and evidence commands
   4. Parses the diff — identifies IAM, RDS, S3, and network resource changes

@@ -160,4 +160,4 @@ Nothing else needs touching. `.learnings/` and `memory/` file formats are unchan
 
 - How it works (concepts, lifecycle, examples): [examples/agent-self-improve/HOW_IT_WORKS.md](HOW_IT_WORKS.md)
 - Full protocol reference: [references/agent-self-improve.md](../../references/agent-self-improve.md)
-- Slash command specification: [commands/self-improve.md](../../commands/self-improve.md)
+- Slash command specification: [skills/self-improve/SKILL.md](../../commands/self-improve.md)

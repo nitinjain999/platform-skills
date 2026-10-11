@@ -1,6 +1,7 @@
 ---
 name: triage
 description: Triages a PR comment — from a bot (Copilot, CI) or a human reviewer. Routes to the `triage_helper.py` helper for identity checks, thread snapshotting, isolated-worktree fixes, and publish/reply/resolve mechanics; you classify the finding and apply a justified fix. `--dry-run` is fully read-only (investigation and a printed plan, zero mutations). `--no-resolve` runs the full fix/reply workflow but never resolves a thread. Run from inside the repo.
+when_to_use: Also use when asked to classify a review comment or finding (ACTIONABLE_FIX, ALREADY_FIXED, INFORMATIONAL, NOT_APPLICABLE, NEEDS_CLARIFICATION, OUT_OF_SCOPE, DUPLICATE), to decide whether a flagged bug is already fixed after a rename, or to draft the reply to a review thread, even when no live PR is involved.
 argument-hint: "<PR number> <comment ID> [--dry-run] [--no-resolve] | --all <PR number> [--dry-run] [--no-resolve] [--repo OWNER/REPO]"
 title: "Triage Command"
 sidebar_label: "triage"

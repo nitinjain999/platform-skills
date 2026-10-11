@@ -13,7 +13,7 @@ fail() { echo "  FAIL: $1"; ERRORS=$((ERRORS + 1)); }
 echo ""
 echo "=== Helmchart command file ==="
 
-CMD="commands/helmchart.md"
+CMD="skills/helmchart/SKILL.md"
 
 if [ -f "$CMD" ]; then
   pass "$CMD exists"
@@ -45,12 +45,14 @@ fi
 
 # ---------------------------------------------------------------------------
 echo ""
-echo "=== Helmchart slash command registered in plugin.json ==="
+echo "=== Helmchart skill loads as /platform-skills:helmchart ==="
 
-if grep -q '"./commands/helmchart.md"' .claude-plugin/plugin.json; then
-  pass "commands/helmchart.md registered in plugin.json"
+# skills/ is scanned by default; the directory name and frontmatter name give
+# the command its last segment.
+if [ "$(awk '/^name:/{print $2; exit}' "$CMD")" = "helmchart" ]; then
+  pass "$CMD loads as /platform-skills:helmchart"
 else
-  fail "commands/helmchart.md not registered in plugin.json"
+  fail "$CMD frontmatter name must be helmchart"
 fi
 
 # ---------------------------------------------------------------------------

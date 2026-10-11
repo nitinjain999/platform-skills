@@ -1,6 +1,6 @@
 # AI Governance
 
-Deep reference for `/platform-skills:ai-governance`. Read `commands/ai-governance.md` first for the wizard; this covers the mechanics behind it.
+Deep reference for `/platform-skills:ai-governance`. Read `skills/ai-governance/SKILL.md` first for the wizard; this covers the mechanics behind it.
 
 ## Policy schema
 
@@ -62,7 +62,7 @@ The runtime protocol above is what crosses stdin/stdout. Registration is a separ
 
 `matcher` is an optional field on the group. Omitting it (or setting `"*"`/`""`) means "match every tool call", which is what this policy wants — every call is evaluated, and the write-intent gate below decides what `protected_paths` applies to. Do not add a `matcher` unless you are deliberately scoping to a subset of tools.
 
-The practical consequence for `generate`: the merge into an existing `.claude/settings.json` has to append a group into `.hooks.<Event>`, which may already contain the user's own matcher groups. `.hooks.PreToolUse = [...]` discards them. `examples/ai-governance/claude-settings-snippet.json` is the shape to copy; `commands/ai-governance.md` step 6 has the `jq` that merges it safely.
+The practical consequence for `generate`: the merge into an existing `.claude/settings.json` has to append a group into `.hooks.<Event>`, which may already contain the user's own matcher groups. `.hooks.PreToolUse = [...]` discards them. `examples/ai-governance/claude-settings-snippet.json` is the shape to copy; `skills/ai-governance/SKILL.md` step 6 has the `jq` that merges it safely.
 
 Copilot's registration is flat by comparison — `.github/hooks/preToolUse.json` holds `{version, hooks: {preToolUse: [{type, bash, timeoutSec}]}}` — so the two are not interchangeable.
 
@@ -98,7 +98,7 @@ Exit codes match the real modes (`0` allow, `2` deny), so it is scriptable. Two 
 
 A PR that edits `.ai-governance.yaml` or `.ai-governance/evaluate.sh` could otherwise weaken the very rule meant to catch that. The merge-time workflow fetches **the base branch's** copy of both files (`git show origin/<base>:<path>`) and runs *that* copy against the PR's diff — trust comes from which copy of the script executes, decided by the workflow YAML, not from extra comparison logic inside the evaluator. This does not fix arbitrary edits to the workflow file itself (a `pull_request`-triggered check on a same-repo branch runs using the PR's modified workflow — a general GitHub Actions limitation). The actual backstop for that is CODEOWNERS-enforced review on the governance-asset paths, which `generate` prints but cannot enforce (branch protection is a repo-admin action).
 
-This also means the check cannot pass on the very first PR that adopts it: `git show origin/<base>:.ai-governance/evaluate.sh` has nothing to read until a copy already exists on the base branch. `commands/ai-governance.md`'s `generate` mode sequences this in two stages — land the evaluator/policy/workflow first, without the check marked required, then require it only once that PR has merged — see its Section 1, step 7.
+This also means the check cannot pass on the very first PR that adopts it: `git show origin/<base>:.ai-governance/evaluate.sh` has nothing to read until a copy already exists on the base branch. `skills/ai-governance/SKILL.md`'s `generate` mode sequences this in two stages — land the evaluator/policy/workflow first, without the check marked required, then require it only once that PR has merged — see its Section 1, step 7.
 
 ## `denied_commands` — explicitly scoped
 

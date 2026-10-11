@@ -496,7 +496,7 @@ exit-code: 1
 
 ## Cross-references
 
-- `commands/trivy.md` — interactive command (wizard, mode dispatch, agent behavior)
+- `skills/trivy/SKILL.md` — interactive command (wizard, mode dispatch, agent behavior)
 - `references/supply-chain.md` — Cosign image signing, Syft SBOM generation, SLSA provenance
 - `references/kyverno.md` — Kyverno admission policies, `kyverno apply` for manifest posture
 - `references/checkov.md` — Checkov IaC scanning (Terraform, GHA, Helm)

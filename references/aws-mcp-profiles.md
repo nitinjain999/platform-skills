@@ -125,7 +125,7 @@ dev-sandbox: dev
 security: shared-services
 ```
 
-If this file does not exist, run `/platform-skills:aws-profile discover` (see `commands/aws-profile.md`) and it will generate a starter file from profile name heuristics for you to review.
+If this file does not exist, run `/platform-skills:aws-profile discover` (see `skills/aws-profile/SKILL.md`) and it will generate a starter file from profile name heuristics for you to review.
 
 ---
 
@@ -343,7 +343,7 @@ VS Code prompts the engineer for profile and region when the server starts.
 
 **When to use input variables vs `switch` command:**
 - Input variables: VS Code only, interactive per-session, good for teams who change accounts frequently
-- `switch` command: patches hardcoded values, works for both VS Code and Claude Code, good for long-lived workspace configs (see `commands/aws-profile.md` → Mode: switch)
+- `switch` command: patches hardcoded values, works for both VS Code and Claude Code, good for long-lived workspace configs (see `skills/aws-profile/SKILL.md` → Mode: switch)
 
 These are separate patterns — not interchangeable.
 

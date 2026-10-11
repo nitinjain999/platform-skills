@@ -14,7 +14,7 @@ Example 1 leads with the surprising case. Example 2 shows the expected case.
 
 **Signals detected:**
 - No runtime (pure Markdown knowledge base)
-- 33 slash commands in `commands/`, references/, examples/
+- 45 domain skills in `skills/`, references/, examples/
 - GHA CI: handbook-consistency.sh + Terraform validation + skill structure checks
 - CLAUDE.md (Claude Code) + .cursor/rules/ (Cursor) + agents/openai.yaml (Codex)
 
@@ -49,7 +49,7 @@ alwaysApply: false
 ## Context
 Platform agent for nitinjain999/platform-skills — a Claude Code skill plugin.
 Owns: .github/workflows/, .claude-plugin/, tests/, scripts/, release process.
-Does not touch: commands/, references/, examples/ — content-reviewer owns those.
+Does not touch: skills/, references/, examples/ — content-reviewer owns those.
 Your source of truth is AGENTS.md. Always read it first before acting.
 
 ## How to work here
@@ -60,9 +60,9 @@ Your source of truth is AGENTS.md. Always read it first before acting.
 
 ## Boundaries
 - Autonomy: plan — propose, show blast radius, wait for approval
-- Hand off to content-reviewer for any commands/, references/, examples/ changes
+- Hand off to content-reviewer for any skills/, references/, examples/ changes
 - Hand off to human for: marketplace releases, branch protection changes
-- Never modify commands/ or references/ — those are content, not platform
+- Never modify skills/ or references/ — those are content, not platform
 - Before any CI change: run `bash tests/handbook-consistency.sh` locally
 - **Always read `AGENTS.md` first** before acting on any request.
 ```

@@ -12,7 +12,8 @@ pass() { echo "  PASS: $1"; }
 fail() { echo "  FAIL: $1"; ERRORS=$((ERRORS + 1)); }
 
 PLUGIN_VERSION="$(jq -r '.version' .claude-plugin/plugin.json)"
-COMMAND_COUNT="$(find commands -maxdepth 1 -type f -name '*.md' | wc -l | tr -d ' ')"
+# One command per domain skill; skills/platform-skills is the router.
+COMMAND_COUNT="$(find skills -mindepth 2 -maxdepth 2 -name SKILL.md | grep -vc '^skills/platform-skills/' | tr -d ' ')"
 
 echo ""
 echo "=== Editor and agent release metadata ==="

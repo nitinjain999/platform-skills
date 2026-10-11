@@ -98,5 +98,5 @@ Audits any `action.yml` against the production checklist. Reports CRITICAL / WAR
 ## Further reading
 
 - **Reference:** [references/composite-actions.md](../../../references/composite-actions.md) — full documentation
-- **Command:** [commands/composite-actions.md](../../../commands/composite-actions.md) — all modes
+- **Command:** [skills/composite-actions/SKILL.md](../../../commands/composite-actions.md) — all modes
 - **Upstream docs:** [Creating a composite action — GitHub Docs](https://docs.github.com/en/actions/tutorials/create-actions/create-a-composite-action)

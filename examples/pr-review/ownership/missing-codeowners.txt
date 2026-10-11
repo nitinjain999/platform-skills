@@ -29,7 +29,7 @@
 *                   @platform-team
 
 references/         @platform-team
-commands/           @platform-team
+skills/             @platform-team
 examples/           @platform-team
 .claude-plugin/     @platform-leads
 CHANGELOG.md        @platform-leads

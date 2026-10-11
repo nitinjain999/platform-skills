@@ -106,57 +106,7 @@
     "ingress-nginx-migration",
     "httproute"
   ],
-  "skills": [
-    "./skills/platform-skills"
-  ],
   "experimental": {
     "evals": "plugin-evals"
-  },
-  "commands": [
-    "./commands/terraform.md",
-    "./commands/debug.md",
-    "./commands/preflight.md",
-    "./commands/gitops.md",
-    "./commands/linkerd.md",
-    "./commands/linux.md",
-    "./commands/product.md",
-    "./commands/compliance.md",
-    "./commands/helmchart.md",
-    "./commands/mcp.md",
-    "./commands/observability.md",
-    "./commands/document.md",
-    "./commands/datadog.md",
-    "./commands/dynatrace.md",
-    "./commands/commit.md",
-    "./commands/opa.md",
-    "./commands/kyverno.md",
-    "./commands/pr-review.md",
-    "./commands/triage.md",
-    "./commands/keda.md",
-    "./commands/self-improve.md",
-    "./commands/supply-chain.md",
-    "./commands/runtime-security.md",
-    "./commands/chaos.md",
-    "./commands/dora.md",
-    "./commands/awesome-docs.md",
-    "./commands/aws.md",
-    "./commands/composite-actions.md",
-    "./commands/fluxcd.md",
-    "./commands/aws-profile.md",
-    "./commands/renovate.md",
-    "./commands/karpenter.md",
-    "./commands/setup-agents.md",
-    "./commands/checkov.md",
-    "./commands/trivy.md",
-    "./commands/github-actions.md",
-    "./commands/kubernetes.md",
-    "./commands/azure.md",
-    "./commands/openshift.md",
-    "./commands/secrets.md",
-    "./commands/zizmor.md",
-    "./commands/kingfisher.md",
-    "./commands/ai-governance.md",
-    "./commands/token-optimizer.md",
-    "./commands/gateway-api.md"
-  ]
+  }
 }

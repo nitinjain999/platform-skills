@@ -55,10 +55,13 @@ command -v python3 >/dev/null 2>&1 || { echo "python3 not found" >&2; exit 3; }
 # that shapes every answer (the router skill, the manifest, the suite itself)
 # runs every case.
 DOMAIN_MAP='
-^(commands/(fluxcd|gitops)\.md|references/fluxcd[^/]*\.md)$	fluxcd
-^(commands/opa\.md|references/opa\.md)$	opa
-^(commands/(triage|pr-review)\.md|references/triage\.md|examples/triage/)	triage
-^(skills/|SKILL\.md$|\.claude-plugin/plugin\.json$|plugin-evals/)	ALL
+^(skills/(fluxcd|gitops)/|references/fluxcd[^/]*\.md$)	fluxcd
+^(skills/opa/|references/opa\.md$)	opa
+^(skills/(triage|pr-review)/|references/triage\.md$|examples/triage/)	triage
+^(skills/(secrets|kubernetes)/|references/secrets\.md$)	secrets
+^(skills/(kyverno|opa|kubernetes)/|references/kyverno\.md$)	kyverno
+^(skills/(openshift|kubernetes)/|references/openshift\.md$)	openshift
+^(skills/platform-skills/|SKILL\.md$|\.claude-plugin/plugin\.json$|plugin-evals/)	ALL
 '
 
 TAGS=()

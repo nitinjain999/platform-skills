@@ -7,7 +7,7 @@ custom_edit_url: null
 
 Covers the judgment, evidence rules, data model, and helper contract behind `/platform-skills:triage`: how to establish identity before touching anything, how to build a defensible fix plan from evidence instead of a search hit, when a thread is actually eligible to close, and exactly what each `triage_helper.py` subcommand takes and returns.
 
-`commands/triage.md` is the router: modes, invocation forms, the classification table, the hard gates, and the report format live there. This file is where the reasoning behind each phase lives, and where the helper's mechanical contract is spelled out flag by flag so a future reader does not have to open the Python source to know what a subcommand actually does.
+`skills/triage/SKILL.md` is the router: modes, invocation forms, the classification table, the hard gates, and the report format live there. This file is where the reasoning behind each phase lives, and where the helper's mechanical contract is spelled out flag by flag so a future reader does not have to open the Python source to know what a subcommand actually does.
 
 **Verified against `examples/triage/scripts/triage_helper.py` at commit `d8d03ab`** (11 top-level subcommands, state schema version 1). `worktree` and `state` each nest further verbs (`worktree prepare`/`cleanup`/`preserve`; `state lock`/`unlock`/`read`/`write`), for 16 invokable operations in total if you count every leaf individually. If the installed helper's `--help` output disagrees with a flag shown here, trust the installed helper and treat this file as stale for that detail.
 
@@ -206,7 +206,7 @@ Passing `--snapshot <path>` mechanizes the "no new human input" eligibility item
 
 Order inside the subcommand is load-bearing, and it is: snapshot lookup, live state read, `isResolved` short-circuit, drift guard, `viewerCanResolve`, mutation. The `ALREADY_RESOLVED` return happens **before** the drift guard, so calling `resolve-thread` twice is always safe: the second call short-circuits on the resolved state and never reaches the comment-set comparison, even though that second call's live comment set has by then drifted from the snapshot by the reply the first call's run posted. Idempotency and the drift guard would otherwise contradict each other. The one thing the guard needs unconditionally is a snapshot that actually contains the thread; `--snapshot` naming a snapshot with no entry for `--thread-node-id` raises `THREAD_NOT_IN_SNAPSHOT` before any API call rather than silently degrading to an unguarded resolve. Omitting `--snapshot` entirely skips the guard by choice, which is a different thing from asking for it and not getting it.
 
-Separately from this mechanical gate, which findings are *eligible* to close at all is a per-classification decision (already covered in `commands/triage.md`'s resolution eligibility section): `ACTIONABLE_FIX` only after successful remediation, `ALREADY_FIXED` only with current evidence, `DUPLICATE` only once its canonical concern is verified and linked, and `INFORMATIONAL`/`NEEDS_CLARIFICATION`/`OUT_OF_SCOPE`/disputed `NOT_APPLICABLE` never by default.
+Separately from this mechanical gate, which findings are *eligible* to close at all is a per-classification decision (already covered in `skills/triage/SKILL.md`'s resolution eligibility section): `ACTIONABLE_FIX` only after successful remediation, `ALREADY_FIXED` only with current evidence, `DUPLICATE` only once its canonical concern is verified and linked, and `INFORMATIONAL`/`NEEDS_CLARIFICATION`/`OUT_OF_SCOPE`/disputed `NOT_APPLICABLE` never by default.
 
 ---
 
@@ -238,7 +238,7 @@ Three independent layers of state exist for every finding. Do not merge them int
 
 ### Finding classification
 
-The seven values (full definitions and default handling are in `commands/triage.md`'s classification table): `ACTIONABLE_FIX`, `ALREADY_FIXED`, `INFORMATIONAL`, `NOT_APPLICABLE`, `NEEDS_CLARIFICATION`, `OUT_OF_SCOPE`, `DUPLICATE`.
+The seven values (full definitions and default handling are in `skills/triage/SKILL.md`'s classification table): `ACTIONABLE_FIX`, `ALREADY_FIXED`, `INFORMATIONAL`, `NOT_APPLICABLE`, `NEEDS_CLARIFICATION`, `OUT_OF_SCOPE`, `DUPLICATE`.
 
 ### Fix execution state
 
