@@ -1,5 +1,5 @@
 # Platform Engineering Instructions for GitHub Copilot
-# Version: 1.42.0
+# Version: 1.43.0
 # Source: https://github.com/nitinjain999/platform-skills
 # Scope: project-level — applies to every Copilot Chat session in this workspace
 # Install: ./install.sh --copilot --target /path/to/your-project
@@ -169,6 +169,18 @@ Never use `helm upgrade --set` to pass secrets. `selectorLabels` must NOT includ
 
 For event-driven autoscaling, require explicit `minReplicaCount`, `maxReplicaCount`, cooldown, fallback behavior where supported, and trigger authentication ownership. For AWS triggers on EKS, prefer IRSA over static keys. For Prometheus triggers, validate query cardinality and failure behavior before recommending scale-to-zero.
 
+## Ingress and Gateway API
+
+Never propose ingress-nginx for new work: its best-effort maintenance ended in March 2026 (no releases, bug fixes or security fixes). Default to Gateway API with Envoy Gateway.
+
+- One shared `Gateway` owned by the platform team; app teams own `HTTPRoute`s in their own namespaces
+- HTTPS listeners use `allowedRoutes.namespaces.from: Selector` on a platform-controlled label, never `from: All`
+- Gateway API CRDs on the **standard** channel, installed by their own release and marked `helm.sh/resource-policy: keep` (deleting a CRD deletes every Gateway and route). Envoy Gateway's controller chart bundles experimental CRDs: set `crds.enabled: false` and use `gateway-crds-helm`
+- TLS via cert-manager v1.15+ with `config.gatewayAPI.enabled: true`; one HTTPS listener per hostname with `hostname`, `tls.mode: Terminate`, `certificateRefs`
+- Flux: `infrastructure` (CRDs, controllers) → `infrastructure-configs` (Gateway objects) → `apps` (routes), with a `healthCheckExprs` check on Gateway `Programmed`
+- Port-80 HTTPS redirect with `statusCode: 308`; `backendRefs` use the Service port **number**
+- Migrating: inventory annotations first; treat every ingress2gateway warning as blocking; run both controllers in parallel and move traffic by DNS one hostname at a time; decommission ingress-nginx in a separate change after a soak
+
 ## Supply Chain and Runtime Security
 
 For container and deployment pipelines, prefer:
@@ -321,6 +333,7 @@ When reviewing any PR that touches infrastructure, check all six dimensions:
 - `references/kyverno.md` — CEL policies, Audit→Deny, PolicyException
 - `references/pr-review.md` — cost, drift, ownership, compliance, upgrade, rollback
 - `references/keda.md` — ScaledObject, ScaledJob, TriggerAuthentication, all scalers, IRSA, GitOps integration
+- `references/gateway-api.md` — ingress-nginx migration, Envoy Gateway, CRD channel, ingress2gateway annotation coverage, cert-manager, cutover, rollback
 - `references/agent-self-improve.md` — `.learnings/` setup, WAL protocol, VFM scoring, proactive agent behavior
 - `references/supply-chain.md` — Cosign signing, Syft SBOM, Trivy CVE gates, SLSA Level 2, Kyverno enforcement
 - `references/trivy.md` — image/fs/repo/SBOM/cluster CVE scanning, severity gating, Trivy Operator via Flux HelmRelease

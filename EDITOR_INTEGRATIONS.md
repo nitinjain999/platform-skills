@@ -435,6 +435,32 @@ Generate a KEDA ScaledJob that processes SQS messages as batch Kubernetes Jobs �
 
 ---
 
+### gateway-api — migrate off ingress-nginx
+
+**Assess what blocks the migration:**
+```
+We run ingress-nginx. Here is the annotation inventory from `kubectl get ingress -A -o json`. Classify each annotation as converts automatically, needs a decision, or blocks the migration, using the platform-skills Gateway API rules.
+[paste output]
+```
+
+**Convert one Ingress:**
+```
+Convert this ingress-nginx Ingress to a Gateway API HTTPRoute that attaches to our shared platform-gateway in envoy-gateway-system. Move TLS to the Gateway listener, keep every host and path, and list anything that does not translate.
+[paste YAML]
+```
+
+**Debug a route that will not attach:**
+```
+My HTTPRoute status shows Accepted=False with reason NotAllowedByListeners. Give me the evidence to collect and the most likely causes in order.
+```
+
+**Plan the cutover:**
+```
+Plan a parallel-run cutover from ingress-nginx to Envoy Gateway for payments.example.com: shadow test, DNS TTL, soak criteria, decommission gate, and the rollback at each stage.
+```
+
+---
+
 ### compliance — SOC 2 gap analysis and remediation
 
 ```

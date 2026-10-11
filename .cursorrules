@@ -1,4 +1,4 @@
-# Platform Engineering Rules — platform-skills v1.42.0
+# Platform Engineering Rules — platform-skills v1.43.0
 # Source: https://github.com/nitinjain999/platform-skills
 # Scope: project-level — applies to all Cursor AI in this workspace
 # Upgrade: git pull in the platform-skills clone → re-copy this file → commit
@@ -43,6 +43,18 @@ readinessProbe:
 ```
 
 OpenShift: never set `runAsUser` to a specific UID.
+
+### Ingress — Gateway API, never ingress-nginx
+
+Never propose ingress-nginx for new work: its best-effort maintenance ended in March 2026 (no releases, bug fixes or security fixes). Default to Gateway API with Envoy Gateway.
+
+- One shared `Gateway` owned by the platform team; app teams own `HTTPRoute`s in their own namespaces
+- HTTPS listeners use `allowedRoutes.namespaces.from: Selector` on a platform-controlled label, never `from: All`
+- Gateway API CRDs on the **standard** channel, installed by their own release and marked `helm.sh/resource-policy: keep` (deleting a CRD deletes every Gateway and route). Envoy Gateway's controller chart bundles experimental CRDs: set `crds.enabled: false` and use `gateway-crds-helm`
+- TLS via cert-manager v1.15+ with `config.gatewayAPI.enabled: true`; one HTTPS listener per hostname with `hostname`, `tls.mode: Terminate`, `certificateRefs`
+- Flux: `infrastructure` (CRDs, controllers) → `infrastructure-configs` (Gateway objects) → `apps` (routes), with a `healthCheckExprs` check on Gateway `Programmed`
+- Port-80 HTTPS redirect with `statusCode: 308`; `backendRefs` use the Service port **number**
+- Migrating: inventory annotations first; treat every ingress2gateway warning as blocking; run both controllers in parallel and move traffic by DNS one hostname at a time; decommission ingress-nginx in a separate change after a soak
 
 ### Terraform — always do
 
@@ -147,5 +159,5 @@ Use `@docs platform-skills` in chat to scope answers to these files:
 - `references/github-actions.md`, `references/helm.md`, `references/kyverno.md`
 - `references/opa.md`, `references/compliance.md`, `references/pr-review.md`
 - `references/observability.md`, `references/datadog.md`, `references/dynatrace.md`
-- `references/conventional-commits.md`, `references/mcp.md`
+- `references/conventional-commits.md`, `references/mcp.md`, `references/gateway-api.md`
 - `examples/` — working copy-paste examples for all domains

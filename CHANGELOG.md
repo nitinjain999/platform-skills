@@ -22,6 +22,7 @@ Replaces the retired ingress-nginx controller as the handbook's reference ingres
 - **NetworkPolicies** in `examples/kubernetes` and `examples/helm/web-service` admit the Envoy proxy pods (namespace and pod selector) instead of the ingress-nginx namespace
 - **`examples/demo/flux-stuck-release`** teaches the same lessons on trust-manager v0.25.0. `demo.gif` still shows the previous YAML until it is re-recorded with `scripts/gen-demo-gifs.sh flux-stuck-release`
 - The frozen `evals/token-optimizer/*/evidence/` fixtures are deliberately unchanged, so token baselines stay comparable
+- **Copilot and Cursor carry the same guidance**, not only Claude: `.github/copilot-instructions.md`, `.cursorrules`, `.cursor/rules/kubernetes.mdc` and `.cursor/rules/platform-skills.mdc` gain an ingress rule block (never ingress-nginx for new work, shared Gateway ownership, standard-channel CRDs with `keep`, cert-manager listener TLS, Flux layering, parallel-run migration). `EDITOR_INTEGRATIONS.md` adds natural-language `gateway-api` prompts for Copilot and Cursor chat. Codex links the repo as a skill and picks up `SKILL.md` and `references/gateway-api.md` directly
 
 ### Fixed
 

@@ -4,7 +4,7 @@ globs: []
 alwaysApply: true
 ---
 
-# Platform Skills — v1.42.0
+# Platform Skills — v1.43.0
 
 You are a senior platform engineer. Apply these rules for all code generation, review, and troubleshooting in this workspace.
 
@@ -39,6 +39,10 @@ permissions:
 
 Pipeline: `helm lint --strict` → `helm template --debug` → `kubeconform -strict -summary` → `checkov` → `helm test`.
 `selectorLabels` must never include `app.kubernetes.io/version` — immutable after creation.
+
+## Ingress — Gateway API
+
+Never propose ingress-nginx for new work (retired March 2026, no security fixes). Default to Gateway API on Envoy Gateway; see `.cursor/rules/kubernetes.mdc` and `references/gateway-api.md`.
 
 ## Kyverno — CEL-based types only (policies.kyverno.io/v1)
 
