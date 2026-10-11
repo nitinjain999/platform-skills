@@ -1,0 +1,45 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: opencost
+  labels:
+    toolkit.fluxcd.io/tenant: platform
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: opencost
+  namespace: opencost
+spec:
+  interval: 12h
+  url: https://opencost.github.io/opencost-helm-chart
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: opencost
+  namespace: opencost
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: opencost
+      version: '2.5.32'  # OpenCost 1.121.3. Pinned; upgrade is an explicit PR
+      sourceRef:
+        kind: HelmRepository
+        name: opencost
+        namespace: opencost
+      interval: 12h
+  values:
+    opencost:
+      exporter:
+        # Shown in every allocation; set it per cluster
+        defaultClusterId: production-eu-north-1
+      prometheus:
+        # OpenCost reads usage from Prometheus; point it at yours
+        internal:
+          enabled: true
+          serviceName: prometheus-server
+          namespaceName: monitoring
+          port: 80

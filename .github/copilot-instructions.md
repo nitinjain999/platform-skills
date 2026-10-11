@@ -335,6 +335,10 @@ When reviewing any PR that touches infrastructure, check all six dimensions:
 - `references/pr-review.md` — cost, drift, ownership, compliance, upgrade, rollback
 - `references/keda.md` — ScaledObject, ScaledJob, TriggerAuthentication, all scalers, IRSA, GitOps integration
 - `references/gateway-api.md` — ingress-nginx migration, Envoy Gateway, CRD channel, ingress2gateway annotation coverage, cert-manager, cutover, rollback
+- `references/cluster-upgrade.md` — removed-API scan, add-on order, drain blockers, node rotation, EKS version rollback limits, blue/green
+- `references/progressive-delivery.md` — Flagger canaries on Gateway API and Linkerd, MetricTemplates, GitOps interplay, rollback
+- `references/backup-dr.md` — Velero with IRSA, schedules, what a backup does not contain, restore drills, DR to another cluster
+- `references/finops.md` — Infracost on PRs, cost-allocation tags in four layers, OpenCost allocation
 - `references/agent-self-improve.md` — `.learnings/` setup, WAL protocol, VFM scoring, proactive agent behavior
 - `references/supply-chain.md` — Cosign signing, Syft SBOM, Trivy CVE gates, SLSA Level 2, Kyverno enforcement
 - `references/trivy.md` — image/fs/repo/SBOM/cluster CVE scanning, severity gating, Trivy Operator via Flux HelmRelease

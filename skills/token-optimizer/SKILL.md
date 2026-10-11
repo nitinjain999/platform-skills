@@ -257,7 +257,7 @@ Steps:
    If you want classification on this repository, install the `copilot-cli` surface, which registers `.github/hooks/preToolUse.json` and is exercised by the shipped tests. Whether VS Code also loads that file is unverified; if it does, classification may work there as a side effect rather than by design. Before advertising VS Code support, validate the registration format against the installed build and confirm the adapter round-trips a real payload.
 
 10. Copy the client's agent templates. The optimizer's own config, state directory and hook command are repository-scoped, but agent definitions can additionally be installed user-wide, so both destinations are listed where a client supports them:
-   - **Claude Code** (repository): copy `examples/token-optimizer/claude/platform-bulk-reader.md` to `.claude/agents/platform-bulk-reader.md`
+   - **Claude Code** (repository): with the platform-skills plugin enabled the agent already ships as `platform-skills:platform-bulk-reader`; use that name as `worker_agent`. Without the plugin, copy `examples/token-optimizer/claude/platform-bulk-reader.md` to `.claude/agents/platform-bulk-reader.md`
    - **Claude Code** (user): copy to `~/.claude/agents/platform-bulk-reader.md`
    - **Copilot CLI** (repository): copy both `examples/token-optimizer/copilot-cli/platform-bulk-reader.agent.md` and `examples/token-optimizer/copilot-cli/platform-coordinator.agent.md` to `.github/agents/`
    - **Copilot CLI** (user): copy both to `~/.copilot/agents/`

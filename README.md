@@ -4,8 +4,8 @@
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-v1.43.0-0e1117)](CHANGELOG.md)
-[![Domains](https://img.shields.io/badge/Domains-64-4c8eda)](references/)
-[![Commands](https://img.shields.io/badge/Commands-45-e87c2b)](skills/)
+[![Domains](https://img.shields.io/badge/Domains-68-4c8eda)](references/)
+[![Commands](https://img.shields.io/badge/Commands-49-e87c2b)](skills/)
 [![Examples](https://img.shields.io/badge/Examples-28-6f42c1)](examples/)
 [![Editors](https://img.shields.io/badge/Editors-VSCode%20%7C%20Cursor%20%7C%20Copilot-2ea44f)](EDITOR_INTEGRATIONS.md)
 [![GitHub Stars](https://img.shields.io/github/stars/nitinjain999/platform-skills?style=flat&label=Stars&color=0e1117)](https://github.com/nitinjain999/platform-skills/stargazers)
@@ -16,7 +16,7 @@
 
 | Tool | What you get |
 |---|---|
-| **Claude Code** | 45 slash commands (`/platform-skills:preflight`, `/platform-skills:kubernetes`, `/platform-skills:secrets`, and more), interactive guidance, automatic activation on relevant files |
+| **Claude Code** | 49 slash commands (`/platform-skills:preflight`, `/platform-skills:kubernetes`, `/platform-skills:secrets`, and more), interactive guidance, automatic activation on relevant files |
 | **Codex** | Skill invocation with `$platform-skills`, loaded on demand in any Codex session |
 | **Cursor** | Project rules for Chat and Agent — platform review and generation in every file context |
 | **GitHub Copilot plugin** | Interactive slash commands in Copilot Chat — install once per user via `copilot plugin install` |
@@ -153,6 +153,10 @@ All layers work independently. Agent integrations are optional.
 | ⚡ KEDA | [references/keda.md](references/keda.md) | ScaledObject, ScaledJob, TriggerAuthentication, Prometheus/SQS/Kafka/Redis/Cron/HTTP/Azure scalers, scale-to-zero, IRSA, GitOps integration, troubleshooting — `/platform-skills:keda` |
 | 🚪 Gateway API | [references/gateway-api.md](references/gateway-api.md) | Ingress on Gateway API with Envoy Gateway, migration off the retired ingress-nginx controller, ingress2gateway annotation coverage, cert-manager listener TLS, Flux layering, parallel-run cutover and rollback — `/platform-skills:gateway-api` |
 | ⚙️ Karpenter | [references/karpenter.md](references/karpenter.md) | EKS node autoscaling — NodePool, EC2NodeClass, NodeClaim, Spot diversity, disruption budgets, ODCR, private clusters, Fargate coexistence, FinOps, CA migration, v0→v1 upgrades — `/platform-skills:karpenter` |
+| ⬆️ Cluster Upgrade | [references/cluster-upgrade.md](references/cluster-upgrade.md) | Kubernetes minor-version upgrades: removed APIs in Git, rendered Helm and the live cluster (pluto, EKS upgrade insights), add-on order, drain blockers, node rotation, EKS one-step version rollback within 7 days, blue/green — `/platform-skills:cluster-upgrade` |
+| 🐤 Progressive Delivery | [references/progressive-delivery.md](references/progressive-delivery.md) | Flagger canaries on Gateway API (Envoy Gateway, Linkerd), MetricTemplates scoped to the canary pods, GitOps interplay, automatic and emergency rollback — `/platform-skills:progressive-delivery` |
+| 💾 Backup / DR | [references/backup-dr.md](references/backup-dr.md) | Velero on EKS with IRSA, schedules and retention, what a backup does not contain, timed restore drills, DR to another cluster — `/platform-skills:backup-dr` |
+| 💸 FinOps | [references/finops.md](references/finops.md) | Infracost cost diff on Terraform PRs, cost-allocation tags enforced in four layers (Terraform, Conftest, AWS Config, Kyverno), OpenCost allocation — `/platform-skills:finops` |
 | 🤖 Agent Self-Improvement | [references/agent-self-improve.md](references/agent-self-improve.md) | `.learnings/` directory setup, LRN/ERR/FEAT entry lifecycle, WAL protocol, working buffer, VFM scoring, ADL decision logic, Six Operating Pillars, heartbeat, reverse prompting, proactive agent behavior — `/platform-skills:self-improve` |
 | 🔗 Supply Chain Security | [references/supply-chain.md](references/supply-chain.md) | Cosign keyless signing, Syft SBOM generation and attestation, Trivy/Grype CVE scanning with severity gates, SLSA Level 2 provenance, Kyverno ImageValidatingPolicy enforcement — `/platform-skills:supply-chain` |
 | 🦅 Runtime Security | [references/runtime-security.md](references/runtime-security.md) | Falco eBPF deployment on EKS/GKE, custom rule authoring, Falcosidekick alert routing, rule debugging, bridging Falco signals to Kyverno admission enforcement — `/platform-skills:runtime-security` |
@@ -306,6 +310,10 @@ platform-skills/
 │   ├── keda.md                         # KEDA event-driven autoscaling (v1.14.0)
 │   ├── gateway-api.md                  # Gateway API ingress, ingress-nginx migration (v1.43.0)
 │   ├── karpenter.md                    # Karpenter EKS node autoscaling (v1.29.0)
+│   ├── cluster-upgrade.md              # Minor-version upgrades, EKS version rollback (v1.43.0)
+│   ├── progressive-delivery.md         # Flagger canaries on Gateway API (v1.43.0)
+│   ├── backup-dr.md                    # Velero backups and restore drills (v1.43.0)
+│   ├── finops.md                       # Infracost, cost tags, OpenCost (v1.43.0)
 │   ├── llm-observability.md                # Datadog LLMObs: instrumentation, evals, trace RCA (v1.20.0)
 │   └── awesome-docs.md                     # Animated SVG doc generation — 4 patterns, GitHub-safe CSS (v1.21.0)
 │
@@ -323,6 +331,9 @@ platform-skills/
 │   ├── triage/                         # PR comment triage scenarios and fixtures (v1.13.0)
 │   ├── keda/                           # ScaledObject, ScaledJob, TriggerAuthentication examples (v1.14.0)
 │   ├── gateway-api/                    # Ingress → HTTPRoute before/after, validator (v1.43.0)
+│   ├── progressive-delivery/           # Flagger via Flux, Canary and MetricTemplates (v1.43.0)
+│   ├── backup-dr/                      # Velero via Flux, IAM policy, restore drill script (v1.43.0)
+│   ├── finops/                         # Tag enforcement, OpenCost, Infracost workflow (v1.43.0)
 │   ├── awesome-docs/                       # Animated SVG templates: arch-flow, lifecycle-loop, field-carousel, timeline-phases (v1.21.0)
 │   └── compliance/                     # SOC 2 Terraform examples (v1.6.0)
 │       ├── checkov-config.yaml         # Checkov config grouped by SOC 2 criterion
@@ -350,7 +361,7 @@ platform-skills/
 
 ## Roadmap
 
-**Current release: v1.43.0** — 45 commands, 65 domain reference guides, 50+ wiki pages.
+**Current release: v1.43.0** — 49 commands, 69 domain reference guides, 50+ wiki pages.
 
 Full version history is in [CHANGELOG.md](CHANGELOG.md).
 

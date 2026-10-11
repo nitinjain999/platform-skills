@@ -130,6 +130,10 @@ REQUIRED_REFERENCES=(
   references/zizmor.md
   references/kingfisher.md
   references/gateway-api.md
+  references/cluster-upgrade.md
+  references/progressive-delivery.md
+  references/backup-dr.md
+  references/finops.md
 )
 
 for ref in "${REQUIRED_REFERENCES[@]}"; do
@@ -322,6 +326,8 @@ VALIDATE_SCRIPTS=(
   "examples/chaos/chaos-validate.sh"
   "examples/dora/dora-validate.sh"
   "examples/gateway-api/gateway-api-validate.sh"
+  "examples/backup-dr/backup-dr-validate.sh"
+  "examples/finops/finops-validate.sh"
 )
 
 for script in "${VALIDATE_SCRIPTS[@]}"; do

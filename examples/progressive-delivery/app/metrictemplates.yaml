@@ -1,0 +1,57 @@
+---
+# Linkerd proxy metrics, from the Flagger Linkerd tutorial. direction=inbound
+# measures what the canary pods themselves served.
+apiVersion: flagger.app/v1beta1
+kind: MetricTemplate
+metadata:
+  name: success-rate
+  namespace: my-app
+spec:
+  provider:
+    type: prometheus
+    address: http://prometheus.linkerd-viz:9090
+  query: |
+    sum(
+      rate(
+        response_total{
+          namespace="{{ namespace }}",
+          deployment=~"{{ target }}",
+          classification!="failure",
+          direction="{{ variables.direction }}"
+        }[{{ interval }}]
+      )
+    )
+    /
+    sum(
+      rate(
+        response_total{
+          namespace="{{ namespace }}",
+          deployment=~"{{ target }}",
+          direction="{{ variables.direction }}"
+        }[{{ interval }}]
+      )
+    )
+    * 100
+---
+apiVersion: flagger.app/v1beta1
+kind: MetricTemplate
+metadata:
+  name: latency
+  namespace: my-app
+spec:
+  provider:
+    type: prometheus
+    address: http://prometheus.linkerd-viz:9090
+  query: |
+    histogram_quantile(
+      0.99,
+      sum(
+        rate(
+          response_latency_ms_bucket{
+            namespace="{{ namespace }}",
+            deployment=~"{{ target }}",
+            direction="{{ variables.direction }}"
+          }[{{ interval }}]
+        )
+      ) by (le)
+    )

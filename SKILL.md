@@ -7,6 +7,20 @@ description: "Use when troubleshooting, implementing, reviewing, or auditing pla
 
 Use this skill for hands-on help with Kubernetes, GitOps, cloud infrastructure, CI/CD, secrets management, service mesh, Linux administration, networking, and platform product thinking — whether you are a solo developer or part of a large platform team.
 
+## Organisation context
+
+Set once when the plugin is enabled (`/config` to change). Use these as defaults for examples and commands; anything the user says in the conversation wins.
+
+| Setting | Value |
+|---|---|
+| GitOps engine | `${user_config.gitops_engine}` |
+| Primary cloud | `${user_config.primary_cloud}` |
+| AWS CLI profile naming | `${user_config.aws_profile_convention}` |
+| Required tag keys | `${user_config.required_tag_keys}` |
+| GitHub organisation | `${user_config.github_org}` |
+
+A value that is empty, or still reads as an unsubstituted placeholder, is not configured (outside Claude Code, or never set): ask the user rather than assume.
+
 ## Pick the right tool for the job
 
 | Layer | When to use |
@@ -36,6 +50,10 @@ Use this skill for hands-on help with Kubernetes, GitOps, cloud infrastructure, 
 | `KEDA` | ScaledObject/ScaledJob, all scalers, TriggerAuthentication, scale-to-zero |
 | `Gateway API` | Ingress via Gateway API (Envoy Gateway default), migration off retired ingress-nginx, cert-manager listener TLS — `/platform-skills:gateway-api` |
 | `Karpenter` | NodePool/EC2NodeClass design, Spot diversity, disruption strategy, capacity planning, audit, CA migration, v0→v1 upgrade |
+| `Cluster Upgrade` | Minor-version upgrades: removed-API scan, add-on order, drain blockers, node rotation, EKS version rollback — `/platform-skills:cluster-upgrade` |
+| `Progressive Delivery` | Flagger canaries on Gateway API (Envoy Gateway, Linkerd), metric-gated promotion, automatic and emergency rollback — `/platform-skills:progressive-delivery` |
+| `Backup / DR` | Velero on EKS with IRSA, schedules and retention, restore drills with measured recovery time, cross-cluster DR — `/platform-skills:backup-dr` |
+| `FinOps` | Infracost PR cost diff, cost-allocation tags enforced in four layers, OpenCost allocation — `/platform-skills:finops` |
 | `Agent Self-Improvement` | `.learnings/` workspace, LRN/ERR lifecycle, WAL, VFM, ADL |
 | `Supply Chain Security` | Cosign signing, Syft SBOM, Trivy/Grype CVE gates, SLSA Level 2 |
 | `Runtime Security` | Falco eBPF, custom rules, Falcosidekick routing, Kyverno enforcement |
@@ -131,6 +149,10 @@ Load only the files needed for the current request.
 | references/keda.md | ScaledObject, ScaledJob, scalers, TriggerAuthentication, scale-to-zero |
 | references/gateway-api.md | ingress-nginx retirement, implementation choice, ownership model, CRD channel and `keep` policy, ingress2gateway annotation coverage, cert-manager, Flux layering, cutover, rollback |
 | references/karpenter.md | NodePool, EC2NodeClass, NodeClaim, IAM, Spot, disruption, private cluster, CA migration |
+| references/cluster-upgrade.md | Removed-API scan (pluto, EKS upgrade insights), add-on compatibility, drain blockers, node rotation, EKS version rollback limits, blue/green |
+| references/progressive-delivery.md | How a Flagger canary works, traffic providers (Gateway API, Linkerd), metrics, GitOps interplay, rollback, troubleshooting |
+| references/backup-dr.md | What Velero backs up and what it does not, configuration decisions, restore drills, DR to another cluster, rollback |
+| references/finops.md | Tag enforcement in four layers (Terraform, Conftest, AWS Config, Kyverno), Infracost on PRs, OpenCost allocation, rollback |
 | references/agent-self-improve.md | `.learnings/` workspace, entry metadata, lint and recall, WAL, VFM, ADL, status/migrate |
 | references/supply-chain.md | Cosign, Syft SBOM, Trivy/Grype, SLSA Level 2, ImageValidatingPolicy |
 | references/trivy.md | Trivy bootstrap, image/fs/repo/secrets/sbom/k8s modes, severity gating, Trivy Operator via Flux HelmRelease |
@@ -177,6 +199,10 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:keda` — design, generate, debug, or review KEDA ScaledObject/ScaledJob autoscaling
 - `/platform-skills:gateway-api` — migrate off the retired ingress-nginx controller to Gateway API: assess annotations, convert with ingress2gateway, scaffold a shared Gateway with cert-manager TLS and Flux layering, plan a parallel-run DNS cutover, debug route attachment, or roll back
 - `/platform-skills:karpenter` — install, generate NodePool/EC2NodeClass, debug provisioning, plan capacity before rollout, audit scale history, migrate from Cluster Autoscaler, or upgrade (including v0→v1 CRD migration)
+- `/platform-skills:cluster-upgrade` — plan, scan, run and roll back a Kubernetes minor-version upgrade: removed APIs in Git, rendered Helm and the live cluster, add-on order, drain blockers, node rotation per pool, and EKS one-step version rollback within 7 days or blue/green
+- `/platform-skills:progressive-delivery` — install Flagger with signed OCI charts, generate a Canary and MetricTemplates on Gateway API or Linkerd, debug a stuck or rolled-back canary, and roll back a release in an emergency
+- `/platform-skills:backup-dr` — install Velero with IRSA, design schedules and retention, run a timed restore drill into an isolated namespace, restore a deleted namespace, plan DR to another cluster, and debug a failed backup or restore
+- `/platform-skills:finops` — estimate a Terraform PR's monthly cost with Infracost, allocate in-cluster cost by namespace and label with OpenCost, enforce required cost tags in four layers, and audit tag coverage
 - `/platform-skills:self-improve` — bootstrap global or project-local `.learnings/` workspace (`init global`/`init local`), log/recall/review/promote/revoke learnings and errors with provenance, scope and expiry, status overview, and migrate between scopes
 - `/platform-skills:supply-chain` — sign images, generate and attest SBOMs, run CVE severity gates, enforce image signatures in Kubernetes, and generate SLSA Level 2 provenance
 - `/platform-skills:runtime-security` — deploy Falco with eBPF, write custom rules, route alerts, debug why a rule is not firing, and bridge Falco signals to Kyverno admission enforcement

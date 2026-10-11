@@ -28,6 +28,8 @@ const sidebars = {
         { type: 'doc', id: 'keda' },
         { type: 'doc', id: 'gateway-api' },
         { type: 'doc', id: 'karpenter' },
+        { type: 'doc', id: 'cluster-upgrade' },
+        { type: 'doc', id: 'backup-dr' },
         { type: 'doc', id: 'openshift' },
       ],
     },
@@ -48,6 +50,7 @@ const sidebars = {
         { type: 'doc', id: 'fluxcd-terraform' },
         { type: 'doc', id: 'fluxcd-troubleshooting' },
         { type: 'doc', id: 'argocd' },
+        { type: 'doc', id: 'progressive-delivery' },
       ],
     },
     {
@@ -125,6 +128,7 @@ const sidebars = {
         { type: 'doc', id: 'documentation' },
         { type: 'doc', id: 'awesome-docs' },
         { type: 'doc', id: 'mcp' },
+        { type: 'doc', id: 'finops' },
       ],
     },
     {

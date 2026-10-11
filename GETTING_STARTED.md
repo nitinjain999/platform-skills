@@ -145,7 +145,7 @@ My Flux Kustomization `apps` is stuck in NotReady with: "context deadline exceed
 - It cannot see your cluster or cloud account — paste the relevant output
 - It works best on one concrete problem at a time, not "review everything"
 
-### All 45 command workflows
+### All 49 command workflows
 
 See [COMMANDS.md](COMMANDS.md) for every command with modes and example prompts:
 
@@ -180,6 +180,10 @@ See [COMMANDS.md](COMMANDS.md) for every command with modes and example prompts:
 | `keda` | Use `/platform-skills:keda` to generate, debug, review, or design a KEDA scaling strategy |
 | `gateway-api` | Use `/platform-skills:gateway-api` to migrate off the retired ingress-nginx controller to Gateway API, or debug a route that will not attach |
 | `karpenter` | Use `/platform-skills:karpenter` to install, generate NodePool/EC2NodeClass, debug provisioning, plan capacity, audit scale history, migrate from CA, or upgrade |
+| `cluster-upgrade` | Use `/platform-skills:cluster-upgrade` to plan, scan, run or roll back a Kubernetes minor-version upgrade, including EKS version rollback |
+| `progressive-delivery` | Use `/platform-skills:progressive-delivery` to add Flagger canaries with metric-gated promotion, or debug a canary that will not promote |
+| `backup-dr` | Use `/platform-skills:backup-dr` to install Velero, design schedules, run a timed restore drill, or restore a namespace |
+| `finops` | Use `/platform-skills:finops` to estimate a Terraform PR's cost, allocate in-cluster cost, or enforce cost-allocation tags |
 | `self-improve` | Bootstrap `.learnings/` workspace, log errors and learnings, resume after interruption, promote to project memory |
 | `supply-chain` | Sign images, generate SBOMs, run CVE gates, enforce image signatures, generate SLSA provenance |
 | `runtime-security` | Deploy Falco with eBPF, write custom rules, route alerts, debug rule firing, bridge to Kyverno |

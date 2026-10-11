@@ -43,6 +43,8 @@ for d in sorted(got):
     if not 1 <= len(fm.get("description", "")) <= 1024:
         errors.append(f"{d}: description must be 1-1024 chars, got {len(fm.get('description',''))}")
     body = m.group(2)
+    if "${user_config." in body:
+        errors.append(f"{d}: Claude-only ${{user_config.*}} placeholder left in the body")
     if "/platform-skills:" in body:
         errors.append(f"{d}: Claude-only /platform-skills: reference left in the body")
     for ref in set(re.findall(r"references/([A-Za-z0-9._-]+\.md)", body)):

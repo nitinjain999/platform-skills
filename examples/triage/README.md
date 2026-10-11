@@ -398,7 +398,7 @@ When you run `/platform-skills:triage --all 42`, triage processes every unresolv
 
 ## See Also
 
-- [skills/triage/SKILL.md](../../commands/triage.md) — the command router: invocation forms, phase order, hard gates, classification table, report format
+- [skills/triage/SKILL.md](../../skills/triage/SKILL.md) — the command router: invocation forms, phase order, hard gates, classification table, report format
 - [references/triage.md](../../references/triage.md) — evidence rules, resolution eligibility, the three-layer state model, failure recovery, and the `triage_helper.py` contract flag by flag
 - [references/pr-review.md](../../references/pr-review.md) — PR review reference with rollback matrix and SOC 2 mapping
 - `/platform-skills:pr-review full <PR number>` — run a full pre-merge review before triaging comments

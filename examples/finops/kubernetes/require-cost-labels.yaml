@@ -1,0 +1,36 @@
+---
+# Layer 4 of 4: Kubernetes. OpenCost allocates cost by namespace and label, so
+# a namespace without these labels is spend nobody owns. Audit first; promote
+# to Deny only after the PolicyReports show zero violations.
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: require-cost-labels
+  annotations:
+    policies.kyverno.io/title: Require cost allocation labels
+    policies.kyverno.io/category: FinOps
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/description: >-
+      Every application namespace must carry owner, cost-center and environment
+      labels so OpenCost can attribute its spend.
+spec:
+  validationActions:
+    - Audit
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ['']
+        apiVersions: [v1]
+        operations: [CREATE, UPDATE]
+        resources: [namespaces]
+  matchConditions:
+    - name: exclude-system-namespaces
+      expression: >-
+        !(object.metadata.name in ['kube-system', 'kube-public', 'kube-node-lease', 'default'])
+  validations:
+    - expression: >-
+        has(object.metadata.labels) &&
+        ['owner', 'cost-center', 'environment'].all(k,
+          k in object.metadata.labels && object.metadata.labels[k] != '')
+      messageExpression: >-
+        "Namespace " + object.metadata.name +
+        " must carry non-empty owner, cost-center and environment labels for cost allocation."

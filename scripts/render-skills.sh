@@ -12,6 +12,7 @@
 #     argument-hint); the docs-site keys (title, sidebar_label, custom_edit_url)
 #     are dropped
 #   - "/platform-skills:<name>" cross-references become "/platform-skills-<name>"
+#   - ${user_config.KEY} placeholders (Claude plugin only) become "(not configured: KEY)"
 #   - every references/<file>.md a skill mentions is copied into that skill's
 #     own references/ directory, so the relative path in the text resolves
 #
@@ -49,17 +50,20 @@ for name in skills:
     when = next((l.split(":", 1)[1].strip() for l in fm_lines if l.split(":", 1)[0].strip() == "when_to_use"), "")
     kept = []
     for line in fm_lines:
-        key = line.split(":", 1)[0].strip()
-        if key == "name":
+        field = line.split(":", 1)[0].strip()
+        if field == "name":
             kept.append(f"name: {target_name(name)}")
-        elif key == "description" and when:
+        elif field == "description" and when:
             desc = f"{line.split(':', 1)[1].strip()} {when}"
             if len(desc) > 1024:
                 sys.exit(f"skills/{name}/SKILL.md: description + when_to_use is {len(desc)} chars; portable skills allow 1024")
             kept.append(f"description: {desc}")
-        elif key in KEEP:
+        elif field in KEEP:
             kept.append(line)
     body = re.sub(r"/platform-skills:([a-z0-9-]+)", lambda mm: f"/{target_name(mm.group(1))}", body)
+    # userConfig values are substituted by the Claude plugin only; elsewhere the
+    # placeholder would be read literally, so say plainly that it is not set.
+    body = re.sub(r"\$\{user_config\.([A-Za-z0-9_]+)\}", lambda mm: f"(not configured: {mm.group(1)})", body)
     out_dir = os.path.join(dest, target_name(name))
     os.makedirs(out_dir)
     with open(os.path.join(out_dir, "SKILL.md"), "w", encoding="utf-8") as f:

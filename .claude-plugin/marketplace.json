@@ -8,7 +8,7 @@
     {
       "name": "platform-skills",
       "version": "1.43.0",
-      "description": "Production-grade platform engineering handbook for Claude, Codex, and Cursor. 45 slash-command workflows: Kubernetes (baseline, RBAC, workload, debug), GitHub Actions (design, security, review, debug), Azure (Workload Identity, AKS, tagging, RBAC), OpenShift (SCC, Routes, GitOps, upgrades), Secrets (ESO, Sealed Secrets, rotation, audit), Helm, Terraform, Flux CD, Argo CD, Gateway API (ingress-nginx migration), AWS, Kyverno, OPA, KEDA, Karpenter, supply chain security, Falco, chaos engineering, DORA metrics, Datadog, Dynatrace, Linkerd, AWS MCP, Renovate, Checkov, Trivy, Zizmor workflow auditing, Kingfisher secret scanning and revocation, token optimization, and multi-agent scaffolding. Every answer includes blast radius, validation steps, and rollback plan.",
+      "description": "Production-grade platform engineering handbook for Claude, Codex, and Cursor. 49 slash-command workflows: Kubernetes (baseline, RBAC, workload, debug), GitHub Actions (design, security, review, debug), Azure (Workload Identity, AKS, tagging, RBAC), OpenShift (SCC, Routes, GitOps, upgrades), Secrets (ESO, Sealed Secrets, rotation, audit), Helm, Terraform, Flux CD, Argo CD, Gateway API (ingress-nginx migration), AWS, Kyverno, OPA, KEDA, Karpenter, cluster upgrades (EKS version rollback), Flagger progressive delivery, Velero backup and restore drills, FinOps (Infracost, cost tags, OpenCost), supply chain security, Falco, chaos engineering, DORA metrics, Datadog, Dynatrace, Linkerd, AWS MCP, Renovate, Checkov, Trivy, Zizmor workflow auditing, Kingfisher secret scanning and revocation, token optimization, and multi-agent scaffolding. Every answer includes blast radius, validation steps, and rollback plan.",
       "author": {
         "name": "Nitin Jain"
       },
@@ -195,6 +195,23 @@
         "source": "url",
         "url": "https://github.com/nitinjain999/platform-skills.git",
         "sha": "df75e5b0d4419bf004656f9d4b72da9107fafc19"
+      },
+      "homepage": "https://github.com/nitinjain999/platform-skills"
+    },
+    {
+      "name": "platform-guardrails",
+      "version": "1.43.0",
+      "description": "Optional enforcing hooks for platform-skills: self-improve lifecycle capture and the ai-governance policy gate (active only in projects with a .ai-governance.yaml). Separate from platform-skills because plugin hooks run in every session for everyone who enables them.",
+      "author": {
+        "name": "Nitin Jain"
+      },
+      "license": "Apache-2.0",
+      "category": "development",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/nitinjain999/platform-skills.git",
+        "path": "plugins/platform-guardrails",
+        "ref": "main"
       },
       "homepage": "https://github.com/nitinjain999/platform-skills"
     }

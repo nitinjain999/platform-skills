@@ -121,10 +121,14 @@ Generate a production-ready Helm chart for a Node.js service with HPA and Networ
 | Full install + troubleshooting | [INSTALLATION.md](INSTALLATION.md) |
 | Understand how the skill works | [HOW_IT_WORKS.md](HOW_IT_WORKS.md) |
 | Learn the ownership model | [GETTING_STARTED.md](GETTING_STARTED.md) |
-| See all 45 commands with examples | [COMMANDS.md](COMMANDS.md) |
+| See all 49 commands with examples | [COMMANDS.md](COMMANDS.md) |
 | Triage PR review comments | `/platform-skills:triage` |
 | Scale workloads with KEDA | `/platform-skills:keda` |
 | Migrate off ingress-nginx to Gateway API | `/platform-skills:gateway-api` |
+| Plan or roll back a Kubernetes upgrade | `/platform-skills:cluster-upgrade` |
+| Add canary releases with automatic rollback | `/platform-skills:progressive-delivery` |
+| Set up backups and prove restores work | `/platform-skills:backup-dr` |
+| Estimate PR cost and enforce cost tags | `/platform-skills:finops` |
 | Scan Terraform for security issues | `/platform-skills:checkov` |
 | Scan container images for CVEs | `/platform-skills:trivy` |
 | Audit GitHub Actions workflows for security findings | `/platform-skills:zizmor` |

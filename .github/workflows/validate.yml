@@ -314,6 +314,10 @@ jobs:
             \( \
               -path "./examples/fluxcd/*" -o \
               -path "./examples/gateway-api/*" -o \
+              -path "./examples/progressive-delivery/*" -o \
+              -path "./examples/backup-dr/*" -o \
+              -path "./examples/finops/kubernetes/*" -o \
+              -path "./examples/finops/opencost/*" -o \
               -path "./examples/argocd/*" -o \
               -path "./examples/kubernetes/*" -o \
               -path "./examples/openshift/*" \
@@ -470,6 +474,15 @@ jobs:
         run: |
           python3 -I -c 'import yaml' 2>/dev/null || sudo apt-get install -y -qq python3-yaml
           bash tests/plugin-evals-structure.sh
+
+      # Portable skills for Copilot, Cursor and Codex (install.sh --skills).
+      - name: Check portable skill rendering
+        run: bash tests/render-skills.sh
+
+      # The platform-guardrails plugin: script drift from examples/, hook
+      # wiring, and the opt-in governance behaviour. jq and yq are on the runner.
+      - name: Check platform-guardrails plugin
+        run: bash tests/guardrails-plugin.sh
 
 
   summary:

@@ -251,7 +251,7 @@ gh copilot suggest "$(cat your-deployment.yaml) — review this for production r
 
 Copilot in VS Code and Cursor also load Agent Skills. Install every platform-skills skill into a project with `./install.sh --skills --target /path/to/your-project`: each domain lands in `.agents/skills/platform-skills-<name>/`, so Copilot or Cursor can pick it from its description or you can run it as `/platform-skills-<name>`. The natural-language prompts below work with or without them.
 
-Platform skills ships 45 command workflows. In Claude Code they are slash commands (`/platform-skills:preflight`). In Copilot Chat and Cursor Chat you phrase them as natural language — the instructions or rules files make the assistant apply the same structured output.
+Platform skills ships 49 command workflows. In Claude Code they are slash commands (`/platform-skills:preflight`). In Copilot Chat and Cursor Chat you phrase them as natural language — the instructions or rules files make the assistant apply the same structured output.
 
 ### review — production-readiness check on any file
 

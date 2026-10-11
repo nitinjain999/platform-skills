@@ -1,0 +1,23 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: flagger
+  namespace: flagger-system
+spec:
+  interval: 30m
+  chartRef:
+    kind: OCIRepository
+    name: flagger
+  install:
+    crds: CreateReplace
+  upgrade:
+    crds: CreateReplace
+  values:
+    # Shift traffic by rewriting Gateway API HTTPRoute weights. Works with the
+    # shared Envoy Gateway (north-south) and with Linkerd's HTTPRoute support.
+    meshProvider: gatewayapi:v1
+    # Canary health comes from Linkerd's proxy metrics, so the app namespace
+    # must be meshed. Without Linkerd, point this at the Prometheus that
+    # scrapes your gateway and rewrite the MetricTemplates for its metrics.
+    metricsServer: http://prometheus.linkerd-viz:9090

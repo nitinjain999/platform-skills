@@ -46,6 +46,10 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:keda](#platform-skillskeda) | KEDA ScaledObject/ScaledJob — generate, debug, review, scale |
 | [/platform-skills:gateway-api](#platform-skillsgateway-api) | Migrate off retired ingress-nginx to Gateway API — assess, convert, scaffold, cutover, debug, review, rollback |
 | [/platform-skills:karpenter](#platform-skillskarpenter) | Karpenter NodePool/EC2NodeClass — generate, debug, review, audit scale history, plan capacity, migrate from CA, upgrade |
+| [/platform-skills:cluster-upgrade](#platform-skillscluster-upgrade) | Plan, scan, run and roll back a Kubernetes minor-version upgrade, EKS version rollback included |
+| [/platform-skills:progressive-delivery](#platform-skillsprogressive-delivery) | Flagger canaries on Gateway API with metric-gated promotion and automatic rollback |
+| [/platform-skills:backup-dr](#platform-skillsbackup-dr) | Velero backups, timed restore drills, namespace restore, DR to another cluster |
+| [/platform-skills:finops](#platform-skillsfinops) | Infracost PR cost diff, OpenCost allocation, four-layer cost-tag enforcement |
 | [/platform-skills:self-improve](#platform-skillsself-improve) | Bootstrap, log, review, or promote agent self-improvement entries |
 | [/platform-skills:chaos](#platform-skillschaos) | Install Litmus Chaos or Chaos Mesh, generate fault experiments, schedule chaos, run GameDay, debug, report |
 | [/platform-skills:dora](#platform-skillsdora) | Instrument DORA metrics, generate Grafana dashboards, benchmark against performance bands, debug metric gaps |
@@ -2179,6 +2183,151 @@ When invoked with no arguments, the command asks two questions before proceeding
 - CA and Karpenter must not coexist on the same nodes — scale CA to 0 before Karpenter takes over
 
 Reference: `skills/karpenter/SKILL.md`, `references/karpenter.md`, and `examples/karpenter/`
+
+---
+
+## `/platform-skills:cluster-upgrade`
+
+**What it does:** Plans a Kubernetes minor-version upgrade one phase at a time (removed APIs, add-ons, control plane, nodes) and states the validation and rollback for each phase before anything changes. It scans three places removed APIs hide (Git, rendered Helm charts, the live cluster) with pluto and EKS upgrade insights, checks add-on compatibility against the target version, finds PodDisruptionBudgets that will stall a drain, and picks the right rollback: EKS one-step version rollback within 7 days of an in-place upgrade, a node pool or add-on rollback, or a blue/green cluster. The command produces commands for you to run; it never runs an upgrade or a drain itself.
+
+**Modes**
+
+| Mode | What it does |
+|---|---|
+| `plan` | Full phased plan with blast radius, validation and rollback per phase |
+| `scan` | Removed and deprecated APIs in Git, rendered Helm, deployed releases and the live API, plus EKS upgrade insights |
+| `addons` | Add-on compatibility for the target version and whether each upgrades before or after the control plane |
+| `drain` | PDBs and pods that block a drain or lose data in one, with fixes |
+| `rotate` | Node rotation per pool type, smallest blast radius first |
+| `rollback` | The rollback for what failed and how long ago: EKS version rollback, node pool, add-on, or blue/green |
+| `validate` | Post-phase checks |
+
+**Usage**
+
+```
+/platform-skills:cluster-upgrade
+/platform-skills:cluster-upgrade plan prod-eks 1.33 to 1.34
+/platform-skills:cluster-upgrade scan 1.34
+/platform-skills:cluster-upgrade addons 1.34
+/platform-skills:cluster-upgrade drain
+/platform-skills:cluster-upgrade rollback
+```
+
+**Example prompts**
+
+```
+/platform-skills:cluster-upgrade what breaks if we upgrade prod-eks from 1.33 to 1.34? We use Flux, Karpenter and KEDA
+/platform-skills:cluster-upgrade the node group upgrade is stuck draining ip-10-0-12-34
+/platform-skills:cluster-upgrade we upgraded the control plane two days ago and CoreDNS is failing. Can we roll back?
+```
+
+Reference: `skills/cluster-upgrade/SKILL.md` and `references/cluster-upgrade.md`
+
+---
+
+## `/platform-skills:progressive-delivery`
+
+**What it does:** Adds canary releases with automatic promotion and rollback using Flagger on Flux. Flagger shifts traffic through Gateway API HTTPRoute weights (Envoy Gateway north-south, Linkerd east-west), gates each step on success rate and latency measured for the canary pods only, and rolls back on its own when the checks fail. Flagger installs from the signed OCI chart with cosign verification.
+
+**Modes**
+
+| Mode | What it does |
+|---|---|
+| `install` | Flagger via Flux from the signed OCI chart, with `meshProvider` and `metricsServer` set for your traffic and metrics |
+| `canary` | Canary and MetricTemplates for one app, adapted to its ports, hostname, listener and HPA |
+| `metrics` | Design or fix MetricTemplate queries so they measure the canary pods only, and prove they return data |
+| `debug` | Why a canary is stuck, never starts, or always rolls back |
+| `rollback` | Automatic rollback, a revert in Git, `skipAnalysis`, or `suspend`, depending on the situation |
+
+**Usage**
+
+```
+/platform-skills:progressive-delivery
+/platform-skills:progressive-delivery install Envoy Gateway, Prometheus in monitoring
+/platform-skills:progressive-delivery canary podinfo
+/platform-skills:progressive-delivery debug podinfo
+/platform-skills:progressive-delivery rollback
+```
+
+**Example prompts**
+
+```
+/platform-skills:progressive-delivery add a canary to the checkout service behind our shared Gateway, 10% steps, roll back above 1% errors
+/platform-skills:progressive-delivery why does my canary roll back every time even though the new version is healthy?
+```
+
+Reference: `skills/progressive-delivery/SKILL.md`, `references/progressive-delivery.md`, and `examples/progressive-delivery/README.md`
+
+---
+
+## `/platform-skills:backup-dr`
+
+**What it does:** Backs up and restores Kubernetes workloads with Velero, and proves recovery works. It installs Velero on EKS via Flux with IRSA, an S3 backup location and EBS snapshots, derives schedules and retention from the recovery point objective, states what a backup does not contain, and runs restore drills that restore a namespace into an isolated copy and measure the recovery time.
+
+**Modes**
+
+| Mode | What it does |
+|---|---|
+| `install` | Velero via Flux with IRSA, the scoped IAM policy and a backup bucket protected from deletion |
+| `schedule` | Schedules and retention from the recovery point objective |
+| `drill` | Run and interpret `restore-drill.sh`; compare the measured time with the recovery time objective |
+| `restore` | Restore a namespace or specific resources, including into a different namespace |
+| `dr` | Recovery into a new cluster: Flux bootstrap first, read-only backup location, then application namespaces |
+| `debug` | Failed or partial backups and restores |
+
+**Usage**
+
+```
+/platform-skills:backup-dr
+/platform-skills:backup-dr install prod-eks eu-north-1
+/platform-skills:backup-dr schedule RPO 1h for payments, 24h for everything else
+/platform-skills:backup-dr drill payments
+/platform-skills:backup-dr restore payments
+/platform-skills:backup-dr dr
+```
+
+**Example prompts**
+
+```
+/platform-skills:backup-dr we have Velero but have never restored anything. How long would recovering the payments namespace take?
+/platform-skills:backup-dr someone deleted the orders namespace an hour ago, restore it from last night's backup
+```
+
+Reference: `skills/backup-dr/SKILL.md`, `references/backup-dr.md`, and `examples/backup-dr/README.md`
+
+---
+
+## `/platform-skills:finops`
+
+**What it does:** Makes the cost of platform changes visible before they merge and attributable after they run. It adds an Infracost monthly cost diff to Terraform pull requests, allocates in-cluster cost by namespace and label with OpenCost, and enforces required cost tags in four layers: provider `default_tags` with variable validation, a Conftest gate on the plan, the AWS Config `REQUIRED_TAGS` rule, and a Kyverno namespace-label policy. The required tag keys come from the plugin's `required_tag_keys` setting.
+
+**Modes**
+
+| Mode | What it does |
+|---|---|
+| `estimate` | Monthly cost difference of a Terraform change, and the Infracost PR workflow |
+| `allocate` | OpenCost via Flux, pointed at your Prometheus, with a per-cluster ID |
+| `tags` | The four-layer tag enforcement for your tag keys, Kyverno in Audit first |
+| `audit` | Untagged resources and unowned namespaces now, plus OpenCost's idle and unallocated cost |
+
+**Usage**
+
+```
+/platform-skills:finops
+/platform-skills:finops estimate terraform/network
+/platform-skills:finops allocate
+/platform-skills:finops tags owner,cost-center,environment
+/platform-skills:finops audit
+```
+
+**Example prompts**
+
+```
+/platform-skills:finops what will this PR cost per month?
+/platform-skills:finops enforce cost-center and owner tags on every AWS resource and every namespace without breaking existing deploys
+```
+
+Reference: `skills/finops/SKILL.md`, `references/finops.md`, and `examples/finops/README.md`
 
 ---
 

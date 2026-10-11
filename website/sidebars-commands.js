@@ -31,6 +31,8 @@ const sidebars = {
         { type: 'doc', id: 'keda' },
         { type: 'doc', id: 'gateway-api' },
         { type: 'doc', id: 'karpenter' },
+        { type: 'doc', id: 'cluster-upgrade' },
+        { type: 'doc', id: 'backup-dr' },
       ],
     },
     {
@@ -39,6 +41,7 @@ const sidebars = {
       items: [
         { type: 'doc', id: 'fluxcd' },
         { type: 'doc', id: 'gitops' },
+        { type: 'doc', id: 'progressive-delivery' },
       ],
     },
     {
@@ -115,6 +118,7 @@ const sidebars = {
         { type: 'doc', id: 'mcp' },
         { type: 'doc', id: 'triage' },
         { type: 'doc', id: 'self-improve' },
+        { type: 'doc', id: 'finops' },
       ],
     },
     {

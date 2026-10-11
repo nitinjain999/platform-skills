@@ -114,6 +114,8 @@ Steps:
    }
    ```
 
+   **On Claude Code, prefer the plugin:** with `platform-guardrails@platform-skills` enabled, the `PreToolUse`/`PostToolUse` gate already ships from the plugin and switches on in any project that commits `.ai-governance.yaml`. Skip the settings merge below in that case (a second wiring would evaluate every call twice), and keep only the policy file and `.ai-governance/` assets in the repository.
+
 6. **Merge, never overwrite** `.claude/settings.json`.
 
    Claude Code's `settings.json` hook registration is **three levels deep**, not two: each event key holds an array of *matcher-group* objects, and each matcher group holds its own inner `hooks` array of handler objects. `matcher` is optional — omitting it means "match every tool call", which is what this policy wants (every call gets evaluated, not just one tool):

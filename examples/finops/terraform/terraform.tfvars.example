@@ -1,0 +1,5 @@
+required_tags = {
+  owner         = "platform-team"
+  cost-center   = "cc-4021"
+  environment   = "production"
+}

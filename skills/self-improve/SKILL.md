@@ -40,7 +40,7 @@ Reference: `references/agent-self-improve.md` → Global vs project scope
 
 ## Helper Script
 
-Modes below run `bash ~/.claude/scripts/learnings.sh <subcommand>` for anything deterministic: reading entries, validating them, checking dates, changing a status. If the script is missing, say so once, offer to install it (`init global` step 5), and do the step by hand. Exit code 3 means another session holds `.learnings/.drain.lock`. Wait a few seconds and retry once. Exit code 4 means the helper refused: the entry doesn't exist, or it exists and is not eligible. `promote` also refuses on the wrong status, missing or invalid provenance, a stale or expired entry, an inferred source without `--allow-inferred`, another project's scope, a `Paths` conflict with the target, and an entry already promoted elsewhere; `unpromote` refuses when no rule carries the entry's marker. Never guess which one it was: the helper prints the reason on stderr, so relay that line.
+Modes below run `bash ~/.claude/scripts/learnings.sh <subcommand>` for anything deterministic (with the `platform-guardrails` plugin enabled, `learnings.sh` is on `PATH` and can be run directly): reading entries, validating them, checking dates, changing a status. If the script is missing, say so once, offer to install it (`init global` step 5), and do the step by hand. Exit code 3 means another session holds `.learnings/.drain.lock`. Wait a few seconds and retry once. Exit code 4 means the helper refused: the entry doesn't exist, or it exists and is not eligible. `promote` also refuses on the wrong status, missing or invalid provenance, a stale or expired entry, an inferred source without `--allow-inferred`, another project's scope, a `Paths` conflict with the target, and an entry already promoted elsewhere; `unpromote` refuses when no rule carries the entry's marker. Never guess which one it was: the helper prints the reason on stderr, so relay that line.
 
 Reference: `references/agent-self-improve.md` → Helper script
 
@@ -66,7 +66,7 @@ Steps:
      SESSION-STATE.md
    ```
 4. Seed each file with the correct header and an example entry marked `Status: example`
-5. Detect the user's platform and offer to wire all four hooks (`SessionStart`, `SessionEnd`, `PostToolUseFailure`, `PreCompact`) in `~/.claude/settings.json`:
+5. **On Claude Code, offer the plugin first:** `claude plugin install platform-guardrails@platform-skills` wires all four hooks from the plugin and puts `learnings.sh` on `PATH`, and plugin updates deliver fixes to the scripts. If the user takes it, skip the rest of this step, and make sure `~/.claude/settings.json` has no self-improve hooks left (both wirings at once would capture every event twice). Otherwise, detect the user's platform and offer to wire all four hooks (`SessionStart`, `SessionEnd`, `PostToolUseFailure`, `PreCompact`) in `~/.claude/settings.json`:
    - **macOS / Linux / WSL / Git Bash** → `self-improve-hook.sh` with the `session-start`, `session-end`, `tool-failure` and `precompact` subcommands; point to `settings.json.example`
    - **Windows native (PowerShell)** → `self-improve-hook.ps1`, same four subcommands; point to `settings-windows.json.example`, and have the user replace the literal `C:\Users\alex` with their own profile path
    - **Alpine or minimal Linux** → same as macOS/Linux but remind the user to install bash first: `apk add bash`

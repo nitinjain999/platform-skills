@@ -1,0 +1,59 @@
+---
+# Progressive delivery for my-app behind the shared platform-gateway from
+# examples/fluxcd/basic-monorepo. Flagger creates my-app-primary and its own
+# HTTPRoute, so the app's hand-written HTTPRoute must be removed when this is
+# adopted: two routes for one hostname would split traffic unpredictably.
+apiVersion: flagger.app/v1beta1
+kind: Canary
+metadata:
+  name: my-app
+  namespace: my-app
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: my-app
+  # Roll back if the new version makes no progress for 10 minutes
+  progressDeadlineSeconds: 600
+  service:
+    port: 80
+    targetPort: http
+    hosts:
+      - my-app.example.com
+    gatewayRefs:
+      - name: platform-gateway
+        namespace: envoy-gateway-system
+        sectionName: https-my-app
+  analysis:
+    interval: 1m
+    # Five failed checks in a row roll the canary back automatically
+    threshold: 5
+    maxWeight: 50
+    stepWeight: 10
+    metrics:
+      - name: success-rate
+        templateRef:
+          name: success-rate
+        thresholdRange:
+          min: 99
+        interval: 1m
+        templateVariables:
+          direction: inbound
+      - name: latency
+        templateRef:
+          name: latency
+        # milliseconds, p99
+        thresholdRange:
+          max: 500
+        interval: 1m
+        templateVariables:
+          direction: inbound
+    webhooks:
+      # Gate the rollout on a smoke test against the canary before any traffic moves
+      - name: smoke-test
+        type: pre-rollout
+        url: http://flagger-loadtester.my-app/
+        timeout: 30s
+        metadata:
+          type: bash
+          cmd: "curl -sf http://my-app-canary.my-app/ >/dev/null"

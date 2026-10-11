@@ -1,0 +1,65 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: velero
+  namespace: velero
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: velero
+      version: '12.2.1'  # Velero 1.18.2. Pinned; upgrade is an explicit PR
+      sourceRef:
+        kind: HelmRepository
+        name: vmware-tanzu
+        namespace: velero
+      interval: 12h
+  install:
+    crds: CreateReplace
+  upgrade:
+    crds: CreateReplace
+    cleanupOnFail: true
+  values:
+    # Velero 1.18.x pairs with velero-plugin-for-aws 1.14.x
+    initContainers:
+      - name: velero-plugin-for-aws
+        image: velero/velero-plugin-for-aws:v1.14.3
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+          - mountPath: /target
+            name: plugins
+    # IRSA, not an access key: no long-lived credential in the cluster
+    credentials:
+      useSecret: false
+    serviceAccount:
+      server:
+        annotations:
+          eks.amazonaws.com/role-arn: arn:aws:iam::111122223333:role/velero-backup
+    configuration:
+      backupStorageLocation:
+        - name: default
+          provider: aws
+          bucket: example-velero-backups-eu-north-1
+          prefix: production
+          default: true
+          config:
+            region: eu-north-1
+      volumeSnapshotLocation:
+        - name: default
+          provider: aws
+          config:
+            region: eu-north-1
+    schedules:
+      # Every namespace nightly, kept 30 days. Cluster-scoped resources are
+      # included so a restore into a new cluster has CRDs and storage classes.
+      nightly:
+        disabled: false
+        schedule: "0 2 * * *"
+        useOwnerReferencesInBackup: false
+        template:
+          ttl: 720h
+          storageLocation: default
+          includedNamespaces:
+            - "*"
+          snapshotVolumes: true

@@ -1,0 +1,22 @@
+---
+# Flagger publishes its chart as a signed OCI artifact. verify makes Flux
+# reject the chart unless the Flagger release workflow signed it (Cosign
+# keyless); Flagger 1.43+ signatures need Flux 2.8 or later to verify.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: flagger
+  namespace: flagger-system
+spec:
+  interval: 12h
+  url: oci://ghcr.io/fluxcd/charts/flagger
+  ref:
+    tag: 1.45.0  # Pinned. Upgrade is an explicit PR
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: copy
+  verify:
+    provider: cosign
+    matchOIDCIdentity:
+      - issuer: ^https://token\.actions\.githubusercontent\.com$
+        subject: ^https://github\.com/fluxcd/flagger/\.github/workflows/release\.yml@refs/tags/v\d+\.\d+\.\d+$

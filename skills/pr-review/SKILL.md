@@ -43,6 +43,8 @@ Then proceed into the selected mode.
 
 Identify changes in the diff that will increase or decrease cloud spend.
 
+When the repository runs Infracost (or the user can run it), prefer its number over an estimate: `infracost diff --path=. --compare-to=<base.json>` gives the monthly delta per resource. Missing cost tags are a cost finding too: a resource without `owner` / `cost-center` cannot be attributed. For setting up Infracost, OpenCost or tag enforcement, hand off to `/platform-skills:finops`.
+
 ### What to check
 
 **Compute**
@@ -256,7 +258,7 @@ Reference: `references/pr-review.md` → Compliance and SOC 2, `references/compl
 
 ## Mode: upgrade
 
-Detect deprecated APIs, EOL versions, and version hygiene issues.
+Detect deprecated APIs, EOL versions, and version hygiene issues in this diff. Planning or running the cluster upgrade itself (removed-API scans of the live cluster, add-on order, drain blockers, rollback) belongs to `/platform-skills:cluster-upgrade`.
 
 ### What to check
 

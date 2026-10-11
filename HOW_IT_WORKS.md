@@ -121,6 +121,10 @@ Slash commands are predefined Claude workflows. In Codex or Cursor, ask for the 
 | `/platform-skills:keda` | KEDA ScaledObject/ScaledJob — generate, debug, review, or design a scaling strategy |
 | `/platform-skills:gateway-api` | You run ingress-nginx and need to move to Gateway API, or a Gateway, HTTPRoute or listener certificate is not working |
 | `/platform-skills:karpenter` | Karpenter NodePool/EC2NodeClass — generate, debug, review, audit scale history, plan capacity, migrate from CA, upgrade |
+| `/platform-skills:cluster-upgrade` | Plan, scan, run or roll back a Kubernetes minor-version upgrade, including EKS one-step version rollback |
+| `/platform-skills:progressive-delivery` | Add Flagger canaries with metric-gated promotion and automatic rollback, or debug a canary that will not promote |
+| `/platform-skills:backup-dr` | Install Velero, design schedules, run a timed restore drill, restore a namespace, or plan DR to another cluster |
+| `/platform-skills:finops` | Estimate a Terraform PR's cost, allocate in-cluster cost with OpenCost, or enforce cost-allocation tags |
 | `/platform-skills:setup-agents` | Scaffold multi-agent AI setup — generate, upgrade, add, review |
 | `/platform-skills:self-improve` | Bootstrap `.learnings/` workspace, log errors/learnings, resume after interruption, review patterns, promote to project memory |
 | `/platform-skills:supply-chain` | Sign images, generate SBOMs, run CVE gates, enforce image signatures, generate SLSA provenance |
