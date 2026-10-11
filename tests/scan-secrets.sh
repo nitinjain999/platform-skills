@@ -49,7 +49,12 @@ FAILURES=0
 #                              quote, and the pattern's own closing quote the
 #                              closing quote. Any file holding either regex must
 #                              be excluded from this one.
-EXCLUDE_RE='(^|/)node_modules/|(^|/)examples/|\.md$|\.lock\.yml$|(^|/)(release|validate)\.yml$|(^|/)scan-secrets\.sh$'
+#   plugins/platform-guardrails/scripts/{ai-governance-evaluate,learnings,
+#   self-improve-hook}.sh    — byte-identical copies of files under examples/,
+#                              which is already excluded; tests/guardrails-plugin.sh
+#                              fails if they drift. Only those three: the plugin's
+#                              own wrapper scripts are still scanned.
+EXCLUDE_RE='(^|/)node_modules/|(^|/)examples/|\.md$|\.lock\.yml$|(^|/)(release|validate)\.yml$|(^|/)scan-secrets\.sh$|^plugins/platform-guardrails/scripts/(ai-governance-evaluate|learnings|self-improve-hook)\.sh$'
 
 # --- Check 1: broad heuristic scan across tracked files ---------------------
 scan_repository() {
