@@ -1,0 +1,15 @@
+{
+  "cases": {
+    "flux-helmrelease": {
+      "score": 1
+    },
+    "opa-policy": {
+      "score": 1
+    },
+    "pr-triage": {
+      "score": 1
+    }
+  },
+  "floor": 0.7,
+  "tolerance": 0.15
+}

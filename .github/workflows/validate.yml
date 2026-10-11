@@ -464,6 +464,13 @@ jobs:
       - name: Run helmcheck validation
         run: bash tests/validate-helmcheck.sh
 
+      # Model-free checks of the claude plugin eval suite. The suite itself is
+      # billed per run and is not run in CI yet; see plugin-evals/README.md.
+      - name: Check plugin eval suite structure
+        run: |
+          python3 -I -c 'import yaml' 2>/dev/null || sudo apt-get install -y -qq python3-yaml
+          bash tests/plugin-evals-structure.sh
+
 
   summary:
     name: Validation Summary
