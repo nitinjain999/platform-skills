@@ -109,6 +109,9 @@
   "skills": [
     "./skills/platform-skills"
   ],
+  "experimental": {
+    "evals": "plugin-evals"
+  },
   "commands": [
     "./commands/terraform.md",
     "./commands/debug.md",

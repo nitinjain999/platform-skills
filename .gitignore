@@ -177,3 +177,5 @@ __pycache__/
 website/node_modules/
 website/build/
 website/.docusaurus/
+# claude plugin eval run output
+plugin-evals/results/
