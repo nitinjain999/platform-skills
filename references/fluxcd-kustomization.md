@@ -113,20 +113,20 @@ Without `secretRef`, Cloud KMS with workload identity is used (GCP, AWS, Azure).
 
 ## Health checks
 
-When `wait: true`, standard Kubernetes readiness conditions are evaluated. Custom CEL expressions override the built-in check:
+When `wait: true`, standard Kubernetes readiness conditions are evaluated (kstatus). Custom CEL expressions add readiness logic for custom resources:
 
 ```yaml
 spec:
   healthCheckExprs:
-    - apiVersion: apps/v1
-      kind: Deployment
-      current: >
-        status.conditions.filter(e, e.type == 'Available').all(e, e.status == 'True')
-      inProgress: >
-        status.conditions.filter(e, e.type == 'Progressing').exists(e, e.status == 'True')
-      failed: >
-        status.replicas > 0 && status.readyReplicas == 0
+    # Gateway has no Ready condition, so kstatus alone reports it healthy before
+    # it has an address. Programmed=True means the data plane is serving.
+    - apiVersion: gateway.networking.k8s.io/v1
+      kind: Gateway
+      failed: status.conditions.exists(e, e.type == 'Accepted' && e.status == 'False')
+      current: status.conditions.exists(e, e.type == 'Programmed' && e.status == 'True')
 ```
+
+Use expressions only for custom resources whose readiness kstatus cannot read. Built-in kinds such as Deployment already get kstatus's rollout-aware check; do not redefine them. A hand-written Deployment rule is easy to get wrong: Flux evaluates `inProgress` before `current`, and a finished Deployment keeps `Progressing=True`, so an `inProgress` on that condition never lets it become healthy. Expressions evaluate against the resource itself: `status.…`, not `object.status.…`.
 
 ---
 

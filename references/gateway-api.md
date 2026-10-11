@@ -285,10 +285,13 @@ Run both controllers side by side. Each has its own load balancer address, so tr
 | 7. Decommission | Delete Ingress objects, then the ingress-nginx release and its load balancer | No traffic on the old address for the whole soak |
 
 ```bash
-# Phase 4: test the new path without touching DNS
-NEW_IP=$(kubectl get gateway platform-gateway -n envoy-gateway-system -o jsonpath='{.status.addresses[0].value}')
+# Phase 4: test the new path without touching DNS.
+# The Gateway address can be an IP or a hostname (cloud LBs often publish a DNS
+# name). --connect-to accepts either and keeps the URL host for Host and TLS SNI;
+# --resolve only accepts an IP and fails to parse a hostname.
+NEW_ADDR=$(kubectl get gateway platform-gateway -n envoy-gateway-system -o jsonpath='{.status.addresses[0].value}')
 curl -sS -o /dev/null -w '%{http_code} %{time_total}\n' \
-  --resolve payments.example.com:443:"$NEW_IP" https://payments.example.com/api/health
+  --connect-to payments.example.com:443:"$NEW_ADDR":443 https://payments.example.com/api/health
 ```
 
 **Blast radius per phase:** phases 1 to 4 change nothing users see. Phase 5 moves one hostname at a time. Phase 7 is the only irreversible step; never combine it with phase 5 in one change.

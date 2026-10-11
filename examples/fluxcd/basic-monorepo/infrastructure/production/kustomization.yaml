@@ -6,13 +6,6 @@ resources:
 patches:
   - target:
       kind: HelmRelease
-      name: envoy-gateway
-    patch: |-
-      - op: add
-        path: /spec/values/deployment/envoyGateway/resources/limits/cpu
-        value: "1000m"
-  - target:
-      kind: HelmRelease
       name: cert-manager
     patch: |-
       - op: replace

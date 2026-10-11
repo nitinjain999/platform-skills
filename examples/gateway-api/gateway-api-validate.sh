@@ -234,6 +234,27 @@ else
   pass "app namespaces (and their gateway-access label) are owned by the platform layer"
 fi
 
+# Two proxy replicas only survive a node failure if they run on different nodes.
+if kubectl kustomize "$MONOREPO/infrastructure/configs/production" \
+    | yq -e -N 'select(.kind == "EnvoyProxy") | .spec.provider.kubernetes.envoyDeployment.pod.topologySpreadConstraints[] | select(.topologyKey == "kubernetes.io/hostname" and .whenUnsatisfiable == "DoNotSchedule")' >/dev/null 2>&1; then
+  pass "production Envoy proxies are spread across nodes (hostname, DoNotSchedule)"
+else
+  fail "production EnvoyProxy needs a kubernetes.io/hostname topologySpreadConstraint with DoNotSchedule"
+fi
+
+# Repository baseline: no CPU limits (CFS throttling); memory limits only.
+# A yq error must fail the check, never read as "no CPU limit found".
+for overlay in infrastructure/production infrastructure/staging infrastructure/configs/production infrastructure/configs/staging; do
+  if ! cpu_limits="$(kubectl kustomize "$MONOREPO/$overlay" \
+      | yq -N '.. | select(tag == "!!map" and has("limits")) | .limits | select(tag == "!!map" and has("cpu")) | .cpu' 2>&1)"; then
+    fail "$overlay: CPU-limit check could not run: $cpu_limits"
+  elif [ -n "$cpu_limits" ]; then
+    fail "$overlay sets a CPU limit ($cpu_limits); the baseline is CPU requests plus memory-only limits"
+  else
+    pass "$overlay sets no CPU limits"
+  fi
+done
+
 for env in production staging; do
   # A route hostname the listener does not cover is NoMatchingListenerHostname.
   if command -v kubectl >/dev/null 2>&1; then

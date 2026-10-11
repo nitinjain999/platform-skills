@@ -42,16 +42,21 @@ Ask one at a time:
    kubectl get ingressclass
    # One row per Ingress annotation, keeping the resource identity and hosts,
    # so every annotation can be traced to the Ingress that carries it.
-   # Columns: namespace, name, class, hosts, annotation. An Ingress with no
-   # nginx annotation still gets one row with "-" so it is not dropped.
+   # Columns: namespace, name, class, hosts, annotation, value. The value is
+   # kept because several blockers are value-dependent (`rewrite-target: /$1`
+   # uses a capture group; a snippet's body is what has to be redesigned).
+   # @tsv escapes tabs and newlines, so a multi-line snippet stays on one row.
+   # An Ingress with no nginx annotation still gets one row with "-".
    kubectl get ingress -A -o json | jq -r '
      .items[]
+     | (.metadata.annotations // {}) as $a
      | [.metadata.namespace, .metadata.name,
-        (.spec.ingressClassName // .metadata.annotations["kubernetes.io/ingress.class"] // "-"),
+        (.spec.ingressClassName // $a["kubernetes.io/ingress.class"] // "-"),
         ([.spec.rules[]?.host // "*"] | unique | join(","))] as $id
-     | ([.metadata.annotations // {} | keys[] | select(startswith("nginx.ingress.kubernetes.io/"))]
-        | if length == 0 then ["-"] else . end)[]
-     | $id + [.] | @tsv' | column -t -s $'\t'
+     | ([$a | to_entries[] | select(.key | startswith("nginx.ingress.kubernetes.io/")) | [.key, .value]]
+        | if length == 0 then [["-", "-"]] else . end)[]
+     | $id + . | @tsv' > ingress-inventory.tsv
+   column -t -s $'\t' ingress-inventory.tsv
    # Cluster-wide count per annotation, to size the work
    kubectl get ingress -A -o json \
      | jq -r '.items[] | .metadata.annotations // {} | keys[]' \
@@ -114,9 +119,12 @@ Produce a per-hostname plan following the migration path in `references/gateway-
 2. **TTL:** lower the DNS TTL to 60s at least one old-TTL period before the switch
 3. **Shadow test** each hostname against the new address without touching DNS:
    ```bash
-   NEW_IP=$(kubectl get gateway platform-gateway -n envoy-gateway-system -o jsonpath='{.status.addresses[0].value}')
+   # The address can be an IP or a hostname (cloud LBs often publish a DNS name).
+   # --connect-to accepts either and keeps the URL host for Host and TLS SNI;
+   # --resolve only accepts an IP and fails to parse a hostname.
+   NEW_ADDR=$(kubectl get gateway platform-gateway -n envoy-gateway-system -o jsonpath='{.status.addresses[0].value}')
    curl -sS -o /dev/null -w '%{http_code} %{time_total}\n' \
-     --resolve <host>:443:"$NEW_IP" https://<host>/<health-path>
+     --connect-to <host>:443:"$NEW_ADDR":443 https://<host>/<health-path>
    ```
    Compare status codes, key response headers, redirects and p99 latency with the old path
 4. **Order:** lowest-risk hostname first; one hostname per change
