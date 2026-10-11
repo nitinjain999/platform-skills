@@ -16,11 +16,13 @@ basic-monorepo/
 ├── clusters/
 │   ├── production/
 │   │   ├── flux-system/                 # Flux bootstrap
+│   │   ├── gateway-crds.yaml            # Gateway API + Envoy Gateway CRDs (never pruned)
 │   │   ├── infrastructure.yaml          # Controllers: Envoy Gateway, cert-manager
 │   │   ├── infrastructure-configs.yaml  # Gateway, GatewayClass, ClusterIssuer
 │   │   └── apps.yaml                    # Apps Kustomization
 │   └── staging/
 │       ├── flux-system/
+│       ├── gateway-crds.yaml
 │       ├── infrastructure.yaml
 │       ├── infrastructure-configs.yaml
 │       └── apps.yaml
@@ -30,7 +32,7 @@ basic-monorepo/
 │   │   ├── envoy-gateway/
 │   │   └── cert-manager/
 │   ├── configs/                   # Objects that need those CRDs
-│   │   ├── base/                  # GatewayClass, EnvoyProxy, Gateway, redirect, ClusterIssuer
+│   │   ├── base/                  # App namespaces, GatewayClass, EnvoyProxy, Gateway, redirect, ClusterIssuer
 │   │   ├── production/            # Production hostnames
 │   │   └── staging/               # Staging hostnames, single proxy
 │   ├── production/                # Production overrides
@@ -104,7 +106,7 @@ spec:
 
 ### Layer Dependencies
 
-Three layers reconcile in order: `infrastructure` installs the controllers and their CRDs. `infrastructure-configs` creates the Gateway API and cert-manager objects that need those CRDs. `apps` attaches routes to the Gateway.
+The layers reconcile in order: `gateway-api-crds` and `envoy-gateway-crds` apply the CRDs. `infrastructure` installs the controllers (Envoy Gateway, cert-manager; cert-manager must start after the Gateway API CRDs exist). `infrastructure-configs` creates the app namespaces and the Gateway API and cert-manager objects that need those CRDs. `apps` attaches routes to the Gateway.
 
 Splitting controllers from configs is required, not cosmetic. Flux dry-runs a Kustomization before applying it, and a `Gateway` cannot be dry-run until the Gateway API CRDs exist.
 
@@ -177,9 +179,9 @@ Ownership is split the way Gateway API intends:
 | `HTTPRoute` per app | App team | the app's namespace |
 
 - **TLS:** the Gateway carries `cert-manager.io/cluster-issuer: letsencrypt-prod`. cert-manager creates one Certificate per HTTPS listener and solves HTTP-01 through the same Gateway.
-- **Access:** the HTTPS listener only accepts routes from namespaces labelled `gateway-access: "true"`. A route from any other namespace is rejected with `NotAllowedByListeners`.
+- **Access:** the HTTPS listener only accepts routes from namespaces labelled `gateway-access: "true"`. A route from any other namespace is rejected with `NotAllowedByListeners`. App namespaces are created in `infrastructure/configs/base/app-namespaces.yaml`, not under `apps/`, so an app team cannot grant itself the label. Protect that path with CODEOWNERS.
 - **Redirect:** a platform-owned `HTTPRoute` on port 80 sends everything to HTTPS with a 308, the same code ingress-nginx used. ACME challenge routes use an `Exact` path match, which takes precedence over it.
-- **CRDs:** a separate `gateway-crds` HelmRelease installs the Gateway API CRDs on the **standard** channel and marks them `helm.sh/resource-policy: keep`. Deleting a CRD deletes every Gateway and HTTPRoute in the cluster, so removing the release must never take them with it.
+- **CRDs:** `clusters/<env>/gateway-crds.yaml` applies the Gateway API **standard**-channel CRDs and the Envoy Gateway CRDs as plain manifests through two Flux Kustomizations. Not a HelmRelease: the CRDs are multi-megabyte and a Helm release Secret is capped at 1 MiB. Both use `prune: false` and `deletionPolicy: Orphan`, because deleting a CRD deletes every Gateway and HTTPRoute in the cluster.
 - **Availability:** `EnvoyProxy` runs two proxy replicas with a PodDisruptionBudget in production. Staging runs one and removes the PDB, because `minAvailable: 1` on a single replica blocks every node drain.
 
 
@@ -217,7 +219,7 @@ Keep environment differences small. Most configuration should be in base.
 
 ## Adding New Applications
 
-A new **public hostname** needs a platform-team change first: add an HTTPS listener for it to `infrastructure/configs/base/gateway.yaml` and patch the hostname per environment. cert-manager requires one listener per hostname. Internal-only apps skip this.
+A new app needs a platform-team change first: add its Namespace to `infrastructure/configs/base/app-namespaces.yaml`, with `gateway-access: "true"` if it serves public traffic. A new **public hostname** also needs an HTTPS listener in `infrastructure/configs/base/gateway.yaml`, patched per environment; cert-manager requires one listener per hostname.
 
 1. **Create base definition:**
 

@@ -1,0 +1,75 @@
+---
+# Gateway API and Envoy Gateway CRDs, applied as plain manifests by Flux.
+#
+# Not a HelmRelease: the CRDs are multi-megabyte (EnvoyProxy alone is ~1.4 MB),
+# and a Helm release stores the chart and the rendered manifest in a Secret
+# capped at 1 MiB. Envoy Gateway's own CRD chart README says to render it and
+# apply the output instead of installing it with Helm.
+#
+# Blast radius: deleting a CRD deletes every Gateway and HTTPRoute in the
+# cluster. prune: false plus deletionPolicy: Orphan means neither removing a
+# CRD from the source nor deleting these Kustomizations ever deletes a CRD.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: gateway-api
+  namespace: flux-system
+spec:
+  interval: 12h
+  url: https://github.com/kubernetes-sigs/gateway-api
+  ref:
+    tag: v1.6.1  # Pinned. Must be supported by the Envoy Gateway version below
+  sparseCheckout:
+    - config/crd/standard
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: gateway-api-crds
+  namespace: flux-system
+spec:
+  interval: 1h
+  timeout: 5m
+  sourceRef:
+    kind: GitRepository
+    name: gateway-api
+  # Standard channel only: GA and beta fields. Also installs the upstream
+  # safe-upgrades policy that blocks experimental CRDs over standard ones.
+  path: ./config/crd/standard
+  prune: false
+  deletionPolicy: Orphan
+  wait: true
+---
+# The same pinned chart artifact as the controller HelmRelease, extracted
+# instead of copied, so Flux can read its plain (untemplated) CRD files.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: OCIRepository
+metadata:
+  name: envoy-gateway-crds
+  namespace: flux-system
+spec:
+  interval: 12h
+  url: oci://docker.io/envoyproxy/gateway-helm
+  ref:
+    tag: v1.9.2  # Pinned. Must match the controller version
+  layerSelector:
+    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
+    operation: extract
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: envoy-gateway-crds
+  namespace: flux-system
+spec:
+  interval: 1h
+  timeout: 5m
+  sourceRef:
+    kind: OCIRepository
+    name: envoy-gateway-crds
+  # Only the Envoy Gateway CRDs. The sibling gatewayapi-crds.yaml one level up
+  # is the experimental channel and is deliberately not applied.
+  path: ./gateway-helm/charts/crds/crds/generated
+  prune: false
+  deletionPolicy: Orphan
+  wait: true

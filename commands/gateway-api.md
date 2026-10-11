@@ -40,7 +40,19 @@ Ask one at a time:
 1. Collect:
    ```bash
    kubectl get ingressclass
-   kubectl get ingress -A -o wide
+   # One row per Ingress annotation, keeping the resource identity and hosts,
+   # so every annotation can be traced to the Ingress that carries it.
+   # Columns: namespace, name, class, hosts, annotation. An Ingress with no
+   # nginx annotation still gets one row with "-" so it is not dropped.
+   kubectl get ingress -A -o json | jq -r '
+     .items[]
+     | [.metadata.namespace, .metadata.name,
+        (.spec.ingressClassName // .metadata.annotations["kubernetes.io/ingress.class"] // "-"),
+        ([.spec.rules[]?.host // "*"] | unique | join(","))] as $id
+     | ([.metadata.annotations // {} | keys[] | select(startswith("nginx.ingress.kubernetes.io/"))]
+        | if length == 0 then ["-"] else . end)[]
+     | $id + [.] | @tsv' | column -t -s $'\t'
+   # Cluster-wide count per annotation, to size the work
    kubectl get ingress -A -o json \
      | jq -r '.items[] | .metadata.annotations // {} | keys[]' \
      | grep '^nginx.ingress.kubernetes.io/' | sort | uniq -c | sort -rn
@@ -84,12 +96,12 @@ Ask one at a time:
 
 Generate the layout from `examples/fluxcd/basic-monorepo`, adapted to the answers:
 
-1. **CRDs:** a dedicated release on the **standard** channel with `helm.sh/resource-policy: keep` on every CRD. For Envoy Gateway: `oci://docker.io/envoyproxy/gateway-crds-helm` with `crds.gatewayAPI.channel: standard`, and `crds.enabled: false` on the controller chart
+1. **CRDs:** **standard** channel, applied as plain manifests, never through a Helm release (they exceed the 1 MiB release Secret). For Flux: one `Kustomization` per source with `prune: false` and `deletionPolicy: Orphan`: Gateway API `config/crd/standard` at the pinned tag, plus Envoy Gateway's `charts/crds/crds/generated/` from the pinned chart artifact. Set `crds.enabled: false` on the controller chart
 2. **Controller:** pinned exact version; at least two control-plane replicas in production
 3. **Data plane:** at least two proxy replicas plus a PodDisruptionBudget in production. Never a PDB of `minAvailable: 1` on one replica
-4. **GatewayClass and Gateway:** one shared Gateway owned by the platform team. Port 80 `from: Same` (redirect and ACME only), HTTPS listeners `from: Selector` on a platform-controlled label. Never `from: All` on a shared listener
+4. **GatewayClass and Gateway:** one shared Gateway owned by the platform team. Port 80 `from: Same` (redirect and ACME only), HTTPS listeners `from: Selector` on a platform-controlled label. Never `from: All` on a shared listener. App namespaces, and so the label, are created in the platform layer, never by the app layer
 5. **Redirect:** a platform-owned `RequestRedirect` route on port 80 with `statusCode: 308`
-6. **TLS:** cert-manager v1.15+ with `config.gatewayAPI.enabled: true`, the `cert-manager.io/cluster-issuer` annotation on the Gateway, and the `gatewayHTTPRoute` HTTP-01 solver. cert-manager must start after the CRDs exist (`dependsOn` the CRD release)
+6. **TLS:** cert-manager v1.15+ with `config.gatewayAPI.enabled: true`, the `cert-manager.io/cluster-issuer` annotation on the Gateway, and the `gatewayHTTPRoute` HTTP-01 solver. cert-manager must start after the CRDs exist (its layer `dependsOn` the CRD Kustomizations)
 7. **Delivery:** for Flux, three layers (`infrastructure` → `infrastructure-configs` → `apps`) with a `healthCheckExprs` entry on Gateway `Programmed`. For Argo CD, sync waves in the same order
 8. **NetworkPolicy:** allow app ingress only from the proxy pods (namespace **and** pod selector)
 9. Run `bash examples/gateway-api/gateway-api-validate.sh` against the adapted copy, or the kubeconform command above
@@ -135,7 +147,7 @@ Review in this order and separate critical findings from improvements:
 
 1. **Correctness:** `backendRefs` use port numbers; listener hostnames cover route hostnames; every HTTPS listener has `hostname`, `tls.mode: Terminate` and `certificateRefs`; configs depend on CRDs
 2. **Security:** no `from: All` on shared listeners; opt-in label is platform-controlled; `ReferenceGrant`s are as narrow as possible; NetworkPolicy admits only proxy pods; no experimental channel unless deliberate
-3. **Operational safety:** CRDs carry `keep`; CRDs and controller are separate releases; proxy replicas ≥ 2 with a PDB in production; exact version pins; a `Programmed` health check
+3. **Operational safety:** CRDs are plain manifests that are never pruned or deleted with their owner; the controller chart does not install CRDs; proxy replicas ≥ 2 with a PDB in production; exact version pins; a `Programmed` health check
 4. **Portability:** implementation-specific policies are listed and justified
 
 ## Mode: rollback
@@ -147,7 +159,7 @@ Ask which stage was reached, then apply the rollback table in `references/gatewa
 | Before DNS cutover | Delete the new routes; nothing user-facing changed |
 | After cutover, ingress-nginx still running | Point DNS back at the ingress-nginx address |
 | After decommission | Revert the decommission commit; Flux or Argo re-creates ingress-nginx and the Ingress objects; then switch DNS |
-| Bad CRD upgrade | Revert the CRD chart version in Git. Never delete the CRD release |
+| Bad CRD upgrade | Revert the CRD source tag in Git. Never delete a CRD or its Kustomization |
 
 ## Output format
 

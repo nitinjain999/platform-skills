@@ -3,11 +3,13 @@ kind: ResourceSetInputProvider
 metadata:
   name: app-image-tag
   namespace: flux-system
+  annotations:
+    # The polling interval is an annotation; ResourceSetInputProvider has no spec.interval
+    fluxcd.controlplane.io/reconcileEvery: "5m"
 spec:
   type: OCIArtifactTag
   url: "oci://ghcr.io/my-org/my-app"
   filter:
     semver: "1.x"
-  interval: 5m
   secretRef:
     name: registry-auth

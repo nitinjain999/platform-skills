@@ -330,12 +330,21 @@ jobs:
           tar xzf kubeconform-linux-amd64.tar.gz
           sudo mv kubeconform /usr/local/bin/
 
+          # Custom resources (Flux, Gateway API, cert-manager, Envoy Gateway, Flux Operator)
+          # are validated against the datreeio CRDs catalog, pinned to a commit so a catalog
+          # change cannot turn CI red on its own. -strict rejects unknown fields, which is
+          # what catches a misspelled CRD field; without the catalog every CRD kind was
+          # silently skipped by -ignore-missing-schemas.
+          CRD_CATALOG='https://raw.githubusercontent.com/datreeio/CRDs-catalog/63669a570e231d4f1f8396d229a1de512bcf0a34/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+
           ERRORS=0
           while IFS= read -r file; do
             echo "Validating Kubernetes manifest: $file"
             # -skip Route: OpenShift Route CRD has no entry in yannh/kubernetes-json-schema;
             # kubeconform returns a 429 rate-limit error (not 404) which -ignore-missing-schemas does not catch.
-            if ! kubeconform -summary -output text -ignore-missing-schemas -skip Route "$file"; then
+            # -ignore-missing-schemas still skips kinds neither location knows (e.g. kustomize.config.k8s.io).
+            if ! kubeconform -strict -summary -output text -ignore-missing-schemas -skip Route \
+                -schema-location default -schema-location "$CRD_CATALOG" "$file"; then
               echo "❌ Kubeconform validation failed: $file"
               ERRORS=$((ERRORS + 1))
             fi

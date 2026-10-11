@@ -48,7 +48,8 @@ service:
   targetPort: 8080
 
 # Prefer a Gateway API HTTPRoute (see examples/gateway-api). Kept for clusters
-# still running an Ingress controller; set className to that controller's class.
+# still running an Ingress controller; set className to that controller's class
+# and point networkPolicy.ingressFrom at that controller's pods.
 ingress:
   enabled: false
   className: nginx
@@ -98,8 +99,21 @@ pdb:
   minAvailable: 1
 
 networkPolicy:
-  # -- Enable NetworkPolicy — default-deny ingress + allow from ingress controller
+  # -- Enable NetworkPolicy — default-deny ingress + allow only the peers below
   enabled: true
+  # -- Peers allowed to reach targetPort. Must match whatever actually sends the
+  # traffic: the default is Envoy Gateway's proxies. If you enable `ingress` with
+  # another controller, replace this with that controller's namespace and pod
+  # labels, or its traffic is silently dropped.
+  # Selectors in one list item are ANDed (namespace AND pod); separate items are ORed.
+  ingressFrom:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: envoy-gateway-system
+      podSelector:
+        matchLabels:
+          app.kubernetes.io/name: envoy
+          app.kubernetes.io/component: proxy
 
 nodeSelector: {}
 tolerations: []

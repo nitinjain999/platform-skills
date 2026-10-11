@@ -1,9 +1,0 @@
----
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: my-app
-  labels:
-    name: my-app
-    toolkit.fluxcd.io/tenant: app-team
-    gateway-access: "true"  # Allows HTTPRoutes here to attach to platform-gateway

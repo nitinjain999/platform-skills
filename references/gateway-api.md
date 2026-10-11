@@ -100,27 +100,49 @@ Gateway API CRDs ship in two channels. **Standard** holds GA and beta fields. **
 |---|---|---|
 | Channel | Standard | Experimental fields can change incompatibly between minor versions |
 | Who installs the CRDs | One owner, separate from the controller | Two charts installing the same CRDs fight on every upgrade |
-| Deletion policy | `helm.sh/resource-policy: keep` | Deleting a CRD deletes every Gateway and HTTPRoute in the cluster |
+| How they are applied | Plain manifests (Flux `Kustomization` or `kubectl apply --server-side`), not a Helm release | The CRDs are multi-megabyte; a Helm release stores chart and manifest in a Secret capped at 1 MiB |
+| Deletion policy | Never garbage-collected: Flux `prune: false` + `deletionPolicy: Orphan` | Deleting a CRD deletes every Gateway and HTTPRoute in the cluster |
 
 **Envoy Gateway v1.9.2 specifics:**
 
 - The controller chart (`oci://docker.io/envoyproxy/gateway-helm`) bundles **experimental**-channel Gateway API CRDs by default (`crds.enabled: true`).
 - It also installs a ValidatingAdmissionPolicy that rejects experimental CRDs on top of standard ones. On a cluster that already has standard-channel CRDs, for example from another controller or a managed platform, the default install fails.
-- Use the separate CRD chart `oci://docker.io/envoyproxy/gateway-crds-helm` with `crds.gatewayAPI.channel: standard`, `crds.gatewayAPI.enabled: true` and `crds.envoyGateway.enabled: true`. Set `crds.enabled: false` on the controller chart.
+- Do not `helm install` the separate CRD chart (`gateway-crds-helm`) either. Its README says to `helm template … | kubectl apply --server-side` instead, because of a Helm limitation with large CRDs in `templates/`: the EnvoyProxy CRD alone is about 1.4 MB, and the rendered set is about 3.7 MB.
+- Apply plain CRDs instead: the Gateway API standard channel from `kubernetes-sigs/gateway-api` (`config/crd/standard` at the pinned tag), and the Envoy Gateway CRDs from the controller chart's own `charts/crds/crds/generated/` directory, which holds untemplated files. Set `crds.enabled: false` on the controller chart.
 - The controller detects which optional CRDs exist and skips the ones that are missing, so the standard channel is enough.
 
 ```yaml
-# Flux HelmRelease for the CRD chart: keep CRDs if the release is removed
-postRenderers:
-  - kustomize:
-      patches:
-        - target:
-            kind: CustomResourceDefinition
-          patch: |-
-            - op: add
-              path: /metadata/annotations/helm.sh~1resource-policy
-              value: keep
+# Flux: one Kustomization per CRD source, never pruned, never deleted with the Kustomization
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: gateway-api
+  namespace: flux-system
+spec:
+  interval: 12h
+  url: https://github.com/kubernetes-sigs/gateway-api
+  ref:
+    tag: v1.6.1
+  sparseCheckout:
+    - config/crd/standard
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: gateway-api-crds
+  namespace: flux-system
+spec:
+  interval: 1h
+  sourceRef:
+    kind: GitRepository
+    name: gateway-api
+  path: ./config/crd/standard
+  prune: false              # removing a CRD from the source never deletes it
+  deletionPolicy: Orphan    # deleting this Kustomization never deletes the CRDs
+  wait: true
 ```
+
+The Envoy Gateway CRDs follow the same shape, sourced from an `OCIRepository` of `oci://docker.io/envoyproxy/gateway-helm` with `layerSelector.operation: extract` and `path: ./gateway-helm/charts/crds/crds/generated`. Full working version: `examples/fluxcd/basic-monorepo/clusters/production/gateway-crds.yaml`.
 
 **Blast radius of a CRD upgrade:** cluster-wide. Every Gateway API consumer (other controllers, Linkerd routes, cert-manager) reads the same CRDs. Upgrade them in their own PR, after checking every consumer supports the new bundle version.
 
@@ -225,7 +247,9 @@ The solver's challenge route uses an `Exact` path match, so a catch-all HTTPS re
 A Gateway cannot be dry-run until its CRDs exist, so Gateway objects cannot live in the same Kustomization that installs the controller.
 
 ```
-infrastructure          → gateway-crds, envoy-gateway, cert-manager (HelmReleases)
+gateway-api-crds        → Gateway API standard CRDs (plain manifests, never pruned)
+envoy-gateway-crds      → Envoy Gateway CRDs (plain manifests, never pruned)
+infrastructure          → envoy-gateway, cert-manager (HelmReleases); dependsOn both CRD layers
 infrastructure-configs  → GatewayClass, EnvoyProxy, Gateway, redirect, ClusterIssuer
 apps                    → HTTPRoute per app
 ```
@@ -294,9 +318,9 @@ An empty list after the colon in the route check means every condition is `True`
 | Before DNS cutover | Delete the new routes; nothing user-facing changed | Immediate |
 | After cutover, ingress-nginx still running | Point DNS back at the ingress-nginx address | DNS TTL (lower it to 60s before cutover) |
 | After decommission | Reinstall ingress-nginx from the last Git revision; Flux re-applies the Ingress objects | Minutes to tens of minutes, plus DNS. Avoid by not decommissioning early |
-| Bad CRD upgrade | Revert the `gateway-crds` chart version in Git. CRDs marked `keep` are never deleted by the rollback | One reconcile interval |
+| Bad CRD upgrade | Revert the CRD source tag in Git. With `prune: false` the revert never deletes a CRD | One reconcile interval |
 
-Never roll back by deleting the CRD release. With `keep` set the CRDs stay, and without it every route in the cluster is deleted.
+Never roll back by deleting a CRD or the Kustomization that applies them. `deletionPolicy: Orphan` keeps the CRDs if the Kustomization goes, but a CRD deleted by hand takes every route in the cluster with it.
 
 ## Troubleshooting
 
@@ -309,7 +333,7 @@ Never roll back by deleting the CRD release. With `keep` set the CRDs stay, and 
 | Gateway `Programmed=False`, `AddressNotAssigned` | Runtime | No LoadBalancer implementation | `kubectl get svc -n envoy-gateway-system` stuck `<pending>` | Install one, or use a NodePort `EnvoyProxy` locally |
 | No Certificate for the Gateway | Reconciliation | cert-manager started before the CRDs; Gateway support off; listener missing `hostname` | cert-manager logs; `kubectl get certificate -n envoy-gateway-system` | Restart cert-manager; set `config.gatewayAPI.enabled: true`; add the hostname |
 | `infrastructure-configs` dry-run fails `no matches for kind "Gateway"` | Reconciliation | Configs layer does not depend on the CRD layer | `flux get kustomizations` | `dependsOn: infrastructure` |
-| Controller install fails on a ValidatingAdmissionPolicy | Chart rendering | Experimental CRDs over existing standard CRDs | Helm error mentions `safe-upgrades.gateway.networking.k8s.io` | Use the CRD chart on the standard channel; `crds.enabled: false` on the controller |
+| Controller install fails on a ValidatingAdmissionPolicy | Chart rendering | Experimental CRDs over existing standard CRDs | Helm error mentions `safe-upgrades.gateway.networking.k8s.io` | Apply standard-channel CRDs as plain manifests; `crds.enabled: false` on the controller |
 | Behaviour differs after cutover | Runtime | A dropped annotation or snippet | ingress2gateway warnings; annotation inventory | Re-express it as a filter or policy, or roll back DNS |
 
 ## Common mistakes

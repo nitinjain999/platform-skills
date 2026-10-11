@@ -47,6 +47,6 @@ helm test my-release -n payments
 - Resource requests and limits set on every container
 - Liveness and readiness probes defined
 - PDB enabled for `replicaCount >= 2`
-- NetworkPolicy: default-deny + explicit allow from Envoy Gateway proxies
+- NetworkPolicy: default-deny + explicit allow from Envoy Gateway proxies (`networkPolicy.ingressFrom`; change it if you enable `ingress` with another controller)
 - `values.schema.json` enforces types on critical values
 - `helm lint --strict` passes with zero warnings

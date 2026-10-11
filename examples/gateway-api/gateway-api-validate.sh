@@ -6,9 +6,22 @@
 # datreeio CRDs catalog, so a misspelled CRD field fails instead of being skipped.
 #
 # Usage: bash examples/gateway-api/gateway-api-validate.sh
-# Requires: kubectl (for `kubectl kustomize`); kubeconform optional
+# Requires: kubectl (for `kubectl kustomize`) and mikefarah yq v4
+#           (https://github.com/mikefarah/yq; the Python `yq` wrapper uses a
+#           different syntax and will not work). kubeconform is optional.
 
 set -euo pipefail
+
+# Fail fast with one clear message instead of a cascade of command-not-found
+# errors further down: every structural check below depends on yq v4.
+if ! command -v yq >/dev/null 2>&1; then
+  echo "FAIL: yq not found. Install mikefarah yq v4: https://github.com/mikefarah/yq#install"
+  exit 1
+fi
+if ! yq --version 2>&1 | grep -q 'mikefarah/yq.* v4\.'; then
+  echo "FAIL: found '$(yq --version 2>&1 | head -1)', need mikefarah yq v4: https://github.com/mikefarah/yq#install"
+  exit 1
+fi
 
 ERRORS=0
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -18,7 +31,8 @@ MONOREPO="$ROOT_DIR/examples/fluxcd/basic-monorepo"
 pass() { echo "  PASS: $1"; }
 fail() { echo "  FAIL: $1"; ERRORS=$((ERRORS + 1)); }
 
-CRD_CATALOG='https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
+# Pinned to the same catalog commit as .github/workflows/validate.yml
+CRD_CATALOG='https://raw.githubusercontent.com/datreeio/CRDs-catalog/63669a570e231d4f1f8396d229a1de512bcf0a34/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
 
 OVERLAYS=(
   infrastructure/production
@@ -137,36 +151,62 @@ echo "=== basic-monorepo: ordering and access contracts ==="
 
 EG_RELEASE="$MONOREPO/infrastructure/base/envoy-gateway/helmrelease.yaml"
 EG_SOURCE="$MONOREPO/infrastructure/base/envoy-gateway/ocirepository.yaml"
-EG_CRDS="$MONOREPO/infrastructure/base/envoy-gateway/helmrelease-crds.yaml"
 CM_RELEASE="$MONOREPO/infrastructure/base/cert-manager/helmrelease.yaml"
+APP_NAMESPACES="$MONOREPO/infrastructure/configs/base/app-namespaces.yaml"
 
-if [ -f "$EG_SOURCE" ] && [ "$(yq -N '.spec.ref.tag' "$EG_SOURCE" | sort -u)" = "v1.9.2" ]; then
-  pass "Envoy Gateway CRD and controller charts both pinned to v1.9.2"
+if [ -f "$EG_SOURCE" ] && [ "$(yq -N '.spec.ref.tag' "$EG_SOURCE")" = "v1.9.2" ]; then
+  pass "Envoy Gateway controller chart pinned to v1.9.2"
 else
   fail "Envoy Gateway OCIRepository missing or not pinned to v1.9.2"
 fi
 
-# cert-manager ignores Gateways if the Gateway API CRDs appear after it starts.
-if [ -f "$CM_RELEASE" ] && [ "$(yq '.spec.dependsOn[].name' "$CM_RELEASE")" = "gateway-crds" ]; then
-  pass "cert-manager HelmRelease dependsOn gateway-crds (CRDs exist first)"
+# The CRDs are too large for a Helm release Secret (1 MiB), so they must be
+# plain Flux Kustomizations, and the controller chart must not install them.
+if grep -rqE '^  name: gateway-crds$' "$MONOREPO/infrastructure" 2>/dev/null; then
+  fail "a gateway-crds HelmRelease is back in infrastructure/: CRDs exceed the Helm release size limit"
 else
-  fail "cert-manager HelmRelease must dependsOn gateway-crds"
+  pass "no Helm release manages the Gateway CRDs"
+fi
+if [ "$(yq '.spec.values.crds.enabled' "$EG_RELEASE")" = "false" ]; then
+  pass "envoy-gateway chart does not install its bundled experimental CRDs"
+else
+  fail "envoy-gateway must set values.crds.enabled: false"
 fi
 
-# The controller chart bundles experimental-channel CRDs; they must stay off.
-if [ -f "$EG_CRDS" ] && [ "$(yq '.spec.values.crds.gatewayAPI.channel' "$EG_CRDS")" = "standard" ] \
-    && [ "$(yq '.spec.values.crds.enabled' "$EG_RELEASE")" = "false" ]; then
-  pass "Gateway API CRDs are standard channel, owned by gateway-crds only"
-else
-  fail "gateway-crds must set channel: standard and envoy-gateway must set crds.enabled: false"
-fi
-
-# Deleting a CRD deletes every Gateway and HTTPRoute; Helm must keep them.
-if [ -f "$EG_CRDS" ] && [ "$(yq '.spec.postRenderers[].kustomize.patches[] | select(.target.kind == "CustomResourceDefinition") | .patch' "$EG_CRDS" | grep -c 'resource-policy')" -ge 1 ]; then
-  pass "gateway-crds post-renderer marks CRDs helm.sh/resource-policy: keep"
-else
-  fail "gateway-crds must post-render helm.sh/resource-policy: keep onto CRDs"
-fi
+for env in production staging; do
+  crds="$MONOREPO/clusters/$env/gateway-crds.yaml"
+  infra="$MONOREPO/clusters/$env/infrastructure.yaml"
+  if [ ! -f "$crds" ]; then
+    fail "clusters/$env/gateway-crds.yaml missing"
+    continue
+  fi
+  # Standard channel from the pinned Gateway API release, EG CRDs from the same
+  # pinned chart artifact as the controller, never the experimental file.
+  if [ "$(yq -N 'select(.kind == "GitRepository") | .spec.ref.tag' "$crds")" = "v1.6.1" ] \
+      && [ "$(yq -N 'select(.kind == "Kustomization" and .metadata.name == "gateway-api-crds") | .spec.path' "$crds")" = "./config/crd/standard" ]; then
+    pass "$env: Gateway API CRDs are the standard channel of v1.6.1"
+  else
+    fail "$env: gateway-api-crds must apply ./config/crd/standard from tag v1.6.1"
+  fi
+  if [ "$(yq -N 'select(.kind == "OCIRepository") | .spec.ref.tag' "$crds")" = "v1.9.2" ] \
+      && [ "$(yq -N 'select(.kind == "Kustomization" and .metadata.name == "envoy-gateway-crds") | .spec.path' "$crds")" = "./gateway-helm/charts/crds/crds/generated" ]; then
+    pass "$env: Envoy Gateway CRDs come from the v1.9.2 chart's generated/ dir only"
+  else
+    fail "$env: envoy-gateway-crds must apply ./gateway-helm/charts/crds/crds/generated from tag v1.9.2"
+  fi
+  # Deleting a CRD deletes every Gateway and HTTPRoute in the cluster.
+  if [ "$(yq -N 'select(.kind == "Kustomization") | (.spec.prune == false and .spec.deletionPolicy == "Orphan")' "$crds" | sort -u)" = "true" ]; then
+    pass "$env: CRD Kustomizations never delete CRDs (prune: false, deletionPolicy: Orphan)"
+  else
+    fail "$env: every CRD Kustomization needs prune: false and deletionPolicy: Orphan"
+  fi
+  # cert-manager ignores Gateways if the CRDs appear after it starts.
+  if [ "$(yq -N '.spec.dependsOn[].name' "$infra" | sort | tr '\n' ' ')" = "envoy-gateway-crds gateway-api-crds " ]; then
+    pass "$env: infrastructure dependsOn both CRD Kustomizations (CRDs before cert-manager starts)"
+  else
+    fail "$env: clusters/$env/infrastructure.yaml must dependsOn gateway-api-crds and envoy-gateway-crds"
+  fi
+done
 
 if [ -f "$CM_RELEASE" ] && [ "$(yq '.spec.values.config.gatewayAPI.enabled' "$CM_RELEASE" 2>/dev/null)" = "true" ]; then
   pass "cert-manager config.gatewayAPI.enabled is true"
@@ -180,10 +220,18 @@ else
   fail "Envoy Gateway HelmRelease missing chartRef kind: OCIRepository"
 fi
 
-if grep -q 'gateway-access: "true"' "$MONOREPO/apps/base/namespace.yaml"; then
+if [ -f "$APP_NAMESPACES" ] && grep -q 'gateway-access: "true"' "$APP_NAMESPACES"; then
   pass "app namespace opts in to the shared Gateway (gateway-access label)"
 else
-  fail "apps/base/namespace.yaml missing gateway-access: \"true\" — HTTPRoute will be NotAllowedByListeners"
+  fail "infrastructure/configs/base/app-namespaces.yaml missing gateway-access: \"true\" — HTTPRoute will be NotAllowedByListeners"
+fi
+
+# The opt-in label is the access control for the production listener, so the
+# app layer must not be able to create or relabel Namespaces itself.
+if grep -rlE '^kind: Namespace$' "$MONOREPO/apps" >/dev/null 2>&1; then
+  fail "apps/ defines a Namespace: an app team could grant itself gateway-access; create namespaces in infrastructure/configs"
+else
+  pass "app namespaces (and their gateway-access label) are owned by the platform layer"
 fi
 
 for env in production staging; do

@@ -43,7 +43,7 @@ spec:
     multitenant: false      # enables cross-namespace reference restrictions
     tenantDefaultServiceAccount: flux-reconciler
     networkPolicy: true     # adds NetworkPolicies to flux-system
-    clusterDomain: "cluster.local"
+    domain: "cluster.local"     # field is cluster.domain
   components:
     - source-controller
     - kustomize-controller

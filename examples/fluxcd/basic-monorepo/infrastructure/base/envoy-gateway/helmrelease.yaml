@@ -6,8 +6,6 @@ metadata:
   namespace: envoy-gateway-system
 spec:
   interval: 30m
-  dependsOn:
-    - name: gateway-crds
   chartRef:
     kind: OCIRepository
     name: envoy-gateway
@@ -25,7 +23,7 @@ spec:
     keepHistory: false
   values:
     crds:
-      enabled: false  # Owned by the gateway-crds HelmRelease
+      enabled: false  # Owned by the gateway-crds Flux Kustomizations (clusters/*/gateway-crds.yaml)
     # Control plane only. Envoy proxy replicas are set per GatewayClass through
     # the EnvoyProxy resource in infrastructure/configs.
     deployment:

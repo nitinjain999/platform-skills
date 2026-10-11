@@ -1,20 +1,6 @@
 ---
-# Envoy Gateway publishes its charts only as OCI artifacts, so they are pulled
-# with OCIRepository and referenced from each HelmRelease via chartRef.
-apiVersion: source.toolkit.fluxcd.io/v1
-kind: OCIRepository
-metadata:
-  name: gateway-crds
-  namespace: envoy-gateway-system
-spec:
-  interval: 12h
-  url: oci://docker.io/envoyproxy/gateway-crds-helm
-  ref:
-    tag: v1.9.2  # Pinned. Must match the controller version below
-  layerSelector:
-    mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
-    operation: copy
----
+# Envoy Gateway publishes its chart only as an OCI artifact, so it is pulled
+# with an OCIRepository and referenced from the HelmRelease via chartRef.
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: OCIRepository
 metadata:

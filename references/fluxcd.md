@@ -277,12 +277,13 @@ kind: ResourceSetInputProvider
 metadata:
   name: tenant-tags
   namespace: flux-system
+  annotations:
+    fluxcd.controlplane.io/reconcileEvery: "5m"  # polling interval; there is no spec.interval
 spec:
   type: OCIArtifactTag
   url: "oci://ghcr.io/my-org/tenant-app"
   filter:
     semver: "1.x"
-  interval: 5m
   secretRef:
     name: registry-auth
 ```
@@ -482,12 +483,13 @@ kind: ResourceSetInputProvider
 metadata:
   name: app-image-tag
   namespace: flux-system
+  annotations:
+    fluxcd.controlplane.io/reconcileEvery: "5m"  # polling interval; there is no spec.interval
 spec:
   type: OCIArtifactTag
   url: "oci://ghcr.io/my-org/my-app"
   filter:
     semver: "1.x"
-  interval: 5m
   secretRef:
     name: registry-auth
 ---

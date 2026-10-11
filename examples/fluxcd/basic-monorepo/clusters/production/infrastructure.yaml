@@ -23,3 +23,6 @@ spec:
       kind: Deployment
       name: cert-manager
       namespace: cert-manager
+  dependsOn:
+    - name: gateway-api-crds
+    - name: envoy-gateway-crds
