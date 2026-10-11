@@ -7,7 +7,7 @@ Velero on EKS, managed by Flux: nightly backups of every namespace with EBS snap
 | File | What it is |
 |---|---|
 | `velero/helmrelease.yaml` | Velero chart 12.2.1 (Velero 1.18.2) with velero-plugin-for-aws 1.14.3, an S3 backup location and EBS snapshot location in `eu-north-1`, IRSA, and a `nightly` schedule kept 30 days |
-| `iam-policy.json` | The plugin's documented permissions, with S3 scoped to the backup bucket and EC2 limited to one region |
+| `iam-policy.json` | The plugin's actions, scoped: S3 to the backup bucket, `Describe*` to one region, and snapshot create, restore and delete to snapshots tagged `velero.io/backup` (Velero 1.18 tags every snapshot it takes), so the role cannot delete snapshots it did not create |
 | `restore-drill.sh` | Restores one namespace from the latest completed scheduled backup into `<ns>-drill`, waits for every pod to be Ready, reports the time taken, and deletes the drill namespace |
 
 A backup you have never restored is a hope, not a recovery plan. Run the drill on a schedule and after any change to storage, CSI drivers or Velero itself:
@@ -16,7 +16,7 @@ A backup you have never restored is a hope, not a recovery plan. Run the drill o
 bash examples/backup-dr/restore-drill.sh --namespace my-app
 ```
 
-The drill excludes HTTPRoutes and Ingresses, so the restored copy never takes a production hostname. In the basic-monorepo layout the HTTPS listener only accepts routes from `my-app` anyway, so a stray route from `my-app-drill` would be rejected.
+The drill excludes HTTPRoutes, Ingresses and Services from the restore, so the copy never takes a production hostname. It then recreates each Service as an internal ClusterIP (or headless) copy with the same selector and ports, so in-namespace DNS still works. A Service restored as it was could provision a new public load balancer (type `LoadBalancer`) or open a port on every node (`NodePort`). The script needs `jq` for that step. In the basic-monorepo layout the HTTPS listener only accepts routes from `my-app` anyway, so a stray route from `my-app-drill` would be rejected.
 
 Pair it with `/platform-skills:chaos`: run a GameDay that deletes the namespace, then run this drill as the recovery step and compare the measured time with your recovery-time objective.
 

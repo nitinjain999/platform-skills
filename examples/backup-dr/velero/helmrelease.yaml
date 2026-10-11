@@ -17,9 +17,14 @@ spec:
       interval: 12h
   install:
     crds: CreateReplace
+    remediation:
+      retries: 3          # retry a failed install before giving up
   upgrade:
     crds: CreateReplace
     cleanupOnFail: true
+    remediation:
+      retries: 3
+      remediateLastFailure: true  # roll back if the last retry also failed
   values:
     # Velero 1.18.x pairs with velero-plugin-for-aws 1.14.x
     initContainers:

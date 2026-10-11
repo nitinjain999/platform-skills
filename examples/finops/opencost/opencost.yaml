@@ -31,6 +31,14 @@ spec:
         name: opencost
         namespace: opencost
       interval: 12h
+  install:
+    remediation:
+      retries: 3          # retry a failed install before giving up
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+      remediateLastFailure: true  # roll back if the last retry also failed
   values:
     opencost:
       exporter:

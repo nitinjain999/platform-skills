@@ -28,8 +28,9 @@ Read `references/progressive-delivery.md` before responding. It holds how a Flag
 1. Start from `examples/progressive-delivery/app/canary.yaml`. Set `targetRef`, `service.port` and `targetPort`, `hosts`, and `gatewayRefs` (the Gateway and `sectionName` for north-south; the Service for Linkerd east-west).
 2. Add `autoscalerRef` when the app has an HPA.
 3. Pick `interval`, `stepWeight`, `maxWeight` and `threshold` from the app's traffic: a check needs enough requests per `interval` to be meaningful; a low-traffic app needs a load-test webhook or a longer interval.
-4. Remove the app's hand-written `HTTPRoute` in the same change; say so explicitly.
-5. Validate with `kubeconform -strict` against the CRD catalog, as the example README shows.
+4. If the Canary has webhooks, include `examples/progressive-delivery/app/loadtester.yaml` in the app namespace; the webhook URL must name that Service.
+5. Remove the app's hand-written `HTTPRoute` in the same change; say so explicitly.
+6. Validate with `kubeconform -strict` against the CRD catalog, as the example README shows.
 
 ## Mode: rollback
 

@@ -27,7 +27,7 @@ Flagger runs as a Flux component (published under `fluxcd/`, signed OCI artifact
 
 1. You commit a new image (or any pod-spec change) to the `Deployment` in Git; Flux applies it.
 2. Flagger notices the change (to the pod template, or to a ConfigMap or Secret it references). It keeps serving production from `<app>-primary` (which it created from the Deployment on first adoption) and scales the target up as the canary.
-3. It runs `pre-rollout` webhooks (smoke tests), then moves `stepWeight`% of traffic to the canary every `interval`, up to `maxWeight`.
+3. It runs `pre-rollout` webhooks (smoke tests), then moves `stepWeight`% of traffic to the canary every `interval`, up to `maxWeight`. Webhooks of `type: bash` or `cmd` run in Flagger's loadtester, a separate chart (`loadtester` from `https://flagger.app`) installed in the app namespace; without it every rollout fails its first webhook.
 4. At each step it evaluates the metrics. A failed check counts towards `threshold`; reaching it aborts, sets weight back to 0 and scales the canary down: **automatic rollback**.
 5. When `maxWeight` passes, Flagger copies the canary spec to the primary and routes 100% back to the primary: **promotion**.
 
@@ -73,6 +73,6 @@ The metric decides promotion, so it must measure the canary pods only. Linkerd's
 | Symptom | Likely cause | Check |
 |---|---|---|
 | Canary stuck `Progressing`, then rolled back with no traffic | Metric query returns no data | Run the MetricTemplate query in Prometheus with the canary's name |
-| Every release rolls back at the first step | Smoke-test webhook failing, or the canary Service has no ready endpoints | Flagger events: `kubectl -n <ns> describe canary <name>` |
+| Every release rolls back at the first step | Smoke-test webhook failing (including no loadtester at the webhook URL), or the canary Service has no ready endpoints | Flagger events: `kubectl -n <ns> describe canary <name>` |
 | Traffic never shifts | Hand-written HTTPRoute still bound to the hostname, or wrong `sectionName` | `kubectl get httproute -n <ns>` and the route's `.status.parents` |
 | Canary never starts | Nothing Flagger tracks changed | An analysis starts on a change to the pod template or to a ConfigMap or Secret the pods reference |

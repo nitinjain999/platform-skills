@@ -2,9 +2,10 @@
 # tests/plugin-evals-structure.sh — free, model-free checks on plugin-evals/.
 #
 # Catches the mistakes that otherwise only show up as a failed (and billed)
-# `claude plugin eval` run: frontmatter that does not parse, unknown keys,
-# regex graders that do not compile, a case without a grader, a case without a
-# skill-fired check, and a case tag the runner's domain map never selects.
+# `claude plugin eval` run: frontmatter that does not parse, unknown keys, a
+# missing or unknown grader type, regex graders that do not compile, a case
+# without a grader, a case without a skill-fired check, and a case tag the
+# runner's domain map never selects.
 #
 # Run from the repository root: bash tests/plugin-evals-structure.sh
 
@@ -43,6 +44,9 @@ GRADER_KEYS = {"type", "weight", "arm",
                "tool", "input_match", "min", "max",              # tool_used
                "before", "after", "path", "exists",              # tool_order, file_exists
                "criteria", "focus", "baseline_file"}             # llm, baseline
+# The loader's discriminator (claude plugin eval rejects anything else with
+# "Invalid discriminator value"); checked here so CI fails before a billed run.
+GRADER_TYPES = {"regex", "tool_order", "tool_used", "file_exists", "llm", "baseline"}
 runner = open("tests/plugin-evals.sh", encoding="utf-8").read()
 mapped_tags = set(re.findall(r"\t([a-z][a-z0-9-]*)\n", runner))
 
@@ -69,6 +73,8 @@ for case in cases:
         for k in set(gfm) - GRADER_KEYS:
             fail(f"{g}: unknown grader key {k!r}")
         t = gfm.get("type")
+        if t not in GRADER_TYPES:
+            fail(f"{g}: grader type {t!r} is not one of {sorted(GRADER_TYPES)}")
         if t == "regex":
             pat = gfm.get("pattern")
             if not pat:

@@ -34,7 +34,7 @@ Covers all `/platform-skills:backup-dr` mode logic: Velero install and configura
 | Decision | Recommendation | Reason |
 |---|---|---|
 | Credentials | IRSA or EKS Pod Identity, `credentials.useSecret: false` | No long-lived access key in the cluster |
-| IAM | The plugin's documented actions, S3 scoped to one bucket, EC2 limited by `aws:RequestedRegion` | The Describe calls need `"Resource": "*"`; narrow everything else |
+| IAM | The plugin's actions, S3 scoped to one bucket, `Describe*` limited by `aws:RequestedRegion`, snapshot create, restore and delete limited to snapshots tagged `velero.io/backup` | Only the Describe calls need `"Resource": "*"`. Velero tags every snapshot with `velero.io/backup` and `velero.io/pv`, so a `Null` condition on that tag key stops a compromised role from deleting snapshots it did not take |
 | Bucket | Versioning and Object Lock or a deny-delete policy for anyone but Velero; in another account for DR | Ransomware and a compromised cluster credential must not be able to delete backups |
 | Schedule | Nightly for all namespaces, more often for namespaces whose data changes fast | The schedule interval is your recovery point |
 | Retention | `ttl` on the schedule template (`720h` = 30 days) | Velero garbage-collects expired backups |
@@ -45,7 +45,7 @@ Covers all `/platform-skills:backup-dr` mode logic: Velero install and configura
 A backup that has never been restored is untested. The drill (`examples/backup-dr/restore-drill.sh`):
 
 1. Picks the latest backup created by the schedule (label `velero.io/schedule-name`) and refuses anything not `Completed`.
-2. Restores one namespace into `<namespace>-drill` with `--namespace-mappings`, excluding HTTPRoutes and Ingresses so the copy never receives production traffic.
+2. Restores one namespace into `<namespace>-drill` with `--namespace-mappings`, excluding HTTPRoutes, Ingresses and Services, then recreates each Service as an internal ClusterIP (or headless) copy. The copy cannot claim a production hostname, provision a load balancer or open a node port.
 3. Waits for every pod to be Ready and reports the elapsed time: the measured recovery time for that namespace.
 4. Deletes the drill namespace.
 

@@ -1,0 +1,40 @@
+---
+# Flagger's loadtester runs the Canary's webhooks (the pre-rollout smoke test
+# in canary.yaml). It is a separate chart from the controller and must run in
+# the app namespace: the webhook URL is http://flagger-loadtester.my-app/.
+# Flagger publishes only the controller chart as a signed OCI artifact; the
+# loadtester chart comes from the flagger.app Helm repository.
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: flagger
+  namespace: my-app
+spec:
+  interval: 12h
+  url: https://flagger.app
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  # The chart names its Service after the release when the release name
+  # contains "loadtester", so this yields Service flagger-loadtester.
+  name: flagger-loadtester
+  namespace: my-app
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: loadtester
+      version: '0.39.0'  # Released with Flagger 1.45.0. Pinned; upgrade is an explicit PR
+      sourceRef:
+        kind: HelmRepository
+        name: flagger
+      interval: 12h
+  install:
+    remediation:
+      retries: 3          # retry a failed install before giving up
+  upgrade:
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+      remediateLastFailure: true  # roll back if the last retry also failed

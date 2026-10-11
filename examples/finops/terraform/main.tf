@@ -18,7 +18,9 @@ variable "required_tags" {
 
   validation {
     condition = alltrue([
-      for k in ["owner", "cost-center", "environment"] : contains(keys(var.required_tags), k) && length(trimspace(var.required_tags[k])) > 0
+      # try(): Terraform before 1.12 evaluates both sides of &&, so a missing key
+      # would fail with "Invalid index" instead of this error_message.
+      for k in ["owner", "cost-center", "environment"] : try(length(trimspace(var.required_tags[k])) > 0, false)
     ])
     error_message = "required_tags must set non-empty owner, cost-center and environment."
   }

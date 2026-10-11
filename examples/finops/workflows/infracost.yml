@@ -34,5 +34,8 @@ jobs:
         uses: infracost/actions/diff@fb736a8f219195d6efdca58682069b16fe1bc280  # v4.2.0
         with:
           api-key: ${{ secrets.INFRACOST_API_KEY }}
+          # The action pin does not pin the scanner: version defaults to "latest",
+          # resolved at run time. Pin it and upgrade deliberately.
+          version: 0.2.10
           base-path: base
           head-path: head

@@ -3,8 +3,8 @@
 #
 # Checks the Agent Skills constraints the other tools rely on (name equals the
 # directory, lowercase 1-64 chars; description 1-1024 chars), that every skill
-# was rendered, that no Claude-only "/platform-skills:" reference or docs-site
-# key leaked through, that every references/<file>.md a skill mentions resolves
+# was rendered, that no Claude-only "/platform-skills:" reference, userConfig
+# placeholder or docs-site key leaked through (frontmatter included), that every references/<file>.md a skill mentions resolves
 # inside the rendered skill, and that re-rendering leaves foreign skills alone.
 #
 # Run from the repository root: bash tests/render-skills.sh
@@ -43,10 +43,14 @@ for d in sorted(got):
     if not 1 <= len(fm.get("description", "")) <= 1024:
         errors.append(f"{d}: description must be 1-1024 chars, got {len(fm.get('description',''))}")
     body = m.group(2)
-    if "${user_config." in body:
-        errors.append(f"{d}: Claude-only ${{user_config.*}} placeholder left in the body")
-    if "/platform-skills:" in body:
-        errors.append(f"{d}: Claude-only /platform-skills: reference left in the body")
+    # The whole file, frontmatter included: a description is what these tools
+    # match on, so a Claude-only reference there is as wrong as one in the body.
+    if "${user_config." in text:
+        errors.append(f"{d}: Claude-only ${{user_config.*}} placeholder left in the skill")
+    if re.search(r"\(not configured: [A-Za-z0-9_]+\)", text):
+        errors.append(f"{d}: userConfig rendered as a sentinel; skills only recognise an empty value")
+    if "/platform-skills:" in text:
+        errors.append(f"{d}: Claude-only /platform-skills: reference left in the skill")
     for ref in set(re.findall(r"references/([A-Za-z0-9._-]+\.md)", body)):
         if os.path.isfile(f"references/{ref}") and not os.path.isfile(f"{out}/{d}/references/{ref}"):
             errors.append(f"{d}: mentions references/{ref} but it was not copied beside the skill")

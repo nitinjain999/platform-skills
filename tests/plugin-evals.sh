@@ -10,16 +10,24 @@
 #   bash tests/plugin-evals.sh --changed origin/main   # only domains this branch touched (PR mode)
 #   bash tests/plugin-evals.sh --all                   # every case (nightly mode)
 # Options:
-#   --runs N             runs per case per arm (default 1 for --changed, 3 for --all)
+#   --runs N             runs per case per arm (default 1 for --changed, 2 for --all)
 #   --ablation MODE      none | with-without (default none for --changed, with-without for --all)
-#   --max-cost-usd X     hard ceiling for this invocation (default 3)
+#   --max-cost-usd X     hard ceiling for this invocation (default 3 for --changed,
+#                        6 for --all: six cases cost about $2.40 per with+without
+#                        run pair, so 2 runs is about $4.80)
 #   --model M            pin the agent model (recommended in CI)
 #   --judge-model M      pin the judge model (only llm/baseline graders use it)
 #   --update-baseline    write the scores of this run to plugin-evals/baseline.json
 #   --dry-run            print the selected tags and the claude command; no model call
 #
-# Exit codes: 0 pass or nothing to evaluate, 1 below floor / regressed / load
-# error, 2 partial run (cost ceiling or credential), 3 bad usage or prerequisites.
+# A case also fails when its tool_used Skill grader failed in any run of the
+# with-plugin arm: a correct answer that did not come from the plugin is not a
+# pass. Under with-without the CLI does not score that grader at all, so the
+# check is made here rather than through the score.
+#
+# Exit codes: 0 pass or nothing to evaluate, 1 below floor / regressed / skill
+# not fired / load error, 2 partial run (cost ceiling or credential), 3 bad usage
+# or prerequisites.
 
 set -euo pipefail
 
@@ -28,7 +36,7 @@ cd "$ROOT_DIR"
 EVAL_DIR="plugin-evals"
 BASELINE="$EVAL_DIR/baseline.json"
 
-MODE="" BASE_REF="" RUNS="" ABLATION="" COST="3" MODEL="" JUDGE="" UPDATE=0 DRY=0
+MODE="" BASE_REF="" RUNS="" ABLATION="" COST="" MODEL="" JUDGE="" UPDATE=0 DRY=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --changed) MODE=changed; BASE_REF="${2:?--changed needs a base ref}"; shift 2 ;;
@@ -40,28 +48,28 @@ while [ $# -gt 0 ]; do
     --judge-model) JUDGE="${2:?}"; shift 2 ;;
     --update-baseline) UPDATE=1; shift ;;
     --dry-run) DRY=1; shift ;;
-    -h|--help) sed -n '2,25p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,30p' "$0"; exit 0 ;;
     *) echo "unknown option: $1" >&2; exit 3 ;;
   esac
 done
 [ -n "$MODE" ] || { echo "choose --changed <base-ref> or --all" >&2; exit 3; }
-[ "$MODE" = all ] && RUNS="${RUNS:-3}" ABLATION="${ABLATION:-with-without}"
-[ "$MODE" = changed ] && RUNS="${RUNS:-1}" ABLATION="${ABLATION:-none}"
+[ "$MODE" = all ] && RUNS="${RUNS:-2}" ABLATION="${ABLATION:-with-without}" COST="${COST:-6}"
+[ "$MODE" = changed ] && RUNS="${RUNS:-1}" ABLATION="${ABLATION:-none}" COST="${COST:-3}"
 
 command -v claude >/dev/null 2>&1 || { echo "claude CLI not found" >&2; exit 3; }
 command -v python3 >/dev/null 2>&1 || { echo "python3 not found" >&2; exit 3; }
 
 # Domain map: changed path (extended regex) -> eval tag. A change to anything
-# that shapes every answer (the router skill, the manifest, the suite itself)
-# runs every case.
+# that shapes every answer (the router skill, the manifest, the suite itself,
+# this runner) runs every case.
 DOMAIN_MAP='
-^(skills/(fluxcd|gitops)/|references/fluxcd[^/]*\.md$)	fluxcd
-^(skills/opa/|references/opa\.md$)	opa
+^(skills/(fluxcd|gitops)/|references/fluxcd[^/]*\.md$|examples/fluxcd/)	fluxcd
+^(skills/opa/|references/opa\.md$|examples/opa/)	opa
 ^(skills/(triage|pr-review)/|references/triage\.md$|examples/triage/)	triage
 ^(skills/(secrets|kubernetes)/|references/secrets\.md$)	secrets
 ^(skills/(kyverno|opa|kubernetes)/|references/kyverno\.md$)	kyverno
 ^(skills/(openshift|kubernetes)/|references/openshift\.md$)	openshift
-^(skills/platform-skills/|SKILL\.md$|\.claude-plugin/plugin\.json$|plugin-evals/)	ALL
+^(skills/platform-skills/|SKILL\.md$|\.claude-plugin/plugin\.json$|plugin-evals/|tests/plugin-evals\.sh$)	ALL
 '
 
 TAGS=()
@@ -116,10 +124,19 @@ for case in res.get("cases", []):
     agg = case.get("aggregates", {})
     score = agg.get("score", 0.0)
     ref = base["cases"].get(name, {}).get("score")
-    errors = [r.get("error") for r in case.get("arms", {}).get("with", []) if r.get("error")]
+    with_runs = case.get("arms", {}).get("with", [])
+    errors = [r.get("error") for r in with_runs if r.get("error")]
+    skill = {g["name"] for g in case.get("graders", [])
+             if g.get("type") == "tool_used" and g.get("config", {}).get("tool") == "Skill"}
+    fired = sum(1 for r in with_runs
+                if any(g.get("name") in skill and g.get("passed") for g in r.get("graders", [])))
     verdict = "ok"
     if errors:
         verdict = f"FAIL run error: {errors[0]}"
+    elif not skill:
+        verdict = "FAIL no tool_used Skill grader in the result"
+    elif fired < len(with_runs):
+        verdict = f"FAIL plugin skill fired in {fired}/{len(with_runs)} runs"
     elif score < floor:
         verdict = f"FAIL below floor {floor}"
     elif ref is not None and score < ref - tol:

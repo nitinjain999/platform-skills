@@ -11,8 +11,10 @@
 #     with any when_to_use appended to it,
 #     argument-hint); the docs-site keys (title, sidebar_label, custom_edit_url)
 #     are dropped
-#   - "/platform-skills:<name>" cross-references become "/platform-skills-<name>"
-#   - ${user_config.KEY} placeholders (Claude plugin only) become "(not configured: KEY)"
+#   - "/platform-skills:<name>" cross-references become "/platform-skills-<name>",
+#     in the description as well as the body
+#   - ${user_config.KEY} placeholders (Claude plugin only) become empty, which
+#     is what each skill already treats as "not configured, ask the user"
 #   - every references/<file>.md a skill mentions is copied into that skill's
 #     own references/ directory, so the relative path in the text resolves
 #
@@ -39,8 +41,16 @@ for d in os.listdir(dest):
     if d == PREFIX or d.startswith(PREFIX + "-"):
         shutil.rmtree(os.path.join(dest, d))
 
+def portable(text):
+    # Applied to the whole file, frontmatter included: descriptions name other
+    # skills too, and that text is what these tools match on.
+    text = re.sub(r"/platform-skills:([a-z0-9-]+)", lambda mm: f"/{target_name(mm.group(1))}", text)
+    # userConfig values are substituted by the Claude plugin only. Render them
+    # empty: every skill that reads one treats an empty value as not configured.
+    return re.sub(r"\$\{user_config\.[A-Za-z0-9_]+\}", "", text)
+
 for name in skills:
-    text = open(f"{root}/skills/{name}/SKILL.md", encoding="utf-8").read()
+    text = portable(open(f"{root}/skills/{name}/SKILL.md", encoding="utf-8").read())
     m = re.match(r"---\n(.*?)\n---\n(.*)", text, re.S)
     if not m:
         sys.exit(f"skills/{name}/SKILL.md: no frontmatter")
@@ -60,10 +70,6 @@ for name in skills:
             kept.append(f"description: {desc}")
         elif field in KEEP:
             kept.append(line)
-    body = re.sub(r"/platform-skills:([a-z0-9-]+)", lambda mm: f"/{target_name(mm.group(1))}", body)
-    # userConfig values are substituted by the Claude plugin only; elsewhere the
-    # placeholder would be read literally, so say plainly that it is not set.
-    body = re.sub(r"\$\{user_config\.([A-Za-z0-9_]+)\}", lambda mm: f"(not configured: {mm.group(1)})", body)
     out_dir = os.path.join(dest, target_name(name))
     os.makedirs(out_dir)
     with open(os.path.join(out_dir, "SKILL.md"), "w", encoding="utf-8") as f:

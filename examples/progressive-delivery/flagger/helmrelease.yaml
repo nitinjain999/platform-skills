@@ -11,8 +11,14 @@ spec:
     name: flagger
   install:
     crds: CreateReplace
+    remediation:
+      retries: 3          # retry a failed install before giving up
   upgrade:
     crds: CreateReplace
+    cleanupOnFail: true
+    remediation:
+      retries: 3
+      remediateLastFailure: true  # roll back if the last retry also failed
   values:
     # Shift traffic by rewriting Gateway API HTTPRoute weights. Works with the
     # shared Envoy Gateway (north-south) and with Linkerd's HTTPRoute support.

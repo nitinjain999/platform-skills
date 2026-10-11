@@ -2,19 +2,69 @@
   "Version": "2012-10-17",
   "Statement": [
     {
-      "Sid": "EbsSnapshotsInOneRegion",
+      "Sid": "DescribeInOneRegion",
       "Effect": "Allow",
       "Action": [
         "ec2:DescribeVolumes",
-        "ec2:DescribeSnapshots",
-        "ec2:CreateTags",
-        "ec2:CreateVolume",
-        "ec2:CreateSnapshot",
-        "ec2:DeleteSnapshot"
+        "ec2:DescribeSnapshots"
       ],
       "Resource": "*",
       "Condition": {
         "StringEquals": { "aws:RequestedRegion": "eu-north-1" }
+      }
+    },
+    {
+      "Sid": "SnapshotAnyVolume",
+      "Effect": "Allow",
+      "Action": "ec2:CreateSnapshot",
+      "Resource": "arn:aws:ec2:eu-north-1:111122223333:volume/*"
+    },
+    {
+      "Sid": "CreateOnlyVeleroTaggedSnapshots",
+      "Effect": "Allow",
+      "Action": "ec2:CreateSnapshot",
+      "Resource": "arn:aws:ec2:eu-north-1::snapshot/*",
+      "Condition": {
+        "Null": { "aws:RequestTag/velero.io/backup": "false" }
+      }
+    },
+    {
+      "Sid": "RestoreOnlyFromVeleroSnapshots",
+      "Effect": "Allow",
+      "Action": "ec2:CreateVolume",
+      "Resource": "arn:aws:ec2:eu-north-1::snapshot/*",
+      "Condition": {
+        "Null": { "aws:ResourceTag/velero.io/backup": "false" }
+      }
+    },
+    {
+      "Sid": "RestoredVolumesCarryTheBackupTag",
+      "Effect": "Allow",
+      "Action": "ec2:CreateVolume",
+      "Resource": "arn:aws:ec2:eu-north-1:111122223333:volume/*",
+      "Condition": {
+        "Null": { "aws:RequestTag/velero.io/backup": "false" }
+      }
+    },
+    {
+      "Sid": "TagOnlyWhileCreating",
+      "Effect": "Allow",
+      "Action": "ec2:CreateTags",
+      "Resource": [
+        "arn:aws:ec2:eu-north-1::snapshot/*",
+        "arn:aws:ec2:eu-north-1:111122223333:volume/*"
+      ],
+      "Condition": {
+        "StringEquals": { "ec2:CreateAction": ["CreateSnapshot", "CreateVolume"] }
+      }
+    },
+    {
+      "Sid": "DeleteOnlyVeleroSnapshots",
+      "Effect": "Allow",
+      "Action": "ec2:DeleteSnapshot",
+      "Resource": "arn:aws:ec2:eu-north-1::snapshot/*",
+      "Condition": {
+        "Null": { "aws:ResourceTag/velero.io/backup": "false" }
       }
     },
     {

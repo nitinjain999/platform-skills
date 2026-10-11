@@ -58,6 +58,12 @@ else
   fail "unpinned uses: in infracost.yml: $unpinned"
 fi
 
+if grep -qE '^[[:space:]]+version:[[:space:]]*[0-9]+\.[0-9]+\.[0-9]+[[:space:]]*$' "$DIR/workflows/infracost.yml"; then
+  pass "infracost.yml pins the scanner version (the action defaults it to latest)"
+else
+  fail "infracost.yml must pass an exact scanner version: the action's version input defaults to latest"
+fi
+
 echo ""
 echo "=== Rego tests ==="
 if command -v opa >/dev/null 2>&1; then

@@ -14,7 +14,7 @@ Example 1 leads with the surprising case. Example 2 shows the expected case.
 
 **Signals detected:**
 - No runtime (pure Markdown knowledge base)
-- 45 domain skills in `skills/`, references/, examples/
+- 49 domain skills in `skills/`, references/, examples/
 - GHA CI: handbook-consistency.sh + Terraform validation + skill structure checks
 - CLAUDE.md (Claude Code) + .cursor/rules/ (Cursor) + agents/openai.yaml (Codex)
 

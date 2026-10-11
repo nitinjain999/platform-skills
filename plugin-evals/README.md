@@ -12,7 +12,10 @@ Behavioural evals for this plugin, run with [`claude plugin eval`](https://code.
 |---|---|---|---|
 | `flux-helmrelease` | `fluxcd` | `evals/flux-helmrelease` | 6 regex (checklist weights 2,2,2,2,1,1) + skill fired |
 | `opa-policy` | `opa` | `evals/opa-policy` | 8 regex (checklist weights split where one item had two conditions) + skill fired |
-| `pr-triage` | `triage` | `evals/pr-triage` | 8 regex (both scenarios) + skill fired |
+| `pr-triage` | `triage` | `evals/pr-triage` | 9 regex (both scenarios; requests and the memory limit are graded separately) + skill fired |
+| `secrets-trigger` | `secrets`, `trigger` | New: a Secret rotation question | 2 regex (ESO specifics, rollback) + skill fired, which must be `secrets`, not `kubernetes` |
+| `kyverno-trigger` | `kyverno`, `trigger` | New: an admission-policy request | 2 regex (Audit first, CEL policy types) + skill fired, which must be `kyverno`, not `opa` or `kubernetes` |
+| `openshift-trigger` | `openshift`, `trigger` | New: an SCC admission error | 2 regex (SCC named, least-privilege grant) + skill fired, which must be `openshift`, not `kubernetes` |
 
 Every grader is free (`regex` or `tool_used`), so a run costs only the agent calls. Each case also has a `tool_used: Skill` grader: a correct answer that did not come from the plugin is a finding, not a pass.
 
@@ -31,20 +34,21 @@ Every run is a billed model call on your own credential.
 # Only the domains this branch touched (what a PR gate would run): 1 run, no baseline arm
 bash tests/plugin-evals.sh --changed origin/main
 
-# Everything, with the no-plugin baseline (what a nightly job would run)
+# Everything, with the no-plugin baseline (what a nightly job would run):
+# 2 runs per arm, ceiling $6 (about $4.80 for the six cases)
 bash tests/plugin-evals.sh --all
 
 # See what would run without calling a model
 bash tests/plugin-evals.sh --changed origin/main --dry-run
 ```
 
-`tests/plugin-evals.sh` fails when a case scores below the floor (0.7) or more than the tolerance (0.15) below its score in `baseline.json`. It does not gate on exact output: model answers vary, so scores are compared against a recorded baseline. Refresh the baseline deliberately after an intended change:
+`tests/plugin-evals.sh` fails when a case scores below the floor (0.7) or more than the tolerance (0.15) below its score in `baseline.json`, and when its skill-fired grader failed in any run of the with-plugin arm. That last check is separate from the score: one failed skill-fired grader moves a case's score by less than the tolerance, and under `--ablation with-without` the CLI does not score it at all. It does not gate on exact output: model answers vary, so scores are compared against a recorded baseline. Refresh the baseline deliberately after an intended change:
 
 ```bash
 bash tests/plugin-evals.sh --all --runs 2 --update-baseline
 ```
 
-`tests/plugin-evals-structure.sh` checks the suite's files without any model call (frontmatter keys, regex compilation, a skill-fired grader per case, tags the runner can select) and runs in CI.
+`tests/plugin-evals-structure.sh` checks the suite's files without any model call (frontmatter keys, grader types, regex compilation, a skill-fired grader per case, tags the runner can select) and runs in CI.
 
 ## Adding a case
 

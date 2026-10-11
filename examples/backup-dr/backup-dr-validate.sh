@@ -21,8 +21,9 @@ done
 
 echo ""
 echo "=== IAM policy is scoped ==="
-# No wildcard action, every S3 statement names the backup bucket, and a
-# Resource "*" statement (EBS snapshots) is narrowed by a Condition.
+# No wildcard action, every S3 statement names the backup bucket, only the
+# Describe calls use Resource "*" (and only with a Condition), and snapshot
+# deletion is limited to snapshots Velero tagged velero.io/backup.
 if python3 -I - "$DIR/iam-policy.json" <<'PY'
 import json, sys
 doc = json.load(open(sys.argv[1]))
@@ -36,11 +37,17 @@ for st in doc["Statement"]:
         bad.append(f"{st.get('Sid', '?')}: S3 on Resource *")
     if any(r == "*" for r in resources) and not st.get("Condition"):
         bad.append(f"{st.get('Sid', '?')}: Resource * without a Condition")
+    if any(r == "*" for r in resources) and any(not a.startswith("ec2:Describe") for a in actions):
+        bad.append(f"{st.get('Sid', '?')}: only Describe calls may use Resource *")
+    if "ec2:DeleteSnapshot" in actions:
+        cond = json.dumps(st.get("Condition", {}))
+        if "velero.io/backup" not in cond or any(r == "*" for r in resources):
+            bad.append(f"{st.get('Sid', '?')}: DeleteSnapshot must be limited to snapshots tagged velero.io/backup")
 print("\n".join(bad))
 sys.exit(1 if bad else 0)
 PY
 then
-  pass "iam-policy.json has no wildcard actions, no unscoped S3 statements, and every Resource * is conditioned"
+  pass "iam-policy.json: no wildcard actions, S3 scoped, Resource * only for conditioned Describe calls, deletes limited to Velero snapshots"
 else
   fail "iam-policy.json is broader than the example promises"
 fi
@@ -59,12 +66,22 @@ else
 fi
 
 echo ""
-echo "=== Restore drill never takes production traffic ==="
-if grep -q 'httproutes.gateway.networking.k8s.io' "$DIR/restore-drill.sh" \
-   && grep -q 'ingresses.networking.k8s.io' "$DIR/restore-drill.sh"; then
-  pass "restore-drill.sh excludes HTTPRoutes and Ingresses"
+echo "=== Restore drill is not reachable from outside the cluster ==="
+excl="$(grep -o -- '--exclude-resources [^ ]*' "$DIR/restore-drill.sh" || true)"
+excl="${excl#--exclude-resources }"
+missing=""
+for r in httproutes.gateway.networking.k8s.io ingresses.networking.k8s.io services; do
+  printf '%s\n' "$excl" | tr ',' '\n' | grep -qx "$r" || missing="$missing $r"
+done
+if [ -z "$missing" ]; then
+  pass "restore-drill.sh excludes HTTPRoutes, Ingresses and Services from the Velero restore"
 else
-  fail "restore-drill.sh must exclude HTTPRoutes and Ingresses from the drill restore"
+  fail "restore-drill.sh must exclude from the drill restore:$missing"
+fi
+if grep -q 'type: "ClusterIP"' "$DIR/restore-drill.sh"; then
+  pass "restore-drill.sh recreates Services as ClusterIP only"
+else
+  fail "restore-drill.sh must recreate Services as ClusterIP (no LoadBalancer or NodePort)"
 fi
 if bash -n "$DIR/restore-drill.sh"; then
   pass "restore-drill.sh parses"
