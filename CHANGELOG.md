@@ -29,6 +29,7 @@ Replaces the retired ingress-nginx controller as the handbook's reference ingres
 - **`basic-monorepo` infrastructure overlays did not build.** `namespaces.yaml` and each component's `namespace.yaml` declared the same Namespace twice, so `kustomize build` failed
 - **`HelmRepository` used `source.toolkit.fluxcd.io/v1beta2`**, which Flux 2.9 no longer serves
 - **`healthCheckExprs` samples in `references/fluxcd-kustomization.md` and `references/fluxcd-helmrelease.md` used `object.status`.** Flux evaluates the expression against the resource itself, so the field is `status`
+- **CI never schema-checked the Flux examples.** The kubeconform step in `validate.yml` matched `./examples/flux/*`, a directory renamed to `examples/fluxcd` in May 2026, so it validated nothing there. It now covers `examples/fluxcd` and `examples/gateway-api` (66 files, all passing)
 
 ## [1.42.0] - 2026-09-27
 

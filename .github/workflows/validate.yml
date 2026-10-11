@@ -312,7 +312,8 @@ jobs:
         run: |
           K8S_FILES=$(find . -type f \( -name "*.yml" -o -name "*.yaml" \) \
             \( \
-              -path "./examples/flux/*" -o \
+              -path "./examples/fluxcd/*" -o \
+              -path "./examples/gateway-api/*" -o \
               -path "./examples/argocd/*" -o \
               -path "./examples/kubernetes/*" -o \
               -path "./examples/openshift/*" \
