@@ -29,6 +29,7 @@ const sidebars = {
         { type: 'doc', id: 'openshift' },
         { type: 'doc', id: 'helmchart' },
         { type: 'doc', id: 'keda' },
+        { type: 'doc', id: 'gateway-api' },
         { type: 'doc', id: 'karpenter' },
       ],
     },

@@ -26,6 +26,7 @@ const sidebars = {
         { type: 'doc', id: 'kubernetes' },
         { type: 'doc', id: 'helm' },
         { type: 'doc', id: 'keda' },
+        { type: 'doc', id: 'gateway-api' },
         { type: 'doc', id: 'karpenter' },
         { type: 'doc', id: 'openshift' },
       ],

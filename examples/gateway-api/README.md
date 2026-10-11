@@ -1,6 +1,6 @@
 # Gateway API Migration Example
 
-> Status: Stable
+Status: Stable
 
 A before-and-after pair for moving one ingress-nginx `Ingress` to Gateway API on Envoy Gateway. It shows what translates automatically, what needs a decision, and what does not port at all.
 

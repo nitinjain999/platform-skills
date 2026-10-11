@@ -3,9 +3,9 @@
 > A production-grade field handbook for platform, DevOps, SRE, and cloud engineers covering Kubernetes, Flux CD, Terraform, GitHub Actions, AWS, OPA/Rego, KEDA, Karpenter, supply chain security, Falco, observability, and more. Use it on GitHub, as a local reference, or with Claude, Codex, Cursor, and Copilot for interactive guidance with blast radius, validation steps, and rollback plans built in.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-v1.42.0-0e1117)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-v1.43.0-0e1117)](CHANGELOG.md)
 [![Domains](https://img.shields.io/badge/Domains-64-4c8eda)](references/)
-[![Commands](https://img.shields.io/badge/Commands-44-e87c2b)](commands/)
+[![Commands](https://img.shields.io/badge/Commands-45-e87c2b)](commands/)
 [![Examples](https://img.shields.io/badge/Examples-28-6f42c1)](examples/)
 [![Editors](https://img.shields.io/badge/Editors-VSCode%20%7C%20Cursor%20%7C%20Copilot-2ea44f)](EDITOR_INTEGRATIONS.md)
 [![GitHub Stars](https://img.shields.io/github/stars/nitinjain999/platform-skills?style=flat&label=Stars&color=0e1117)](https://github.com/nitinjain999/platform-skills/stargazers)
@@ -16,7 +16,7 @@
 
 | Tool | What you get |
 |---|---|
-| **Claude Code** | 41 slash commands (`/platform-skills:preflight`, `/platform-skills:kubernetes`, `/platform-skills:secrets`, and more), interactive guidance, automatic activation on relevant files |
+| **Claude Code** | 45 slash commands (`/platform-skills:preflight`, `/platform-skills:kubernetes`, `/platform-skills:secrets`, and more), interactive guidance, automatic activation on relevant files |
 | **Codex** | Skill invocation with `$platform-skills`, loaded on demand in any Codex session |
 | **Cursor** | Project rules for Chat and Agent — platform review and generation in every file context |
 | **GitHub Copilot plugin** | Interactive slash commands in Copilot Chat — install once per user via `copilot plugin install` |
@@ -151,6 +151,7 @@ All layers work independently. Agent integrations are optional.
 | 🔍 PR Review | [references/pr-review.md](references/pr-review.md) | Cost impact, environment drift, ownership gaps, SOC 2 compliance, deprecated API / version hygiene, rollback feasibility |
 | 🧵 PR Comment Triage | [commands/triage.md](commands/triage.md), [references/triage.md](references/triage.md) | `/platform-skills:triage` classifies a PR comment across seven finding types, applies a validated fix in an isolated worktree, replies on the thread, and resolves it only when that finding is eligible for closure |
 | ⚡ KEDA | [references/keda.md](references/keda.md) | ScaledObject, ScaledJob, TriggerAuthentication, Prometheus/SQS/Kafka/Redis/Cron/HTTP/Azure scalers, scale-to-zero, IRSA, GitOps integration, troubleshooting — `/platform-skills:keda` |
+| 🚪 Gateway API | [references/gateway-api.md](references/gateway-api.md) | Ingress on Gateway API with Envoy Gateway, migration off the retired ingress-nginx controller, ingress2gateway annotation coverage, cert-manager listener TLS, Flux layering, parallel-run cutover and rollback — `/platform-skills:gateway-api` |
 | ⚙️ Karpenter | [references/karpenter.md](references/karpenter.md) | EKS node autoscaling — NodePool, EC2NodeClass, NodeClaim, Spot diversity, disruption budgets, ODCR, private clusters, Fargate coexistence, FinOps, CA migration, v0→v1 upgrades — `/platform-skills:karpenter` |
 | 🤖 Agent Self-Improvement | [references/agent-self-improve.md](references/agent-self-improve.md) | `.learnings/` directory setup, LRN/ERR/FEAT entry lifecycle, WAL protocol, working buffer, VFM scoring, ADL decision logic, Six Operating Pillars, heartbeat, reverse prompting, proactive agent behavior — `/platform-skills:self-improve` |
 | 🔗 Supply Chain Security | [references/supply-chain.md](references/supply-chain.md) | Cosign keyless signing, Syft SBOM generation and attestation, Trivy/Grype CVE scanning with severity gates, SLSA Level 2 provenance, Kyverno ImageValidatingPolicy enforcement — `/platform-skills:supply-chain` |
@@ -303,6 +304,7 @@ platform-skills/
 │   ├── helm.md                         # Helm chart patterns, lint pipeline, values design
 │   ├── pr-review.md                    # PR review: cost, drift, ownership, compliance, upgrade, rollback (v1.12.0)
 │   ├── keda.md                         # KEDA event-driven autoscaling (v1.14.0)
+│   ├── gateway-api.md                  # Gateway API ingress, ingress-nginx migration (v1.43.0)
 │   ├── karpenter.md                    # Karpenter EKS node autoscaling (v1.29.0)
 │   ├── llm-observability.md                # Datadog LLMObs: instrumentation, evals, trace RCA (v1.20.0)
 │   └── awesome-docs.md                     # Animated SVG doc generation — 4 patterns, GitHub-safe CSS (v1.21.0)
@@ -320,6 +322,7 @@ platform-skills/
 │   ├── helm/web-service/               # Production Helm chart: Deployment, HPA, PDB, NetworkPolicy, schema
 │   ├── triage/                         # PR comment triage scenarios and fixtures (v1.13.0)
 │   ├── keda/                           # ScaledObject, ScaledJob, TriggerAuthentication examples (v1.14.0)
+│   ├── gateway-api/                    # Ingress → HTTPRoute before/after, validator (v1.43.0)
 │   ├── awesome-docs/                       # Animated SVG templates: arch-flow, lifecycle-loop, field-carousel, timeline-phases (v1.21.0)
 │   └── compliance/                     # SOC 2 Terraform examples (v1.6.0)
 │       ├── checkov-config.yaml         # Checkov config grouped by SOC 2 criterion
@@ -347,7 +350,7 @@ platform-skills/
 
 ## Roadmap
 
-**Current release: v1.42.0** — 44 commands, 64 domain reference guides, 50+ wiki pages.
+**Current release: v1.43.0** — 45 commands, 65 domain reference guides, 50+ wiki pages.
 
 Full version history is in [CHANGELOG.md](CHANGELOG.md).
 

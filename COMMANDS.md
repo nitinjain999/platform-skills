@@ -44,6 +44,7 @@ Commands work in any conversation — type the slash command or describe your pr
 | [/platform-skills:pr-review](#platform-skillspr-review) | Comprehensive PR risk review |
 | [/platform-skills:triage](#platform-skillstriage) | Triage and resolve PR comments |
 | [/platform-skills:keda](#platform-skillskeda) | KEDA ScaledObject/ScaledJob — generate, debug, review, scale |
+| [/platform-skills:gateway-api](#platform-skillsgateway-api) | Migrate off retired ingress-nginx to Gateway API — assess, convert, scaffold, cutover, debug, review, rollback |
 | [/platform-skills:karpenter](#platform-skillskarpenter) | Karpenter NodePool/EC2NodeClass — generate, debug, review, audit scale history, plan capacity, migrate from CA, upgrade |
 | [/platform-skills:self-improve](#platform-skillsself-improve) | Bootstrap, log, review, or promote agent self-improvement entries |
 | [/platform-skills:chaos](#platform-skillschaos) | Install Litmus Chaos or Chaos Mesh, generate fault experiments, schedule chaos, run GameDay, debug, report |
@@ -2008,6 +2009,47 @@ Triage a PR review or issue comment from a bot, CI tool, or human reviewer. Ever
 A mixed thread stays open while any substantive concern remains, and a PR conversation comment has no thread to resolve at all. Classification, fix execution state, and discussion state are reported as three separate facts, so "fixed, pushed, thread open pending CI" is a complete outcome rather than a partial failure.
 
 Reference: `commands/triage.md` (router), `references/triage.md` (evidence rules, helper contract, failure recovery), and `examples/triage/README.md`
+
+---
+
+## `/platform-skills:gateway-api`
+
+**What it does:** Moves ingress traffic off the retired ingress-nginx controller (best-effort maintenance ended March 2026: no releases, bug fixes or security fixes) onto Kubernetes Gateway API without a user-visible change. Envoy Gateway is the default implementation. The command inventories annotations and classifies each as auto, decision, or blocked, converts with ingress2gateway, rewrites the output for a platform-owned shared Gateway, and plans a parallel-run DNS cutover that keeps a one-step rollback until the old path is provably unused.
+
+**Modes**
+
+| Mode | What it does |
+|---|---|
+| `assess` | Inventory Ingresses, classes, annotations and controller ConfigMap settings; flag what will not translate |
+| `convert` | ingress2gateway v1.2.0 per namespace, then shared-Gateway rewrite and kubeconform validation |
+| `scaffold` | Standard-channel CRDs with `keep`, controller, GatewayClass, shared Gateway, cert-manager, Flux layers |
+| `cutover` | Per-hostname shadow test, TTL plan, soak criteria and decommission gate |
+| `debug` | Route, listener, certificate and Gateway address problems by condition reason |
+| `review` | Correctness, security, operational safety and portability review |
+| `rollback` | The rollback for the stage reached |
+
+**Usage**
+
+```
+/platform-skills:gateway-api
+/platform-skills:gateway-api assess
+/platform-skills:gateway-api convert payments
+/platform-skills:gateway-api scaffold Flux, Envoy Gateway, cert-manager HTTP-01
+/platform-skills:gateway-api cutover payments.example.com
+/platform-skills:gateway-api debug my HTTPRoute shows NotAllowedByListeners
+/platform-skills:gateway-api review
+/platform-skills:gateway-api rollback
+```
+
+**Example prompts**
+
+```
+/platform-skills:gateway-api we run ingress-nginx in production with configuration-snippet on a dozen Ingresses. What blocks a migration?
+/platform-skills:gateway-api convert the payments namespace and point every route at our shared platform-gateway
+/platform-skills:gateway-api why does cert-manager not create a certificate for my Gateway listener?
+```
+
+Reference: `commands/gateway-api.md`, `references/gateway-api.md`, `examples/gateway-api/README.md`, and the full layout in `examples/fluxcd/basic-monorepo`
 
 ---
 

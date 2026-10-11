@@ -145,7 +145,7 @@ My Flux Kustomization `apps` is stuck in NotReady with: "context deadline exceed
 - It cannot see your cluster or cloud account — paste the relevant output
 - It works best on one concrete problem at a time, not "review everything"
 
-### All 44 command workflows
+### All 45 command workflows
 
 See [COMMANDS.md](COMMANDS.md) for every command with modes and example prompts:
 
@@ -178,6 +178,7 @@ See [COMMANDS.md](COMMANDS.md) for every command with modes and example prompts:
 | `product` | DevEx audit, RFC/ADR, incident update, post-mortem |
 | `triage` | Use `/platform-skills:triage` to classify, fix, reply to, and resolve PR comments |
 | `keda` | Use `/platform-skills:keda` to generate, debug, review, or design a KEDA scaling strategy |
+| `gateway-api` | Use `/platform-skills:gateway-api` to migrate off the retired ingress-nginx controller to Gateway API, or debug a route that will not attach |
 | `karpenter` | Use `/platform-skills:karpenter` to install, generate NodePool/EC2NodeClass, debug provisioning, plan capacity, audit scale history, migrate from CA, or upgrade |
 | `self-improve` | Bootstrap `.learnings/` workspace, log errors and learnings, resume after interruption, promote to project memory |
 | `supply-chain` | Sign images, generate SBOMs, run CVE gates, enforce image signatures, generate SLSA provenance |

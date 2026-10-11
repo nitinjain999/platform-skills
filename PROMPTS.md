@@ -140,6 +140,16 @@ We have an incident. Build a troubleshooting plan with symptom, evidence, hypoth
 Review these alerts for actionability, ownership, severity, burn-rate signal, noise risk, and runbook links.
 ```
 
+## Gateway API And Ingress
+
+```text
+/platform-skills:gateway-api assess our ingress-nginx usage. List every annotation by namespace, classify what translates automatically, what needs a decision, and what blocks the migration.
+```
+
+```text
+/platform-skills:gateway-api plan the cutover for payments.example.com: shadow test against the new Gateway address, DNS TTL plan, soak criteria, and the rollback at each stage.
+```
+
 ## KEDA And Autoscaling
 
 ```text

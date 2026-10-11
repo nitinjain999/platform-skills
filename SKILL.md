@@ -34,6 +34,7 @@ Use this skill for hands-on help with Kubernetes, GitOps, cloud infrastructure, 
 | `PR Review` | Cost, drift, ownership, SOC 2, deprecated APIs, rollback feasibility |
 | `PR Triage` | 7-way comment classification, isolated-worktree fix, reply, eligibility-gated resolve |
 | `KEDA` | ScaledObject/ScaledJob, all scalers, TriggerAuthentication, scale-to-zero |
+| `Gateway API` | Ingress via Gateway API (Envoy Gateway default), migration off retired ingress-nginx, cert-manager listener TLS — `/platform-skills:gateway-api` |
 | `Karpenter` | NodePool/EC2NodeClass design, Spot diversity, disruption strategy, capacity planning, audit, CA migration, v0→v1 upgrade |
 | `Agent Self-Improvement` | `.learnings/` workspace, LRN/ERR lifecycle, WAL, VFM, ADL |
 | `Supply Chain Security` | Cosign signing, Syft SBOM, Trivy/Grype CVE gates, SLSA Level 2 |
@@ -128,6 +129,7 @@ Load only the files needed for the current request.
 | references/kyverno.md | ValidatingPolicy, MutatingPolicy, ImageValidatingPolicy, CEL, kyverno-cli |
 | references/pr-review.md | Cost, drift, ownership, compliance, deprecated APIs, rollback scoring |
 | references/keda.md | ScaledObject, ScaledJob, scalers, TriggerAuthentication, scale-to-zero |
+| references/gateway-api.md | ingress-nginx retirement, implementation choice, ownership model, CRD channel and `keep` policy, ingress2gateway annotation coverage, cert-manager, Flux layering, cutover, rollback |
 | references/karpenter.md | NodePool, EC2NodeClass, NodeClaim, IAM, Spot, disruption, private cluster, CA migration |
 | references/agent-self-improve.md | `.learnings/` workspace, entry metadata, lint and recall, WAL, VFM, ADL, status/migrate |
 | references/supply-chain.md | Cosign, Syft SBOM, Trivy/Grype, SLSA Level 2, ImageValidatingPolicy |
@@ -173,6 +175,7 @@ For explicit, repeatable workflows use these commands:
 - `/platform-skills:pr-review` — comprehensive PR review: cost, drift, ownership, compliance, upgrade, rollback
 - `/platform-skills:triage` — triage a PR comment (bot or human): classify as ACTIONABLE_FIX / ALREADY_FIXED / INFORMATIONAL / NOT_APPLICABLE / NEEDS_CLARIFICATION / OUT_OF_SCOPE / DUPLICATE, produce the exact fix if needed, write the thread reply, and resolve the thread only when that finding is eligible for closure
 - `/platform-skills:keda` — design, generate, debug, or review KEDA ScaledObject/ScaledJob autoscaling
+- `/platform-skills:gateway-api` — migrate off the retired ingress-nginx controller to Gateway API: assess annotations, convert with ingress2gateway, scaffold a shared Gateway with cert-manager TLS and Flux layering, plan a parallel-run DNS cutover, debug route attachment, or roll back
 - `/platform-skills:karpenter` — install, generate NodePool/EC2NodeClass, debug provisioning, plan capacity before rollout, audit scale history, migrate from Cluster Autoscaler, or upgrade (including v0→v1 CRD migration)
 - `/platform-skills:self-improve` — bootstrap global or project-local `.learnings/` workspace (`init global`/`init local`), log/recall/review/promote/revoke learnings and errors with provenance, scope and expiry, status overview, and migrate between scopes
 - `/platform-skills:supply-chain` — sign images, generate and attest SBOMs, run CVE severity gates, enforce image signatures in Kubernetes, and generate SLSA Level 2 provenance

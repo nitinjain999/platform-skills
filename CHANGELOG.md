@@ -5,6 +5,30 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.43.0] - 2026-10-11
+
+Replaces the retired ingress-nginx controller as the handbook's reference ingress and adds `/platform-skills:gateway-api` to migrate existing clusters (45 commands total). ingress-nginx best-effort maintenance ended in March 2026: no releases, bug fixes or security fixes since. Existing installs keep running, which is exactly why the handbook should stop recommending it.
+
+### Added
+
+- **`/platform-skills:gateway-api`** with seven modes: `assess` (annotation and controller-ConfigMap inventory, each item classified auto, decision or blocked), `convert` (ingress2gateway v1.2.0 per namespace, rewritten for a platform-owned shared Gateway), `scaffold`, `cutover` (per-hostname shadow test, TTL plan, soak criteria, a decommission gate kept out of the cutover change), `debug` (by Gateway API condition reason), `review` and `rollback`
+- **`references/gateway-api.md`**: implementation choice (Envoy Gateway default, Cilium, Istio, NGINX Gateway Fabric, AWS Load Balancer Controller), ownership model, CRD channel and deletion policy, the ingress2gateway annotation coverage table, cert-manager listener TLS, Flux layering, a seven-phase parallel-run migration, rollback by stage, and troubleshooting
+- **`examples/gateway-api/`**: a before/after pair for one Ingress (timeout, CIDR allowlist, `configuration-snippet`), and `gateway-api-validate.sh`, which builds every Flux overlay, runs `kubeconform -strict` against the CRD catalog, and fails if any manifest outside the frozen evals still references ingress-nginx
+
+### Changed
+
+- **`examples/fluxcd/basic-monorepo` runs Gateway API on Envoy Gateway v1.9.2** with cert-manager v1.21.2, in three Flux layers: `infrastructure` (CRDs and controllers) → `infrastructure-configs` (GatewayClass, EnvoyProxy, shared Gateway, 308 HTTPS redirect, ClusterIssuer) → `apps` (HTTPRoute). The split is required because a Gateway cannot be dry-run before its CRDs exist. The configs layer gates on the Gateway's `Programmed` condition through `healthCheckExprs`
+- **Gateway API CRDs are installed on the standard channel by a dedicated release and marked `helm.sh/resource-policy: keep`.** The controller chart bundles experimental-channel CRDs plus an admission policy that rejects them on clusters that already have standard CRDs. Deleting a CRD deletes every Gateway and HTTPRoute in the cluster, so removing the release must never cascade
+- **NetworkPolicies** in `examples/kubernetes` and `examples/helm/web-service` admit the Envoy proxy pods (namespace and pod selector) instead of the ingress-nginx namespace
+- **`examples/demo/flux-stuck-release`** teaches the same lessons on trust-manager v0.25.0. `demo.gif` still shows the previous YAML until it is re-recorded with `scripts/gen-demo-gifs.sh flux-stuck-release`
+- The frozen `evals/token-optimizer/*/evidence/` fixtures are deliberately unchanged, so token baselines stay comparable
+
+### Fixed
+
+- **`basic-monorepo` infrastructure overlays did not build.** `namespaces.yaml` and each component's `namespace.yaml` declared the same Namespace twice, so `kustomize build` failed
+- **`HelmRepository` used `source.toolkit.fluxcd.io/v1beta2`**, which Flux 2.9 no longer serves
+- **`healthCheckExprs` samples in `references/fluxcd-kustomization.md` and `references/fluxcd-helmrelease.md` used `object.status`.** Flux evaluates the expression against the resource itself, so the field is `status`
+
 ## [1.42.0] - 2026-09-27
 
 Rewrites `/platform-skills:triage` for reliability, the first of two capability-reliability passes in this release — replaces every hand-rolled `gh api`/jq call behind the command with a 12-subcommand stdlib-only helper CLI (17 operations counting `worktree`'s and `state`'s own nested actions), splits finding classification from fix-execution and discussion state, and adds `--dry-run`/`--no-resolve` controls.

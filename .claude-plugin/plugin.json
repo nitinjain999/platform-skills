@@ -1,7 +1,7 @@
 {
   "name": "platform-skills",
-  "version": "1.42.0",
-  "description": "Practical guidance for platform engineers across Claude, Codex, Cursor, and Copilot: Kubernetes (baseline, RBAC, workload hardening, debug), GitHub Actions (design, security, review, debug), Azure (Workload Identity, tagging, AKS, RBAC), OpenShift (SCC, Routes, GitOps, upgrades), Secrets (ESO, Sealed Secrets, rotation, audit), Kyverno, Helm, Terraform, Flux CD (Flux Operator, FluxInstance, OCI delivery), Argo CD, AWS (CloudFront, WAF, Lambda@Edge, IAM, IRSA), Linkerd, Linux, networking, MCP development, observability, SOC 2 compliance, PR review, PR triage, KEDA, Karpenter, supply chain security (Cosign, SBOM, SLSA), Falco runtime security, Chaos Engineering, DORA Metrics, LLM Observability (Datadog LLMObs), and animated docs. Every answer includes blast radius, validation steps, and rollback plan.",
+  "version": "1.43.0",
+  "description": "Practical guidance for platform engineers across Claude, Codex, Cursor, and Copilot: Kubernetes (baseline, RBAC, workload hardening, debug), GitHub Actions (design, security, review, debug), Azure (Workload Identity, tagging, AKS, RBAC), OpenShift (SCC, Routes, GitOps, upgrades), Secrets (ESO, Sealed Secrets, rotation, audit), Kyverno, Helm, Terraform, Flux CD (Flux Operator, FluxInstance, OCI delivery), Argo CD, AWS (CloudFront, WAF, Lambda@Edge, IAM, IRSA), Gateway API (ingress-nginx migration, Envoy Gateway), Linkerd, Linux, networking, MCP development, observability, SOC 2 compliance, PR review, PR triage, KEDA, Karpenter, supply chain security (Cosign, SBOM, SLSA), Falco runtime security, Chaos Engineering, DORA Metrics, LLM Observability (Datadog LLMObs), and animated docs. Every answer includes blast radius, validation steps, and rollback plan.",
   "author": {
     "name": "Nitin Jain",
     "email": "nitin.solna@gmail.com",
@@ -100,7 +100,11 @@
     "cost-optimization",
     "subagents",
     "model-routing",
-    "context-management"
+    "context-management",
+    "gateway-api",
+    "envoy-gateway",
+    "ingress-nginx-migration",
+    "httproute"
   ],
   "skills": [
     "./skills/platform-skills"
@@ -149,6 +153,7 @@
     "./commands/zizmor.md",
     "./commands/kingfisher.md",
     "./commands/ai-governance.md",
-    "./commands/token-optimizer.md"
+    "./commands/token-optimizer.md",
+    "./commands/gateway-api.md"
   ]
 }
