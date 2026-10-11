@@ -187,6 +187,22 @@ else
 fi
 
 for env in production staging; do
+  # A route hostname the listener does not cover is NoMatchingListenerHostname.
+  if command -v kubectl >/dev/null 2>&1; then
+    listener_hosts="$(kubectl kustomize "$MONOREPO/infrastructure/configs/$env" | yq -N 'select(.kind == "Gateway") | .spec.listeners[] | select(.protocol == "HTTPS") | .hostname')"
+    route_hosts="$(kubectl kustomize "$MONOREPO/apps/$env" | yq -N 'select(.kind == "HTTPRoute") | .spec.hostnames[]')"
+    if [ -z "$route_hosts" ]; then
+      fail "apps/$env renders no HTTPRoute hostnames"
+    fi
+    for h in $route_hosts; do
+      if printf '%s\n' "$listener_hosts" | grep -qx "$h"; then
+        pass "$env: route hostname $h has a matching HTTPS listener"
+      else
+        fail "$env: route hostname $h has no HTTPS listener on platform-gateway"
+      fi
+    done
+  fi
+
   apps="$MONOREPO/clusters/$env/apps.yaml"
   if [ "$(yq '.spec.dependsOn[].name' "$apps" 2>/dev/null)" = "infrastructure-configs" ]; then
     pass "clusters/$env/apps.yaml depends on infrastructure-configs"
