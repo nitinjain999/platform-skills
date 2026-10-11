@@ -17,7 +17,7 @@ Read `references/backup-dr.md` before responding. It holds what Velero does and 
 
 | Mode | What it does |
 |---|---|
-| `install` | Velero via Flux from `examples/backup-dr`, with IRSA, the scoped IAM policy and a backup bucket protected from deletion |
+| `install` | The protected backup bucket from `examples/backup-dr/bucket` (versioning, noncurrent-version retention, a bucket policy that lets only break-glass roles delete versions or lift the protection), then Velero via Flux from `examples/backup-dr` with IRSA and the scoped IAM policy |
 | `schedule` | Schedules and retention derived from the recovery point objective; which namespaces need more frequent backups |
 | `drill` | Run and interpret `restore-drill.sh`; compare the measured time with the recovery time objective |
 | `restore` | Restore a namespace or specific resources, including into a different namespace |

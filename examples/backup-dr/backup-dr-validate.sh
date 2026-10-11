@@ -15,7 +15,7 @@ fail() { echo "  FAIL: $1"; ERRORS=$((ERRORS + 1)); }
 
 echo ""
 echo "=== Backup/DR example structure ==="
-for f in README.md iam-policy.json restore-drill.sh velero/helmrelease.yaml; do
+for f in README.md iam-policy.json restore-drill.sh velero/helmrelease.yaml bucket/main.tf; do
   if [ -f "$DIR/$f" ]; then pass "$f exists"; else fail "$f missing"; fi
 done
 
@@ -96,6 +96,61 @@ if [ -n "$np_line" ] && [ -n "$restore_line" ] && [ "$np_line" -lt "$restore_lin
 else
   fail "restore-drill.sh must apply a default-deny egress NetworkPolicy to the drill namespace before velero restore"
 fi
+# An empty namespaceSelector on the DNS rule would allow those ports to every
+# pod in every namespace, not just the resolver. ($dns_ns is a literal jq variable.)
+# shellcheck disable=SC2016
+if ! grep -q 'namespaceSelector: {}' "$DIR/restore-drill.sh" \
+   && grep -qF '"kubernetes.io/metadata.name": $dns_ns' "$DIR/restore-drill.sh"; then
+  pass "restore-drill.sh limits DNS egress to the DNS namespace and pod label"
+else
+  fail "restore-drill.sh must scope the DNS egress rule to the DNS namespace and pods, never namespaceSelector: {}"
+fi
+# The drill namespace holds production Secrets: a failed restore or readiness
+# timeout must not leave it running.
+trap_line="$(grep -n '^trap cleanup EXIT' "$DIR/restore-drill.sh" | head -1 | cut -d: -f1 || true)"
+ns_line="$(grep -n 'kind: "Namespace"' "$DIR/restore-drill.sh" | head -1 | cut -d: -f1 || true)"
+if [ -n "$trap_line" ] && [ -n "$ns_line" ] && [ "$trap_line" -lt "$ns_line" ]; then
+  pass "restore-drill.sh deletes the drill namespace on every exit path (EXIT trap set before it is created)"
+else
+  fail "restore-drill.sh must set an EXIT trap that deletes the drill namespace before creating it"
+fi
+
+echo ""
+echo "=== Backup bucket is protected from deletion ==="
+# Velero holds s3:DeleteObject; versioning turns that into a delete marker, and
+# only the admin roles may delete versions or remove the protection.
+if python3 -I - "$DIR/bucket/main.tf" "$DIR/iam-policy.json" "$DIR/velero/helmrelease.yaml" <<'PY'
+import json, re, sys
+tf, iam, hr = (open(p).read() for p in sys.argv[1:4])
+bad = []
+if not re.search(r'aws_s3_bucket_versioning"[^}]*status\s*=\s*"Enabled"', tf, re.S):
+    bad.append("bucket/main.tf: versioning must be Enabled")
+if "prevent_destroy = true" not in tf:
+    bad.append("bucket/main.tf: the bucket must set prevent_destroy")
+for action in ("s3:DeleteObjectVersion", "s3:PutBucketVersioning", "s3:PutLifecycleConfiguration",
+               "s3:PutBucketPolicy", "s3:DeleteBucket"):
+    if f'"{action}"' not in tf:
+        bad.append(f"bucket/main.tf: bucket policy must deny {action} to non-admins")
+granted = {a for st in json.loads(iam)["Statement"] if st["Effect"] == "Allow"
+           for a in (st["Action"] if isinstance(st["Action"], list) else [st["Action"]])}
+for action in granted & {"s3:DeleteObjectVersion", "s3:PutBucketVersioning", "s3:PutLifecycleConfiguration",
+                         "s3:PutBucketPolicy", "s3:DeleteBucketPolicy", "s3:DeleteBucket"}:
+    bad.append(f"iam-policy.json: Velero must not hold {action}")
+name = re.search(r'variable "bucket_name"[^}]*default\s*=\s*"([^"]+)"', tf, re.S)
+name = name.group(1) if name else ""
+if not name or f"bucket: {name}" not in hr or f"arn:aws:s3:::{name}" not in iam:
+    bad.append(f"bucket name {name!r} must match velero/helmrelease.yaml and iam-policy.json")
+print("\n".join(bad))
+sys.exit(1 if bad else 0)
+PY
+then
+  pass "bucket/main.tf: versioned, prevent_destroy, version deletion and protection changes denied to non-admins; Velero holds none of them; bucket name consistent"
+else
+  fail "backup bucket is not protected as the example promises"
+fi
+
+echo ""
+echo "=== Restore drill script ==="
 if bash -n "$DIR/restore-drill.sh"; then
   pass "restore-drill.sh parses"
 else

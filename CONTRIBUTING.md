@@ -200,8 +200,8 @@ Follow this checklist when adding a net-new domain (e.g. a new command + referen
 - [ ] File exists at `skills/<domain>/SKILL.md` (one directory per skill; supporting files can sit beside it)
 - [ ] Has YAML frontmatter: `name:`, `description:`, `argument-hint:`
 - [ ] Defines at least one `## Mode:` section
-- [ ] Registered in `.claude-plugin/plugin.json` commands array
-- [ ] Run `tests/validate-skill.sh` to confirm registration
+- [ ] Do not add a `commands` or `skills` key to `.claude-plugin/plugin.json`; `skills/` is scanned by default and either key fails validation
+- [ ] Run `tests/validate-skill.sh` and `tests/release-consistency.sh` to confirm the skill loads as `/platform-skills:<domain>`
 
 ### 3. SKILL.md (both copies)
 

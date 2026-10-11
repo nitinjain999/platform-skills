@@ -1,0 +1,6 @@
+bucket_name = "example-velero-backups-eu-north-1"
+admin_role_arns = [
+  "arn:aws:iam::111122223333:role/break-glass-admin",
+  "arn:aws:iam::111122223333:role/terraform-apply",
+]
+noncurrent_retention_days = 30

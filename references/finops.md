@@ -28,7 +28,7 @@ One layer is never enough: each misses a path the next one catches.
 |---|---|---|
 | 1. Terraform provider | `default_tags` from a validated `required_tags` variable | Resources outside Terraform; resources whose own `tags` override a default with an empty value |
 | 2. CI | Conftest on `terraform show -json` output, checking `tags_all` (or `tags`) of every created or updated `aws_*` resource | Anything not deployed through that pipeline |
-| 3. AWS account | AWS Config `REQUIRED_TAGS` (up to six keys, `tag1Key`…`tag6Key`) | Nothing in the account, but it detects after the fact; pair it with remediation or a report |
+| 3. AWS account | AWS Config `REQUIRED_TAGS` (up to six keys, `tag1Key`…`tag6Key`) | Resource types the rule does not support, and any type the Config recorder is not recording; it also detects after the fact, so pair it with remediation or a report. Cover the gap with the Resource Groups Tagging API or Cost Explorer's untagged-spend view |
 | 4. Kubernetes | Kyverno `ValidatingPolicy` on namespaces (and workloads if you allocate by workload) | Cloud resources |
 
 Keep the key list identical in all four. Start the Kyverno policy in `Audit`; promote to `Deny` once PolicyReports show zero violations (`/platform-skills:kyverno`).
