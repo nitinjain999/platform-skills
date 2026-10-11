@@ -8,7 +8,8 @@
 # Usage: bash examples/gateway-api/gateway-api-validate.sh
 # Requires: kubectl (for `kubectl kustomize`) and mikefarah yq v4
 #           (https://github.com/mikefarah/yq; the Python `yq` wrapper uses a
-#           different syntax and will not work). kubeconform is optional.
+#           different syntax and will not work). kubeconform is optional
+#           locally and required in CI (CI=true), where its absence fails.
 
 set -euo pipefail
 
@@ -30,6 +31,13 @@ MONOREPO="$ROOT_DIR/examples/fluxcd/basic-monorepo"
 
 pass() { echo "  PASS: $1"; }
 fail() { echo "  FAIL: $1"; ERRORS=$((ERRORS + 1)); }
+
+# The schema pass is the only check that sees CRD fields in rendered overlays,
+# so CI must never skip it silently.
+if [ -n "${CI:-}" ] && ! command -v kubeconform >/dev/null 2>&1; then
+  echo "FAIL: CI=true but kubeconform is not installed; the rendered-overlay schema checks would be skipped"
+  exit 1
+fi
 
 # Pinned to the same catalog commit as .github/workflows/validate.yml
 CRD_CATALOG='https://raw.githubusercontent.com/datreeio/CRDs-catalog/63669a570e231d4f1f8396d229a1de512bcf0a34/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json'
@@ -220,18 +228,38 @@ else
   fail "Envoy Gateway HelmRelease missing chartRef kind: OCIRepository"
 fi
 
-if [ -f "$APP_NAMESPACES" ] && grep -q 'gateway-access: "true"' "$APP_NAMESPACES"; then
-  pass "app namespace opts in to the shared Gateway (gateway-access label)"
+# Each HTTPS listener must name the one namespace that owns its hostname, by
+# the immutable kubernetes.io/metadata.name label. A shared opt-in label lets
+# every onboarded team attach to every listener and claim another's hostname.
+for env in production staging; do
+  if ! listeners="$(kubectl kustomize "$MONOREPO/infrastructure/configs/$env" \
+      | yq -N 'select(.kind == "Gateway") | .spec.listeners[] | select(.protocol == "HTTPS")
+               | .name + " " + (.allowedRoutes.namespaces.from // "Same") + " "
+                 + (.allowedRoutes.namespaces.selector.matchLabels["kubernetes.io/metadata.name"] // "-")' 2>&1)"; then
+    fail "$env: listener check could not run: $listeners"
+    continue
+  fi
+  [ -z "$listeners" ] && fail "$env: no HTTPS listeners rendered"
+  while read -r lname lfrom lns; do
+    [ -z "$lname" ] && continue
+    if [ "$lfrom" = "Selector" ] && [ "$lns" != "-" ] && grep -qE "^  name: ${lns}\$" "$APP_NAMESPACES" 2>/dev/null; then
+      pass "$env: listener $lname is bound to namespace $lns, which the platform layer creates"
+    else
+      fail "$env: listener $lname must select one platform-created namespace by kubernetes.io/metadata.name (got from=$lfrom ns=$lns)"
+    fi
+  done <<< "$listeners"
+done
+if grep -rq 'gateway-access' "$MONOREPO" --include='*.yaml' 2>/dev/null; then
+  fail "a shared gateway-access label is back: listeners must bind to the owning namespace instead"
 else
-  fail "infrastructure/configs/base/app-namespaces.yaml missing gateway-access: \"true\" — HTTPRoute will be NotAllowedByListeners"
+  pass "no shared gateway opt-in label"
 fi
 
-# The opt-in label is the access control for the production listener, so the
-# app layer must not be able to create or relabel Namespaces itself.
+# Namespaces are the unit listeners bind to, so the app layer must not create them.
 if grep -rlE '^kind: Namespace$' "$MONOREPO/apps" >/dev/null 2>&1; then
-  fail "apps/ defines a Namespace: an app team could grant itself gateway-access; create namespaces in infrastructure/configs"
+  fail "apps/ defines a Namespace; create app namespaces in infrastructure/configs (platform review)"
 else
-  pass "app namespaces (and their gateway-access label) are owned by the platform layer"
+  pass "app namespaces are owned by the platform layer"
 fi
 
 # Two proxy replicas only survive a node failure if they run on different nodes.

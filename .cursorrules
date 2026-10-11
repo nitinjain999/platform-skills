@@ -49,9 +49,9 @@ OpenShift: never set `runAsUser` to a specific UID.
 Never propose ingress-nginx for new work: its best-effort maintenance ended in March 2026 (no releases, bug fixes or security fixes). Default to Gateway API with Envoy Gateway.
 
 - One shared `Gateway` owned by the platform team; app teams own `HTTPRoute`s in their own namespaces
-- HTTPS listeners use `allowedRoutes.namespaces.from: Selector` on a platform-controlled label, never `from: All`
+- Bind each HTTPS listener to the namespace that owns its hostname (`allowedRoutes` selector on `kubernetes.io/metadata.name`); never `from: All`, never one shared opt-in label
 - Gateway API CRDs on the **standard** channel, applied as plain manifests, never a Helm release (too large for its 1 MiB Secret), and never garbage-collected: Flux `prune: false` + `deletionPolicy: Orphan` (deleting a CRD deletes every Gateway and route). Envoy Gateway's controller chart bundles experimental CRDs: set `crds.enabled: false`
-- App namespaces and their gateway opt-in label belong to the platform layer; an app layer that can label its own namespace can attach to the production listener
+- App namespaces belong to the platform layer, not the app layer
 - TLS via cert-manager v1.15+ with `config.gatewayAPI.enabled: true`; one HTTPS listener per hostname with `hostname`, `tls.mode: Terminate`, `certificateRefs`
 - Flux: `infrastructure` (CRDs, controllers) → `infrastructure-configs` (Gateway objects) → `apps` (routes), with a `healthCheckExprs` check on Gateway `Programmed`
 - Port-80 HTTPS redirect with `statusCode: 308`; `backendRefs` use the Service port **number**

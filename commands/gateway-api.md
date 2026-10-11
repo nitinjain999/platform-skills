@@ -85,7 +85,7 @@ Ask one at a time:
    - Delete generated `Gateway` objects
    - Set each route's `parentRefs` to `platform-gateway` in `envoy-gateway-system`, with the right `sectionName`
    - Move TLS to a Gateway HTTPS listener per hostname (cert-manager requirement)
-   - Add `gateway-access: "true"` to each app namespace
+   - Bind each HTTPS listener's `allowedRoutes` to the namespace that owns its hostname (`kubernetes.io/metadata.name`)
    - Use the Service **port number** in `backendRefs`
 5. Re-express each `decision` item (filter or policy) and show it next to the original annotation
 6. Validate:
@@ -104,7 +104,7 @@ Generate the layout from `examples/fluxcd/basic-monorepo`, adapted to the answer
 1. **CRDs:** **standard** channel, applied as plain manifests, never through a Helm release (they exceed the 1 MiB release Secret). For Flux: one `Kustomization` per source with `prune: false` and `deletionPolicy: Orphan`: Gateway API `config/crd/standard` at the pinned tag, plus Envoy Gateway's `charts/crds/crds/generated/` from the pinned chart artifact. Set `crds.enabled: false` on the controller chart
 2. **Controller:** pinned exact version; at least two control-plane replicas in production
 3. **Data plane:** at least two proxy replicas plus a PodDisruptionBudget in production. Never a PDB of `minAvailable: 1` on one replica
-4. **GatewayClass and Gateway:** one shared Gateway owned by the platform team. Port 80 `from: Same` (redirect and ACME only), HTTPS listeners `from: Selector` on a platform-controlled label. Never `from: All` on a shared listener. App namespaces, and so the label, are created in the platform layer, never by the app layer
+4. **GatewayClass and Gateway:** one shared Gateway owned by the platform team. Port 80 `from: Same` (redirect and ACME only), HTTPS listeners `from: Selector` bound to the namespace that owns the hostname via `kubernetes.io/metadata.name`. Never `from: All`, and never one shared opt-in label across listeners: either lets a team claim another team's hostname. App namespaces are created in the platform layer, never by the app layer
 5. **Redirect:** a platform-owned `RequestRedirect` route on port 80 with `statusCode: 308`
 6. **TLS:** cert-manager v1.15+ with `config.gatewayAPI.enabled: true`, the `cert-manager.io/cluster-issuer` annotation on the Gateway, and the `gatewayHTTPRoute` HTTP-01 solver. cert-manager must start after the CRDs exist (its layer `dependsOn` the CRD Kustomizations)
 7. **Delivery:** for Flux, three layers (`infrastructure` → `infrastructure-configs` → `apps`) with a `healthCheckExprs` entry on Gateway `Programmed`. For Argo CD, sync waves in the same order
@@ -154,7 +154,7 @@ Produce a per-hostname plan following the migration path in `references/gateway-
 Review in this order and separate critical findings from improvements:
 
 1. **Correctness:** `backendRefs` use port numbers; listener hostnames cover route hostnames; every HTTPS listener has `hostname`, `tls.mode: Terminate` and `certificateRefs`; configs depend on CRDs
-2. **Security:** no `from: All` on shared listeners; opt-in label is platform-controlled; `ReferenceGrant`s are as narrow as possible; NetworkPolicy admits only proxy pods; no experimental channel unless deliberate
+2. **Security:** no `from: All` on shared listeners; each HTTPS listener binds to the namespace owning its hostname, not a shared label; `ReferenceGrant`s are as narrow as possible; NetworkPolicy admits only proxy pods; no experimental channel unless deliberate
 3. **Operational safety:** CRDs are plain manifests that are never pruned or deleted with their owner; the controller chart does not install CRDs; proxy replicas ≥ 2 with a PDB in production; exact version pins; a `Programmed` health check
 4. **Portability:** implementation-specific policies are listed and justified
 

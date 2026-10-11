@@ -442,6 +442,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
+      # examples/gateway-api/gateway-api-validate.sh (run by validate-skill.sh) renders
+      # every Flux overlay and checks it with kubeconform -strict against the pinned
+      # CRDs catalog. Raw-file validation cannot do that: patch bodies are strings.
+      # Without the binary the validator fails in CI rather than skipping.
+      - name: Install kubeconform
+        env:
+          KUBECONFORM_VERSION: v0.8.0
+          KUBECONFORM_SHA256: 9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883
+        run: |
+          curl -fsSLo kubeconform.tar.gz \
+            "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz"
+          echo "${KUBECONFORM_SHA256}  kubeconform.tar.gz" | sha256sum -c -
+          tar xzf kubeconform.tar.gz kubeconform
+          sudo mv kubeconform /usr/local/bin/
+          kubeconform -v
+
       - name: Run skill structure validation
         run: bash tests/validate-skill.sh
 

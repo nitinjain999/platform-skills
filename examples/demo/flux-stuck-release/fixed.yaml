@@ -41,5 +41,4 @@ spec:
         cpu: 25m
         memory: 64Mi
       limits:
-        cpu: 500m
-        memory: 256Mi
+        memory: 256Mi   # memory only: a CPU limit throttles the webhook under load

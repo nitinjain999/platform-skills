@@ -27,7 +27,7 @@ basic-monorepo/
 │       ├── infrastructure-configs.yaml
 │       └── apps.yaml
 ├── infrastructure/
-│   ├── base/                      # Shared controllers (install CRDs)
+│   ├── base/                      # Shared controllers (CRDs come from clusters/<env>/gateway-crds.yaml)
 │   │   ├── kustomization.yaml
 │   │   ├── envoy-gateway/
 │   │   └── cert-manager/
@@ -179,7 +179,7 @@ Ownership is split the way Gateway API intends:
 | `HTTPRoute` per app | App team | the app's namespace |
 
 - **TLS:** the Gateway carries `cert-manager.io/cluster-issuer: letsencrypt-prod`. cert-manager creates one Certificate per HTTPS listener and solves HTTP-01 through the same Gateway.
-- **Access:** the HTTPS listener only accepts routes from namespaces labelled `gateway-access: "true"`. A route from any other namespace is rejected with `NotAllowedByListeners`. App namespaces are created in `infrastructure/configs/base/app-namespaces.yaml`, not under `apps/`, so an app team cannot grant itself the label. Protect that path with CODEOWNERS.
+- **Access:** each HTTPS listener accepts routes only from the namespace that owns its hostname, selected by `kubernetes.io/metadata.name` (set by the API server, immutable). A route from any other namespace is rejected with `NotAllowedByListeners`, so one team cannot claim paths on another team's hostname. App namespaces are created in `infrastructure/configs/base/app-namespaces.yaml`, not under `apps/`. Protect both files with CODEOWNERS.
 - **Redirect:** a platform-owned `HTTPRoute` on port 80 sends everything to HTTPS with a 308, the same code ingress-nginx used. ACME challenge routes use an `Exact` path match, which takes precedence over it.
 - **CRDs:** `clusters/<env>/gateway-crds.yaml` applies the Gateway API **standard**-channel CRDs and the Envoy Gateway CRDs as plain manifests through two Flux Kustomizations. Not a HelmRelease: the CRDs are multi-megabyte and a Helm release Secret is capped at 1 MiB. Both use `prune: false` and `deletionPolicy: Orphan`, because deleting a CRD deletes every Gateway and HTTPRoute in the cluster.
 - **Availability:** `EnvoyProxy` runs two proxy replicas with a PodDisruptionBudget in production. Staging runs one and removes the PDB, because `minAvailable: 1` on a single replica blocks every node drain.
@@ -219,7 +219,7 @@ Keep environment differences small. Most configuration should be in base.
 
 ## Adding New Applications
 
-A new app needs a platform-team change first: add its Namespace to `infrastructure/configs/base/app-namespaces.yaml`, with `gateway-access: "true"` if it serves public traffic. A new **public hostname** also needs an HTTPS listener in `infrastructure/configs/base/gateway.yaml`, patched per environment; cert-manager requires one listener per hostname.
+A new app needs a platform-team change first: add its Namespace to `infrastructure/configs/base/app-namespaces.yaml`. A new **public hostname** also needs an HTTPS listener in `infrastructure/configs/base/gateway.yaml` whose `allowedRoutes` selects that namespace by `kubernetes.io/metadata.name`, patched per environment; cert-manager requires one listener per hostname.
 
 1. **Create base definition:**
 
@@ -322,7 +322,7 @@ kubectl get certificate -n envoy-gateway-system
 
 | Condition | Meaning | Fix |
 |---|---|---|
-| `Accepted=False`, `NotAllowedByListeners` | Namespace lacks `gateway-access: "true"` or the `sectionName` is wrong | Label the namespace or fix `sectionName` |
+| `Accepted=False`, `NotAllowedByListeners` | The route's namespace is not the one the listener names, or the `sectionName` is wrong | Attach from the owning namespace, or fix `sectionName` |
 | `ResolvedRefs=False`, `BackendNotFound` | Service name or port in `backendRefs` is wrong | Match the Service name and port number |
 | Gateway `Programmed=False`, `AddressNotAssigned` | No LoadBalancer implementation | Install one, or use a NodePort `EnvoyProxy` for local clusters |
 | No Certificate | cert-manager started before the Gateway API CRDs existed | `kubectl rollout restart deployment cert-manager -n cert-manager` |

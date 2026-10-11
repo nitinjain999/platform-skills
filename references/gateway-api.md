@@ -81,16 +81,25 @@ allowedRoutes:
   namespaces:
     from: All
 
-# ✅ Namespaces opt in with a label the platform team controls
+# ⚠️ One shared opt-in label: every labelled team can attach to every listener,
+#    so team A can serve paths on team B's hostname
 allowedRoutes:
   namespaces:
     from: Selector
     selector:
       matchLabels:
         gateway-access: "true"
+
+# ✅ Each hostname's listener accepts routes only from the namespace that owns it
+allowedRoutes:
+  namespaces:
+    from: Selector
+    selector:
+      matchLabels:
+        kubernetes.io/metadata.name: payments
 ```
 
-Protect the opt-in label itself: if app teams can label their own namespaces, the selector is decoration. Enforce it with admission policy (`/platform-skills:kyverno`) or keep namespace creation in the platform repo.
+`kubernetes.io/metadata.name` is set by the API server and cannot be changed, so nobody can label their way into another team's listener. When one hostname is served from several namespaces, list them with `matchExpressions` (`key: kubernetes.io/metadata.name, operator: In`). A custom label is only a boundary if app teams cannot set it; then enforce it with admission policy (`/platform-skills:kyverno`) or keep namespace creation in the platform repo.
 
 ## CRD channel and lifecycle
 
@@ -185,7 +194,7 @@ ingress2gateway print --providers=ingress-nginx --ingress-nginx-ingress-class=in
 | Backend protocol | `backend-protocol` | `GRPC`/`GRPCS` become `GRPCRoute`; `HTTPS`/`GRPCS` create `BackendTLSPolicy` |
 | Regex | `use-regex` | `PathMatchRegularExpression` |
 | CORS | `enable-cors`, `cors-*` | CORS configuration |
-| IP control | `whitelist-source-range`, `denylist-source-range` | Implementation-specific (Envoy Gateway `SecurityPolicy`) |
+| IP control | `whitelist-source-range`, `denylist-source-range` | Implementation-specific (Envoy Gateway `SecurityPolicy`). Set client-IP detection to match the load balancer (TCP source behind L4 with `externalTrafficPolicy: Local`; `ClientTrafficPolicy` X-Forwarded-For behind L7), then prove it with one allowed and one denied request |
 | Backend TLS | `proxy-ssl-verify`, `proxy-ssl-secret`, `proxy-ssl-name`, `proxy-ssl-server-name` | `BackendTLSPolicy` |
 | Passthrough | `ssl-passthrough` | `TLSRoute` plus a `Passthrough` listener |
 | **Warned, not converted** | `canary-by-header-pattern`, `canary-by-cookie`, `proxy-redirect-from/to`, `custom-headers`, `proxy-ssl-verify-depth`, `proxy-ssl-protocols` | Manual decision |
@@ -329,7 +338,7 @@ Never roll back by deleting a CRD or the Kustomization that applies them. `delet
 
 | Symptom | Layer | Likely cause | Evidence | Fix |
 |---|---|---|---|---|
-| Route `Accepted=False`, `NotAllowedByListeners` | Runtime | Namespace not labelled, or wrong `sectionName` | `kubectl get ns <ns> --show-labels`; route `.status.parents` | Label the namespace or fix `sectionName` |
+| Route `Accepted=False`, `NotAllowedByListeners` | Runtime | Route is not in the namespace the listener names, or wrong `sectionName` | Listener `allowedRoutes`; route `.status.parents` | Attach from the owning namespace, or fix `sectionName` |
 | Route `Accepted=False`, `NoMatchingListenerHostname` | Runtime | Route hostname not covered by the listener hostname | Gateway listeners vs route `hostnames` | Add a listener or align hostnames |
 | Route `ResolvedRefs=False`, `BackendNotFound` | Runtime | Wrong Service name or port | `kubectl get svc -n <ns>` | Use the Service name and **port number** |
 | Route `ResolvedRefs=False`, `RefNotPermitted` | Runtime | Cross-namespace backend without a `ReferenceGrant` | Backend namespace | Add a `ReferenceGrant` in the backend's namespace |

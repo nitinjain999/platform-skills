@@ -31,9 +31,13 @@ spec:
         certificateRefs:
           - kind: Secret
             name: my-app-tls
+      # Bound to the one namespace that owns this hostname. A shared opt-in
+      # label would let every onboarded team attach routes here and claim
+      # paths on another team's hostname. kubernetes.io/metadata.name is set
+      # by the API server and cannot be changed, so it is a real boundary.
       allowedRoutes:
         namespaces:
           from: Selector
           selector:
             matchLabels:
-              gateway-access: "true"  # Namespaces opt in explicitly
+              kubernetes.io/metadata.name: my-app

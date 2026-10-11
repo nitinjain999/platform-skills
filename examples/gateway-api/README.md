@@ -15,6 +15,7 @@ For the full cluster layout (controllers, shared Gateway, cert-manager, Flux lay
 | [before/ingress.yaml](before/ingress.yaml) | An ingress-nginx `Ingress` with TLS, a timeout, a source-CIDR allowlist and a `configuration-snippet` |
 | [after/httproute.yaml](after/httproute.yaml) | The portable equivalent: `HTTPRoute` with path match, response header filter and timeouts |
 | [after/securitypolicy.yaml](after/securitypolicy.yaml) | The CIDR allowlist as an Envoy Gateway `SecurityPolicy`. Implementation-specific |
+| [after/clienttrafficpolicy.yaml](after/clienttrafficpolicy.yaml) | How Envoy determines the client IP the allowlist checks. Platform-owned, Gateway-wide |
 | [gateway-api-validate.sh](gateway-api-validate.sh) | Validates this example and the Flux monorepo |
 
 ## Annotation by annotation
@@ -25,6 +26,17 @@ For the full cluster layout (controllers, shared Gateway, cert-manager, Flux lay
 | `proxy-read-timeout: "60"` | `rules[].timeouts.backendRequest: 60s` | Yes. Semantics differ slightly; test under load |
 | `whitelist-source-range` | `SecurityPolicy` `authorization.rules[].principal.clientCIDRs` | No. Each implementation has its own policy kind |
 | `configuration-snippet` | Rewritten by hand as a `ResponseHeaderModifier` filter | Partly. Raw nginx config never translates |
+
+### Client IP for the allowlist
+
+A source-IP allowlist is only as good as the address Envoy believes is the client. ingress-nginx defaulted to the TCP source (`use-forwarded-headers: false`), so match the topology explicitly:
+
+| In front of Envoy | Client IP comes from | Configure |
+|---|---|---|
+| L4 load balancer (AWS NLB instance targets, Azure Standard LB) with `externalTrafficPolicy: Local` (Envoy Gateway default) | TCP source address | Nothing; do not trust `X-Forwarded-For`, a client could forge it |
+| L7 load balancer or proxy (AWS ALB, CDN) | `X-Forwarded-For` | `ClientTrafficPolicy` `clientIPDetection.xForwardedFor.numTrustedHops` = the number of proxies you run |
+
+Validate before relying on it: send one request from an allowed address and one from a denied address, and expect `200` and `403`.
 
 Treat every annotation that ingress2gateway warns about as a blocking finding. A dropped snippet is a silent behaviour change in production.
 

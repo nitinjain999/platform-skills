@@ -1,0 +1,28 @@
+---
+# AFTER: how Envoy decides the client IP that securitypolicy.yaml checks.
+# Platform-owned: it targets the shared Gateway, so it lives in the Gateway's
+# namespace, not the app's. Pick ONE topology:
+#
+# - L7 load balancer in front of Envoy (AWS ALB, a CDN, another proxy): the
+#   TCP source is the load balancer, so trust exactly the hops you run and
+#   read the client from X-Forwarded-For. This file is that case: one hop.
+# - L4 load balancer (AWS NLB instance targets, Azure Standard LB) with
+#   externalTrafficPolicy: Local (Envoy Gateway's default): the TCP source
+#   already is the client. Delete this file; trusting XFF there would let any
+#   client spoof its address with a header.
+#
+# Either way, prove it before relying on the allowlist: request once from an
+# allowed and once from a denied address and expect 200 and 403.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: ClientTrafficPolicy
+metadata:
+  name: client-ip-from-l7-lb
+  namespace: envoy-gateway-system
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: platform-gateway
+  clientIPDetection:
+    xForwardedFor:
+      numTrustedHops: 1  # exactly the number of proxies you operate in front of Envoy

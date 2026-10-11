@@ -2,6 +2,8 @@
 # AFTER: whitelist-source-range has no portable Gateway API field. Envoy
 # Gateway expresses it as a SecurityPolicy attached to the route. Another
 # implementation needs its own policy kind: this file does not port.
+# The CIDR is only meaningful if Envoy sees the real client IP: see
+# clienttrafficpolicy.yaml for the L4 vs L7 load-balancer choice.
 apiVersion: gateway.envoyproxy.io/v1alpha1
 kind: SecurityPolicy
 metadata:

@@ -1,8 +1,7 @@
 ---
-# App namespaces are created by the platform layer, not by app teams. The
-# gateway-access label is what lets a namespace attach routes to the shared
-# production listener; if the app layer owned this object, any team could
-# label itself in. Add a namespace here (platform-team review) to onboard an app.
+# App namespaces are created by the platform layer, not by app teams: onboarding
+# an app is a platform-team review. Gateway access is not a label here; each
+# HTTPS listener in gateway.yaml names the one namespace that owns its hostname.
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -10,4 +9,3 @@ metadata:
   labels:
     name: my-app
     toolkit.fluxcd.io/tenant: app-team
-    gateway-access: "true"  # Allows HTTPRoutes here to attach to platform-gateway
