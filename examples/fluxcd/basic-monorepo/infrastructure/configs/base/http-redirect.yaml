@@ -1,0 +1,19 @@
+---
+# Replaces the implicit HTTP-to-HTTPS redirect that Ingress controllers add.
+# ACME challenge routes created by cert-manager use an Exact path match, which
+# takes precedence over this catch-all, so issuance still works over HTTP.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: http-to-https-redirect
+  namespace: envoy-gateway-system
+spec:
+  parentRefs:
+    - name: platform-gateway
+      sectionName: http
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301

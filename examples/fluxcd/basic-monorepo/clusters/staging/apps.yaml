@@ -6,7 +6,7 @@ metadata:
   namespace: flux-system
 spec:
   dependsOn:
-    - name: infrastructure
+    - name: infrastructure-configs
   interval: 3m0s  # Faster sync for staging
   retryInterval: 30s
   timeout: 3m0s

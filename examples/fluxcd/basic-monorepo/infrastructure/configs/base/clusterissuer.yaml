@@ -1,0 +1,20 @@
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: platform-team@example.com
+    privateKeySecretRef:
+      name: letsencrypt-prod-account-key
+    solvers:
+      # Solve HTTP-01 through the shared Gateway instead of an Ingress
+      - http01:
+          gatewayHTTPRoute:
+            parentRefs:
+              - name: platform-gateway
+                namespace: envoy-gateway-system
+                kind: Gateway
+                sectionName: http

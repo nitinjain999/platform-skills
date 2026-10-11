@@ -1,0 +1,39 @@
+---
+# One shared Gateway owned by the platform team. App teams attach HTTPRoutes to
+# it from their own namespaces; they never create Gateways or touch TLS.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: platform-gateway
+  namespace: envoy-gateway-system
+  annotations:
+    # cert-manager creates a Certificate for every HTTPS listener below
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+spec:
+  gatewayClassName: envoy-gateway
+  listeners:
+    # Port 80 serves only the HTTPS redirect and ACME HTTP-01 challenges,
+    # both created in this namespace, so no other namespace may attach here.
+    - name: http
+      protocol: HTTP
+      port: 80
+      allowedRoutes:
+        namespaces:
+          from: Same
+    # cert-manager requires one listener per hostname with a non-empty hostname
+    # and tls.mode Terminate. Each new public hostname is a platform-team PR.
+    - name: https-my-app
+      protocol: HTTPS
+      port: 443
+      hostname: my-app.example.com
+      tls:
+        mode: Terminate
+        certificateRefs:
+          - kind: Secret
+            name: my-app-tls
+      allowedRoutes:
+        namespaces:
+          from: Selector
+          selector:
+            matchLabels:
+              gateway-access: "true"  # Namespaces opt in explicitly

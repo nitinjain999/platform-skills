@@ -2,9 +2,9 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: ingress-nginx
+  name: envoy-gateway-system
   labels:
-    name: ingress-nginx
+    name: envoy-gateway-system
     toolkit.fluxcd.io/tenant: platform
 ---
 apiVersion: v1

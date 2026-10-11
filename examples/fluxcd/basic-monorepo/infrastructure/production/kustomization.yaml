@@ -6,13 +6,10 @@ resources:
 patches:
   - target:
       kind: HelmRelease
-      name: ingress-nginx
+      name: envoy-gateway
     patch: |-
-      - op: replace
-        path: /spec/values/controller/replicaCount
-        value: 3
       - op: add
-        path: /spec/values/controller/resources/limits/cpu
+        path: /spec/values/deployment/envoyGateway/resources/limits/cpu
         value: "1000m"
   - target:
       kind: HelmRelease

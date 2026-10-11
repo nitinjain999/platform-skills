@@ -6,17 +6,17 @@ resources:
 patches:
   - target:
       kind: HelmRelease
-      name: ingress-nginx
+      name: envoy-gateway
     patch: |-
       - op: replace
-        path: /spec/values/controller/replicaCount
+        path: /spec/values/deployment/replicas
         value: 1
       - op: replace
-        path: /spec/values/controller/resources/requests/cpu
+        path: /spec/values/deployment/envoyGateway/resources/requests/cpu
         value: "50m"
       - op: replace
-        path: /spec/values/controller/resources/requests/memory
-        value: "64Mi"
+        path: /spec/values/deployment/envoyGateway/resources/requests/memory
+        value: "128Mi"
   - target:
       kind: HelmRelease
       name: cert-manager

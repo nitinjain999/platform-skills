@@ -1,0 +1,24 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../base
+patches:
+  - target:
+      kind: Gateway
+      name: platform-gateway
+    patch: |-
+      - op: replace
+        path: /spec/listeners/1/hostname
+        value: my-app.staging.example.com
+  # One proxy in staging. The PDB must go with it: minAvailable 1 on a single
+  # replica blocks every node drain.
+  - target:
+      kind: EnvoyProxy
+      name: platform-proxy
+    patch: |-
+      - op: replace
+        path: /spec/provider/kubernetes/envoyDeployment/replicas
+        value: 1
+      - op: remove
+        path: /spec/provider/kubernetes/envoyPDB

@@ -1,0 +1,28 @@
+---
+# Gateway API objects need the CRDs that the infrastructure layer installs, so
+# they live in their own Kustomization that waits for that layer to be Ready.
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: infrastructure-configs
+  namespace: flux-system
+spec:
+  dependsOn:
+    - name: infrastructure
+  interval: 10m0s
+  retryInterval: 1m0s
+  timeout: 5m0s
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./infrastructure/configs/production
+  prune: true
+  wait: true
+  healthCheckExprs:
+    # Gateway has no Ready condition, so kstatus alone would report it healthy
+    # before Envoy has an address. Programmed=True means the proxy is serving.
+    # Requires a LoadBalancer implementation (EKS/AKS/GKE or MetalLB on kind).
+    - apiVersion: gateway.networking.k8s.io/v1
+      kind: Gateway
+      failed: status.conditions.exists(e, e.type == 'Accepted' && e.status == 'False')
+      current: status.conditions.exists(e, e.type == 'Programmed' && e.status == 'True')

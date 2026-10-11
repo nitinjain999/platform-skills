@@ -24,12 +24,9 @@ patches:
         path: /spec/template/spec/containers/0/resources/limits/memory
         value: "256Mi"
   - target:
-      kind: Ingress
+      kind: HTTPRoute
       name: my-app
     patch: |-
       - op: replace
-        path: /spec/tls/0/hosts/0
-        value: my-app.prod.example.com
-      - op: replace
-        path: /spec/rules/0/host
+        path: /spec/hostnames/0
         value: my-app.prod.example.com

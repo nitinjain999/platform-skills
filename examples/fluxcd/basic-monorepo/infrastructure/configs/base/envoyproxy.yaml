@@ -1,0 +1,23 @@
+---
+# Data-plane settings for every Gateway of the envoy-gateway class. Without this,
+# Envoy Gateway runs one proxy replica: a single point of failure for all traffic.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: platform-proxy
+  namespace: envoy-gateway-system
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        replicas: 2
+        container:
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+      envoyPDB:
+        minAvailable: 1  # Node drains keep one proxy serving

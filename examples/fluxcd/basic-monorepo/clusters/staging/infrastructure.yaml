@@ -17,5 +17,9 @@ spec:
   healthChecks:
     - apiVersion: apps/v1
       kind: Deployment
-      name: ingress-nginx-controller
-      namespace: ingress-nginx
+      name: envoy-gateway
+      namespace: envoy-gateway-system
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: cert-manager
+      namespace: cert-manager

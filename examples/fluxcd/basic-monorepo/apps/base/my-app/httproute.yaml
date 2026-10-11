@@ -1,0 +1,23 @@
+---
+# Replaces the networking.k8s.io Ingress. The app team owns this route; the
+# platform team owns the Gateway, listener and certificate it attaches to.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: my-app
+  namespace: my-app
+spec:
+  parentRefs:
+    - name: platform-gateway
+      namespace: envoy-gateway-system
+      sectionName: https-my-app
+  hostnames:
+    - my-app.example.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: my-app
+          port: 80

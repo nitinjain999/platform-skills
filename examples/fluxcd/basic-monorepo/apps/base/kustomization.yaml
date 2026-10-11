@@ -5,4 +5,4 @@ resources:
   - namespace.yaml
   - my-app/deployment.yaml
   - my-app/service.yaml
-  - my-app/ingress.yaml
+  - my-app/httproute.yaml

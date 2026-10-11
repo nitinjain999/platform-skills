@@ -329,6 +329,7 @@ VALIDATE_SCRIPTS=(
   "examples/runtime-security/runtime-security-validate.sh"
   "examples/chaos/chaos-validate.sh"
   "examples/dora/dora-validate.sh"
+  "examples/gateway-api/gateway-api-validate.sh"
 )
 
 for script in "${VALIDATE_SCRIPTS[@]}"; do
