@@ -45,9 +45,10 @@ Covers all `/platform-skills:backup-dr` mode logic: Velero install and configura
 A backup that has never been restored is untested. The drill (`examples/backup-dr/restore-drill.sh`):
 
 1. Picks the latest backup created by the schedule (label `velero.io/schedule-name`) and refuses anything not `Completed`.
-2. Restores one namespace into `<namespace>-drill` with `--namespace-mappings`, excluding HTTPRoutes, Ingresses and Services, then recreates each Service as an internal ClusterIP (or headless) copy. The copy cannot claim a production hostname, provision a load balancer or open a node port.
-3. Waits for every pod to be Ready and reports the elapsed time: the measured recovery time for that namespace.
-4. Deletes the drill namespace.
+2. Creates `<namespace>-drill` with the source namespace's labels and a default-deny `NetworkPolicy` before restoring anything. Only pod-to-pod traffic inside the drill namespace, DNS, and any `--allow-egress <cidr>` test dependencies are allowed. The restored workloads carry production Secrets, so without this they could write to production databases, call external APIs or consume live queues. This needs a CNI that enforces egress policy; otherwise drill in a separate cluster.
+3. Restores one namespace into `<namespace>-drill` with `--namespace-mappings`, excluding HTTPRoutes, Ingresses, Services and NetworkPolicies (a restored policy could reopen egress), then recreates each Service as an internal ClusterIP (or headless) copy. The copy cannot claim a production hostname, provision a load balancer or open a node port.
+4. Waits for every pod to be Ready and reports the elapsed time: the measured recovery time for that namespace.
+5. Deletes the drill namespace.
 
 Run it on a schedule (weekly is a good start) and after any change to storage classes, CSI drivers or Velero. Record each result; a growing recovery time is a finding.
 

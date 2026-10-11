@@ -70,11 +70,11 @@ echo "=== Restore drill is not reachable from outside the cluster ==="
 excl="$(grep -o -- '--exclude-resources [^ ]*' "$DIR/restore-drill.sh" || true)"
 excl="${excl#--exclude-resources }"
 missing=""
-for r in httproutes.gateway.networking.k8s.io ingresses.networking.k8s.io services; do
+for r in httproutes.gateway.networking.k8s.io ingresses.networking.k8s.io services networkpolicies.networking.k8s.io; do
   printf '%s\n' "$excl" | tr ',' '\n' | grep -qx "$r" || missing="$missing $r"
 done
 if [ -z "$missing" ]; then
-  pass "restore-drill.sh excludes HTTPRoutes, Ingresses and Services from the Velero restore"
+  pass "restore-drill.sh excludes HTTPRoutes, Ingresses, Services and NetworkPolicies from the Velero restore"
 else
   fail "restore-drill.sh must exclude from the drill restore:$missing"
 fi
@@ -82,6 +82,19 @@ if grep -q 'type: "ClusterIP"' "$DIR/restore-drill.sh"; then
   pass "restore-drill.sh recreates Services as ClusterIP only"
 else
   fail "restore-drill.sh must recreate Services as ClusterIP (no LoadBalancer or NodePort)"
+fi
+
+echo ""
+echo "=== Restore drill cannot reach production ==="
+# The namespace and its default-deny policy must exist before velero restore
+# runs, or restored pods start with production credentials and open egress.
+np_line="$(grep -n 'kind: "NetworkPolicy"' "$DIR/restore-drill.sh" | head -1 | cut -d: -f1 || true)"
+restore_line="$(grep -n '^velero restore create' "$DIR/restore-drill.sh" | head -1 | cut -d: -f1 || true)"
+if [ -n "$np_line" ] && [ -n "$restore_line" ] && [ "$np_line" -lt "$restore_line" ] \
+   && grep -q 'policyTypes: \["Ingress", "Egress"\]' "$DIR/restore-drill.sh"; then
+  pass "restore-drill.sh applies a default-deny Ingress+Egress NetworkPolicy before the restore"
+else
+  fail "restore-drill.sh must apply a default-deny egress NetworkPolicy to the drill namespace before velero restore"
 fi
 if bash -n "$DIR/restore-drill.sh"; then
   pass "restore-drill.sh parses"

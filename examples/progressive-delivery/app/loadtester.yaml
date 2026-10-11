@@ -38,3 +38,39 @@ spec:
     remediation:
       retries: 3
       remediateLastFailure: true  # roll back if the last retry also failed
+  # The chart defaults to requests only and leaves both security contexts
+  # disabled. The loadtester executes whatever a Canary webhook sends it, so
+  # run it non-root, read-only, without capabilities, and with a memory bound.
+  values:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+      limits:
+        memory: 256Mi     # room for a short `hey` run; raise it for real load tests
+    securityContext:
+      enabled: true
+      context:
+        runAsNonRoot: true
+        runAsUser: 100
+        runAsGroup: 101
+        readOnlyRootFilesystem: true
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: [ALL]
+    podSecurityContext:
+      enabled: true
+      context:
+        runAsNonRoot: true
+        fsGroup: 101
+        fsGroupChangePolicy: OnRootMismatch
+        seccompProfile:
+          type: RuntimeDefault
+    # Writable scratch space for webhook commands; the root filesystem is read-only.
+    volumes:
+      - name: tmp
+        emptyDir:
+          sizeLimit: 64Mi
+    volumeMounts:
+      - name: tmp
+        mountPath: /tmp

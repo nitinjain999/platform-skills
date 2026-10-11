@@ -18,6 +18,14 @@ bash examples/backup-dr/restore-drill.sh --namespace my-app
 
 The drill excludes HTTPRoutes, Ingresses and Services from the restore, so the copy never takes a production hostname. It then recreates each Service as an internal ClusterIP (or headless) copy with the same selector and ports, so in-namespace DNS still works. A Service restored as it was could provision a new public load balancer (type `LoadBalancer`) or open a port on every node (`NodePort`). The script needs `jq` for that step. In the basic-monorepo layout the HTTPS listener only accepts routes from `my-app` anyway, so a stray route from `my-app-drill` would be rejected.
 
+Blocking inbound traffic is not enough on its own. The restored Deployments, Jobs and consumers start with production Secrets and config, and they could write to the production database, call external APIs or consume live queues before the readiness check. So the script creates `<ns>-drill` before the restore, copying the source namespace's labels, and applies a default-deny `NetworkPolicy` (`restore-drill-isolation`) that allows only pod-to-pod traffic inside the drill namespace and DNS. The backup's own NetworkPolicies are not restored, because policies are additive and one that allows egress would undo the isolation. If you provide test instances of a workload's dependencies, allow them explicitly:
+
+```bash
+bash examples/backup-dr/restore-drill.sh --namespace my-app --allow-egress 10.20.30.0/24
+```
+
+Pods that cannot reach a dependency they need at startup will not become Ready. That is a finding about the drill setup, not about the backup. Egress isolation needs a CNI that enforces NetworkPolicy egress (Calico, Cilium, the VPC CNI with network policy enabled, OVN-Kubernetes). If your CNI does not, run the drill in a separate cluster.
+
 Pair it with `/platform-skills:chaos`: run a GameDay that deletes the namespace, then run this drill as the recovery step and compare the measured time with your recovery-time objective.
 
 Validate the HelmRelease values against the real chart:
