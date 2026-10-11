@@ -167,8 +167,8 @@ spec:
   dependsOn:
     - name: cert-manager
       namespace: cert-manager
-    - name: ingress-nginx
-      namespace: ingress-nginx
+    - name: envoy-gateway
+      namespace: envoy-gateway-system
 ```
 
 ---
@@ -183,11 +183,11 @@ spec:
     - apiVersion: apps/v1
       kind: Deployment
       current: >
-        object.status.conditions.filter(e, e.type == 'Available').all(e, e.status == 'True')
+        status.conditions.filter(e, e.type == 'Available').all(e, e.status == 'True')
       inProgress: >
-        object.status.conditions.filter(e, e.type == 'Progressing').exists(e, e.status == 'True')
+        status.conditions.filter(e, e.type == 'Progressing').exists(e, e.status == 'True')
       failed: >
-        object.status.replicas > 0 && object.status.readyReplicas == 0
+        status.replicas > 0 && status.readyReplicas == 0
 ```
 
 ---

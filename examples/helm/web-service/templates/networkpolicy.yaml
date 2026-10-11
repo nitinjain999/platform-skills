@@ -15,14 +15,15 @@ spec:
     - Egress
   ingress:
     - from:
-        # Both selectors are ANDed — pod must be in the ingress-nginx namespace AND match the label.
+        # Both selectors are ANDed — pod must be an Envoy Gateway proxy in envoy-gateway-system.
         # To express OR, use two separate list items instead.
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: ingress-nginx
+              kubernetes.io/metadata.name: envoy-gateway-system
           podSelector:
             matchLabels:
-              app.kubernetes.io/name: ingress-nginx
+              app.kubernetes.io/name: envoy
+              app.kubernetes.io/component: proxy
       ports:
         - protocol: TCP
           port: {{ .Values.service.targetPort }}

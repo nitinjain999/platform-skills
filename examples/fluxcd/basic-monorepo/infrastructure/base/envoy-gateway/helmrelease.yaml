@@ -6,19 +6,17 @@ metadata:
   namespace: envoy-gateway-system
 spec:
   interval: 30m
+  dependsOn:
+    - name: gateway-crds
   chartRef:
     kind: OCIRepository
     name: envoy-gateway
   maxHistory: 3
   install:
-    # The chart ships the Envoy Gateway and Gateway API CRDs in crds/.
-    # Helm never upgrades crds/ on its own; CreateReplace keeps them current.
-    crds: CreateReplace
     strategy:
       name: RetryOnFailure
       retryInterval: 3m
   upgrade:
-    crds: CreateReplace
     cleanupOnFail: true
     strategy:
       name: RetryOnFailure
@@ -26,6 +24,8 @@ spec:
   uninstall:
     keepHistory: false
   values:
+    crds:
+      enabled: false  # Owned by the gateway-crds HelmRelease
     # Control plane only. Envoy proxy replicas are set per GatewayClass through
     # the EnvoyProxy resource in infrastructure/configs.
     deployment:

@@ -10,7 +10,7 @@ Baseline manifests for Kubernetes platform patterns. Apply across EKS, AKS, GKE,
 |------|--------------|-------------|
 | [namespace-baseline.yaml](namespace-baseline.yaml) | Namespace with ownership labels and pod security enforcement | `pod-security.kubernetes.io/enforce: restricted`, team/env labels |
 | [deployment-baseline.yaml](deployment-baseline.yaml) | Deployment with resource limits, probes, and locked-down security context | `runAsNonRoot`, `readOnlyRootFilesystem`, `capabilities.drop: ALL`, no CPU limit |
-| [network-policy-default-deny.yaml](network-policy-default-deny.yaml) | Default-deny ingress + example allow rule for ingress controller | Applied before workload; explicit allow for ingress controller namespace |
+| [network-policy-default-deny.yaml](network-policy-default-deny.yaml) | Default-deny ingress + example allow rule for Envoy Gateway proxies | Applied before workload; explicit allow for the Envoy proxy pods only |
 | [pod-disruption-budget.yaml](pod-disruption-budget.yaml) | PDB protecting minimum availability during node drain | `minAvailable: 1` — prevents simultaneous eviction |
 
 ## Quick Start

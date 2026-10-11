@@ -9,7 +9,7 @@ A Flux HelmRelease that goes NotReady and stays there. Platform-skills identifie
 | Finding | Severity | Risk |
 |---|---|---|
 | `version: "*"` — unpinned chart | Critical | Silent major upgrades; non-reproducible clusters |
-| No `dependsOn` | High | HelmRelease deploys before cert-manager CRDs exist → CrashLoopBackOff |
+| No `dependsOn` | High | HelmRelease deploys before cert-manager CRDs exist → the webhook `Certificate` fails to apply and the install never goes Ready |
 | `interval: 1h` — too long | Medium | Changes take up to 1 hour to reconcile |
 | No `timeout` | Medium | Stuck install blocks other Flux reconciliations |
 | No `remediation` | Medium | Failed install retries forever without rollback |
@@ -17,8 +17,8 @@ A Flux HelmRelease that goes NotReady and stays there. Platform-skills identifie
 
 ## What changed in fixed.yaml
 
-- Pinned chart version `4.10.1` — upgrade is an explicit PR decision
-- `dependsOn: cert-manager` — ensures CRDs exist before ingress deploys
+- Pinned chart version `v0.25.0` — upgrade is an explicit PR decision
+- `dependsOn: cert-manager` — ensures CRDs exist before trust-manager deploys
 - `interval: 10m` — changes reconcile in minutes, not hours
 - `timeout: 5m` — fail fast, unblock other reconciliations
 - `install.remediation.retries: 3` + `upgrade.remediation.remediateLastFailure: true` — automatic rollback on failure
@@ -27,16 +27,16 @@ A Flux HelmRelease that goes NotReady and stays there. Platform-skills identifie
 ## Diagnosing a stuck release
 
 ```bash
-flux get helmrelease nginx-ingress -n ingress-system
-flux logs --kind HelmRelease --name nginx-ingress --namespace ingress-system
-kubectl describe helmrelease nginx-ingress -n ingress-system
+flux get helmrelease trust-manager -n cert-manager
+flux logs --kind HelmRelease --name trust-manager --namespace cert-manager
+kubectl describe helmrelease trust-manager -n cert-manager
 ```
 
 ## Force reconcile after fix
 
 ```bash
-flux reconcile helmrelease nginx-ingress -n ingress-system --with-source
-flux get helmrelease nginx-ingress -n ingress-system --watch
+flux reconcile helmrelease trust-manager -n cert-manager --with-source
+flux get helmrelease trust-manager -n cert-manager --watch
 ```
 
 ## Try it yourself

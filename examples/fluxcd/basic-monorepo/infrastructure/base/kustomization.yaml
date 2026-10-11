@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - namespaces.yaml
   - envoy-gateway/ocirepository.yaml
+  - envoy-gateway/helmrelease-crds.yaml
   - envoy-gateway/helmrelease.yaml
   - cert-manager/helmrepository.yaml
   - cert-manager/helmrelease.yaml

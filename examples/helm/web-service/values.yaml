@@ -47,6 +47,8 @@ service:
   # -- Internal container port the app listens on
   targetPort: 8080
 
+# Prefer a Gateway API HTTPRoute (see examples/gateway-api). Kept for clusters
+# still running an Ingress controller; set className to that controller's class.
 ingress:
   enabled: false
   className: nginx

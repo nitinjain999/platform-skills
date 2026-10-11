@@ -7,9 +7,9 @@ metadata:
 spec:
   interval: 30m
   # cert-manager only watches Gateways if the Gateway API CRDs exist when it
-  # starts. Envoy Gateway installs those CRDs, so it must be Ready first.
+  # starts, so the CRD release must be Ready first.
   dependsOn:
-    - name: envoy-gateway
+    - name: gateway-crds
       namespace: envoy-gateway-system
   chart:
     spec:

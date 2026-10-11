@@ -1,0 +1,22 @@
+---
+# AFTER: whitelist-source-range has no portable Gateway API field. Envoy
+# Gateway expresses it as a SecurityPolicy attached to the route. Another
+# implementation needs its own policy kind: this file does not port.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: payments-api-source-range
+  namespace: payments
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: payments-api
+  authorization:
+    defaultAction: Deny
+    rules:
+      - name: allow-internal
+        action: Allow
+        principal:
+          clientCIDRs:
+            - 10.0.0.0/8

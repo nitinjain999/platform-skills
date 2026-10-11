@@ -1,0 +1,34 @@
+---
+# BEFORE: a typical ingress-nginx Ingress. Three annotations need a decision
+# during migration; ingress2gateway translates only some of them.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: payments-api
+  namespace: payments
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    # Translated by ingress2gateway into an HTTPRoute timeout
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    # Translated, but the result is implementation-specific (Envoy Gateway: SecurityPolicy)
+    nginx.ingress.kubernetes.io/whitelist-source-range: "10.0.0.0/8"
+    # NOT translated: snippets are raw nginx config. Re-express by hand or drop
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: DENY";
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - payments.example.com
+      secretName: payments-tls
+  rules:
+    - host: payments.example.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: payments-api
+                port:
+                  number: 80

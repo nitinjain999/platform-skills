@@ -1,26 +1,25 @@
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
-  name: ingress-nginx
+  name: jetstack
   namespace: flux-system
 spec:
   interval: 1h
-  url: https://kubernetes.github.io/ingress-nginx
+  url: https://charts.jetstack.io
 ---
 apiVersion: helm.toolkit.fluxcd.io/v2
 kind: HelmRelease
 metadata:
-  name: nginx-ingress
-  namespace: ingress-system
+  name: trust-manager
+  namespace: cert-manager
 spec:
   interval: 1h
   chart:
     spec:
-      chart: ingress-nginx
+      chart: trust-manager
       version: "*"
       sourceRef:
         kind: HelmRepository
-        name: ingress-nginx
+        name: jetstack
   values:
-    controller:
-      replicaCount: 1
+    replicaCount: 1

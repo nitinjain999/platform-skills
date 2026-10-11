@@ -87,23 +87,85 @@ else
 fi
 
 echo ""
+echo "=== Repository: no manifest still depends on ingress-nginx ==="
+
+# Excluded on purpose: the frozen token-optimizer eval fixtures (changing them
+# breaks baseline comparability) and the migration example's "before" state.
+STALE="$(cd "$ROOT_DIR" && grep -rIl --include='*.yaml' --include='*.yml' 'ingress-nginx' . \
+  --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=.claude \
+  | grep -v -E '^\./(evals/token-optimizer/|examples/gateway-api/before/)' || true)"
+if [ -z "$STALE" ]; then
+  pass "no manifest outside the allowlist references ingress-nginx"
+else
+  fail "manifests still reference ingress-nginx: $(printf '%s' "$STALE" | tr '\n' ' ')"
+fi
+
+echo ""
+echo "=== Migration example: before and after ==="
+
+BEFORE="$SCRIPT_DIR/before/ingress.yaml"
+AFTER="$SCRIPT_DIR/after/httproute.yaml"
+if [ -f "$BEFORE" ] && [ -f "$AFTER" ]; then
+  pass "before/ingress.yaml and after/httproute.yaml exist"
+  if command -v kubeconform >/dev/null 2>&1; then
+    if kubeconform -strict -summary -output text \
+        -schema-location default -schema-location "$CRD_CATALOG" \
+        "$BEFORE" "$SCRIPT_DIR"/after/*.yaml >/dev/null 2>&1; then
+      pass "before/after pass kubeconform (strict, CRD catalog)"
+    else
+      fail "before/after fail kubeconform"
+    fi
+  fi
+  # Every host in the Ingress must survive the conversion. An empty host list
+  # would make the loop below pass vacuously, so it is a failure on its own.
+  if [ -z "$(yq '.spec.rules[].host' "$BEFORE")" ]; then
+    fail "before/ingress.yaml has no rules[].host — nothing to compare"
+  fi
+  for host in $(yq '.spec.rules[].host' "$BEFORE"); do
+    if yq '.spec.hostnames[]' "$AFTER" | grep -qx "$host"; then
+      pass "host $host carried into HTTPRoute"
+    else
+      fail "host $host from the Ingress is missing in the HTTPRoute"
+    fi
+  done
+else
+  fail "examples/gateway-api/before/ingress.yaml or after/httproute.yaml missing"
+fi
+
+echo ""
 echo "=== basic-monorepo: ordering and access contracts ==="
 
 EG_RELEASE="$MONOREPO/infrastructure/base/envoy-gateway/helmrelease.yaml"
 EG_SOURCE="$MONOREPO/infrastructure/base/envoy-gateway/ocirepository.yaml"
+EG_CRDS="$MONOREPO/infrastructure/base/envoy-gateway/helmrelease-crds.yaml"
 CM_RELEASE="$MONOREPO/infrastructure/base/cert-manager/helmrelease.yaml"
 
-if [ -f "$EG_SOURCE" ] && [ "$(yq '.spec.ref.tag' "$EG_SOURCE")" = "v1.9.2" ]; then
-  pass "Envoy Gateway chart pinned to v1.9.2"
+if [ -f "$EG_SOURCE" ] && [ "$(yq -N '.spec.ref.tag' "$EG_SOURCE" | sort -u)" = "v1.9.2" ]; then
+  pass "Envoy Gateway CRD and controller charts both pinned to v1.9.2"
 else
   fail "Envoy Gateway OCIRepository missing or not pinned to v1.9.2"
 fi
 
 # cert-manager ignores Gateways if the Gateway API CRDs appear after it starts.
-if [ -f "$CM_RELEASE" ] && grep -q 'name: envoy-gateway' "$CM_RELEASE" && grep -q 'dependsOn:' "$CM_RELEASE"; then
-  pass "cert-manager HelmRelease dependsOn envoy-gateway (CRDs exist first)"
+if [ -f "$CM_RELEASE" ] && [ "$(yq '.spec.dependsOn[].name' "$CM_RELEASE")" = "gateway-crds" ]; then
+  pass "cert-manager HelmRelease dependsOn gateway-crds (CRDs exist first)"
 else
-  fail "cert-manager HelmRelease must dependsOn envoy-gateway"
+  fail "cert-manager HelmRelease must dependsOn gateway-crds"
+fi
+
+# The controller chart bundles experimental-channel CRDs; they must stay off.
+if [ -f "$EG_CRDS" ] && [ "$(yq '.spec.values.crds.gatewayAPI.channel' "$EG_CRDS")" = "standard" ] \
+    && [ "$(yq '.spec.values.crds.enabled' "$EG_RELEASE")" = "false" ]; then
+  pass "Gateway API CRDs are standard channel, owned by gateway-crds only"
+else
+  fail "gateway-crds must set channel: standard and envoy-gateway must set crds.enabled: false"
+fi
+
+# Deleting a CRD deletes every Gateway and HTTPRoute; Helm must keep them.
+if [ -f "$EG_CRDS" ] && [ "$(yq '.spec.postRenderers[].kustomize.patches[] | select(.target.kind == "CustomResourceDefinition") | .patch' "$EG_CRDS" | grep -c 'resource-policy')" -ge 1 ]; then
+  pass "gateway-crds post-renderer marks CRDs helm.sh/resource-policy: keep"
+else
+  fail "gateway-crds must post-render helm.sh/resource-policy: keep onto CRDs"
 fi
 
 if [ -f "$CM_RELEASE" ] && [ "$(yq '.spec.values.config.gatewayAPI.enabled' "$CM_RELEASE" 2>/dev/null)" = "true" ]; then

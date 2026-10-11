@@ -34,7 +34,7 @@ Sleep 200ms
 Type "echo '⚠️  IMPROVE  interval:1h — pushed fix waits up to 1h without manual trigger'"
 Enter
 Sleep 200ms
-Type "echo '⚠️  IMPROVE  replicaCount:1 — pod restart causes ingress downtime'"
+Type "echo '⚠️  IMPROVE  replicaCount:1 — pod restart takes the trust-manager webhook down'"
 Enter
 Sleep 2s
 

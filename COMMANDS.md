@@ -121,7 +121,7 @@ resource "aws_iam_role_policy" "app" {
 
 Review Helm values against a specific chart:
 ```
-/platform-skills:preflight my values.yaml for the ingress-nginx chart — are resource limits set? Is the service account locked down?
+/platform-skills:preflight my values.yaml for the envoy-gateway chart — are resource limits set? Is the service account locked down?
 ```
 
 **What comes back:** A structured report grouped by severity. Critical items block merge; Improvements are non-blocking; Notes are informational.

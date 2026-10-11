@@ -1,0 +1,35 @@
+---
+# AFTER: the same routing as a Gateway API HTTPRoute. TLS moved to the shared
+# Gateway listener (platform-owned), so the route carries no certificate.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: payments-api
+  namespace: payments
+spec:
+  parentRefs:
+    - name: platform-gateway
+      namespace: envoy-gateway-system
+      sectionName: https-payments
+  hostnames:
+    - payments.example.com
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api
+      filters:
+        # Replaces the configuration-snippet with a portable, reviewed filter
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+              - name: X-Frame-Options
+                value: DENY
+      # proxy-read-timeout bounded the wait for the backend's response; the
+      # closest portable field is backendRequest. Verify behaviour under load.
+      timeouts:
+        request: 70s
+        backendRequest: 60s
+      backendRefs:
+        - name: payments-api
+          port: 80
