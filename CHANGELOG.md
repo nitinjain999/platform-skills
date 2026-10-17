@@ -5,6 +5,19 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Renovate missed pins outside its default file patterns.**
+  - **Examples were not scanned.** The example workflows outside `.github/workflows` (14 of them, plus the Copilot setup-steps template) were never scanned, and some had already drifted (`flux-sync.yml` still pinned checkout v6.0.2). Flux `HelmRelease`, `OCIRepository` and `GitRepository` versions were not scanned either, because the flux manager defaults to `gotk-components.yaml` only. The same went for the two example manifests that use real public images, since the kubernetes manager matches nothing by default. `renovate.json` now adds patterns for each of these.
+  - **Tool versions in env blocks and download URLs were invisible to Renovate.** `ZIZMOR_VERSION` stayed at 1.29.0 while 1.31.1 shipped, under a comment that said "Renovate keeps it current". These pins now carry a `# renovate: datasource=... depName=...` annotation, which a new custom regex manager reads. When a `*_SHA256` line follows the version, Renovate updates the checksum with it through `github-release-attachments`.
+  - **Two kubeconform installs were unverified.** `validate.yml` downloaded kubeconform v0.6.4 with no checksum, next to a checksum-verified v0.8.0, and so did `examples/github-actions/flux-sync.yml`. Both now use the pinned, verified v0.8.0.
+  - **The gate's actionlint download hard-coded its version.** In `renovate-gate.md`, actionlint now builds its URL from an annotated version variable (lock recompiled with gh aw v0.86.2). A new package rule adds a note to any Renovate PR that touches a gh-aw source, because the lock file needs a recompile before merge.
+- **Duplicate Terraform PRs.** `terraform_version` was extracted twice, as `terraform` by the github-actions manager and as `hashicorp/terraform` by the custom manager, so one version line could get two PRs. The github-actions copy is disabled. The custom manager now also reads gh-aw `.md` sources, where the Renovate Gate pins Terraform 1.15.8.
+- **Fixtures that are outdated or broken on purpose are now ignored.** These are the eval evidence, the pr-review and triage scenarios, and the demo `bad.*` files. The two custom managers that matched nothing (the "Flux CLI (…)" and "Kubernetes cluster (…)" doc regexes) are removed.
+- **New gate: `tests/renovate-coverage.sh`.** `tests/handbook-consistency.sh` now runs it. It fails on an unannotated `*_VERSION:` pin, an annotation with no value below it, or a download URL that hard-codes a release version. It also fails on an empty scan.
+
 ## [1.44.1] - 2026-10-17
 
 Fixes two problems in how `platform-guardrails` ships, the plugin that runs hooks in every session.

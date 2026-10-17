@@ -36,6 +36,8 @@ fi
 echo "Checking every marketplace plugin entry is pinned..."
 bash tests/marketplace-pins.sh
 
+bash tests/renovate-coverage.sh
+
 bash tests/editor-version-consistency.sh
 
 declare -a REQUIRED_PATHS=(

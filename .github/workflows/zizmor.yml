@@ -55,7 +55,9 @@ permissions: {}
 
 env:
   # Pinned so a new zizmor release cannot change this check's verdict without
-  # a commit. Renovate keeps it current.
+  # a commit. Renovate keeps it current through the annotation below; it passes
+  # to zizmor-action as `${{ env.ZIZMOR_VERSION }}`, which no manager reads.
+  # renovate: datasource=docker depName=ghcr.io/zizmorcore/zizmor
   ZIZMOR_VERSION: 1.29.0
 
   # Fail the job when a finding at or above this severity is present.

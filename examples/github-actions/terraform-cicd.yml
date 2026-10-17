@@ -17,6 +17,7 @@ permissions:
   id-token: write
 
 env:
+  # renovate: datasource=github-releases depName=hashicorp/terraform extractVersion=^v(?<version>.*)$
   TF_VERSION: '1.7.0'
   AWS_REGION: 'us-east-1'
 

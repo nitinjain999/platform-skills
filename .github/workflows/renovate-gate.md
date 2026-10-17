@@ -62,10 +62,14 @@ network:
     - python
 pre-steps:
   - name: Install actionlint
+    env:
+      # renovate: datasource=github-release-attachments depName=rhysd/actionlint
+      ACTIONLINT_VERSION: v1.7.12
+      ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
     run: |
       set -euo pipefail
-      curl -f -sLo /tmp/actionlint.tar.gz --max-time 120 --retry 3 https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz
-      echo "8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8  /tmp/actionlint.tar.gz" | sha256sum -c -
+      curl -f -sLo /tmp/actionlint.tar.gz --max-time 120 --retry 3 "https://github.com/rhysd/actionlint/releases/download/${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION#v}_linux_amd64.tar.gz"
+      echo "${ACTIONLINT_SHA256}  /tmp/actionlint.tar.gz" | sha256sum -c -
       tar xz -C /tmp -f /tmp/actionlint.tar.gz actionlint
       sudo mv /tmp/actionlint /usr/local/bin/
   - name: Install Terraform

@@ -32,6 +32,7 @@ jobs:
       - name: Setup Flux CLI
         uses: fluxcd/flux2/action@871be9b40d53627786d3a3835a3ddba1e3234bd2  # v2.8.3
         with:
+          # renovate: datasource=github-releases depName=fluxcd/flux2 extractVersion=^v(?<version>.*)$
           version: '2.2.3'
 
       - name: Validate Flux manifests
@@ -80,9 +81,16 @@ jobs:
           echo "✅ All Kustomize builds successful"
 
       - name: Setup Kubeconform
+        env:
+          # Pinned and checksum-verified; Renovate bumps both lines together.
+          # renovate: datasource=github-release-attachments depName=yannh/kubeconform
+          KUBECONFORM_VERSION: v0.8.0
+          KUBECONFORM_SHA256: 9bc2bffbf71f261128533edaf912153948b7ff238f9a531ae6d34466ec287883
         run: |
-          wget https://github.com/yannh/kubeconform/releases/download/v0.6.4/kubeconform-linux-amd64.tar.gz
-          tar xzf kubeconform-linux-amd64.tar.gz
+          curl -fsSLo kubeconform.tar.gz \
+            "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz"
+          echo "${KUBECONFORM_SHA256}  kubeconform.tar.gz" | sha256sum -c -
+          tar xzf kubeconform.tar.gz kubeconform
           sudo mv kubeconform /usr/local/bin/
 
       - name: Validate Kubernetes manifests

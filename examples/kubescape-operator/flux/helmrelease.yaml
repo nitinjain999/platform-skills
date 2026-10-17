@@ -70,7 +70,8 @@ spec:
         # Chart 1.40.4 bundles scanner v4.0.13. Its "all" framework scans — every
         # scheduled and operator-triggered scan — fail with
         # "framework 'C-0042' not found" (fixed in v4.0.14, kubescape#3768).
-        # Keep this in step with the CLI version used in CI.
+        # Keep this in step with the CLI version used in CI (Renovate groups them).
+        # renovate: datasource=docker depName=quay.io/kubescape/kubescape
         tag: v4.0.16
 
     alertCRD:

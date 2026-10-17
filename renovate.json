@@ -24,6 +24,32 @@
     "labels": ["security"],
     "assignees": ["nitinjain999"]
   },
+  "github-actions": {
+    "description": "Example workflows that live outside .github/workflows. Patterns add to the manager's defaults, which only see .github/workflows and action.yml.",
+    "managerFilePatterns": [
+      "/^examples/(ai-governance|awesome-docs|finops/workflows|kubescape/workflows|supply-chain)/[^/]+\\.ya?ml$/",
+      "/^examples/github-actions/(reusable-workflows/)?[^/]+\\.ya?ml$/",
+      "/^examples/demo/github-actions-supply-chain/fixed\\.yml$/",
+      "/^assets/copilot-setup-steps\\.template\\.yml$/"
+    ]
+  },
+  "flux": {
+    "description": "HelmRelease charts, OCIRepository and GitRepository tags in the Flux examples. The flux manager's default only matches gotk-components.yaml.",
+    "managerFilePatterns": [
+      "/^examples/backup-dr/velero/[^/]+\\.ya?ml$/",
+      "/^examples/finops/opencost/[^/]+\\.ya?ml$/",
+      "/^examples/fluxcd/basic-monorepo/(clusters|infrastructure)/.+\\.ya?ml$/",
+      "/^examples/kubescape-operator/flux/[^/]+\\.ya?ml$/",
+      "/^examples/progressive-delivery/(flagger|app)/[^/]+\\.ya?ml$/"
+    ]
+  },
+  "kubernetes": {
+    "description": "Manifests with real, public images. The kubernetes manager matches nothing by default; the other example manifests use placeholder registries.",
+    "managerFilePatterns": [
+      "/^examples/fluxcd/basic-monorepo/apps/base/my-app/deployment\\.yaml$/",
+      "/^examples/backup-dr/velero/helmrelease\\.yaml$/"
+    ]
+  },
   "packageRules": [
     {
       "description": "GitHub Actions - pin to commit SHA for security",
@@ -105,13 +131,37 @@
       "minimumReleaseAge": "3 days",
       "matchUpdateTypes": ["minor", "patch"],
       "groupName": "Python packages"
+    },
+    {
+      "description": "setup-terraform's terraform_version is already extracted by the terraform_version custom manager below as hashicorp/terraform, which also covers composite-action inputs and gh-aw sources. Extracting it here too opened a second PR for the same line.",
+      "matchManagers": ["github-actions"],
+      "matchDepTypes": ["uses-with"],
+      "matchDepNames": ["terraform"],
+      "enabled": false
+    },
+    {
+      "description": "The Kubescape CLI in CI and the operator's scanner image override must move together; the operator HelmRelease says so.",
+      "matchDepNames": ["kubescape/kubescape", "quay.io/kubescape/kubescape"],
+      "groupName": "Kubescape CLI and scanner image"
+    },
+    {
+      "description": "The loadtester chart is released with Flagger; bump them together.",
+      "matchFileNames": ["examples/progressive-delivery/**"],
+      "groupName": "Flagger"
+    },
+    {
+      "description": "A gh-aw workflow source does not take effect until it is recompiled, and the compiled lock fails its stale-lock check meanwhile.",
+      "matchFileNames": [".github/workflows/*.md"],
+      "prBodyNotes": [
+        ":warning: This updates a gh-aw workflow source. Run `gh aw compile <workflow> --strict` and commit the regenerated `.lock.yml` to this branch before merging; the workflow fails its stale-lock check until then."
+      ]
     }
   ],
   "customManagers": [
     {
       "customType": "regex",
-      "description": "Update Terraform version in GitHub Actions workflows",
-      "managerFilePatterns": ["/^\\.github/workflows/.*\\.ya?ml$/"],
+      "description": "Update Terraform version in GitHub Actions workflows and gh-aw workflow sources (.md frontmatter)",
+      "managerFilePatterns": ["/^\\.github/workflows/.*\\.(ya?ml|md)$/"],
       "matchStrings": ["terraform_version:\\s*['\"]?(?<currentValue>[^'\"\\s]+)['\"]?"],
       "depNameTemplate": "hashicorp/terraform",
       "datasourceTemplate": "github-releases",
@@ -119,21 +169,14 @@
     },
     {
       "customType": "regex",
-      "description": "Update Flux CD version in documentation",
-      "managerFilePatterns": ["/^examples/fluxcd/.*\\.md$/"],
-      "matchStrings": ["Flux CLI \\((?<currentValue>[^)]+)\\)"],
-      "depNameTemplate": "fluxcd/flux2",
-      "datasourceTemplate": "github-releases",
-      "extractVersionTemplate": "^v(?<version>.*)$"
-    },
-    {
-      "customType": "regex",
-      "description": "Update Kubernetes version in documentation",
-      "managerFilePatterns": ["/^examples/.*/.*\\.md$/"],
-      "matchStrings": ["Kubernetes cluster \\((?<currentValue>[^)]+)\\+?\\)"],
-      "depNameTemplate": "kubernetes/kubernetes",
-      "datasourceTemplate": "github-releases",
-      "extractVersionTemplate": "^v(?<version>.*)$"
+      "description": "Annotated pins: a `# renovate: datasource=... depName=...` comment on the line above a `KEY: value` line. Covers tool versions in env blocks and action inputs that no built-in manager reads. An optional `*_SHA256` line directly below is captured as the digest, so github-release-attachments updates the checksum with the version. tests/renovate-coverage.sh fails on an unannotated pin.",
+      "managerFilePatterns": [
+        "/^\\.github/workflows/[^/]+\\.(ya?ml|md)$/",
+        "/^examples/.+\\.ya?ml$/"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>[a-zA-Z0-9-._]+?) depName=(?<depName>[^\\s]+?)(?: packageName=(?<packageName>[^\\s]+?))?(?: versioning=(?<versioning>[^\\s]+?))?(?: extractVersion=(?<extractVersion>[^\\s]+?))?\\s+[A-Za-z0-9_-]+\\s*:\\s*[\"']?(?<currentValue>[^\"'\\s#]+)[\"']?(?:[ \\t]+#[^\\n]*)?(?:\\s+[A-Za-z0-9_]+_SHA256\\s*:\\s*[\"']?(?<currentDigest>[a-f0-9]{64})[\"']?)?"
+      ]
     }
   ],
   "ignorePaths": [
@@ -141,6 +184,10 @@
     "**/vendor/**",
     "**/.terraform/**",
     "**/charts/**",
-    ".github/workflows/*.lock.yml"
+    ".github/workflows/*.lock.yml",
+    "evals/**",
+    "examples/pr-review/**",
+    "examples/triage/**",
+    "examples/demo/**/bad.*"
   ]
 }
