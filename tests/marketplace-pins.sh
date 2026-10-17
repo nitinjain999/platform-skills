@@ -51,7 +51,19 @@ if [ -n "$RELEASE" ]; then
   TAG_COMMIT="$(git rev-parse --verify "${RELEASE}^{commit}")" || { echo "❌ --release $RELEASE is not a commit"; exit 1; }
 fi
 
-# name<TAB>sha per entry; a string source or a missing sha yields an empty sha.
+# name<TAB>sha per entry. A string source or a missing sha yields an empty sha;
+# a sha (or name) that is not a string yields "<type>" so it is reported, not
+# fed to @tsv, which aborts on an array or object. The assignment is checked:
+# inside a process substitution a jq failure would end the loop early with
+# ERRORS still 0, and the entries after the bad one would never be checked.
+entries="$(jq -r '
+  .plugins[]
+  | [ (.name | if type == "string" then . else "<\(type)>" end),
+      (if (.source | type) == "object"
+       then (.source.sha | if type == "string" then . elif . == null then "" else "<\(type)>" end)
+       else "" end) ]
+  | @tsv' "$FILE")" || { echo "❌ could not read the plugin entries in $FILE"; exit 1; }
+
 while IFS=$'\t' read -r name sha; do
   if ! printf '%s' "$sha" | grep -qE '^[0-9a-f]{40}$'; then
     fail "plugin \"$name\" has no 40-character source.sha (got \"$sha\"); an unpinned source ships whatever its branch holds"
@@ -72,7 +84,7 @@ while IFS=$'\t' read -r name sha; do
     continue
   fi
   echo "✅ $name source.sha $sha ships the tagged content"
-done < <(jq -r '.plugins[] | [.name, (if (.source | type) == "object" then (.source.sha // "") else "" end)] | @tsv' "$FILE")
+done <<< "$entries"
 
 if [ "$ERRORS" -gt 0 ]; then
   echo ""

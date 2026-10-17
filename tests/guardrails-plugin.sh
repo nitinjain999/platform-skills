@@ -109,6 +109,19 @@ pin_case "relative path source" 1 '"./plugins/a"'
 pin_case "short sha" 1 '{"source":"url","url":"https://example.com/r.git","sha":"7ff3050"}'
 pin_case "uppercase sha" 1 '{"source":"url","url":"https://example.com/r.git","sha":"7FF3050303B66B38847A21E01A0844375F4483E6"}'
 pin_case "full lowercase sha" 0 '{"source":"url","url":"https://example.com/r.git","sha":"7ff3050303b66b38847a21e01a0844375f4483e6"}'
+pin_case "sha that is an array" 1 '{"source":"url","url":"https://example.com/r.git","sha":["7ff3050303b66b38847a21e01a0844375f4483e6"]}'
+# A malformed entry must not end the scan early: the unpinned entry after it
+# still has to be checked and reported.
+printf '%s\n' '{"name":"t","owner":{"name":"t"},"plugins":[
+  {"name":"good","source":{"source":"url","url":"https://example.com/r.git","sha":"7ff3050303b66b38847a21e01a0844375f4483e6"}},
+  {"name":"malformed","source":{"source":"url","url":"https://example.com/r.git","sha":{"x":1}}},
+  {"name":"unpinned-after","source":{"source":"git-subdir","url":"https://example.com/r.git","path":"p","ref":"main"}}]}' > "$mp/m.json"
+out="$(bash tests/marketplace-pins.sh --file "$mp/m.json" 2>&1)" && rc=0 || rc=$?
+if [ "$rc" = 1 ] && printf '%s' "$out" | grep -q '"malformed"' && printf '%s' "$out" | grep -q '"unpinned-after"'; then
+  pass "pin gate: malformed sha then unpinned entry → exit 1, both reported"
+else
+  fail "pin gate: malformed sha then unpinned entry → exit $rc, want 1 with both entries reported (out: $out)"
+fi
 rm -rf "$mp"
 
 echo ""
