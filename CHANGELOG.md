@@ -24,6 +24,7 @@ Adds Kubescape (CNCF) as two skills, bringing the plugin to 51 commands: `/platf
 
 - `tests/validate-skill.sh` no longer aborts silently when an example directory is missing (`find` under `pipefail`); it reports the missing domain as a failure.
 - `tests/validate-ci.sh`'s PyYAML fallback (used when `yamllint` is not installed) parsed with `yaml.safe_load`, which rejects multi-document files, so 25 valid manifests failed on every machine without yamllint; it now uses `yaml.safe_load_all`.
+- **Renovate Gate no longer fails on every Renovate PR.** Its approve-and-merge path could never succeed: `GITHUB_TOKEN` cannot approve a pull request (422, a platform rule, not a missing permission), and `main` requires an approving review, so `safe_outputs` went red each time (#158, #201, #203, #210). The gate now posts its verdict as a `COMMENT` review (`Renovate Gate: safe to merge (squash).` plus the matched category, green CI and a clean release-notes summary) and a maintainer approves and merges. `APPROVE` and `merge-pull-request` are removed from its safe outputs.
 
 ### Notes
 
