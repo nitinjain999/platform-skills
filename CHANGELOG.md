@@ -5,6 +5,20 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.44.1] - 2026-10-17
+
+Fixes two problems in how `platform-guardrails` ships, the plugin that runs hooks in every session.
+
+### Fixed
+
+- **`platform-guardrails` was not pinned.** Its marketplace entry was `git-subdir` with `ref: main` and no `sha`, so new installs got whatever `main` held, with no tag and no release gate between a merge and code that runs on every session, tool call and compaction. Because the entry also sets a `version`, existing installs never refreshed, so two installs of "1.44.0" could run different hooks. The entry now carries `sha` (`git-subdir` accepts `url`, `path`, `ref` and `sha`), pointing at the content 1.44.0 shipped; the next pin PR moves both entries together.
+- **The release gate checked only `plugins[0]`.** The `source.sha` check in `release.yml` is now `tests/marketplace-pins.sh --release <tag>`, which checks every plugin entry for reachability and for content between the pin and the tag, and fails closed on a missing or malformed `sha` instead of skipping it. `tests/handbook-consistency.sh` runs its structure check on every PR, and `tests/guardrails-plugin.sh` proves it rejects a branch-only source, a relative path, a short and an uppercase sha.
+- **Self-improve hooks could run twice without warning.** With the hooks wired by hand in `settings.json` *and* `platform-guardrails` enabled, every event fired twice: two banners, every tool failure captured twice, every session counted twice. The self-improve skill warned about this only inside its own setup flow. The plugin's `SessionStart` now names any user or project settings file that still wires `self-improve-hook`. Only the plugin's copy can see both wirings, so the check runs only when the script is launched from `CLAUDE_PLUGIN_ROOT`; three new bash cases cover user and project files, a trailing slash on the plugin root, a hand-wired run, and another plugin's root.
+
+### Also in this release
+
+- React 19.3.1 for the docs site (#215) and a repository code-review skill for Copilot (#173), both merged after the 1.44.0 pin.
+
 ## [1.44.0] - 2026-10-17
 
 Adds Kubescape (CNCF) as two skills, bringing the plugin to 51 commands: `/platform-skills:kubescape` for posture checks with the CLI and a PR gate, and `/platform-skills:kubescape-operator` for continuous security inside the cluster. Every command was run against Kubescape CLI v4.0.16 and the operator was installed through Flux on Kubernetes 1.36; four places where the official docs and the shipped code disagree are documented, and the examples are built around the code.

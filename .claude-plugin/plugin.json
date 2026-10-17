@@ -1,6 +1,6 @@
 {
   "name": "platform-skills",
-  "version": "1.44.0",
+  "version": "1.44.1",
   "description": "Practical guidance for platform engineers across Claude, Codex, Cursor, and Copilot: Kubernetes (baseline, RBAC, workload hardening, debug), GitHub Actions (design, security, review, debug), Azure (Workload Identity, tagging, AKS, RBAC), OpenShift (SCC, Routes, GitOps, upgrades), Secrets (ESO, Sealed Secrets, rotation, audit), Kyverno, Helm, Terraform, Flux CD (Flux Operator, OCI delivery), Argo CD, AWS (CloudFront, WAF, Lambda@Edge, IAM, IRSA), Gateway API (ingress-nginx migration), Linkerd, Linux, networking, MCP development, observability, SOC 2 compliance, PR review, PR triage, KEDA, Karpenter, cluster upgrades (EKS version rollback), progressive delivery (Flagger), backup and DR (Velero), FinOps (Infracost, cost tags, OpenCost), supply chain security (Cosign, SBOM, SLSA), Kubescape posture (NSA, MITRE, CIS, SOC2), Falco runtime security, Chaos Engineering, DORA Metrics, LLM Observability (Datadog LLMObs), and animated docs. Every answer includes blast radius, validation steps, and rollback plan.",
   "author": {
     "name": "Nitin Jain",

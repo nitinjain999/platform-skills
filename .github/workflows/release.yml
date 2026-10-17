@@ -261,47 +261,13 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Validate marketplace.json source.sha ships the tagged content
-        run: |
-          TAG_COMMIT=$(git rev-parse HEAD)
-          STORED_SHA=$(jq -r '.plugins[0].source.sha' .claude-plugin/marketplace.json)
-
-          # source.sha, not the tag, selects the tree installers download. Exact
-          # equality is impossible — the sha-bump commit cannot contain its own hash —
-          # so the stored SHA must at least be reachable from the tagged commit.
-          if ! git merge-base --is-ancestor "$STORED_SHA" "$TAG_COMMIT"; then
-            echo "❌ marketplace.json source.sha is not reachable from the tagged commit"
-            echo "  stored: ${STORED_SHA}"
-            echo "  tagged: ${TAG_COMMIT}"
-            echo ""
-            echo "Update source.sha in .claude-plugin/marketplace.json in a PR, merge, then retag."
-            exit 1
-          fi
-
-          # Reachability alone is not enough: anything that differs between the stored
-          # SHA and the tag is content the release does not ship. A sha-bump commit can
-          # only ever touch marketplace.json, so every other path here is a leak.
-          #
-          # This replaces a "warn if more than 1 commit behind" heuristic that could not
-          # tell a metadata commit from a content commit. v1.38.0 sat exactly 1 commit
-          # behind and shipped the pre-azurerm-5 azure example, warning-free, because
-          # the fix commit repointed source.sha at its own parent.
-          EXCLUDED=$(git diff --name-only "$STORED_SHA" "$TAG_COMMIT" -- . ':(exclude).claude-plugin/marketplace.json')
-          if [ -n "$EXCLUDED" ]; then
-            echo "❌ source.sha excludes content that is present in the tag:"
-            while IFS= read -r excluded_path; do
-              echo "  ${excluded_path}"
-            done <<< "$EXCLUDED"
-            echo ""
-            echo "  stored: ${STORED_SHA}"
-            echo "  tagged: ${TAG_COMMIT}"
-            echo ""
-            echo "Land content first and merge it, then bump source.sha to that merge"
-            echo "commit in a PR that touches only .claude-plugin/marketplace.json, then tag."
-            exit 1
-          fi
-
-          echo "✅ source.sha ${STORED_SHA} ships the tagged content"
+      - name: Validate every marketplace source.sha ships the tagged content
+        # Shared with the PR gate (handbook-consistency.sh runs the structure
+        # half). It checks every plugin entry, not only plugins[0]: v1.44.0
+        # shipped platform-guardrails with no sha at all and this step, then
+        # inline and plugins[0]-only, could not see it. Reasoning and history
+        # live in the script header.
+        run: bash tests/marketplace-pins.sh --release "$(git rev-parse HEAD)"
 
       - name: Extract changelog for this version
         id: changelog

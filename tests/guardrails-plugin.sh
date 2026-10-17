@@ -87,6 +87,29 @@ if [ "$(jq -r '.plugins[] | select(.name == "platform-guardrails") | .source.pat
 else
   fail "marketplace.json has no platform-guardrails entry with source.path $G"
 fi
+g_sha="$(jq -r '.plugins[] | select(.name == "platform-guardrails") | .source.sha // ""' .claude-plugin/marketplace.json)"
+if printf '%s' "$g_sha" | grep -qE '^[0-9a-f]{40}$'; then
+  pass "marketplace entry is pinned to $g_sha"
+else
+  fail "platform-guardrails marketplace entry has no source.sha: an enforcing-hooks plugin would ship whatever main holds"
+fi
+
+echo "=== Marketplace pin gate rejects unpinned entries ==="
+# The gate must fail closed on every way an entry can be unpinned; a skip here
+# is how platform-guardrails shipped in 1.44.0 with no sha.
+mp="$(mktemp -d)"
+pin_case() {  # pin_case <label> <expected rc> <source json>
+  printf '{"name":"t","owner":{"name":"t"},"plugins":[{"name":"a","source":%s}]}\n' "$3" > "$mp/m.json"
+  local rc=0
+  bash tests/marketplace-pins.sh --file "$mp/m.json" >/dev/null 2>&1 || rc=$?
+  if [ "$rc" = "$2" ]; then pass "pin gate: $1 → exit $rc"; else fail "pin gate: $1 → exit $rc, want $2"; fi
+}
+pin_case "git-subdir with ref and no sha" 1 '{"source":"git-subdir","url":"https://example.com/r.git","path":"p","ref":"main"}'
+pin_case "relative path source" 1 '"./plugins/a"'
+pin_case "short sha" 1 '{"source":"url","url":"https://example.com/r.git","sha":"7ff3050"}'
+pin_case "uppercase sha" 1 '{"source":"url","url":"https://example.com/r.git","sha":"7FF3050303B66B38847A21E01A0844375F4483E6"}'
+pin_case "full lowercase sha" 0 '{"source":"url","url":"https://example.com/r.git","sha":"7ff3050303b66b38847a21e01a0844375f4483e6"}'
+rm -rf "$mp"
 
 echo ""
 if [ "$ERRORS" -gt 0 ]; then echo "FAIL: $ERRORS guardrails plugin error(s)"; exit 1; fi

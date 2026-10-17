@@ -679,6 +679,49 @@ t_session_start_quiet_for_new_wiring() {
   assert_not_contains "no warning for the new wiring" "legacy" "$(run_hook session-start "$START_JSON")"
 }
 
+# run_hook_as_plugin <plugin-root> <subcommand> [json] — bash only: run the
+# script the way platform-guardrails' hooks.json does, with CLAUDE_PLUGIN_ROOT
+# set. The plugin ships only the bash script, so there is no PowerShell twin.
+run_hook_as_plugin() {
+  local root="$1" sub="$2" json="${3:-}"
+  (
+    cd "$T_PROJ" || exit 99
+    printf '%s' "$json" | env -u USERPROFILE HOME="$T_HOME" CLAUDE_PROJECT_DIR="$T_PROJ" \
+      CLAUDE_PLUGIN_ROOT="$root" bash "$DIR/scripts/self-improve-hook.sh" "$sub"
+  ) 2>/dev/null
+}
+
+MANUAL_WIRING='{"hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"bash ~/.claude/scripts/self-improve-hook.sh session-start"}]}]}}'
+
+t_session_start_warns_about_double_wiring() {
+  [ "$IMPL" = "bash" ] || return 0
+  fresh global
+  printf '%s\n' "$MANUAL_WIRING" > "$T_HOME/.claude/settings.json"
+  mkdir -p "$T_PROJ/.claude"
+  printf '%s\n' "$MANUAL_WIRING" > "$T_PROJ/.claude/settings.local.json"
+  local out
+  out="$(run_hook_as_plugin "$DIR" session-start "$START_JSON")"
+  assert_contains "plugin run flags manual wiring in user settings" \
+    "WARNING: self-improve hooks run twice: the platform-guardrails plugin wires them and so does ~/.claude/settings.json" "$out"
+  assert_contains "plugin run flags manual wiring in project local settings" \
+    "and so does $T_PROJ/.claude/settings.local.json" "$out"
+  # A trailing slash on CLAUDE_PLUGIN_ROOT still counts as running from the plugin.
+  assert_contains "a trailing slash on the plugin root is tolerated" \
+    "self-improve hooks run twice" "$(run_hook_as_plugin "$DIR/" session-start "$START_JSON")"
+}
+
+t_session_start_double_wiring_quiet_when_not_double() {
+  [ "$IMPL" = "bash" ] || return 0
+  fresh global
+  assert_not_contains "plugin run with no manual wiring stays quiet" "run twice" \
+    "$(run_hook_as_plugin "$DIR" session-start "$START_JSON")"
+  printf '%s\n' "$MANUAL_WIRING" > "$T_HOME/.claude/settings.json"
+  assert_not_contains "manual run (no CLAUDE_PLUGIN_ROOT) stays quiet: that is the normal manual setup" \
+    "run twice" "$(run_hook session-start "$START_JSON")"
+  assert_not_contains "CLAUDE_PLUGIN_ROOT of some other plugin does not count" "run twice" \
+    "$(run_hook_as_plugin "$TMP/some-other-plugin" session-start "$START_JSON")"
+}
+
 t_session_start_ignores_pattern_outside_hooks() {
   fresh global
   printf '%s\n' '{"permissions":{"allow":["Bash(cp examples/agent-self-improve/scripts/session-end.sh ~/.claude/scripts/)"]}}' \

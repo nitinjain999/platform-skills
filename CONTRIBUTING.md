@@ -370,7 +370,7 @@ Platform Skills uses automated GitHub Actions workflows for releases.
 1. **Update version and changelog:**
    ```bash
    # Update marketplace.json
-   vim .claude-plugin/marketplace.json  # Set plugins[0].version to "X.Y.Z"
+   vim .claude-plugin/marketplace.json  # Set every plugin's version to "X.Y.Z"
    
    # Update CHANGELOG.md
    vim CHANGELOG.md  # Add [X.Y.Z] section with changes
@@ -423,8 +423,8 @@ Follow semantic versioning:
 Before creating a tag:
 
 - [ ] All PRs merged to main
-- [ ] Version updated in `.claude-plugin/marketplace.json` (`plugins[0].version`)
-- [ ] SHA in `.claude-plugin/marketplace.json` (`plugins[0].source.sha`) updated to the current HEAD commit — this field is not managed by Renovate and must be set manually
+- [ ] Version updated in `.claude-plugin/marketplace.json` (every plugin's `version`)
+- [ ] Every plugin's `source.sha` in `.claude-plugin/marketplace.json` set to the content merge commit, in a PR that touches only that file. Not managed by Renovate; `bash tests/marketplace-pins.sh --release <tag-commit>` is what `release.yml` runs
 - [ ] CHANGELOG.md updated with release notes
 - [ ] All CI checks passing
 - [ ] Examples tested locally

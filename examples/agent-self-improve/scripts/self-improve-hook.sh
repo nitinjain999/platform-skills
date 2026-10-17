@@ -29,6 +29,22 @@ set -u
 
 # Strings that only the legacy Stop/PreToolUse/PostToolUse wiring contained.
 LEGACY_HOOK_PATTERN='session-start-reminder|session-end\.(sh|ps1)|CLAUDE_TOOL_EXIT_CODE'
+# A settings file that wires this script by hand. Harmless on its own; a
+# duplicate when the platform-guardrails plugin also wires it.
+MANUAL_HOOK_PATTERN='self-improve-hook\.(sh|ps1)'
+
+# running_from_plugin — true when this copy was launched from a plugin root,
+# the way platform-guardrails' hooks.json runs it. A CLAUDE_PLUGIN_ROOT that
+# does not contain this script (another plugin's, say) does not count.
+running_from_plugin() {
+  local root="${CLAUDE_PLUGIN_ROOT:-}"
+  root="${root%/}"
+  [ -n "$root" ] || return 1
+  case "$0" in
+    "$root"/*) return 0 ;;
+  esac
+  return 1
+}
 
 resolve_base() {
   local project="${CLAUDE_PROJECT_DIR:-$PWD}"
@@ -397,7 +413,7 @@ cmd_precompact() {
 }
 
 cmd_session_start() {
-  local base mem today scope task count f project hj
+  local base mem today scope task count f project hj from_plugin=0
   base="$(resolve_base)"
   [ -n "$base" ] || return 0
   mem="$base/memory"
@@ -428,6 +444,7 @@ cmd_session_start() {
       "${count:-0}" "$(display_path "$base/.learnings/.pending-errors.log")"
   fi
 
+  running_from_plugin && from_plugin=1
   for f in "$HOME/.claude/settings.json" "$HOME/.claude/settings.local.json" "$project/.claude/settings.json" "$project/.claude/settings.local.json"; do
     # With the project at $HOME, the last two paths are the same files as the first two.
     if [ "$project" = "$HOME" ] && { [ "$f" = "$project/.claude/settings.json" ] || [ "$f" = "$project/.claude/settings.local.json" ]; }; then continue; fi
@@ -435,6 +452,13 @@ cmd_session_start() {
       hj="$(hooks_text "$f")"
       if [ -n "$hj" ] && printf '%s' "$hj" | grep -qE "$LEGACY_HOOK_PATTERN"; then
         printf 'WARNING: legacy self-improve hooks are still wired in %s. Remove its Stop, PreToolUse and PostToolUse self-improve entries (see "Migrating from the legacy hooks" in examples/agent-self-improve/README.md).\n' \
+          "$(display_path "$f")"
+      fi
+      # Only the plugin's copy can see both wirings: a hand-wired copy has no
+      # way to know the plugin is enabled. Both run on every event, so every
+      # failure is captured twice and every session is counted twice.
+      if [ "$from_plugin" = 1 ] && [ -n "$hj" ] && printf '%s' "$hj" | grep -qE "$MANUAL_HOOK_PATTERN"; then
+        printf 'WARNING: self-improve hooks run twice: the platform-guardrails plugin wires them and so does %s. Remove the self-improve-hook entries from that file; the plugin covers SessionStart, SessionEnd, PostToolUseFailure and PreCompact.\n' \
           "$(display_path "$f")"
       fi
     fi
