@@ -16,9 +16,19 @@ jobs:
 
       - name: Install actionlint
         shell: bash
+        env:
+          # Pinned and checksum-verified, not the download script from main piped
+          # into bash: what runs is the reviewed release. Renovate bumps both lines.
+          # renovate: datasource=github-release-attachments depName=rhysd/actionlint
+          ACTIONLINT_VERSION: v1.7.12
+          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
         run: |
-          curl -sL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash \
-            | bash -s -- latest /usr/local/bin
+          set -euo pipefail
+          curl -fsSLo /tmp/actionlint.tar.gz --retry 3 \
+            "https://github.com/rhysd/actionlint/releases/download/${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION#v}_linux_amd64.tar.gz"
+          echo "${ACTIONLINT_SHA256}  /tmp/actionlint.tar.gz" | sha256sum -c -
+          tar xzf /tmp/actionlint.tar.gz -C /tmp actionlint
+          sudo install -m 0755 /tmp/actionlint /usr/local/bin/actionlint
 
       - name: Lint action.yml
         shell: bash

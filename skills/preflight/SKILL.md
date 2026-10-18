@@ -395,7 +395,7 @@ If a tool isn't installed, skip execution, label affected findings `Static revie
 
 **Security**
 - No `eval` with user input
-- No `curl | bash`
+- No downloaded script piped straight into a shell: fetch it, verify its checksum, then run it
 - Credentials sourced from environment or secret manager
 
 **Operational Safety**

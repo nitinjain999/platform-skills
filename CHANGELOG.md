@@ -5,6 +5,15 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Composite-action release workflows ran an unpinned installer.** All eleven `examples/github-actions/composite-actions/*/.github/workflows/release.yml` installed actionlint with `curl -sL …/actionlint/main/scripts/download-actionlint.bash | bash -s -- latest`: a script from a moving branch, piped straight into bash, fetching whatever release was newest. Each now downloads the pinned actionlint release tarball, checks its SHA-256, and installs it. The version and checksum carry a Renovate annotation, so `github-release-attachments` bumps both together, as in the Renovate Gate. The plugin directory listed three of these as "Contains a download-and-run command".
+- **`k8s-deploy` installed `kubectl` without verifying it.** The action downloaded the binary from `dl.k8s.io` and made it executable. It now fetches the `kubectl.sha256` published beside it and runs `sha256sum --check` before installing.
+- **`k8s-deploy` and `notify-slack` set `timeout-minutes` on composite steps.** GitHub accepts `timeout-minutes` only on a job, so each action failed to load ("Unexpected value 'timeout-minutes'"). The five lines are removed. The rollout wait keeps its own `--timeout`, and the Slack webhook call gains `--max-time 30`. Set `timeout-minutes` on the calling job.
+- **Two download-and-run false matches.** The preflight skill's security rule read "No `curl | bash`" and now says the same thing without the pattern. The dora skill piped a heredoc into `curl` to push metrics, and now feeds `curl` the heredoc directly, with no pipe and the same request.
+
 ## [1.45.4] - 2026-10-18
 
 Trims the plugin directory's review holds: the image-file hold on the self-improve hook, and five false matches in the credential hold. Neither hold blocks submission. The credential hold stays on for review by design, because its remaining findings are vendor credentials used with that vendor's own service.

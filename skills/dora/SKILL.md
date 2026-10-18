@@ -51,7 +51,7 @@ Steps:
        FIRST_COMMIT_TS=${FIRST_COMMIT_TS:-$DEPLOY_TS}
        LEAD_TIME=$((DEPLOY_TS - FIRST_COMMIT_TS))
        INSTANCE="${REPO//\//_}"
-       cat <<EOF | curl --data-binary @- "${PUSHGATEWAY_URL}/metrics/job/dora/instance/${INSTANCE}"
+       curl --data-binary @- "${PUSHGATEWAY_URL}/metrics/job/dora/instance/${INSTANCE}" <<EOF
        # TYPE dora_deployment_timestamp gauge
        dora_deployment_timestamp{repo="${REPO}",env="production"} ${DEPLOY_TS}
        # TYPE dora_lead_time_seconds gauge
