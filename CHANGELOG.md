@@ -5,6 +5,12 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Renovate's GitHub Actions group failed with "Error updating branch: update failure".** #219 added `assets/copilot-setup-steps.template.yml` to the github-actions manager's patterns, but every `uses:` ref in that template is a placeholder that `setup-agents` fills in (`hashicorp/setup-terraform@__SETUP_TERRAFORM_SHA__  # v__SETUP_TERRAFORM_VERSION__`). Renovate read each placeholder as a branch name, tried to pin it to a digest, then could not re-read the edited line ("Could not autoReplace"). That failed the whole group branch, along with every real update in it. The template is out of the patterns and listed in `ignorePaths`.
+
 ## [1.45.0] - 2026-10-18
 
 Clears the plugin directory review (no machine credentials, a marketplace description, a listing icon) and makes Renovate cover every pinned version in the repository, then lands the first batch of updates it found.

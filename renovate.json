@@ -25,12 +25,11 @@
     "assignees": ["nitinjain999"]
   },
   "github-actions": {
-    "description": "Example workflows that live outside .github/workflows. Patterns add to the manager's defaults, which only see .github/workflows and action.yml.",
+    "description": "Example workflows that live outside .github/workflows. Patterns add to the manager's defaults, which only see .github/workflows and action.yml. assets/copilot-setup-steps.template.yml is deliberately absent (and in ignorePaths): its refs are __PLACEHOLDER__ tokens that setup-agents fills in, and Renovate's attempt to pin them failed the whole GitHub Actions group with 'update failure'.",
     "managerFilePatterns": [
       "/^examples/(ai-governance|awesome-docs|finops/workflows|kubescape/workflows|supply-chain)/[^/]+\\.ya?ml$/",
       "/^examples/github-actions/(reusable-workflows/)?[^/]+\\.ya?ml$/",
-      "/^examples/demo/github-actions-supply-chain/fixed\\.yml$/",
-      "/^assets/copilot-setup-steps\\.template\\.yml$/"
+      "/^examples/demo/github-actions-supply-chain/fixed\\.yml$/"
     ]
   },
   "flux": {
@@ -192,6 +191,7 @@
     "evals/**",
     "examples/pr-review/**",
     "examples/triage/**",
-    "examples/demo/**/bad.*"
+    "examples/demo/**/bad.*",
+    "assets/*.template.*"
   ]
 }
