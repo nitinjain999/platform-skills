@@ -96,9 +96,16 @@ scan_repository() {
 # pre-steps compiles straight into the .lock.yml. So scan
 # .github/workflows/**/*.md explicitly, with a tighter pattern (keyword +
 # separator + a long literal value) that does not self-match.
+#
+# Two details this check depended on and once lacked, so it scanned nothing:
+#   - the pathspec needs :(glob). Without it git reads `**/` as "at least one
+#     directory", so .github/workflows/renovate-gate.md never matched and the
+#     check reported "No agentic workflow sources found" from 2026-08 to 2026-10.
+#   - the match is case-insensitive (-i): frontmatter env keys are uppercase
+#     (API_TOKEN, GH_TOKEN), which a lowercase keyword list never matched.
 scan_agentic_sources() {
   local sources found
-  sources=$(git ls-files -- '.github/workflows/**/*.md' || true)
+  sources=$(git ls-files -- ':(glob).github/workflows/**/*.md' || true)
 
   if [ -z "$sources" ]; then
     echo "ℹ️  No agentic workflow sources found"
@@ -106,7 +113,7 @@ scan_agentic_sources() {
   fi
 
   found=$(printf '%s\n' "$sources" | tr '\n' '\0' | \
-     xargs -0 grep -IHnE '(password|secret|key|token|apikey)[[:space:]]*[:=][[:space:]]*["]?[A-Za-z0-9/+_-]{16,}' | \
+     xargs -0 grep -IHniE '(password|secret|key|token|apikey)[[:space:]]*[:=][[:space:]]*["]?[A-Za-z0-9/+_-]{16,}' | \
      grep -v 'secrets\.' | \
      grep -v 'vars\.' | \
      grep -v 'github\.token' || true)
