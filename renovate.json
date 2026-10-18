@@ -25,7 +25,7 @@
     "assignees": ["nitinjain999"]
   },
   "github-actions": {
-    "description": "Example workflows that live outside .github/workflows. Patterns add to the manager's defaults, which only see .github/workflows and action.yml. assets/copilot-setup-steps.template.yml is deliberately absent (and in ignorePaths): its refs are __PLACEHOLDER__ tokens that setup-agents fills in, and Renovate's attempt to pin them failed the whole GitHub Actions group with 'update failure'.",
+    "description": "Example workflows that live outside .github/workflows. Patterns add to the manager's defaults, which only see .github/workflows and action.yml. assets/copilot-setup-steps.template.yml is deliberately absent (and in ignorePaths): its refs are __PLACEHOLDER__ tokens that setup-agents fills in; Renovate has nothing to update there.",
     "managerFilePatterns": [
       "/^examples/(ai-governance|awesome-docs|finops/workflows|kubescape/workflows|supply-chain)/[^/]+\\.ya?ml$/",
       "/^examples/github-actions/(reusable-workflows/)?[^/]+\\.ya?ml$/",
@@ -141,6 +141,12 @@
       "matchDepTypes": ["uses-with"],
       "matchDepNames": ["terraform"],
       "enabled": false
+    },
+    {
+      "description": "Tool versions passed as action inputs (depType uses-with, e.g. cosign-release, tflint_version) are plain strings; a `with:` value has no place for a digest. With pinDigests inherited from the GitHub Actions rule, Renovate proposed a pinDigest for cosign-release v3.1.3, could not write it ('Digest is not updated'), and failed the whole group with 'update failure'. Version updates still apply.",
+      "matchManagers": ["github-actions"],
+      "matchDepTypes": ["uses-with"],
+      "pinDigests": false
     },
     {
       "description": "The Kubescape CLI in CI and the operator's scanner image override must move together; the operator HelmRelease says so.",

@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- **Renovate's GitHub Actions group failed with "Error updating branch: update failure".** #219 added `assets/copilot-setup-steps.template.yml` to the github-actions manager's patterns, but every `uses:` ref in that template is a placeholder that `setup-agents` fills in (`hashicorp/setup-terraform@__SETUP_TERRAFORM_SHA__  # v__SETUP_TERRAFORM_VERSION__`). Renovate read each placeholder as a branch name, tried to pin it to a digest, then could not re-read the edited line ("Could not autoReplace"). That failed the whole group branch, along with every real update in it. The template is out of the patterns and listed in `ignorePaths`.
+- **Renovate's GitHub Actions group failed with "Error updating branch: update failure".** The group rule sets `pinDigests: true` for everything the github-actions manager extracts, including tool versions passed as action inputs (depType `uses-with`). #219 brought `cosign-release: v3.1.3` in `examples/kubescape/workflows/kubescape.yml` into scope, and Renovate tried to pin it to a commit digest. A `with:` value has nowhere to put a digest, so the update could not be written ("Digest is not updated" in the job log). That failed the whole group branch, along with every real update in it. `uses-with` dependencies now have `pinDigests: false`; their version updates still apply.
+- **The placeholder Copilot setup-steps template is no longer scanned.** Every `uses:` ref in `assets/copilot-setup-steps.template.yml` is a placeholder that `setup-agents` fills in, so Renovate has nothing to update there. The template is out of the github-actions patterns, and `assets/*.template.*` is listed in `ignorePaths` (#236).
 
 ## [1.45.0] - 2026-10-18
 
