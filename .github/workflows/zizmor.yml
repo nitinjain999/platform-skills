@@ -58,7 +58,7 @@ env:
   # a commit. Renovate keeps it current through the annotation below; it passes
   # to zizmor-action as `${{ env.ZIZMOR_VERSION }}`, which no manager reads.
   # renovate: datasource=docker depName=ghcr.io/zizmorcore/zizmor
-  ZIZMOR_VERSION: 1.29.0
+  ZIZMOR_VERSION: 1.31.1
 
   # Fail the job when a finding at or above this severity is present.
   # One of: none | informational | low | medium | high
