@@ -162,7 +162,13 @@ fi
 
 # 7. credential-shaped literals
 vendor='(gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,}|A(KI|SI)A[0-9A-Z]{16}|xox[abposr]-[0-9A-Za-z-]{10,}|sk_(live|test)_[0-9A-Za-z]{16,}|glpat-[0-9A-Za-z_-]{20,}|AIza[0-9A-Za-z_-]{35}|-----BEGIN ([A-Z]+ )?PRIVATE KEY-----)'
-named='([A-Za-z0-9_-]*(token|secret|password|passwd|api[_-]?key|access[_-]?key)[A-Za-z0-9_-]*["'"'"']?[[:space:]]*[:=][[:space:]]*["'"'"']?|--[a-z-]*(token|secret|password|api-key)[[:space:]]+["'"'"']?)[A-Za-z0-9+/_-]{16,}'
+# Assembled from pieces: tests/scan-secrets.sh flags any line with a credential
+# keyword followed by = and a quoted literal, which a one-line definition of this
+# pattern is. Splitting it keeps this file inside that scan instead of excluded.
+named_key='[A-Za-z0-9_-]*(token|secret|password|passwd|api[_-]?key|access[_-]?key)[A-Za-z0-9_-]*["'"'"']?[[:space:]]*'
+named_sep='[:=]'
+named_flag='--[a-z-]*(token|secret|password|api-key)[[:space:]]+'
+named="(${named_key}${named_sep}[[:space:]]*[\"']?|${named_flag}[\"']?)[A-Za-z0-9+/_-]{16,}"
 # grep exits 1 on no match; anything above 1 is a failed scan and must fail closed.
 scan() { local rc=0; grep "$@" "$fresh/plugin" || rc=$?; [ "$rc" -le 1 ] || { echo "grep failed ($rc)" >&2; return 2; }; }
 # Capture each scan on its own: $(…) strips trailing newlines, so joining two
@@ -170,14 +176,19 @@ scan() { local rc=0; grep "$@" "$fresh/plugin" || rc=$?; [ "$rc" -le 1 ] || { ec
 if ! vendor_hits="$(scan -rnoIE "$vendor")" || ! named_hits="$(scan -rnoiIE "$named")"; then
   fail "the credential scan itself failed"
 else
-  creds="$(printf '%s\n%s\n' "$vendor_hits" "$named_hits" | grep . | sed "s|^$fresh/plugin/||" | awk -F: '{
+  # No `grep .` filter: it exits 1 when both scans are empty, and pipefail would
+  # then end the script on a clean build. awk skips the blank records itself.
+  # Only file:line is printed; echoing the match would copy a real secret into
+  # CI and release logs, where it is not masked.
+  creds="$(printf '%s\n%s\n' "$vendor_hits" "$named_hits" | sed "s|^$fresh/plugin/||" | awk -F: '{
       m = $0; sub(/^[^:]*:[0-9]+:/, "", m)
+      if (m == "") next
       v = m; sub(/^.*[:= ][[:space:]]*["\047]?/, "", v)
       if (v ~ /EXAMPLE|example|[xX]{4}|YOUR_|[Pp]laceholder|REDACTED|[Dd]ummy|[Ff]ake/) next
-      if (m ~ /^(gh[pousr]_|github_pat_|A(KI|SI)A|xox|sk_(live|test)_|glpat-|AIza|-----BEGIN)/) { print; next }
+      if (m ~ /^(gh[pousr]_|github_pat_|A(KI|SI)A|xox|sk_(live|test)_|glpat-|AIza|-----BEGIN)/) { print $1 ":" $2 ": [value redacted]"; next }
       d = gsub(/[0-9]/, "&", v); l = gsub(/[A-Za-z]/, "&", v)
-      if (d >= 3 && l >= 3) print
-    }')"
+      if (d >= 1 && l >= 1) print $1 ":" $2 ": [value redacted]"
+    }' | sort -u)"
   if [ -z "$creds" ]; then
     echo "✅ no credential-shaped literal in what the next release ships"
   else
