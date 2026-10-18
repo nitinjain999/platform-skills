@@ -18,7 +18,7 @@ spec:
   interval: 12h
   url: https://github.com/kubernetes-sigs/gateway-api
   ref:
-    tag: v1.6.1  # Pinned. Must be supported by the Envoy Gateway version below
+    tag: v1.6.3  # Pinned. Must be supported by the Envoy Gateway version below
   sparseCheckout:
     - config/crd/standard
 ---
