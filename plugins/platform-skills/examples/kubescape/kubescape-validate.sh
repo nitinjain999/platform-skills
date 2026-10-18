@@ -11,7 +11,7 @@ DIR="$ROOT_DIR/examples/kubescape"
 WORKFLOW="$DIR/workflows/kubescape.yml"
 
 ERRORS=0
-pass() { echo "  PASS: $1"; }
+ok() { echo "  PASS: $1"; }
 fail() { echo "  FAIL: $1"; ERRORS=$((ERRORS + 1)); }
 
 echo ""
@@ -19,11 +19,11 @@ echo "=== Kubescape example structure ==="
 for f in README.md exceptions.json workflows/kubescape.yml \
          manifests/insecure/deployment.yaml \
          manifests/hardened/deployment.yaml manifests/hardened/networkpolicy.yaml; do
-  if [ -f "$DIR/$f" ]; then pass "$f exists"; else fail "$f missing"; fi
+  if [ -f "$DIR/$f" ]; then ok "$f exists"; else fail "$f missing"; fi
 done
 
 if grep -qE '^Status: (Stable|Beta|Draft|Experimental)' "$DIR/README.md" 2>/dev/null; then
-  pass "README.md has a Status: line"
+  ok "README.md has a Status: line"
 else
   fail "README.md needs a 'Status:' line near the top"
 fi
@@ -56,7 +56,7 @@ for e in entries:
     assert not any("controlName" in p for p in pols), f"{name}: controlName is deprecated; use controlID"
 PY
 then
-  pass "exceptions.json entries are well formed"
+  ok "exceptions.json entries are well formed"
 else
   fail "exceptions.json is malformed (see the assertion above)"
 fi
@@ -67,7 +67,7 @@ for f in manifests/insecure/deployment.yaml manifests/hardened/deployment.yaml \
          manifests/hardened/networkpolicy.yaml workflows/kubescape.yml; do
   [ -f "$DIR/$f" ] || continue
   if python3 -I -c 'import sys, yaml; list(yaml.safe_load_all(open(sys.argv[1])))' "$DIR/$f" 2>/dev/null; then
-    pass "$f is valid YAML"
+    ok "$f is valid YAML"
   else
     fail "$f is invalid YAML"
   fi
@@ -82,39 +82,39 @@ if [ -f "$WORKFLOW" ]; then
   if grep -qE 'uses:[[:space:]]*kubescape/github-action' "$WORKFLOW"; then
     fail "workflow uses kubescape/github-action (stale CLI); install the pinned CLI instead"
   else
-    pass "workflow does not use kubescape/github-action"
+    ok "workflow does not use kubescape/github-action"
   fi
   if grep -qE 'uses:[[:space:]]*tj-actions/' "$WORKFLOW"; then
     fail "workflow uses tj-actions/* (compromised in March 2025)"
   else
-    pass "workflow does not use tj-actions/*"
+    ok "workflow does not use tj-actions/*"
   fi
   unpinned="$(grep -nE '^[[:space:]]*-?[[:space:]]*uses:' "$WORKFLOW" | grep -vE '@[0-9a-f]{40}' || true)"
   if [ -z "$unpinned" ]; then
-    pass "every uses: is pinned to a full commit SHA"
+    ok "every uses: is pinned to a full commit SHA"
   else
     fail "unpinned uses: $unpinned"
   fi
   version="$(sed -nE 's/^[[:space:]]*KUBESCAPE_VERSION:[[:space:]]*"?([0-9]+\.[0-9]+\.[0-9]+)"?.*/\1/p' "$WORKFLOW" | head -1)"
   if [ -n "$version" ]; then
-    pass "KUBESCAPE_VERSION pinned to $version"
+    ok "KUBESCAPE_VERSION pinned to $version"
   else
     fail "KUBESCAPE_VERSION must be pinned to an exact X.Y.Z"
   fi
   if grep -q 'cosign verify-blob' "$WORKFLOW" \
      && grep -q 'certificate-identity "https://github.com/kubescape/kubescape/.github/workflows/02-release.yaml@refs/tags/v${KUBESCAPE_VERSION}"' "$WORKFLOW" \
      && grep -q 'certificate-oidc-issuer "https://token.actions.githubusercontent.com"' "$WORKFLOW"; then
-    pass "CLI download is verified with cosign against the release workflow identity"
+    ok "CLI download is verified with cosign against the release workflow identity"
   else
     fail "workflow must cosign verify-blob checksums.sha256 against the 02-release.yaml identity and GitHub OIDC issuer"
   fi
   if grep -qE 'sha256sum (--check|-c)' "$WORKFLOW"; then
-    pass "tarball checked against the verified checksums"
+    ok "tarball checked against the verified checksums"
   else
     fail "workflow must sha256sum --check the tarball against checksums.sha256"
   fi
   if grep -q 'persist-credentials: false' "$WORKFLOW"; then
-    pass "checkout does not persist credentials"
+    ok "checkout does not persist credentials"
   else
     fail "actions/checkout must set persist-credentials: false"
   fi
@@ -130,7 +130,7 @@ pr = on.get("pull_request") if isinstance(on, dict) else None
 sys.exit(1 if isinstance(pr, dict) and ("paths" in pr or "paths-ignore" in pr) else 0)
 PY
   then
-    pass "pull_request trigger has no paths filter (required check always reports)"
+    ok "pull_request trigger has no paths filter (required check always reports)"
   else
     fail "pull_request must not use paths/paths-ignore: a skipped required check blocks merges"
   fi
@@ -140,13 +140,13 @@ PY
   scans="$(grep -cE '^[[:space:]]*kubescape scan ' "$WORKFLOW" || true)"
   hardened="$(grep -A3 -E '^[[:space:]]*kubescape scan ' "$WORKFLOW" | grep -c -- '--honor-inline-exceptions=false' || true)"
   if [ "$scans" -gt 0 ] && [ "$scans" = "$hardened" ]; then
-    pass "all $scans kubescape scans pass --honor-inline-exceptions=false"
+    ok "all $scans kubescape scans pass --honor-inline-exceptions=false"
   else
     fail "every kubescape scan must pass --honor-inline-exceptions=false ($hardened of $scans do)"
   fi
 
   if grep -q 'helm dependency build' "$WORKFLOW"; then
-    pass "Helm chart dependencies are built (and fail loudly) before scanning"
+    ok "Helm chart dependencies are built (and fail loudly) before scanning"
   else
     fail "workflow must run 'helm dependency build' for charts under SCAN_PATH; kubescape only warns when its own build fails"
   fi
@@ -182,7 +182,7 @@ for s in doc["jobs"]["posture"]["steps"]:
       (cd "$tmpd/$ws" && PATH="$tmpd/bin:$PATH" GITHUB_WORKSPACE="$tmpd/$ws" RUNNER_TEMP="$tmpd/rt-$ws" SCAN_PATH="$sp" bash -c "$depstep") >/dev/null 2>&1 || true
       builds="$(grep -c '^dependency build ' "$tmpd/helm.log" || true)"
       if grep -q "^dependency build $tmpd/$ws/$want\$" "$tmpd/helm.log" && [ "$builds" = 1 ]; then
-        pass "chart discovery: SCAN_PATH=$sp builds $want only (vendored subcharts skipped)"
+        ok "chart discovery: SCAN_PATH=$sp builds $want only (vendored subcharts skipped)"
       else
         fail "chart discovery: SCAN_PATH=$sp should build exactly $want, helm saw: $(tr '\n' ';' < "$tmpd/helm.log")"
       fi
@@ -219,7 +219,7 @@ for s in doc["jobs"]["posture"]["steps"]:
     for c in valid:0 alertonly:0 expired:1 undated:1 mixed:1 mixed_undated:1 empty:1 unknown:1 noactions:1 missing:0; do
       f="${c%%:*}"; want="${c##*:}"
       if EXCEPTIONS="$tmpx/$f.json" bash -c "$step" >/dev/null 2>&1; then got=0; else got=1; fi
-      if [ "$got" = "$want" ]; then pass "exception policy: $f → exit $got"; else fail "exception policy: $f → exit $got, want $want"; fi
+      if [ "$got" = "$want" ]; then ok "exception policy: $f → exit $got"; else fail "exception policy: $f → exit $got, want $want"; fi
     done
     rm -rf "$tmpx"
   fi
@@ -232,7 +232,7 @@ if command -v kubescape >/dev/null 2>&1; then
   trap 'rm -rf "$tmp"' EXIT
   if kubescape scan framework nsa "$DIR/manifests/hardened" --severity-threshold medium \
        --format json --output "$tmp/hardened.json" >/dev/null 2>&1; then
-    pass "hardened manifests pass NSA at --severity-threshold medium"
+    ok "hardened manifests pass NSA at --severity-threshold medium"
   else
     fail "hardened manifests should pass NSA at --severity-threshold medium"
   fi
@@ -240,7 +240,7 @@ if command -v kubescape >/dev/null 2>&1; then
        --format json --output "$tmp/insecure.json" >/dev/null 2>&1; then
     fail "insecure manifest should fail NSA at --severity-threshold medium"
   else
-    pass "insecure manifest fails NSA at --severity-threshold medium"
+    ok "insecure manifest fails NSA at --severity-threshold medium"
   fi
 else
   echo "  SKIP: kubescape not on PATH; gate behaviour not exercised"

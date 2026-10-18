@@ -3,7 +3,7 @@
 > A production-grade field handbook for platform, DevOps, SRE, and cloud engineers covering Kubernetes, Flux CD, Terraform, GitHub Actions, AWS, OPA/Rego, KEDA, Karpenter, supply chain security, Falco, observability, and more. Use it on GitHub, as a local reference, or with Claude, Codex, Cursor, and Copilot for interactive guidance with blast radius, validation steps, and rollback plans built in.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-v1.45.3-0e1117)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-v1.45.4-0e1117)](CHANGELOG.md)
 [![Domains](https://img.shields.io/badge/Domains-69-4c8eda)](references/)
 [![Commands](https://img.shields.io/badge/Commands-51-e87c2b)](skills/)
 [![Examples](https://img.shields.io/badge/Examples-28-6f42c1)](examples/)
@@ -367,7 +367,7 @@ platform-skills/
 
 ## Roadmap
 
-**Current release: v1.45.3** — 51 commands, 71 domain reference guides, 50+ wiki pages.
+**Current release: v1.45.4** — 51 commands, 71 domain reference guides, 50+ wiki pages.
 
 Full version history is in [CHANGELOG.md](CHANGELOG.md).
 

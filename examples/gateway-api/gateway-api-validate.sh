@@ -29,7 +29,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 MONOREPO="$ROOT_DIR/examples/fluxcd/basic-monorepo"
 
-pass() { echo "  PASS: $1"; }
+ok() { echo "  PASS: $1"; }
 fail() { echo "  FAIL: $1"; ERRORS=$((ERRORS + 1)); }
 
 # The schema pass is the only check that sees CRD fields in rendered overlays,
@@ -59,11 +59,11 @@ if ! command -v kubectl >/dev/null 2>&1; then
 else
   for overlay in "${OVERLAYS[@]}"; do
     if out="$(kubectl kustomize "$MONOREPO/$overlay" 2>&1)"; then
-      pass "$overlay builds"
+      ok "$overlay builds"
       if command -v kubeconform >/dev/null 2>&1; then
         if printf '%s\n' "$out" | kubeconform -strict -summary -output text \
             -schema-location default -schema-location "$CRD_CATALOG" - >/dev/null 2>&1; then
-          pass "$overlay passes kubeconform (strict, CRD catalog)"
+          ok "$overlay passes kubeconform (strict, CRD catalog)"
         else
           fail "$overlay fails kubeconform — run: kubectl kustomize $overlay | kubeconform -strict -schema-location default -schema-location '$CRD_CATALOG' -"
         fi
@@ -80,7 +80,7 @@ if command -v kubeconform >/dev/null 2>&1; then
   if kubeconform -strict -summary -output text \
       -schema-location default -schema-location "$CRD_CATALOG" \
       "$MONOREPO"/clusters/*/*.yaml >/dev/null 2>&1; then
-    pass "clusters/*/*.yaml pass kubeconform (strict, CRD catalog)"
+    ok "clusters/*/*.yaml pass kubeconform (strict, CRD catalog)"
   else
     fail "clusters/*/*.yaml fail kubeconform"
   fi
@@ -93,19 +93,19 @@ echo "=== basic-monorepo: no retired controller, no removed APIs ==="
 if grep -rIl --include='*.yaml' 'ingress-nginx' "$MONOREPO" >/dev/null 2>&1; then
   fail "ingress-nginx still referenced: $(grep -rIl --include='*.yaml' 'ingress-nginx' "$MONOREPO" | sed "s|$ROOT_DIR/||" | tr '\n' ' ')"
 else
-  pass "no ingress-nginx references in manifests"
+  ok "no ingress-nginx references in manifests"
 fi
 
 if grep -rIlE '^kind: Ingress$' "$MONOREPO" >/dev/null 2>&1; then
   fail "networking.k8s.io Ingress objects remain — use HTTPRoute"
 else
-  pass "no Ingress objects"
+  ok "no Ingress objects"
 fi
 
 if grep -rIl 'source.toolkit.fluxcd.io/v1beta2' "$MONOREPO" >/dev/null 2>&1; then
   fail "source.toolkit.fluxcd.io/v1beta2 is not served by Flux 2.9 — use v1"
 else
-  pass "Flux source APIs are v1"
+  ok "Flux source APIs are v1"
 fi
 
 echo ""
@@ -118,7 +118,7 @@ STALE="$(cd "$ROOT_DIR" && grep -rIl --include='*.yaml' --include='*.yml' 'ingre
   --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=.claude \
   | grep -v -E '^\./(evals/token-optimizer/|examples/gateway-api/before/|plugins/platform-skills/)' || true)"
 if [ -z "$STALE" ]; then
-  pass "no manifest outside the allowlist references ingress-nginx"
+  ok "no manifest outside the allowlist references ingress-nginx"
 else
   fail "manifests still reference ingress-nginx: $(printf '%s' "$STALE" | tr '\n' ' ')"
 fi
@@ -129,12 +129,12 @@ echo "=== Migration example: before and after ==="
 BEFORE="$SCRIPT_DIR/before/ingress.yaml"
 AFTER="$SCRIPT_DIR/after/httproute.yaml"
 if [ -f "$BEFORE" ] && [ -f "$AFTER" ]; then
-  pass "before/ingress.yaml and after/httproute.yaml exist"
+  ok "before/ingress.yaml and after/httproute.yaml exist"
   if command -v kubeconform >/dev/null 2>&1; then
     if kubeconform -strict -summary -output text \
         -schema-location default -schema-location "$CRD_CATALOG" \
         "$BEFORE" "$SCRIPT_DIR"/after/*.yaml >/dev/null 2>&1; then
-      pass "before/after pass kubeconform (strict, CRD catalog)"
+      ok "before/after pass kubeconform (strict, CRD catalog)"
     else
       fail "before/after fail kubeconform"
     fi
@@ -146,7 +146,7 @@ if [ -f "$BEFORE" ] && [ -f "$AFTER" ]; then
   fi
   for host in $(yq '.spec.rules[].host' "$BEFORE"); do
     if yq '.spec.hostnames[]' "$AFTER" | grep -qx "$host"; then
-      pass "host $host carried into HTTPRoute"
+      ok "host $host carried into HTTPRoute"
     else
       fail "host $host from the Ingress is missing in the HTTPRoute"
     fi
@@ -171,7 +171,7 @@ EG_LINE='^v1\.9\.[0-9]+$'
 EG_TAG=""
 [ -f "$EG_SOURCE" ] && EG_TAG="$(yq -N '.spec.ref.tag' "$EG_SOURCE")"
 if [[ "$EG_TAG" =~ $EG_LINE ]]; then
-  pass "Envoy Gateway controller chart pinned to $EG_TAG (v1.9.x)"
+  ok "Envoy Gateway controller chart pinned to $EG_TAG (v1.9.x)"
 else
   fail "Envoy Gateway OCIRepository missing or not pinned to a v1.9.x tag (got '${EG_TAG}')"
 fi
@@ -181,10 +181,10 @@ fi
 if grep -rqE '^  name: gateway-crds$' "$MONOREPO/infrastructure" 2>/dev/null; then
   fail "a gateway-crds HelmRelease is back in infrastructure/: CRDs exceed the Helm release size limit"
 else
-  pass "no Helm release manages the Gateway CRDs"
+  ok "no Helm release manages the Gateway CRDs"
 fi
 if [ "$(yq '.spec.values.crds.enabled' "$EG_RELEASE")" = "false" ]; then
-  pass "envoy-gateway chart does not install its bundled experimental CRDs"
+  ok "envoy-gateway chart does not install its bundled experimental CRDs"
 else
   fail "envoy-gateway must set values.crds.enabled: false"
 fi
@@ -201,7 +201,7 @@ for env in production staging; do
   gwapi_tag="$(yq -N 'select(.kind == "GitRepository") | .spec.ref.tag' "$crds")"
   if [[ "$gwapi_tag" =~ $GATEWAY_API_LINE ]] \
       && [ "$(yq -N 'select(.kind == "Kustomization" and .metadata.name == "gateway-api-crds") | .spec.path' "$crds")" = "./config/crd/standard" ]; then
-    pass "$env: Gateway API CRDs are the standard channel of $gwapi_tag (v1.6.x)"
+    ok "$env: Gateway API CRDs are the standard channel of $gwapi_tag (v1.6.x)"
   else
     fail "$env: gateway-api-crds must apply ./config/crd/standard from a v1.6.x tag (got '${gwapi_tag}')"
   fi
@@ -209,32 +209,32 @@ for env in production staging; do
   eg_crds_tag="$(yq -N 'select(.kind == "OCIRepository") | .spec.ref.tag' "$crds")"
   if [ -n "$EG_TAG" ] && [ "$eg_crds_tag" = "$EG_TAG" ] \
       && [ "$(yq -N 'select(.kind == "Kustomization" and .metadata.name == "envoy-gateway-crds") | .spec.path' "$crds")" = "./gateway-helm/charts/crds/crds/generated" ]; then
-    pass "$env: Envoy Gateway CRDs come from the $EG_TAG chart's generated/ dir only"
+    ok "$env: Envoy Gateway CRDs come from the $EG_TAG chart's generated/ dir only"
   else
     fail "$env: envoy-gateway-crds must apply ./gateway-helm/charts/crds/crds/generated from the controller's tag '${EG_TAG}' (got '${eg_crds_tag}')"
   fi
   # Deleting a CRD deletes every Gateway and HTTPRoute in the cluster.
   if [ "$(yq -N 'select(.kind == "Kustomization") | (.spec.prune == false and .spec.deletionPolicy == "Orphan")' "$crds" | sort -u)" = "true" ]; then
-    pass "$env: CRD Kustomizations never delete CRDs (prune: false, deletionPolicy: Orphan)"
+    ok "$env: CRD Kustomizations never delete CRDs (prune: false, deletionPolicy: Orphan)"
   else
     fail "$env: every CRD Kustomization needs prune: false and deletionPolicy: Orphan"
   fi
   # cert-manager ignores Gateways if the CRDs appear after it starts.
   if [ "$(yq -N '.spec.dependsOn[].name' "$infra" | sort | tr '\n' ' ')" = "envoy-gateway-crds gateway-api-crds " ]; then
-    pass "$env: infrastructure dependsOn both CRD Kustomizations (CRDs before cert-manager starts)"
+    ok "$env: infrastructure dependsOn both CRD Kustomizations (CRDs before cert-manager starts)"
   else
     fail "$env: clusters/$env/infrastructure.yaml must dependsOn gateway-api-crds and envoy-gateway-crds"
   fi
 done
 
 if [ -f "$CM_RELEASE" ] && [ "$(yq '.spec.values.config.gatewayAPI.enabled' "$CM_RELEASE" 2>/dev/null)" = "true" ]; then
-  pass "cert-manager config.gatewayAPI.enabled is true"
+  ok "cert-manager config.gatewayAPI.enabled is true"
 else
   fail "cert-manager must set values.config.gatewayAPI.enabled: true"
 fi
 
 if [ -f "$EG_RELEASE" ] && grep -q 'kind: OCIRepository' "$EG_RELEASE"; then
-  pass "Envoy Gateway HelmRelease uses chartRef to the OCIRepository"
+  ok "Envoy Gateway HelmRelease uses chartRef to the OCIRepository"
 else
   fail "Envoy Gateway HelmRelease missing chartRef kind: OCIRepository"
 fi
@@ -254,7 +254,7 @@ for env in production staging; do
   while read -r lname lfrom lns; do
     [ -z "$lname" ] && continue
     if [ "$lfrom" = "Selector" ] && [ "$lns" != "-" ] && grep -qE "^  name: ${lns}\$" "$APP_NAMESPACES" 2>/dev/null; then
-      pass "$env: listener $lname is bound to namespace $lns, which the platform layer creates"
+      ok "$env: listener $lname is bound to namespace $lns, which the platform layer creates"
     else
       fail "$env: listener $lname must select one platform-created namespace by kubernetes.io/metadata.name (got from=$lfrom ns=$lns)"
     fi
@@ -263,20 +263,20 @@ done
 if grep -rq 'gateway-access' "$MONOREPO" --include='*.yaml' 2>/dev/null; then
   fail "a shared gateway-access label is back: listeners must bind to the owning namespace instead"
 else
-  pass "no shared gateway opt-in label"
+  ok "no shared gateway opt-in label"
 fi
 
 # Namespaces are the unit listeners bind to, so the app layer must not create them.
 if grep -rlE '^kind: Namespace$' "$MONOREPO/apps" >/dev/null 2>&1; then
   fail "apps/ defines a Namespace; create app namespaces in infrastructure/configs (platform review)"
 else
-  pass "app namespaces are owned by the platform layer"
+  ok "app namespaces are owned by the platform layer"
 fi
 
 # Two proxy replicas only survive a node failure if they run on different nodes.
 if kubectl kustomize "$MONOREPO/infrastructure/configs/production" \
     | yq -e -N 'select(.kind == "EnvoyProxy") | .spec.provider.kubernetes.envoyDeployment.pod.topologySpreadConstraints[] | select(.topologyKey == "kubernetes.io/hostname" and .whenUnsatisfiable == "DoNotSchedule")' >/dev/null 2>&1; then
-  pass "production Envoy proxies are spread across nodes (hostname, DoNotSchedule)"
+  ok "production Envoy proxies are spread across nodes (hostname, DoNotSchedule)"
 else
   fail "production EnvoyProxy needs a kubernetes.io/hostname topologySpreadConstraint with DoNotSchedule"
 fi
@@ -290,7 +290,7 @@ for overlay in infrastructure/production infrastructure/staging infrastructure/c
   elif [ -n "$cpu_limits" ]; then
     fail "$overlay sets a CPU limit ($cpu_limits); the baseline is CPU requests plus memory-only limits"
   else
-    pass "$overlay sets no CPU limits"
+    ok "$overlay sets no CPU limits"
   fi
 done
 
@@ -304,7 +304,7 @@ for env in production staging; do
     fi
     for h in $route_hosts; do
       if printf '%s\n' "$listener_hosts" | grep -qx "$h"; then
-        pass "$env: route hostname $h has a matching HTTPS listener"
+        ok "$env: route hostname $h has a matching HTTPS listener"
       else
         fail "$env: route hostname $h has no HTTPS listener on platform-gateway"
       fi
@@ -313,13 +313,13 @@ for env in production staging; do
 
   apps="$MONOREPO/clusters/$env/apps.yaml"
   if [ "$(yq '.spec.dependsOn[].name' "$apps" 2>/dev/null)" = "infrastructure-configs" ]; then
-    pass "clusters/$env/apps.yaml depends on infrastructure-configs"
+    ok "clusters/$env/apps.yaml depends on infrastructure-configs"
   else
     fail "clusters/$env/apps.yaml must dependsOn infrastructure-configs"
   fi
   configs="$MONOREPO/clusters/$env/infrastructure-configs.yaml"
   if [ -f "$configs" ] && [ "$(yq '.spec.dependsOn[].name' "$configs")" = "infrastructure" ]; then
-    pass "clusters/$env/infrastructure-configs.yaml depends on infrastructure"
+    ok "clusters/$env/infrastructure-configs.yaml depends on infrastructure"
   else
     fail "clusters/$env/infrastructure-configs.yaml missing or not dependent on infrastructure"
   fi

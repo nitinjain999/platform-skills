@@ -5,6 +5,15 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.45.4] - 2026-10-18
+
+Trims the plugin directory's review holds: the image-file hold on the self-improve hook, and five false matches in the credential hold. Neither hold blocks submission. The credential hold stays on for review by design, because its remaining findings are vendor credentials used with that vendor's own service.
+
+### Fixed
+
+- **The directory held the plugin because the self-improve hook "names" the listing icon.** `examples/agent-self-improve/scripts/self-improve-hook.sh` never mentions `icon.png`, but `running_from_plugin` matched `$0` against a wildcard case pattern under `CLAUDE_PLUGIN_ROOT`. The directory's scanner reads a wildcard under the plugin root as naming every file there, `.claude-plugin/icon.png` included, and holds the plugin as `UNREAD_ASSET_REFERENCED`. The check is now a prefix strip with the same result, checked for a root with and without a trailing slash, a sibling directory sharing the prefix, the root itself, and an unset root. The `plugins/platform-guardrails` copy stays byte-identical, and all 240 hook tests pass in bash and pwsh.
+- **Five false matches in the "Uses a credential from the user's machine" hold.** Four validator scripts (`gateway-api`, `kubescape`, `kubescape-operator` and `terraform`) named their pass/fail helper `pass`, so `pass "$f …"` read as a password next to a URL in the same file. The helper is now `ok`, and the printed `PASS:` lines are unchanged. `references/kingfisher.md` mounted `"$PWD"`, which read as a password variable, and now uses `"$(pwd)"`.
+
 ## [1.45.3] - 2026-10-18
 
 Clears the one issue that blocked the plugin directory submission (a sample token in the triage reference), adds a credential check to the plugin-folder gate, and repairs the gh-aw source scan.

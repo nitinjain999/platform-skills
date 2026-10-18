@@ -11,7 +11,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DIR="$ROOT_DIR/examples/kubescape-operator"
 
 ERRORS=0
-pass() { echo "  PASS: $1"; }
+ok() { echo "  PASS: $1"; }
 fail() { echo "  FAIL: $1"; ERRORS=$((ERRORS + 1)); }
 
 FILES=(README.md flux/kustomization.yaml flux/namespace.yaml flux/helmrepository.yaml
@@ -22,10 +22,10 @@ FILES=(README.md flux/kustomization.yaml flux/namespace.yaml flux/helmrepository
 echo ""
 echo "=== Kubescape operator example structure ==="
 for f in "${FILES[@]}"; do
-  if [ -f "$DIR/$f" ]; then pass "$f exists"; else fail "$f missing"; fi
+  if [ -f "$DIR/$f" ]; then ok "$f exists"; else fail "$f missing"; fi
 done
 if grep -qE '^Status: (Stable|Beta|Draft|Experimental)' "$DIR/README.md" 2>/dev/null; then
-  pass "README.md has a Status: line"
+  ok "README.md has a Status: line"
 else
   fail "README.md needs a 'Status:' line near the top"
 fi
@@ -36,7 +36,7 @@ for f in "${FILES[@]}"; do
   case "$f" in *.yaml) ;; *) continue ;; esac
   [ -f "$DIR/$f" ] || continue
   if python3 -I -c 'import sys, yaml; list(yaml.safe_load_all(open(sys.argv[1])))' "$DIR/$f" 2>/dev/null; then
-    pass "$f is valid YAML"
+    ok "$f is valid YAML"
   else
     fail "$f is invalid YAML"
   fi
@@ -81,7 +81,7 @@ for e in errors: print("    -", e)
 sys.exit(1 if errors else 0)
 PY
 then
-  pass "HelmRelease pins the chart, names the cluster and keeps mutating capabilities off"
+  ok "HelmRelease pins the chart, names the cluster and keeps mutating capabilities off"
 else
   fail "HelmRelease checks failed (see above)"
 fi
@@ -94,7 +94,7 @@ if grep -rnE 'applicationprofiles?|networkneighborhoods?|ApplicationProfile|Netw
      "$DIR" --include='*.yaml' --include='*.sh' | grep -v 'kubescape-operator-validate.sh' >/dev/null; then
   fail "examples reference applicationprofiles/networkneighborhoods (removed); use containerprofiles"
 else
-  pass "no references to removed profile resources"
+  ok "no references to removed profile resources"
 fi
 
 echo ""
@@ -124,7 +124,7 @@ for e in errors: print("    -", e)
 sys.exit(1 if errors else 0)
 PY
 then
-  pass "SecurityException carries reason, author, expiresAt; binding lists rules"
+  ok "SecurityException carries reason, author, expiresAt; binding lists rules"
 else
   fail "SecurityException or RuntimeRuleAlertBinding checks failed (see above)"
 fi
@@ -132,7 +132,7 @@ fi
 echo ""
 echo "=== PrometheusRule uses exported metric names ==="
 for m in kubescape_controls_total_cluster_critical kubescape_controls_total_cluster_high kubescape_vulnerabilities_relevant_cluster_critical; do
-  if grep -q "$m" "$DIR/prometheusrule.yaml" 2>/dev/null; then pass "prometheusrule.yaml uses $m"; else fail "prometheusrule.yaml should alert on $m"; fi
+  if grep -q "$m" "$DIR/prometheusrule.yaml" 2>/dev/null; then ok "prometheusrule.yaml uses $m"; else fail "prometheusrule.yaml should alert on $m"; fi
 done
 
 # node-agent v0.3.219 (Config.SkipNamespace) never traces pods in
@@ -186,7 +186,7 @@ for e in errors: print("    -", e)
 sys.exit(1 if errors else 0)
 PY
 then
-  pass "runtime binding targets traced namespaces, removed from the default binding"
+  ok "runtime binding targets traced namespaces, removed from the default binding"
 else
   fail "runtime binding would never fire or would double up with all-rules-all-pods (see above)"
 fi
@@ -203,7 +203,7 @@ for b in bad: print("    -", b)
 sys.exit(1 if bad else 0)
 PY
 then
-  pass "absent() alerts claim only a missing exporter, not failing scans"
+  ok "absent() alerts claim only a missing exporter, not failing scans"
 else
   fail "an absent() alert claims to detect failing scans; the exporter's gauges exist even when every scan fails"
 fi
@@ -218,9 +218,9 @@ elif command -v helm >/dev/null 2>&1; then
   python3 -I -c 'import sys,yaml;yaml.safe_dump(yaml.safe_load(open(sys.argv[1]))["spec"]["values"],open(sys.argv[2],"w"))' "$DIR/flux/helmrelease.yaml" "$tmp/values.yaml"
   if helm template kubescape kubescape-operator --repo https://kubescape.github.io/helm-charts/ \
        --version "$ver" --namespace kubescape -f "$tmp/values.yaml" > "$tmp/out.yaml" 2>"$tmp/err"; then
-    pass "helm template kubescape-operator $ver renders"
-    if grep -q 'name: node-agent' "$tmp/out.yaml"; then pass "node-agent DaemonSet rendered"; else fail "node-agent not rendered"; fi
-    if grep -q 'name: prometheus-exporter' "$tmp/out.yaml"; then pass "prometheus-exporter rendered"; else fail "prometheus-exporter not rendered"; fi
+    ok "helm template kubescape-operator $ver renders"
+    if grep -q 'name: node-agent' "$tmp/out.yaml"; then ok "node-agent DaemonSet rendered"; else fail "node-agent not rendered"; fi
+    if grep -q 'name: prometheus-exporter' "$tmp/out.yaml"; then ok "prometheus-exporter rendered"; else fail "prometheus-exporter not rendered"; fi
     # The rendered RBAC, not just the value: no ClusterRole may grant Secrets.
     if python3 -I - "$tmp/out.yaml" <<'PY2'
 import sys, yaml
@@ -234,7 +234,7 @@ for b in bad: print("    -", b)
 sys.exit(1 if bad else 0)
 PY2
     then
-      pass "no rendered ClusterRole grants access to Secrets"
+      ok "no rendered ClusterRole grants access to Secrets"
     else
       fail "a rendered ClusterRole grants cluster-wide Secret access (see above)"
     fi

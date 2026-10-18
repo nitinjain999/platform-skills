@@ -90,7 +90,7 @@ uvx kingfisher-bin --help           # one-shot, no install
 ```bash
 docker run --rm ghcr.io/mongodb/kingfisher:2.0.0 --version
 
-docker run --rm -v "$PWD":/src ghcr.io/mongodb/kingfisher:2.0.0 scan /src
+docker run --rm -v "$(pwd)":/src ghcr.io/mongodb/kingfisher:2.0.0 scan /src
 ```
 
 **Pin the tag.** `:latest` moves under you — a scan that passed yesterday can behave differently today because the rule catalogue or validator set changed. Pin to a released version tag (`ghcr.io/mongodb/kingfisher:2.0.0`) for reproducible CI, the same reason zizmor's `unpinned-images` audit flags `:latest` container references.
@@ -682,7 +682,7 @@ Needs `security-events: write` on the job. As with any SARIF-only step, a green 
 ```yaml
       - name: Scan for secrets (Docker)
         run: |
-          docker run --rm -v "$PWD":/src \
+          docker run --rm -v "$(pwd)":/src \
             ghcr.io/mongodb/kingfisher:2.0.0 \
             scan /src --since-commit "origin/main" --branch HEAD
 ```

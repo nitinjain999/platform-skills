@@ -36,14 +36,14 @@ MANUAL_HOOK_PATTERN='self-improve-hook\.(sh|ps1)'
 # running_from_plugin — true when this copy was launched from a plugin root,
 # the way platform-guardrails' hooks.json runs it. A CLAUDE_PLUGIN_ROOT that
 # does not contain this script (another plugin's, say) does not count.
+# A prefix strip rather than a wildcard case pattern: the plugin directory's
+# scanner reads a wildcard under the plugin root as naming every file there,
+# the listing icon included, and holds the plugin for review.
 running_from_plugin() {
   local root="${CLAUDE_PLUGIN_ROOT:-}"
   root="${root%/}"
   [ -n "$root" ] || return 1
-  case "$0" in
-    "$root"/*) return 0 ;;
-  esac
-  return 1
+  [ "${0#"$root/"}" != "$0" ]
 }
 
 resolve_base() {
