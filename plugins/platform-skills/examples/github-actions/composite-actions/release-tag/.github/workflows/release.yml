@@ -14,25 +14,29 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
-      - name: Install actionlint
-        shell: bash
-        env:
-          # Pinned and checksum-verified, not the download script from main piped
-          # into bash: what runs is the reviewed release. Renovate bumps both lines.
-          # renovate: datasource=github-release-attachments depName=rhysd/actionlint
-          ACTIONLINT_VERSION: v1.7.12
-          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
-        run: |
-          set -euo pipefail
-          curl -fsSLo /tmp/actionlint.tar.gz --retry 3 \
-            "https://github.com/rhysd/actionlint/releases/download/${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION#v}_linux_amd64.tar.gz"
-          echo "${ACTIONLINT_SHA256}  /tmp/actionlint.tar.gz" | sha256sum -c -
-          tar xzf /tmp/actionlint.tar.gz -C /tmp actionlint
-          sudo install -m 0755 /tmp/actionlint /usr/local/bin/actionlint
-
       - name: Validate action.yml
         shell: bash
-        run: actionlint action.yml
+        # yq ships on the ubuntu runner image, so nothing is downloaded here.
+        # actionlint is a workflow linter: run on action.yml it reports
+        # '"jobs" section is missing' and fails every release.
+        run: |
+          set -euo pipefail
+          errors=0
+          using="$(yq '.runs.using' action.yml)"
+          if [[ "$using" != "composite" ]]; then
+            echo "::error file=action.yml::runs.using is '$using', expected composite"; errors=1
+          fi
+          # The only keys a composite step accepts; any other, timeout-minutes
+          # included, stops the action from loading.
+          unknown="$(yq '.runs.steps[] | keys | .[] | select(test("^(continue-on-error|env|id|if|name|run|shell|uses|with|working-directory)$") | not)' action.yml)"
+          if [[ -n "$unknown" ]]; then
+            echo "::error file=action.yml::unsupported step keys: ${unknown//$'\n'/, }"; errors=1
+          fi
+          noshell="$(yq '.runs.steps[] | select(has("run") and (has("shell") | not)) | (.name // "unnamed step")' action.yml)"
+          if [[ -n "$noshell" ]]; then
+            echo "::error file=action.yml::run steps without shell: ${noshell//$'\n'/, }"; errors=1
+          fi
+          exit "$errors"
 
       - name: Verify SHA pinning
         shell: bash

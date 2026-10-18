@@ -235,7 +235,8 @@ A test workflow that:
 #### .github/workflows/release.yml
 
 - Triggers on `push` to tags matching `v[0-9]+.[0-9]+.[0-9]+`
-- Validates with `actionlint`
+- Validates `action.yml` with `yq` (preinstalled on the runner, nothing downloaded): `runs.using` is `composite`, every step key is one a composite step accepts, and every `run:` step has `shell:`. Not `actionlint`: it lints workflows, and on `action.yml` it fails every release with `"jobs" section is missing`
+- Fails the release when an external `uses:` is not pinned to a 40-character SHA
 - Updates the floating major version tag
 - Creates a GitHub release with auto-generated notes
 
@@ -276,7 +277,7 @@ gh pr create \
 
 - [ ] Test workflow passes on this branch
 - [ ] Matrix covers all input combinations
-- [ ] `actionlint` passes
+- [ ] `actionlint` passes on the workflows, and the `yq` checks pass on `action.yml`
 - [ ] `zizmor --strict-collection .` reports no medium or high findings
 - [ ] Tested locally with `act`
 - [ ] README inputs/outputs table reviewed
@@ -528,7 +529,7 @@ git push origin v1.0.0
 git tag -f v1
 git push origin v1 --force
 
-# Verify release workflow ran (actionlint gate + SHA pinning check)
+# Verify release workflow ran (action.yml check + SHA pinning check)
 gh run list --workflow release.yml --limit 5
 ```
 

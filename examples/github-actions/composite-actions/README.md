@@ -50,7 +50,7 @@ Need to run database migrations safely?            → db-migrate
 | `README.md` | Inputs/outputs table, variables & secrets guide, full usage example |
 | `CHANGELOG.md` | Version history |
 | `.github/workflows/test-action.yml` | Test workflow using local path reference + matrix |
-| `.github/workflows/release.yml` | Tag → actionlint validation → floating major tag → GitHub release |
+| `.github/workflows/release.yml` | Tag → `action.yml` check (yq) → SHA pinning check → floating major tag → GitHub release |
 | `.github/dependabot.yml` | Weekly SHA updates for all pinned external actions |
 
 ---
@@ -68,10 +68,10 @@ Need to run database migrations safely?            → db-migrate
 | `$GITHUB_STEP_SUMMARY` written in every action | All |
 | `::group::` / `::endgroup::` around each logical phase | All |
 | `::error::` / `::warning::` annotations for findings | security-scan, release-tag |
-| `timeout-minutes` on network-bound steps | notify-slack, k8s-deploy, security-scan |
+| Bounded network waits (`curl --max-time`, `kubectl rollout status --timeout`); a composite step does not accept `timeout-minutes` | notify-slack, k8s-deploy |
 | Idempotent by design (documented in each README) | All |
 | `dependabot.yml` for `github-actions` ecosystem | All |
-| Release workflow with `actionlint` gate + SHA pinning check | All |
+| Release workflow with an `action.yml` structure check (yq, nothing downloaded) + SHA pinning check | All |
 
 ---
 

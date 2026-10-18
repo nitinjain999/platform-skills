@@ -75,21 +75,7 @@ Steps:
 
 3. Copy `examples/ai-governance/evaluate.sh` into `.ai-governance/evaluate.sh` in the target repo, executable bit set (`chmod +x`).
 
-4. Check for `yq` (`command -v yq`); if absent, install it using the OS-detected path (same pattern `checkov.md` uses for its own bootstrap). Pin the version and verify the checksum — `releases/latest` is a moving target, and this binary parses the file that decides what the agent may touch:
-   ```bash
-   YQ_VERSION=v4.53.6
-   YQ_SHA256=c5f056448f973ae7d39b5401949648a78f2dc1947d6a8eb65be60d5c504b9385  # yq_linux_amd64
-
-   case "$(uname -s)" in
-     Darwin) brew install yq ;;   # Homebrew verifies its own bottle checksum
-     Linux)
-       curl -fsSL -o /tmp/yq \
-         "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_amd64"
-       echo "${YQ_SHA256}  /tmp/yq" | sha256sum -c -
-       sudo install -m 0755 /tmp/yq /usr/local/bin/yq
-       ;;
-   esac
-   ```
+4. Check for `yq` v4 (`command -v yq && yq --version`). If it is missing, stop and ask the user to install it: Homebrew (`brew install yq`) on macOS, their distribution's package, or a release binary from github.com/mikefarah/yq/releases checked against its published checksum. Never install it yourself. It needs `sudo`, and this binary parses the file that decides what the agent may touch, so where it comes from is the user's call. In CI, `ubuntu-latest` already ships yq v4, and `examples/ai-governance/ai-governance-check.yml` pins and verifies its own copy.
 
 5. Write `.github/hooks/preToolUse.json`:
    ```json

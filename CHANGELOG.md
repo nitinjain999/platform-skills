@@ -5,6 +5,18 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.45.6] - 2026-10-18
+
+Fixes the composite-action release workflows, which failed on every tag, and stops two skills from installing software on their own. Together these remove the download-and-run commands behind six of the ten findings the plugin directory listed. The other four neither download nor run code: the Slack webhook POST in `notify-slack`, `curl -v` in the connectivity ladder of the linux and router skills, and a preflight checklist line. The directory says a match that only appears in documentation needs no change, so they stay.
+
+### Fixed
+
+- **Composite-action release workflows failed on every tag.** All eleven `examples/github-actions/composite-actions/*/.github/workflows/release.yml` ran `actionlint action.yml`. actionlint lints workflows, not action metadata. It read `action.yml` as a workflow, reported `"jobs" section is missing`, and exited 1 before the release was created. The step is now an `action.yml` check with `yq`, which the ubuntu runner image ships. It checks three things: `runs.using` is `composite`, every step key is one GitHub documents for a composite step, and every `run:` step has `shell:`. It passes on all eleven actions. It fails on a step-level `timeout-minutes`, a `run:` without `shell:`, a non-composite action, and invalid YAML. Nothing is downloaded, so the actionlint download the directory listed in four of these files is gone.
+- **The composite-actions reference taught the same broken check and piped an installer into bash.** `references/composite-actions.md` ran `actionlint action.yml` in three places. It also installed actionlint twice with `curl …/actionlint/main/scripts/download-actionlint.bash | bash`. Its release-workflow template expanded `${{ github.ref_name }}` straight into `run:`, which is template injection from a tag name, and pinned checkout v4.2.2 and github-script v7.0.1. The template now matches the example workflows, and the static-validation section uses the `yq` checks. actionlint is described as a workflow linter that also checks the inputs passed to a local action through `uses: ./`. The composite-actions skill and the examples README say the same.
+- **The ai-governance skill installed yq with `sudo`.** When yq was missing, the skill told the agent to download a release binary and `sudo install` it. It now stops and asks the user to install yq. The version it pinned (v4.53.6) was also behind the Renovate-tracked pin in `examples/ai-governance/ai-governance-check.yml`.
+- **The dora skill installed Pushgateway into the cluster on its own.** When no Pushgateway was found, it ran `helm upgrade --install` "before proceeding", with an unpinned chart and no `helm repo add`. It now stops and gives the user a pinned install (`--version 3.9.1`) to run.
+- **The composite-actions README still listed `timeout-minutes` on network-bound steps.** 1.45.5 removed those lines because a composite step does not accept the key. The row now names what bounds the waits: `curl --max-time` and `kubectl rollout status --timeout`.
+
 ## [1.45.5] - 2026-10-18
 
 Pins and verifies the installers in the composite-action examples, which the plugin directory listed as download-and-run commands, and fixes two actions that failed to load.

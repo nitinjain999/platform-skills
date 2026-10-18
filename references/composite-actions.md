@@ -1369,19 +1369,23 @@ act -W .github/workflows/test-action.yml \
 ### Static validation
 
 ```bash
-# Install actionlint
-brew install actionlint
+# actionlint lints workflows, and through each `uses: ./actions/<name>` it checks
+# the inputs passed against that action's action.yml. It does not lint
+# action.yml itself: `actionlint action.yml` fails with '"jobs" section is missing'.
+actionlint .github/workflows/*.yml
 
-# Validate
-actionlint actions/setup-env/action.yml
+# action.yml structure, with yq (v4). The first prints composite; the other two
+# print nothing when clean.
+yq '.runs.using' actions/setup-env/action.yml
+# Keys a composite step does not accept (timeout-minutes stops the action loading)
+yq '.runs.steps[] | keys | .[] | select(test("^(continue-on-error|env|id|if|name|run|shell|uses|with|working-directory)$") | not)' actions/setup-env/action.yml
+# run: steps without shell:
+yq '.runs.steps[] | select(has("run") and (has("shell") | not)) | .name' actions/setup-env/action.yml
 
 # Check all external actions are SHA-pinned
 grep -rn 'uses:' actions/ \
   | grep -vE '(@[0-9a-f]{40}|\./)' \
   | grep -v '#'
-
-# Check every run: step has shell:
-grep -B1 'run:' actions/*/action.yml | grep -v 'shell:' | grep 'run:'
 ```
 
 ---
@@ -1462,23 +1466,52 @@ jobs:
       contents: write
 
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
-      - name: Validate with actionlint
+      - name: Validate action.yml
+        shell: bash
+        # yq ships on the ubuntu runner image, so nothing is downloaded here.
+        # actionlint is a workflow linter: run on action.yml it reports
+        # '"jobs" section is missing' and fails every release.
+        run: |
+          set -euo pipefail
+          errors=0
+          using="$(yq '.runs.using' action.yml)"
+          if [[ "$using" != "composite" ]]; then
+            echo "::error file=action.yml::runs.using is '$using', expected composite"; errors=1
+          fi
+          # The only keys a composite step accepts; any other, timeout-minutes
+          # included, stops the action from loading.
+          unknown="$(yq '.runs.steps[] | keys | .[] | select(test("^(continue-on-error|env|id|if|name|run|shell|uses|with|working-directory)$") | not)' action.yml)"
+          if [[ -n "$unknown" ]]; then
+            echo "::error file=action.yml::unsupported step keys: ${unknown//$'\n'/, }"; errors=1
+          fi
+          noshell="$(yq '.runs.steps[] | select(has("run") and (has("shell") | not)) | (.name // "unnamed step")' action.yml)"
+          if [[ -n "$noshell" ]]; then
+            echo "::error file=action.yml::run steps without shell: ${noshell//$'\n'/, }"; errors=1
+          fi
+          exit "$errors"
+
+      - name: Verify SHA pinning
         shell: bash
         run: |
-          curl -sL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash | bash
-          ./actionlint
+          UNPINNED=$(grep -n 'uses:' action.yml \
+            | grep -vE '@[0-9a-f]{40}' | grep -v '\./' || true)
+          [[ -z "$UNPINNED" ]] || { echo "::error::$UNPINNED"; exit 1; }
 
       - name: Update floating major version tag
         shell: bash
+        env:
+          # Never expand github.ref_name straight into the shell: a tag name is
+          # attacker-controllable and ${{ }} is substituted before bash parses it.
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          MAJOR=$(echo "${{ github.ref_name }}" | cut -d. -f1)
+          MAJOR="${REF_NAME%%.*}"
           git tag -f "$MAJOR"
           git push origin "$MAJOR" --force
 
       - name: Create GitHub release
-        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9.0.0
         with:
           script: |
             const tag = context.ref.replace('refs/tags/', '');
@@ -1770,21 +1803,15 @@ eval $(some_command)
 To run actionlint locally:
 
 ```bash
-# Install
-brew install actionlint     # macOS
-# or:
-curl -sL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash \
-  | bash -s -- latest /usr/local/bin
+# Install: Homebrew on macOS; elsewhere a pinned release binary from
+# github.com/rhysd/actionlint/releases, verified against its checksums file
+brew install actionlint
 
-# Lint a single action
-actionlint action.yml
-
-# Lint all workflows in a repo
+# Lint all workflows in a repo (shellcheck runs on their run: blocks when installed)
 actionlint .github/workflows/*.yml
-
-# With shellcheck integration
-actionlint -shellcheck shellcheck action.yml
 ```
+
+actionlint does not lint `action.yml` on its own (`actionlint action.yml` fails with `"jobs" section is missing`), so this check never reaches a composite action's `run:` blocks. For `action.yml`, use the `yq` checks under [Static validation](#static-validation).
 
 ---
 
@@ -1917,7 +1944,7 @@ if: inputs.enable_cache == 'true'
 **Testing**
 - [ ] Test workflow uses local path reference (`./actions/…`)
 - [ ] Matrix covers key input variants
-- [ ] `actionlint` passes with zero warnings
+- [ ] `actionlint` passes with zero warnings on the workflows, and the `yq` checks pass on `action.yml`
 - [ ] Tested locally with `act`
 
 **Documentation**
