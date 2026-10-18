@@ -15,7 +15,7 @@ Deploy the Dynatrace Operator and OneAgent on Kubernetes.
 
 Steps:
 1. Ask for: environment ID, Kubernetes distribution (EKS/AKS/GKE), monitoring mode (fullStack / cloudNativeFullStack)
-2. Install Operator: `kubectl apply -f .../dynatrace-operator/releases/latest/download/kubernetes.yaml`
+2. Install Operator from a pinned release, never `releases/latest`: `kubectl apply -f .../dynatrace-operator/releases/download/v1.11.0/kubernetes.yaml`
 3. Create Secret with `apiToken` and `dataIngestToken` (store in Kubernetes Secret or secrets manager — never plain values)
 4. Generate `DynaKube` CR with `cloudNativeFullStack` for automatic injection — no pod restarts required
 5. Enable `metadataEnrichment: true` for Kubernetes metadata on all telemetry

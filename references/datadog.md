@@ -414,10 +414,8 @@ resource "datadog_synthetics_test" "orders_api" {
 # macOS (verify tap name at https://github.com/datadog-labs/pup)
 brew install datadog/datadog-labs/pup
 
-# Linux — check https://github.com/datadog-labs/pup/releases for the latest binary
-# Example (verify URL before running):
-# curl -sSL https://github.com/datadog-labs/pup/releases/latest/download/pup-linux-amd64 \
-#   -o /usr/local/bin/pup && chmod +x /usr/local/bin/pup
+# Linux: the binary for your platform from a pinned release at
+# github.com/datadog-labs/pup/releases, verified before you install it
 ```
 
 ### Configure

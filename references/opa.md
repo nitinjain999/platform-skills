@@ -400,9 +400,8 @@ conftest fmt ./policies/*.rego
 ```bash
 # Install
 brew install styrainc/packages/regal   # macOS
-# or
-curl -L -o regal "https://github.com/StyraInc/regal/releases/latest/download/regal_$(uname -s)_$(uname -m)"
-chmod +x regal && sudo mv regal /usr/local/bin/
+# Elsewhere: the binary for your platform from a pinned release at
+# github.com/open-policy-agent/regal/releases, checked against its checksums.txt
 
 # Lint all .rego files
 regal lint ./policies
@@ -495,18 +494,30 @@ jobs:
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
 
+      # Pinned releases, each checked against the checksums.txt published with
+      # it. Resolving releases/latest at run time installs whatever shipped last.
       - name: Install Conftest
+        env:
+          CONFTEST_VERSION: 0.71.1
         run: |
-          VERSION=$(curl -s https://api.github.com/repos/open-policy-agent/conftest/releases/latest | jq -r .tag_name)
-          curl -Lo conftest.tar.gz "https://github.com/open-policy-agent/conftest/releases/download/${VERSION}/conftest_${VERSION#v}_Linux_x86_64.tar.gz"
-          tar xzf conftest.tar.gz conftest
-          sudo mv conftest /usr/local/bin/
+          set -euo pipefail
+          base="https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}"
+          curl -fsSLO "${base}/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz"
+          curl -fsSL -o conftest-checksums.txt "${base}/checksums.txt"
+          sha256sum --check --ignore-missing conftest-checksums.txt
+          tar xzf "conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz" conftest
+          sudo install -m 0755 conftest /usr/local/bin/conftest
 
       - name: Install Regal
+        env:
+          REGAL_VERSION: 0.43.0
         run: |
-          VERSION=$(curl -s https://api.github.com/repos/StyraInc/regal/releases/latest | jq -r .tag_name)
-          curl -Lo regal "https://github.com/StyraInc/regal/releases/download/${VERSION}/regal_Linux_x86_64"
-          chmod +x regal && sudo mv regal /usr/local/bin/
+          set -euo pipefail
+          base="https://github.com/open-policy-agent/regal/releases/download/v${REGAL_VERSION}"
+          curl -fsSLO "${base}/regal_Linux_x86_64"
+          curl -fsSL -o regal-checksums.txt "${base}/checksums.txt"
+          sha256sum --check --ignore-missing regal-checksums.txt
+          sudo install -m 0755 regal_Linux_x86_64 /usr/local/bin/regal
 
       - name: Check formatting
         run: conftest fmt ./policies --check

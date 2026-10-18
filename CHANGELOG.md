@@ -5,6 +5,19 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.45.7] - 2026-10-18
+
+Replaces the remaining real download-and-run commands in what the plugin ships. A sweep of all 410 shipped files found them in five references, one skill and one example script. The plugin directory has listed exactly ten download-and-run findings in each of the last three scans, with new files taking the place of cleared ones. Four of the ten it listed for 1.45.6 are fixed here, plus the datadog reference and the dynatrace skill and reference, which it had not listed. The other six (dora, linux, the router skill, preflight, `notify-slack` and `references/composite-actions.md`) call APIs or webhooks with `curl` and download no code.
+
+### Fixed
+
+- **The kingfisher reference piped install scripts from `main` into bash.** The Linux, macOS and pre-commit installers ran `curl …/main/scripts/install-kingfisher*.sh | bash`. The Windows path ran the PowerShell installer from `main` under `ExecutionPolicy Bypass`. The install section now points to Homebrew, mise, uv, Docker and the release binaries. The pre-commit installer is fetched at the v2.13.0 tag, read, and then run.
+- **The trivy reference piped `contrib/install.sh` from `main` into sh**, locally and in CI. Linux now installs the pinned v0.76.0 release, checked against `trivy_0.76.0_checksums.txt`. CI uses `aquasecurity/setup-trivy` pinned to its v0.3.1 commit, with `version: v0.76.0`; its default is latest.
+- **The opa reference installed Conftest and Regal from `releases/latest` with no checksum**, in its CI template too. CI now pins Conftest 0.71.1 and Regal 0.43.0 and checks each against the release's `checksums.txt`. Regal's URLs point at `open-policy-agent/regal`, where the project moved. The local install keeps Homebrew and describes the pinned-release path.
+- **The datadog reference suggested the latest pup binary straight into `/usr/local/bin`.** It now describes a pinned, verified release.
+- **The dynatrace skill and reference applied the newest operator to the cluster.** Both ran `kubectl apply -f …/dynatrace-operator/releases/latest/download/kubernetes.yaml`, so what landed in the cluster changed with each upstream release. Both now apply the pinned v1.11.0 manifest.
+- **token-optimizer's `set_uint` assigned through `eval`.** It now uses `printf -v`, with the same result and no `eval`. The value was already validated as an unsigned integer. The token-optimizer tests pass, and `printf -v` works on macOS's bash 3.2.
+
 ## [1.45.6] - 2026-10-18
 
 Fixes the composite-action release workflows, which failed on every tag, and stops two skills from installing software on their own. Together these remove the download-and-run commands behind six of the ten findings the plugin directory listed. The other four neither download nor run code: the Slack webhook POST in `notify-slack`, `curl -v` in the connectivity ladder of the linux and router skills, and a preflight checklist line. The directory says a match that only appears in documentation needs no change, so they stay.

@@ -36,9 +36,16 @@ trivy --version   # expect >= 0.50.0
 
 ### Linux (binary)
 
+A pinned release, checked against the checksums file published with it:
+
 ```bash
-curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-  | sh -s -- -b /usr/local/bin
+TRIVY_VERSION=0.76.0
+base="https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}"
+curl -fsSLO "${base}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+curl -fsSLO "${base}/trivy_${TRIVY_VERSION}_checksums.txt"
+sha256sum --check --ignore-missing "trivy_${TRIVY_VERSION}_checksums.txt"
+tar xzf "trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" trivy
+sudo install -m 0755 trivy /usr/local/bin/trivy
 trivy --version
 ```
 
@@ -46,9 +53,9 @@ trivy --version
 
 ```yaml
 - name: Install Trivy
-  run: |
-    curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
-      | sh -s -- -b /usr/local/bin
+  uses: aquasecurity/setup-trivy@81e514348e19b6112ce2a7e3ecbafe19c1e1f567  # v0.3.1
+  with:
+    version: v0.76.0   # the default is latest; pin it
 ```
 
 Or use the official action (pinned to SHA):

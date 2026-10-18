@@ -76,7 +76,8 @@ Use `/platform-skills:dynatrace investigate` for a guided 4-phase workflow:
 ```bash
 # Install the Dynatrace Operator
 kubectl create namespace dynatrace
-kubectl apply -f https://github.com/Dynatrace/dynatrace-operator/releases/latest/download/kubernetes.yaml
+# Pin the release: releases/latest applies whatever operator shipped last
+kubectl apply -f https://github.com/Dynatrace/dynatrace-operator/releases/download/v1.11.0/kubernetes.yaml
 
 # Create API and data-ingest tokens as a Secret
 kubectl -n dynatrace create secret generic dynakube \

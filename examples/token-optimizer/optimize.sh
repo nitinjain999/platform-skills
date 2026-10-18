@@ -136,7 +136,7 @@ set_uint() {
     degrade "$name out of range [$min-$max]: $value"
     return 1
   fi
-  eval "$name=\$value"
+  printf -v "$name" '%s' "$value"
   return 0
 }
 
