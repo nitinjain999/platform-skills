@@ -44,10 +44,9 @@
     ]
   },
   "kubernetes": {
-    "description": "Manifests with real, public images. The kubernetes manager matches nothing by default; the other example manifests use placeholder registries.",
+    "description": "Manifests with real, public images. The kubernetes manager matches nothing by default; the other example manifests use placeholder registries. Do not add HelmRelease files: the flux manager already extracts images from their values, and a second extraction opens a duplicate PR (#225 next to #226).",
     "managerFilePatterns": [
-      "/^examples/fluxcd/basic-monorepo/apps/base/my-app/deployment\\.yaml$/",
-      "/^examples/backup-dr/velero/helmrelease\\.yaml$/"
+      "/^examples/fluxcd/basic-monorepo/apps/base/my-app/deployment\\.yaml$/"
     ]
   },
   "packageRules": [
