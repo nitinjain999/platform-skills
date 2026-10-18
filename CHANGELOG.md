@@ -5,7 +5,9 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.45.3] - 2026-10-18
+
+Clears the one issue that blocked the plugin directory submission (a sample token in the triage reference), adds a credential check to the plugin-folder gate, and repairs the gh-aw source scan.
 
 ### Fixed
 

@@ -653,7 +653,7 @@ python3 "$CLAUDE_PLUGIN_ROOT/examples/triage/scripts/triage_helper.py" state loc
   "ok": true,
   "status": "ACQUIRED",
   "lock_path": "/Users/you/atg/platform-skills/.git/triage-state/atg__platform-skills-482.lock",
-  "lock_token": "3f9c1a7d4b2e08c65d1f8a03b7e42c91"
+  "lock_token": "<32 hex characters, new on every acquire>"
 }
 ```
 
@@ -689,12 +689,12 @@ python3 "$CLAUDE_PLUGIN_ROOT/examples/triage/scripts/triage_helper.py" state wri
 }
 ```
 
-Release the lock, always, even on an early or blocked exit, with the token the acquire returned:
+Release the lock, always, even on an early or blocked exit, with the token the acquire returned (`<lock_token>` stands for that value):
 
 ```bash
 python3 "$CLAUDE_PLUGIN_ROOT/examples/triage/scripts/triage_helper.py" state unlock \
   --repo-root "$REPO_ROOT" --repo atg/platform-skills --pr 482 \
-  --lock-token 3f9c1a7d4b2e08c65d1f8a03b7e42c91
+  --lock-token "<lock_token>"
 ```
 
 ```json
