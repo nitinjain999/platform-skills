@@ -40,11 +40,23 @@ A pinned release, checked against the checksums file published with it. The step
 
 ```bash
 TRIVY_VERSION=0.76.0
+# Trivy's release asset name for this machine's architecture
+case "$(uname -m)" in
+  x86_64)        TRIVY_ARCH=64bit ;;
+  aarch64|arm64) TRIVY_ARCH=ARM64 ;;
+  i386|i686)     TRIVY_ARCH=32bit ;;
+  armv6l|armv7l) TRIVY_ARCH=ARM ;;
+  ppc64le)       TRIVY_ARCH=PPC64LE ;;
+  s390x)         TRIVY_ARCH=s390x ;;
+  *)             TRIVY_ARCH=""; echo "No Trivy Linux build for $(uname -m)" >&2 ;;
+esac
 base="https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}"
-curl -fsSLO "${base}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" &&
+tgz="trivy_${TRIVY_VERSION}_Linux-${TRIVY_ARCH}.tar.gz"
+[ -n "$TRIVY_ARCH" ] &&
+  curl -fsSLO "${base}/${tgz}" &&
   curl -fsSLO "${base}/trivy_${TRIVY_VERSION}_checksums.txt" &&
   sha256sum --check --ignore-missing "trivy_${TRIVY_VERSION}_checksums.txt" &&
-  tar xzf "trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" trivy &&
+  tar xzf "$tgz" trivy &&
   sudo install -m 0755 trivy /usr/local/bin/trivy &&
   trivy --version
 ```
