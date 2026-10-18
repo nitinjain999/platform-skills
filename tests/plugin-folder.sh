@@ -23,6 +23,16 @@
 #      not failed: the folder is rebuilt in the release PR, so between releases
 #      it lags the source by design. validate.yml passes --strict when a PR
 #      touches the folder or the root manifest, and release.yml on every tag.
+#   7. no credential-shaped literal in what the next release ships: a vendor
+#      token prefix (ghp_, github_pat_, AKIA, xox…, sk_live_, glpat-, AIza, a
+#      PEM private key) or a credential-named key or flag (token, secret,
+#      password, api key, access key) given a 16+ character value that mixes
+#      letters and digits. The directory blocks such a file as SECRET_IN_SCRIPT
+#      even when the value is a sample: 1.45.2 was blocked on a 32-hex example
+#      lock_token in references/triage.md. Values containing EXAMPLE, xxxx,
+#      YOUR_, placeholder, REDACTED, dummy or fake pass, as the directory's do.
+#      Scans the fresh build, so a source fix passes here before the release
+#      PR rebuilds the folder.
 #
 # Usage: bash tests/plugin-folder.sh [--strict] [--dir <folder>]
 #   --dir  check another folder (mutation tests); the fresh build still comes
@@ -148,6 +158,32 @@ elif [ "$STRICT" -eq 1 ]; then
   printf '%s\n' "$drift" | head -n 20 | sed 's/^/  /'
 else
   echo "ℹ️  the folder lags the source by $(printf '%s\n' "$drift" | grep -c .) file(s); the release PR rebuilds it (bash scripts/build-plugin.sh)"
+fi
+
+# 7. credential-shaped literals
+vendor='(gh[pousr]_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,}|A(KI|SI)A[0-9A-Z]{16}|xox[abposr]-[0-9A-Za-z-]{10,}|sk_(live|test)_[0-9A-Za-z]{16,}|glpat-[0-9A-Za-z_-]{20,}|AIza[0-9A-Za-z_-]{35}|-----BEGIN ([A-Z]+ )?PRIVATE KEY-----)'
+named='([A-Za-z0-9_-]*(token|secret|password|passwd|api[_-]?key|access[_-]?key)[A-Za-z0-9_-]*["'"'"']?[[:space:]]*[:=][[:space:]]*["'"'"']?|--[a-z-]*(token|secret|password|api-key)[[:space:]]+["'"'"']?)[A-Za-z0-9+/_-]{16,}'
+# grep exits 1 on no match; anything above 1 is a failed scan and must fail closed.
+scan() { local rc=0; grep "$@" "$fresh/plugin" || rc=$?; [ "$rc" -le 1 ] || { echo "grep failed ($rc)" >&2; return 2; }; }
+# Capture each scan on its own: $(…) strips trailing newlines, so joining two
+# substitutions in one string glues the last hit of one to the first of the next.
+if ! vendor_hits="$(scan -rnoIE "$vendor")" || ! named_hits="$(scan -rnoiIE "$named")"; then
+  fail "the credential scan itself failed"
+else
+  creds="$(printf '%s\n%s\n' "$vendor_hits" "$named_hits" | grep . | sed "s|^$fresh/plugin/||" | awk -F: '{
+      m = $0; sub(/^[^:]*:[0-9]+:/, "", m)
+      v = m; sub(/^.*[:= ][[:space:]]*["\047]?/, "", v)
+      if (v ~ /EXAMPLE|example|[xX]{4}|YOUR_|[Pp]laceholder|REDACTED|[Dd]ummy|[Ff]ake/) next
+      if (m ~ /^(gh[pousr]_|github_pat_|A(KI|SI)A|xox|sk_(live|test)_|glpat-|AIza|-----BEGIN)/) { print; next }
+      d = gsub(/[0-9]/, "&", v); l = gsub(/[A-Za-z]/, "&", v)
+      if (d >= 3 && l >= 3) print
+    }')"
+  if [ -z "$creds" ]; then
+    echo "✅ no credential-shaped literal in what the next release ships"
+  else
+    fail "credential-shaped literals the directory blocks as SECRET_IN_SCRIPT; use a placeholder such as <token> or YOUR_TOKEN:"
+    printf '%s\n' "$creds" | head -n 20 | sed 's/^/  /'
+  fi
 fi
 
 if [ "$ERRORS" -gt 0 ]; then
