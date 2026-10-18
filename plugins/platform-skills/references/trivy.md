@@ -36,17 +36,17 @@ trivy --version   # expect >= 0.50.0
 
 ### Linux (binary)
 
-A pinned release, checked against the checksums file published with it:
+A pinned release, checked against the checksums file published with it. The steps are chained with `&&`, so a failed download or checksum stops before anything is extracted or installed; `set -e` would do the same in a script, but pasted into an interactive shell it closes the terminal on the first error:
 
 ```bash
 TRIVY_VERSION=0.76.0
 base="https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}"
-curl -fsSLO "${base}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
-curl -fsSLO "${base}/trivy_${TRIVY_VERSION}_checksums.txt"
-sha256sum --check --ignore-missing "trivy_${TRIVY_VERSION}_checksums.txt"
-tar xzf "trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" trivy
-sudo install -m 0755 trivy /usr/local/bin/trivy
-trivy --version
+curl -fsSLO "${base}/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" &&
+  curl -fsSLO "${base}/trivy_${TRIVY_VERSION}_checksums.txt" &&
+  sha256sum --check --ignore-missing "trivy_${TRIVY_VERSION}_checksums.txt" &&
+  tar xzf "trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" trivy &&
+  sudo install -m 0755 trivy /usr/local/bin/trivy &&
+  trivy --version
 ```
 
 ### CI (GitHub Actions)
