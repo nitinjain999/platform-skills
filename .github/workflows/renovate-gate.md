@@ -80,7 +80,7 @@ pre-steps:
     # version — which zizmor reports as ref-version-mismatch.
     uses: hashicorp/setup-terraform@v4.0.1
     with:
-      terraform_version: 1.15.8
+      terraform_version: 1.16.6
       terraform_wrapper: false
 safe-outputs:
   # COMMENT only, and no merge-pull-request. GITHUB_TOKEN cannot approve a pull
