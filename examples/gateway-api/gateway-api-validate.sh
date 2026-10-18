@@ -162,10 +162,17 @@ EG_SOURCE="$MONOREPO/infrastructure/base/envoy-gateway/ocirepository.yaml"
 CM_RELEASE="$MONOREPO/infrastructure/base/cert-manager/helmrelease.yaml"
 APP_NAMESPACES="$MONOREPO/infrastructure/configs/base/app-namespaces.yaml"
 
-if [ -f "$EG_SOURCE" ] && [ "$(yq -N '.spec.ref.tag' "$EG_SOURCE")" = "v1.9.2" ]; then
-  pass "Envoy Gateway controller chart pinned to v1.9.2"
+# Minor lines are pinned on purpose: an Envoy Gateway minor supports specific
+# Gateway API minors, so a minor bump of either needs a compatibility check and
+# an edit here. Patch releases pass, so Renovate can land them unaided.
+GATEWAY_API_LINE='^v1\.6\.[0-9]+$'
+EG_LINE='^v1\.9\.[0-9]+$'
+EG_TAG=""
+[ -f "$EG_SOURCE" ] && EG_TAG="$(yq -N '.spec.ref.tag' "$EG_SOURCE")"
+if [[ "$EG_TAG" =~ $EG_LINE ]]; then
+  pass "Envoy Gateway controller chart pinned to $EG_TAG (v1.9.x)"
 else
-  fail "Envoy Gateway OCIRepository missing or not pinned to v1.9.2"
+  fail "Envoy Gateway OCIRepository missing or not pinned to a v1.9.x tag (got '${EG_TAG}')"
 fi
 
 # The CRDs are too large for a Helm release Secret (1 MiB), so they must be
@@ -190,17 +197,20 @@ for env in production staging; do
   fi
   # Standard channel from the pinned Gateway API release, EG CRDs from the same
   # pinned chart artifact as the controller, never the experimental file.
-  if [ "$(yq -N 'select(.kind == "GitRepository") | .spec.ref.tag' "$crds")" = "v1.6.1" ] \
+  gwapi_tag="$(yq -N 'select(.kind == "GitRepository") | .spec.ref.tag' "$crds")"
+  if [[ "$gwapi_tag" =~ $GATEWAY_API_LINE ]] \
       && [ "$(yq -N 'select(.kind == "Kustomization" and .metadata.name == "gateway-api-crds") | .spec.path' "$crds")" = "./config/crd/standard" ]; then
-    pass "$env: Gateway API CRDs are the standard channel of v1.6.1"
+    pass "$env: Gateway API CRDs are the standard channel of $gwapi_tag (v1.6.x)"
   else
-    fail "$env: gateway-api-crds must apply ./config/crd/standard from tag v1.6.1"
+    fail "$env: gateway-api-crds must apply ./config/crd/standard from a v1.6.x tag (got '${gwapi_tag}')"
   fi
-  if [ "$(yq -N 'select(.kind == "OCIRepository") | .spec.ref.tag' "$crds")" = "v1.9.2" ] \
+  # The CRDs must come from exactly the controller's chart version, not just the same minor.
+  eg_crds_tag="$(yq -N 'select(.kind == "OCIRepository") | .spec.ref.tag' "$crds")"
+  if [ -n "$EG_TAG" ] && [ "$eg_crds_tag" = "$EG_TAG" ] \
       && [ "$(yq -N 'select(.kind == "Kustomization" and .metadata.name == "envoy-gateway-crds") | .spec.path' "$crds")" = "./gateway-helm/charts/crds/crds/generated" ]; then
-    pass "$env: Envoy Gateway CRDs come from the v1.9.2 chart's generated/ dir only"
+    pass "$env: Envoy Gateway CRDs come from the $EG_TAG chart's generated/ dir only"
   else
-    fail "$env: envoy-gateway-crds must apply ./gateway-helm/charts/crds/crds/generated from tag v1.9.2"
+    fail "$env: envoy-gateway-crds must apply ./gateway-helm/charts/crds/crds/generated from the controller's tag '${EG_TAG}' (got '${eg_crds_tag}')"
   fi
   # Deleting a CRD deletes every Gateway and HTTPRoute in the cluster.
   if [ "$(yq -N 'select(.kind == "Kustomization") | (.spec.prune == false and .spec.deletionPolicy == "Orphan")' "$crds" | sort -u)" = "true" ]; then

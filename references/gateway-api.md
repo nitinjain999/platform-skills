@@ -131,7 +131,7 @@ spec:
   interval: 12h
   url: https://github.com/kubernetes-sigs/gateway-api
   ref:
-    tag: v1.6.1
+    tag: v1.6.3
   sparseCheckout:
     - config/crd/standard
 ---
