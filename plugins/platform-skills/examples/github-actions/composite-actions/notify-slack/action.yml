@@ -139,13 +139,12 @@ runs:
     - name: Send Slack notification
       id: send
       shell: bash
-      timeout-minutes: 1
       env:
         WEBHOOK_URL: ${{ inputs.webhook_url }}
       run: |
         echo "::group::Send Slack notification"
 
-        HTTP_STATUS=$(curl -s -o /tmp/slack_response.txt -w "%{http_code}" \
+        HTTP_STATUS=$(curl -s --max-time 30 -o /tmp/slack_response.txt -w "%{http_code}" \
           -X POST "$WEBHOOK_URL" \
           -H 'Content-Type: application/json' \
           -d @/tmp/slack_payload.json)

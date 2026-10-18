@@ -179,7 +179,6 @@ runs:
     - name: Install kubelogin
       if: inputs.cloud_provider == 'azure'
       shell: bash
-      timeout-minutes: 3
       run: |
         echo "::group::Install kubelogin"
         az aks install-cli --only-show-errors \
@@ -223,7 +222,6 @@ runs:
     # ── 5. Install kubectl ────────────────────────────────────────────────────
     - name: Install kubectl
       shell: bash
-      timeout-minutes: 3
       env:
         KUBECTL_VERSION: ${{ inputs.kubectl_version }}
       run: |
@@ -231,9 +229,14 @@ runs:
         if command -v kubectl > /dev/null 2>&1; then
           echo "kubectl already installed: $(kubectl version --client --short 2>/dev/null || kubectl version --client)"
         else
-          curl -sLO "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
-          chmod +x kubectl
-          sudo mv kubectl /usr/local/bin/kubectl
+          # Verify against the checksum dl.k8s.io publishes beside the binary
+          # before anything runs it.
+          base="https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/amd64"
+          curl -fsSLO --retry 3 "${base}/kubectl"
+          curl -fsSLO --retry 3 "${base}/kubectl.sha256"
+          echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check
+          sudo install -m 0755 kubectl /usr/local/bin/kubectl
+          rm -f kubectl kubectl.sha256
           echo "Installed kubectl $KUBECTL_VERSION"
         fi
         echo "::endgroup::"
@@ -242,7 +245,6 @@ runs:
     - name: Apply manifest
       id: apply
       shell: bash
-      timeout-minutes: 10
       env:
         NAMESPACE: ${{ inputs.namespace }}
         MANIFEST_PATH: ${{ inputs.manifest_path }}
@@ -280,7 +282,6 @@ runs:
     - name: Wait for rollout
       id: rollout
       shell: bash
-      timeout-minutes: 15
       env:
         DEPLOYMENT: ${{ inputs.deployment_name }}
         NAMESPACE: ${{ inputs.namespace }}
