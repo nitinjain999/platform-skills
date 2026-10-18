@@ -12,7 +12,7 @@ spec:
   chart:
     spec:
       chart: kubescape-operator
-      version: "1.40.5"   # Pinned; upgrade is an explicit PR (autoUpgrading stays off)
+      version: "1.40.4"   # Pinned; upgrade is an explicit PR (autoUpgrading stays off)
       sourceRef:
         kind: HelmRepository
         name: kubescape

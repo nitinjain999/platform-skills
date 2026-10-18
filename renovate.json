@@ -123,6 +123,11 @@
       "allowedVersions": "<7"
     },
     {
+      "description": "kubescape-operator 1.40.5 is a GitHub pre-release, but the Helm index has no pre-release flag, so Renovate offered it as stable (#223). references/kubescape-operator.md pins 1.40.4 for that reason. Drop this rule once a stable release after 1.40.4 ships.",
+      "matchPackageNames": ["kubescape-operator"],
+      "allowedVersions": "!/^1\\.40\\.5$/"
+    },
+    {
       "description": "Python packages — minor/patch, merged by renovate-gate",
       "matchManagers": ["pip_requirements", "pip-compile", "pipenv", "poetry"],
       "automerge": false,

@@ -1,6 +1,6 @@
 {
   "name": "platform-guardrails",
-  "version": "1.44.1",
+  "version": "1.45.0",
   "description": "Enforcing hooks for platform-skills, separate from the guidance plugin because hooks run for everyone who enables them: self-improve lifecycle capture (SessionStart, SessionEnd, PostToolUseFailure, PreCompact) and the ai-governance policy gate (PreToolUse/PostToolUse, active only in projects that commit a .ai-governance.yaml). Ships learnings.sh on PATH.",
   "author": {
     "name": "Nitin Jain",
