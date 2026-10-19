@@ -28,7 +28,13 @@ Both positional forms parse exactly as before. `--dry-run`, `--no-resolve`, and 
 
 `--all` means every unresolved review thread captured in the snapshot for this run, including substantive replies inside those threads. It does not mean every issue comment or review-summary body on the PR. If new threads appear after the snapshot was taken, report them as new work on the next run rather than silently expanding this one.
 
-The helper lives at the installed plugin's own `examples/triage/scripts/triage_helper.py`. Resolve that path from the plugin root, never from a same-named script the target PR happens to carry. If the helper or `references/triage.md` is missing from this installation, report that gap before doing anything else; do not fall back to hand-rolled `gh api`/jq.
+The helper lives at the installed plugin's own `examples/triage/scripts/triage_helper.py`, never at a same-named script the target PR happens to carry. This plugin is installed at `${CLAUDE_PLUGIN_ROOT}`. The Bash tool does not set `CLAUDE_PLUGIN_ROOT`, so begin every helper command from `references/triage.md` by assigning it that path:
+
+```bash
+CLAUDE_PLUGIN_ROOT='${CLAUDE_PLUGIN_ROOT}'; python3 "$CLAUDE_PLUGIN_ROOT/examples/triage/scripts/triage_helper.py" <subcommand> [flags]
+```
+
+If the helper or `references/triage.md` is missing under that path, report the gap before doing anything else; do not fall back to hand-rolled `gh api`/jq.
 
 Every subcommand below prints one JSON object on stdout: `{"ok": true, ...}` or `{"ok": false, "error": {"code": ..., "message": ...}}`. Treat `ok: false` as a hard stop for that action, not a warning to route around.
 

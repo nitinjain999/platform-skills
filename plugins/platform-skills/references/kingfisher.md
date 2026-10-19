@@ -52,30 +52,31 @@ brew install kingfisher
 ```bash
 mise use --global github:mongodb/kingfisher
 # pin a version
-mise use --global github:mongodb/kingfisher@1.113.0
+mise use --global github:mongodb/kingfisher@2.13.0
 ```
 
 ### Linux and Windows
 
 Homebrew (on Linux too) and mise above, and uv and Docker below, all work here; mise and Docker pin a version. The project also publishes Linux, macOS and Windows binaries (`kingfisher-windows-x64.zip`, for example) on its GitHub releases page. Prefer these to the install scripts in the repository's `scripts/` directory: fetched from `main`, the script that runs is whatever that branch holds.
 
-### PyPI / uv (no persistent install)
+### PyPI / uv
 
 ```bash
-uv tool install kingfisher-bin      # recommended
-pip install kingfisher-bin          # or plain pip
-uvx kingfisher-bin --help           # one-shot, no install
+uv tool install kingfisher-bin==2.13.0   # recommended
+pip install kingfisher-bin==2.13.0       # or plain pip
 ```
+
+The package is `kingfisher-bin`; the command it installs is `kingfisher`. Pin the version, and install the package rather than running it through `uvx`, which downloads and runs it in one step.
 
 ### Docker
 
 ```bash
-docker run --rm ghcr.io/mongodb/kingfisher:2.0.0 --version
+docker run --rm ghcr.io/mongodb/kingfisher:2.13.0 --version
 
-docker run --rm -v "$(pwd)":/src ghcr.io/mongodb/kingfisher:2.0.0 scan /src
+docker run --rm -v "$(pwd)":/src ghcr.io/mongodb/kingfisher:2.13.0 scan /src
 ```
 
-**Pin the tag.** `:latest` moves under you — a scan that passed yesterday can behave differently today because the rule catalogue or validator set changed. Pin to a released version tag (`ghcr.io/mongodb/kingfisher:2.0.0`) for reproducible CI, the same reason zizmor's `unpinned-images` audit flags `:latest` container references.
+**Pin the tag.** `:latest` moves under you — a scan that passed yesterday can behave differently today because the rule catalogue or validator set changed. Pin to a released version tag (`ghcr.io/mongodb/kingfisher:2.13.0`) for reproducible CI, the same reason zizmor's `unpinned-images` audit flags `:latest` container references.
 
 Also available: pre-built GitHub Releases, MegaLinter bundling, or `make linux` / `make darwin` / `./buildwin.bat` from source (source builds need outbound HTTPS to fetch the pinned Betterleaks rule snapshot at build time).
 
@@ -517,20 +518,18 @@ Key knobs: `--alert-on findings|always`, `--alert-min-confidence low|medium|high
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/mongodb/kingfisher
-    rev: v2.0.0
+    rev: v2.13.0
     hooks:
-      - id: kingfisher-auto     # recommended: auto-downloads and caches the binary, no Docker/manual install
-      # - id: kingfisher-docker # alternative: runs via Docker
-      # - id: kingfisher        # alternative: uses an already-installed local binary
+      - id: kingfisher          # runs the kingfisher already on PATH (see Bootstrap)
 ```
 
 Every hook drives `kingfisher scan . --staged --quiet --no-update-check` under the hood: it snapshots the staged index into a temporary commit, diffs against `HEAD` (or an empty tree pre-first-commit), and scans only the staged delta. Exit codes surface straight to `pre-commit`, so a `205` (live credential staged) fails the commit with no extra plumbing. Trigger it in CI without installing to `.git/hooks`:
 
 ```bash
-pre-commit run kingfisher-auto --all-files
+pre-commit run kingfisher --all-files
 ```
 
-Pin a specific binary version independent of `rev:` via `KINGFISHER_VERSION` in the hook's `env:`.
+Use the `kingfisher` hook: it runs the binary you installed at a pinned version. Upstream's other two hooks fetch code when the hook runs. `kingfisher-auto` downloads the binary on first use, `latest` unless `KINGFISHER_VERSION` is set, with no checksum check. `kingfisher-docker` runs `ghcr.io/mongodb/kingfisher:latest`.
 
 ### Standalone installer (no `pre-commit` framework)
 
@@ -544,18 +543,19 @@ bash install-kingfisher-pre-commit.sh            # per-repo
 bash install-kingfisher-pre-commit.sh --global   # global (core.hooksPath)
 ```
 
-Chains **before** any existing `pre-commit` hook rather than replacing it.
+Chains **before** any existing `pre-commit` hook rather than replacing it. The hook it writes runs `kingfisher scan . --staged --quiet --no-update-check` with the `kingfisher` on your `PATH`, so install the binary first; nothing is downloaded at commit time.
 
 ### Husky (Node.js)
 
 ```bash
-npx husky init
-# Pin the script to the v2.0.0 commit (not `main`) and pin the binary version
-# it installs — otherwise an upstream change to either runs on every
-# contributor's machine on their next commit, with no PR in this repo to
-# review it.
-echo 'curl -fsSL https://raw.githubusercontent.com/mongodb/kingfisher/50dd87544632716fbb029f0eda7326cd868bef68/scripts/kingfisher-pre-commit-auto.sh | KINGFISHER_VERSION=2.0.0 bash' >> .husky/pre-commit
+npm install --save-dev --save-exact husky@9.1.7
+./node_modules/.bin/husky init
+# Runs the kingfisher already on PATH (see Bootstrap) with the flags upstream's
+# own hooks use. Nothing is downloaded when the hook runs.
+echo 'kingfisher scan . --staged --quiet --no-update-check' >> .husky/pre-commit
 ```
+
+Upstream's `scripts/install-husky.sh` writes the same line when run with no options. Don't pass `--auto-install` or `--use-docker`. `--auto-install` writes a hook that pipes `kingfisher-pre-commit-auto.sh` from `main` into `bash` on every commit, so each contributor runs whatever that branch holds. `--use-docker` runs `ghcr.io/mongodb/kingfisher:latest`.
 
 **State the caveat when installing any of these:** these hooks run locally and cannot enforce anything on a contributor who commits with `--no-verify` or on a clone that skipped hook install — the CI gate (below) is the actual control; the hook is a fast, friendly first line.
 
@@ -563,9 +563,9 @@ echo 'curl -fsSL https://raw.githubusercontent.com/mongodb/kingfisher/50dd875446
 
 ## CI integration
 
-**There is no official `mongodb/kingfisher-action`** (unlike, say, `zizmorcore/zizmor-action`). The install-script + direct-invocation pattern below is the documented, supported path.
+**There is no official `mongodb/kingfisher-action`** (unlike, say, `zizmorcore/zizmor-action`). Install a pinned release binary, verify its checksum, and invoke it directly.
 
-### Option A — hard-fail gate, install script
+### Option A — hard-fail gate, pinned release binary
 
 ```yaml
 # .github/workflows/secrets.yml
@@ -593,17 +593,18 @@ jobs:
           persist-credentials: false
 
       - name: Install kingfisher
+        env:
+          KINGFISHER_VERSION: v2.13.0
+          # SHA-256 of kingfisher-linux-x64.tgz, as listed in the release's
+          # signed SLSA provenance (multiple.intoto.jsonl).
+          KINGFISHER_SHA256: 5209e9d260b93ae0cf467690c71e5f272469d9324cf2915a36c68405c2edf202
         run: |
-          # Pin the raw script to the v2.0.0 commit, not the mutable `main`
-          # branch — otherwise --tag v2.0.0 only pins the binary, and upstream
-          # can still change what this job executes without a PR here.
-          curl --silent --location --fail \
-            https://raw.githubusercontent.com/mongodb/kingfisher/50dd87544632716fbb029f0eda7326cd868bef68/scripts/install-kingfisher.sh | \
-            bash -s -- --tag v2.0.0
-          # install-kingfisher.sh places the binary in ~/.local/bin by default.
-          # $GITHUB_PATH is the runner-safe way to make it available to later
-          # steps — safer than exporting PATH by hand, which silently breaks
-          # if the install location ever changes.
+          curl -fsSLo /tmp/kingfisher.tgz --retry 3 \
+            "https://github.com/mongodb/kingfisher/releases/download/${KINGFISHER_VERSION}/kingfisher-linux-x64.tgz"
+          echo "${KINGFISHER_SHA256}  /tmp/kingfisher.tgz" | sha256sum -c -
+          mkdir -p "$HOME/.local/bin"
+          tar -xzf /tmp/kingfisher.tgz -C "$HOME/.local/bin" kingfisher
+          # $GITHUB_PATH makes the binary available to later steps.
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Scan PR diff for secrets
@@ -639,7 +640,7 @@ jobs:
           esac
 ```
 
-Pin `--tag` to a specific released version so the gate doesn't silently change behavior on an upstream release. If `install-kingfisher.sh` ever changes its install directory, update the `$GITHUB_PATH` line to match — check by running the script locally, don't guess.
+Change `KINGFISHER_VERSION` and `KINGFISHER_SHA256` together, in one commit, so the gate never changes behaviour on an upstream release by itself. For a new release, `sha256sum` its `kingfisher-linux-x64.tgz` and compare the result with that file's digest in the release's `multiple.intoto.jsonl` before pinning it. Never pipe upstream's `install-kingfisher.sh` into `bash`: the job would run whatever that script and its downloads hold at the time.
 
 ### Option B — SARIF upload, findings as code-scanning alerts
 
@@ -666,11 +667,11 @@ Needs `security-events: write` on the job. As with any SARIF-only step, a green 
       - name: Scan for secrets (Docker)
         run: |
           docker run --rm -v "$(pwd)":/src \
-            ghcr.io/mongodb/kingfisher:2.0.0 \
+            ghcr.io/mongodb/kingfisher:2.13.0 \
             scan /src --since-commit "origin/main" --branch HEAD
 ```
 
-Pin the tag (`2.0.0`, not `latest`) for the same reproducibility reason as any other container reference in CI.
+Pin the tag (`2.13.0`, not `latest`) for the same reproducibility reason as any other container reference in CI.
 
 ### Rolling this out on a repo that has never run it
 

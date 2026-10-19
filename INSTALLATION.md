@@ -171,7 +171,7 @@ claude plugin install platform-skills
 
 ```bash
 claude plugin list
-# platform-skills  v1.45.7  enabled
+# platform-skills  v1.45.8  enabled
 ```
 
 **Upgrade:**

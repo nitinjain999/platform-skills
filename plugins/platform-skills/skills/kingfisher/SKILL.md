@@ -43,7 +43,7 @@ Parse the first word of `$ARGUMENTS` as the mode. When `$ARGUMENTS` is empty, ru
 | `triage` | Walk existing findings one at a time → validate / revoke / rotate / accept-in-baseline / false-positive |
 | `config` | Generate or repair `kingfisher.yaml` |
 | `ci` | Emit a CI gate: hard-fail, SARIF alerts, or Docker-based |
-| `precommit` | Add the `kingfisher-auto` pre-commit hook (or Husky) and state the caveat |
+| `precommit` | Add the `kingfisher` pre-commit hook, which runs the installed binary (or Husky), and state the caveat |
 | `explain` | Explain a rule id, an exit code, or a validation outcome |
 | _(empty)_ | Three-layer interactive wizard |
 
@@ -102,7 +102,7 @@ What should I scan? (press Enter for the recommended value)
 
 Detect and resolve silently where possible:
 
-- Run `kingfisher --version`. Not installed → offer `brew install kingfisher`, `uvx kingfisher-bin --help` (no install), or the install script from `references/kingfisher.md` → Bootstrap. Do not ask permission to check the version.
+- Run `kingfisher --version`. Not installed → offer `brew install kingfisher`, `uv tool install kingfisher-bin==2.13.0`, or a pinned version from `references/kingfisher.md` → Bootstrap. Do not ask permission to check the version.
 - Check for `kingfisher.yaml` at the target root. **It is never auto-loaded** — if found, ask whether to pass `--config kingfisher.yaml` explicitly; if not found, say defaults apply.
 - Check for a baseline file (`baseline-file.yml`, `baseline.json`, or similar committed near the repo root). Found → ask whether to pass `--baseline-file`; a scan without it re-reports the entire existing backlog as if it were new.
 
@@ -150,7 +150,7 @@ Ask these only when the situation triggers them:
 | Repo already has a kingfisher CI workflow | "A kingfisher workflow already exists at `<path>`. Update it in place, or add a second one?" |
 | Finding is `assumed` (not `verified_active`) and the user is treating it as confirmed | State plainly: `assumed` is high-confidence but not network-checked. Offer to re-run with validation on, or `kingfisher validate` directly on that string. |
 
-Never ask about: output format for a quick local check (default `pretty`; ask only for `ci`/automation, where `sarif`/`json`/`toon` matter), whether to install kingfisher (just do it via `brew`/`uvx`/install script), or whether to check for a `kingfisher.yaml`/baseline file (always check silently).
+Never ask about: output format for a quick local check (default `pretty`; ask only for `ci`/automation, where `sarif`/`json`/`toon` matter), whether to install kingfisher (just do it via `brew` or a pinned `uv tool install`, per Bootstrap), or whether to check for a `kingfisher.yaml`/baseline file (always check silently).
 
 ---
 
@@ -289,7 +289,7 @@ How should this gate behave?
 Enter a, b, c, or d:
 ```
 
-There is no official `mongodb/kingfisher-action` — say this plainly if the user expects one. Copy the matching template from `references/kingfisher.md` → CI integration (Options A–C), which are install-script/Docker-based and already SHA-pin `actions/checkout` and `upload-sarif`.
+There is no official `mongodb/kingfisher-action` — say this plainly if the user expects one. Copy the matching template from `references/kingfisher.md` → CI integration (Options A–C), which install a pinned, checksum-verified release binary or run a pinned Docker image, and already SHA-pin `actions/checkout` and `upload-sarif`.
 
 Ask the rollout question from Layer 3 before finalizing threshold: gate on `205` (confirmed-live) for a repo's first run, or `200` (any candidate) if a baseline already absorbs the backlog. Never default a first-time gate to `200` without asking — see `references/kingfisher.md` → "Rolling this out on a repo that has never run it."
 
@@ -299,10 +299,12 @@ Ask the rollout question from Layer 3 before finalizing threshold: gate on `205`
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/mongodb/kingfisher
-    rev: v2.0.0
+    rev: v2.13.0
     hooks:
-      - id: kingfisher-auto
+      - id: kingfisher
 ```
+
+The `kingfisher` hook runs the binary on `PATH`, so install it first (Layer 2 check). Never use `kingfisher-auto` or `kingfisher-docker`: when the hook runs, they download the binary (`latest` by default, unverified) or pull `ghcr.io/mongodb/kingfisher:latest`.
 
 State the caveat every time: a local hook cannot stop `--no-verify` or a clone that skipped hook install. It's a fast first line, not the control — the CI gate (`ci` mode) is what actually enforces this. Offer the Husky variant if the repo is Node.js-based (`references/kingfisher.md` → Pre-commit and Husky).
 
