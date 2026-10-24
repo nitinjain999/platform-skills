@@ -8,4 +8,7 @@ examples/fluxcd/repo-audit/scripts contains code from fluxcd/agent-skills:
 Copyright 2026 The Flux authors. All rights reserved.
 Licensed under Apache-2.0; see examples/fluxcd/repo-audit/LICENSE.
 Upstream v0.2.0, commit 9b05787530a3e200a9ac031fc8a477566e0b7adc.
-The deprecated-API helper is modified to preserve Flux CLI failures.
+The validator is modified to retain kustomize load restrictions, recognize all
+supported kustomization filenames, and resolve exclusions against the audit root.
+The deprecated-API helper is modified to preserve Flux CLI failures and detect
+deprecated versions in large reports without a SIGPIPE false success.

@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 
-# DO NOT EDIT: this file is vendored from the flux-schema action (single source of truth).
+# Vendored from the flux-schema action; local changes are recorded in ../README.md.
 # Source: https://raw.githubusercontent.com/fluxcd/flux-schema/main/actions/validate/validate.sh
+# Modified by Platform Skills: retain kustomize load restrictions, recognize all
+# supported kustomization filenames, and resolve exclusions against the audit root.
 
 # Copyright 2026 The Flux authors. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
@@ -62,9 +64,8 @@ invalid_count=0
 skipped_count=0
 summaries_parsed=0
 
-# mirror kustomize-controller build options
-kustomize_flags=("--load-restrictor=LoadRestrictionsNone")
-kustomize_config="kustomization.yaml"
+# Keep kustomize's default file-loading restrictions for local audits.
+kustomize_flags=()
 
 # mirror helm-controller install options (CRDs are installed by default)
 helm_flags=("--include-crds")
@@ -126,7 +127,7 @@ usage() {
   echo "  -d, --dir <dir>             Root directory to validate (default: current directory)"
   echo "  -c, --config <file>         Path to a flux-schema config file (default: .fluxschema.yml)."
   echo "                              When the file does not exist, sensible defaults are used."
-  echo "  -e, --exclude <dir>         Directory to exclude from validation and the bundle (can be repeated)"
+  echo "  -e, --exclude <dir>         Directory to exclude, relative to the audit root or absolute (repeatable)"
   echo "  -b, --output-bundle <file>  Write all standalone manifests and rendered kustomize"
   echo "                              overlays to a single YAML file with provenance comments"
   echo "  -H, --helm-charts           Render Helm charts with 'helm template' using their"
@@ -144,7 +145,7 @@ parse_args() {
           echo "ERROR - --dir requires a directory argument" >&2
           exit 1
         fi
-        root_dir="${2%/}"
+        root_dir="$2"
         shift 2
         ;;
       -c|--config)
@@ -160,7 +161,7 @@ parse_args() {
           echo "ERROR - --exclude requires a directory argument" >&2
           exit 1
         fi
-        exclude_dirs+=("./${2#./}")
+        exclude_dirs+=("$2")
         shift 2
         ;;
       -b|--output-bundle)
@@ -202,6 +203,23 @@ check_prerequisites() {
     echo "ERROR - helm is not installed (required by --helm-charts)" >&2
     exit 1
   fi
+}
+
+# Use one absolute path basis for discovered files and user exclusions, even
+# when -d is absolute, relative to another directory, or follows -e on the CLI.
+resolve_paths() {
+  root_dir="$(cd "$root_dir" && pwd -P)"
+  local i dir
+  for i in "${!exclude_dirs[@]}"; do
+    dir="${exclude_dirs[i]}"
+    if [[ "$dir" != /* ]]; then
+      dir="$root_dir/$dir"
+    fi
+    if [[ -d "$dir" ]]; then
+      dir="$(cd "$dir" && pwd -P)"
+    fi
+    exclude_dirs[i]="$dir"
+  done
 }
 
 # Pick the flux-schema invocation. Prefer the 'flux schema' plugin dispatch
@@ -378,7 +396,7 @@ detect_excluded_dirs() {
 
   while IFS= read -r -d $'\0' file; do
     kustomize_dirs+=("$(dirname "$file")")
-  done < <(find "$root_dir" -mindepth 1 -name '.*' -prune -o -type f -name "$kustomize_config" -print0)
+  done < <(find "$root_dir" -mindepth 1 -name '.*' -prune -o -type f \( -name 'kustomization.yaml' -o -name 'kustomization.yml' -o -name 'Kustomization' \) -print0)
 }
 
 # Add a captured flux-schema run's "Summary:" counts to the running tally.
@@ -429,7 +447,7 @@ validate_kustomize_overlays() {
     if is_non_kustomize_excluded_dir "$dir"; then
       continue
     fi
-    overlay="${file/%$kustomize_config}"
+    overlay="$dir"
     echo "INFO - Validating kustomize overlay $overlay"
     if ! build_output=$("${kustomize_cmd[@]}" "$overlay" "${kustomize_flags[@]}"); then
       echo "ERROR - kustomize build failed for $overlay" >&2
@@ -444,7 +462,7 @@ validate_kustomize_overlays() {
     fi
     printf '%s\n' "$output"
     accumulate_summary "$output"
-  done < <(find "$root_dir" -mindepth 1 -name '.*' -prune -o -type f -name "$kustomize_config" -print0)
+  done < <(find "$root_dir" -mindepth 1 -name '.*' -prune -o -type f \( -name 'kustomization.yaml' -o -name 'kustomization.yml' -o -name 'Kustomization' \) -print0)
 }
 
 validate_helm_charts() {
@@ -501,6 +519,7 @@ report_results() {
 # Main
 parse_args "$@"
 check_prerequisites
+resolve_paths
 resolve_flux_schema
 resolve_kustomize
 resolve_config

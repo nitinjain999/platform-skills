@@ -5,6 +5,7 @@
 
 # Modified by Platform Skills: preserve Flux CLI failures instead of reporting
 # a successful audit when migrate fails without a deprecated-version message.
+# Match captured output without a producer pipe that can fail with SIGPIPE.
 
 # This script checks for deprecated Flux API versions in a directory using the
 # flux CLI's migrate command in dry-run mode. It reports the exact resources and
@@ -106,7 +107,7 @@ check_deprecated() {
   output="$(cd "$root_dir" && flux migrate -f . --dry-run 2>&1)" || status=$?
   echo "$output"
 
-  if echo "$output" | grep -qE " v[0-9][a-zA-Z0-9]* -> v[0-9]"; then
+  if grep -qE " v[0-9][a-zA-Z0-9]* -> v[0-9]" <<< "$output"; then
     echo "ERROR - deprecated Flux API versions found" >&2
     return 1
   fi

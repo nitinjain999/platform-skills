@@ -4,9 +4,14 @@ These scripts are vendored from [fluxcd/agent-skills v0.2.0](https://github.com/
 commit `9b05787530a3e200a9ac031fc8a477566e0b7adc`, under Apache-2.0.
 Copyright 2026 The Flux authors. The license ships beside this file.
 
-`discover.sh` and `validate.sh` are unchanged. `check-deprecated.sh` is
-modified to preserve a failing `flux migrate` exit status even when its output
-contains no deprecated-version message.
+`discover.sh` is unchanged. Local changes to the other helpers:
+
+- `validate.sh` retains kustomize's default file-loading restriction, recognizes
+  `kustomization.yaml`, `kustomization.yml` and `Kustomization`, and resolves
+  relative exclusions against the audit root.
+- `check-deprecated.sh` preserves a failing `flux migrate` exit status even when
+  its output contains no deprecated-version message, and matches large reports
+  without a pipe that can fail early with SIGPIPE.
 
 Install the tools separately before an audit:
 
@@ -20,6 +25,14 @@ Install the tools separately before an audit:
 The helpers run the installed tools. They do not clone or download executable
 code. Schema validation may retrieve schema data from the ecosystem catalog,
 and kustomize may resolve a repository's remote resources.
+
+The validator leaves kustomize's
+[`LoadRestrictionsRootOnly` default](https://kubernetes.io/docs/reference/kubectl/generated/kubectl_kustomize/)
+in place.
+Generator files and patches outside a kustomization's root fail the build;
+the helper does not expose an unrestricted-loading option. This restriction is
+not a filesystem sandbox: kustomize can still load other kustomization bases.
+Use an isolated environment without local credentials for untrusted repositories.
 
 Set `audit_dir` to the absolute path of this directory in the loaded
 installation. Repository clones and Claude plugins put it under
@@ -37,6 +50,8 @@ The validator uses `.fluxschema.yml` when present, otherwise the ecosystem
 catalog with SOPS metadata stripped and missing schemas skipped. Review its
 skipped-resource count as a coverage gap. Arguments after `--` override
 validation settings; see `bash "$audit_dir/scripts/validate.sh" --help`.
+For `validate.sh -d <root> -e <directory>`, relative exclusions are resolved
+under `<root>`; absolute exclusions are also accepted.
 
 Both standalone and overlay validation failures make the validator fail.
 The deprecated-API check fails for deprecated versions and for CLI errors.

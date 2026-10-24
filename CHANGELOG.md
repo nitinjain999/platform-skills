@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The bundled Flux validator disabled kustomize's file-loading restriction.** Retain the CLI default so generator files and patches outside a kustomization's root fail the build. Also recognize all three kustomization filenames and apply directory exclusions consistently for absolute and relative audit roots. A native kubectl regression checks that an outside-file fixture cannot enter the bundle while an in-root generator still works.
+- **Large Flux migration reports could falsely pass.** Match captured output through a here-string so early `grep` completion cannot trigger a producer SIGPIPE and hide deprecated APIs under `pipefail`.
 - **The handbook runner emitted two ShellCheck warnings.** Separate the independent identity and version comparisons into shell conditions while preserving failure on any mismatch.
 - **Flux audits cloned and executed remote scripts.** The migration and security references now run bundled helpers, as do both the FluxCD and GitOps skills. The three helpers come from `fluxcd/agent-skills` v0.2.0 at `9b05787530a3e200a9ac031fc8a477566e0b7adc`, with their license and provenance. Portable skills carry the same files. Tool prerequisites now match the pinned scripts: `flux-schema`, kustomize or kubectl, and Flux. Audits may fetch schema data or configured remote manifests, but do not fetch executable scripts.
 - **A failed deprecated-API check could report a clean audit.** The bundled helper preserves Flux CLI failures instead of treating missing migration output as success. Tests cover CLI errors, deprecated APIs, dependency failures, standalone and overlay validation, and documented setup from source and portable installations.
