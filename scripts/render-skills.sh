@@ -23,6 +23,8 @@
 #     to run or start from. Only files tracked by git are copied (local
 #     .terraform caches, state and tfvars stay behind); outside a git checkout
 #     those are skipped by name instead
+#   - each skill's own scripts/ directory is copied beside SKILL.md, with the
+#     same tracked-file filtering and executable-bit preservation
 #
 # Usage: bash scripts/render-skills.sh <destination-skills-dir>
 # The destination's existing platform-skills* directories are replaced; any
@@ -40,26 +42,25 @@ PREFIX = "platform-skills"
 KEEP = ("name", "description", "argument-hint")
 EXAMPLE_PATH = re.compile(r"examples/[A-Za-z0-9._/-]+")
 
-def example_files():
+def tracked_files(prefix):
     try:
-        out = subprocess.run(["git", "-C", root, "ls-files", "-z", "examples"],
+        out = subprocess.run(["git", "-C", root, "ls-files", "-z", "--", prefix],
                              check=True, capture_output=True).stdout.decode()
         files = [f for f in out.split("\0") if f and os.path.isfile(os.path.join(root, f))]
-        if files:
-            return files
+        return files
     except (OSError, subprocess.CalledProcessError):
         pass
-    # Not a git checkout: approximate .gitignore for what lives under examples/.
+    # Not a git checkout: exclude build caches and local Terraform inputs.
     skip_dirs = {".terraform", ".git", "node_modules", "__pycache__", ".venv"}
     skip_files = (".terraform.lock.hcl", "*.tfstate", "*.tfstate.*", "*.tfvars", "*.tfvars.json", "*.pyc")
     files = []
-    for d, dirs, names in os.walk(f"{root}/examples"):
+    for d, dirs, names in os.walk(os.path.join(root, prefix)):
         dirs[:] = [x for x in dirs if x not in skip_dirs]
         files += [os.path.relpath(os.path.join(d, n), root) for n in names
                   if not any(fnmatch.fnmatch(n, p) for p in skip_files)]
     return files
 
-EXAMPLES = sorted(example_files())
+EXAMPLES = sorted(tracked_files("examples"))
 
 def examples_for(body):
     """Tracked files under every examples/<path> the body mentions."""
@@ -119,5 +120,9 @@ for name in skills:
         target = os.path.join(out_dir, rel)
         os.makedirs(os.path.dirname(target), exist_ok=True)
         shutil.copy2(f"{root}/{rel}", target)   # copy2 keeps the executable bit on scripts
+    for rel in tracked_files(f"skills/{name}/scripts"):
+        target = os.path.join(out_dir, os.path.relpath(rel, f"skills/{name}"))
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        shutil.copy2(os.path.join(root, rel), target)
 print(f"rendered {len(skills)} skills into {dest}")
 PY

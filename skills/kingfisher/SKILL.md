@@ -11,7 +11,7 @@ Find a leaked secret, prove whether it's still alive, see what it can reach, and
 
 Read `references/kingfisher.md` before responding. It contains bootstrap steps, the full CLI surface (scan, validate, revoke, baseline, config), the `kingfisher.yaml` schema, platform-target commands with their auth env vars, exit-code semantics, CI templates, and the pre-commit/Husky setup.
 
-Installed plugin root: `${CLAUDE_PLUGIN_ROOT}`. Use this resolved path as `plugin_root` when copying the bundled `skills/kingfisher/scripts/pre-commit.sh`; the Bash tool does not set `CLAUDE_PLUGIN_ROOT`. From a repository clone, use its root instead.
+The bundled hook is `scripts/pre-commit.sh`, relative to this `SKILL.md`. Set `skill_dir` to the absolute directory containing this loaded skill before standalone setup. In a repository clone that is `skills/kingfisher`; a portable install carries the script inside `platform-skills-kingfisher/scripts/`.
 
 **This command is interactive by default.** With no arguments, run the three-layer wizard below. Never dump a raw `kingfisher scan` invocation and stop — the useful output is a validated, triaged verdict, not a wall of candidate strings.
 
@@ -304,6 +304,7 @@ repos:
     rev: v2.13.0
     hooks:
       - id: kingfisher
+        args: [--redact]
 ```
 
 The `kingfisher` hook runs the binary on `PATH`, so install it first (Layer 2 check). Never use `kingfisher-auto` or `kingfisher-docker`: when the hook runs, they download the binary (`latest` by default, unverified) or pull `ghcr.io/mongodb/kingfisher:latest`.

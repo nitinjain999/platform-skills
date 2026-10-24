@@ -3,22 +3,25 @@
 # network access, real credentials, or changes to the developer's Git config.
 set -euo pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
-python3 - <<'PY'
+python3 - "${1:-}" <<'PY'
 import os
 from pathlib import Path
 import shlex
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
 root = Path.cwd()
-section = (root / "references/kingfisher.md").read_text().split(
+skill_dir = Path(sys.argv[1]).resolve() if sys.argv[1] else root / "skills/kingfisher"
+guide = skill_dir / "references/kingfisher.md" if sys.argv[1] else root / "references/kingfisher.md"
+section = guide.read_text().split(
     "### Standalone hook (no `pre-commit` framework)", 1
 )[1]
 install = section.split("```bash\n", 1)[1].split("```", 1)[0].replace(
-    "plugin_root='<resolved plugin or repository root>'",
-    "plugin_root=" + shlex.quote(str(root)),
+    "skill_dir='<absolute directory containing the loaded Kingfisher SKILL.md>'",
+    "skill_dir=" + shlex.quote(str(skill_dir)),
 )
 
 
@@ -81,7 +84,7 @@ fi
         self.assertEqual(self.run_command([str(self.hook)], cwd=nested).returncode, 0)
         self.assertEqual(Path(self.env["KF_TEST_ARGS"]).read_text().splitlines(),
                          [str(self.repo.resolve()), "scan", ".", "--staged",
-                          "--quiet", "--no-update-check"])
+                          "--quiet", "--redact", "--no-update-check"])
 
     def test_scanner_exit_status_is_preserved(self):
         self.scanner()
@@ -125,5 +128,5 @@ fi
         self.assertFalse((Path(self.temp.name) / "pre-commit").exists())
 
 
-unittest.main(verbosity=2)
+unittest.main(argv=[sys.argv[0]], verbosity=2)
 PY

@@ -117,6 +117,9 @@ bash tests/trivy-script.sh
 echo "Running Kingfisher hook tests..."
 bash tests/kingfisher-hook.sh
 
+echo "Running AWS profile generation checks..."
+bash tests/aws-profile-generation.sh
+
 echo "Running ai-governance evaluator tests..."
 bash examples/ai-governance/tests/evaluate_test.sh
 

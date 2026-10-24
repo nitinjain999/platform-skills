@@ -521,9 +521,10 @@ repos:
     rev: v2.13.0
     hooks:
       - id: kingfisher          # runs the kingfisher already on PATH (see Bootstrap)
+        args: [--redact]
 ```
 
-Every hook drives `kingfisher scan . --staged --quiet --no-update-check` under the hood: it snapshots the staged index into a temporary commit, diffs against `HEAD` (or an empty tree pre-first-commit), and scans only the staged delta. Exit codes surface straight to `pre-commit`, so a `205` (live credential staged) fails the commit with no extra plumbing. Trigger it in CI without installing to `.git/hooks`:
+The configured hook runs `kingfisher scan . --staged --quiet --no-update-check --redact`: it snapshots the staged index into a temporary commit, diffs against `HEAD` (or an empty tree pre-first-commit), and scans only the staged delta. `--quiet` controls status/progress output; `--redact` masks finding values. Exit codes surface straight to `pre-commit`, so a `205` (live credential staged) fails the commit with no extra plumbing. Trigger it in CI without installing to `.git/hooks`:
 
 ```bash
 pre-commit run kingfisher --all-files
@@ -533,10 +534,10 @@ Use the `kingfisher` hook: it runs the binary you installed at a pinned version.
 
 ### Standalone hook (no `pre-commit` framework)
 
-Copy the bundled hook from the installed plugin or a repository clone. Set `plugin_root` to the resolved path in the loaded Kingfisher skill. Install the pinned scanner first (see Bootstrap).
+Copy the bundled hook relative to the loaded Kingfisher skill. Set `skill_dir` to the absolute directory containing that skill's `SKILL.md`: `skills/kingfisher` in a repository clone, or `platform-skills-kingfisher` in a portable installation. Install the pinned scanner first (see Bootstrap).
 
 ```bash
-plugin_root='<resolved plugin or repository root>'
+skill_dir='<absolute directory containing the loaded Kingfisher SKILL.md>'
 # A configured hooksPath may be shared across repositories or managed by Husky.
 # Use the framework integration above or below in that case.
 if git config --get core.hooksPath >/dev/null; then
@@ -545,7 +546,7 @@ elif hooks_dir="$(git rev-parse --git-path hooks 2>/dev/null)"; then
   if [ -e "$hooks_dir/pre-commit" ] || [ -L "$hooks_dir/pre-commit" ]; then
     echo 'Existing pre-commit hook: integrate Kingfisher without replacing it.' >&2
   elif mkdir -p "$hooks_dir"; then
-    install -m 755 "$plugin_root/skills/kingfisher/scripts/pre-commit.sh" "$hooks_dir/pre-commit"
+    install -m 755 "$skill_dir/scripts/pre-commit.sh" "$hooks_dir/pre-commit"
   fi
 else
   echo 'Run hook setup from a Git repository.' >&2
@@ -561,7 +562,7 @@ npm install --save-dev --save-exact husky@9.1.7
 ./node_modules/.bin/husky init
 # Runs the kingfisher already on PATH (see Bootstrap) with the flags upstream's
 # own hooks use. Nothing is downloaded when the hook runs.
-echo 'kingfisher scan . --staged --quiet --no-update-check' >> .husky/pre-commit
+echo 'kingfisher scan . --staged --quiet --redact --no-update-check' >> .husky/pre-commit
 ```
 
 Upstream's `scripts/install-husky.sh` writes the same line when run with no options. Don't pass `--auto-install` or `--use-docker`. `--auto-install` writes a hook that pipes `kingfisher-pre-commit-auto.sh` from `main` into `bash` on every commit, so each contributor runs whatever that branch holds. `--use-docker` runs `ghcr.io/mongodb/kingfisher:latest`.

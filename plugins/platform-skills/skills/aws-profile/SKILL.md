@@ -272,26 +272,37 @@ Account ID    Account Name          Env Tag    Profiles configured
 Run with --generate-profiles to emit ~/.aws/config stanzas for them.
 ```
 
-**With `--generate-profiles`** — emit SSO-based stanzas for unconfigured accounts:
-```ini
-# Add to ~/.aws/config — replace ROLE_NAME with your SSO permission set
+**With `--generate-profiles`** — select an existing SSO template profile and read its allowed metadata. Reuse its `sso_session` reference when present; the start URL and SSO region live in that existing session section and do not need to be copied into each new profile.
 
+**Session-based template** (`sso_session = platform`):
+```ini
+# Add to ~/.aws/config; reuse the existing [sso-session platform] section.
+# Replace ROLE_NAME with an authorized permission set for each account.
+
+[profile security-tooling]
+sso_session = platform
+sso_account_id = 890123456
+sso_role_name = ROLE_NAME
+region = eu-west-1
+
+[profile shared-services]
+sso_session = platform
+sso_account_id = 901234567
+sso_role_name = ROLE_NAME
+region = eu-west-1
+```
+
+**Legacy template** (no `sso_session`): copy the template's profile-scoped `sso_start_url` and `sso_region` using the allowed lookups. For example:
+```ini
 [profile security-tooling]
 sso_start_url = https://myorg.awsapps.com/start
 sso_region = eu-west-1
 sso_account_id = 890123456
 sso_role_name = ROLE_NAME
 region = eu-west-1
-credential_process = granted credential-process --profile security-tooling
-
-[profile shared-services]
-sso_start_url = https://myorg.awsapps.com/start
-sso_region = eu-west-1
-sso_account_id = 901234567
-sso_role_name = ROLE_NAME
-region = eu-west-1
-credential_process = granted credential-process --profile shared-services
 ```
+
+Emit the corresponding form for each missing account. Keep an existing session definition unchanged. If a legacy template lacks either required SSO setting, ask for it instead of inventing a URL or region. Confirm the permission set per account. For a Granted template, retain its supported `credential_process` setup from `references/aws-mcp-profiles.md`; do not add a Granted dependency to a native AWS CLI template.
 
 **Steps:**
 
@@ -299,7 +310,7 @@ credential_process = granted credential-process --profile shared-services
    If `--profile` is omitted, let the AWS CLI use its configured credential chain.
 2. For each account, compare the allowed `sso_account_id` metadata for listed profiles or call `aws sts get-caller-identity --profile <p>` to resolve.
 3. Cross-reference `~/.aws-profile-tags.yaml` for env tags.
-4. If `--generate-profiles`: generate SSO stanzas using the `sso_start_url` and `sso_region` from an existing SSO profile as the template.
+4. If `--generate-profiles`: select an SSO template and read `sso_session` first. When it is present, generate new profiles referencing that same session. Otherwise, read the legacy template's `sso_start_url` and `sso_region` individually and require both before generating profiles. Use the supplied target account IDs and confirmed permission sets; never inspect a credential cache.
 
 **Note:** `organizations:ListAccounts` requires management account access. Most platform engineers work from member accounts and will not have this permission. This mode is intended for platform leads and account vending workflows.
 

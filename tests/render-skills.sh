@@ -78,3 +78,6 @@ for e in errors: print(f"  FAIL: {e}")
 print(f"render-skills: {len(got)} skill(s), {len(errors)} error(s)")
 sys.exit(1 if errors else 0)
 PY
+
+# Run the documented setup using only the rendered skill and its bundled files.
+bash tests/kingfisher-hook.sh "$OUT/platform-skills-kingfisher"

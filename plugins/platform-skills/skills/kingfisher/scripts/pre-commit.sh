@@ -8,4 +8,4 @@ if ! command -v kingfisher >/dev/null 2>&1; then
 fi
 
 cd -- "$(git rev-parse --show-toplevel)"
-exec kingfisher scan . --staged --quiet --no-update-check
+exec kingfisher scan . --staged --quiet --redact --no-update-check
