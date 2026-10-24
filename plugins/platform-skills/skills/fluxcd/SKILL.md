@@ -79,24 +79,23 @@ kubectl get fluxreport flux -n flux-system -o yaml
 
 Use before merging, before a release, or when onboarding an unfamiliar repo. Invoke as `/platform-skills:gitops audit`.
 
-Runs 6 phases using the official Flux audit scripts:
+Runs 6 phases using the bundled Flux audit scripts from `examples/fluxcd/repo-audit`. Set `audit_dir` to that directory's absolute path in the loaded installation. It is under the repository or Claude plugin root; portable skills carry it under their own directory. No script is downloaded during an audit.
 
 ```bash
-# One-time setup
-git clone --depth=1 https://github.com/fluxcd/agent-skills.git /tmp/flux-agent-skills
-SCRIPTS=/tmp/flux-agent-skills/skills/gitops-repo-audit/scripts
+audit_dir='<absolute path to bundled examples/fluxcd/repo-audit>'
+SCRIPTS="$audit_dir/scripts"
 
 # Phase 1 — inventory
-bash $SCRIPTS/discover.sh -d .
+bash "$SCRIPTS/discover.sh" -d .
 
-# Phase 2 — validation (yq + kustomize + kubeconform + Flux OpenAPI schemas)
-bash $SCRIPTS/validate.sh -d .
+# Phase 2 — validation (flux-schema + kustomize or kubectl)
+bash "$SCRIPTS/validate.sh" -d .
 
 # Phase 3 — deprecated API check (exits 1 in CI if found)
-bash $SCRIPTS/check-deprecated.sh -d .
+bash "$SCRIPTS/check-deprecated.sh" -d .
 ```
 
-Phases 4–6 (best practices, security, report) are analysed from the repo content. Produces a Critical / Warning / Info report.
+Requires installed `flux-schema >= 0.10.0`, `kustomize` or `kubectl`, and `flux >= 2.9.0`. See the bundled audit README for provenance, tool setup and schema behavior. Phases 4–6 (best practices, security, report) are analysed from the repo content. Produces a Critical / Warning / Info report.
 
 ---
 

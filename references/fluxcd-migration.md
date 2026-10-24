@@ -54,12 +54,12 @@ All `v1beta2` versions were removed:
 # Preview all files that need updating (dry-run — no changes written)
 flux migrate -f . --dry-run
 
-# Or use the official audit script from fluxcd/agent-skills
-git clone --depth=1 https://github.com/fluxcd/agent-skills.git /tmp/flux-agent-skills
-bash /tmp/flux-agent-skills/skills/gitops-repo-audit/scripts/check-deprecated.sh -d .
+# Or use the audit script bundled with the loaded skill
+audit_dir='<absolute path to bundled examples/fluxcd/repo-audit>'
+bash "$audit_dir/scripts/check-deprecated.sh" -d .
 ```
 
-`flux migrate --dry-run` exits 1 if deprecated versions are found. Use in CI to block merges.
+The bundled helper fails when deprecated versions are found or the Flux CLI fails. Resolve `audit_dir` under the repository or Claude plugin root; in a portable install it is inside the loaded skill's directory. See `examples/fluxcd/repo-audit/README.md` for prerequisites and provenance.
 
 ---
 
@@ -152,9 +152,9 @@ The Flux Operator automatically handles in-cluster API migrations when the versi
 ## Post-migration validation
 
 ```bash
-# Validate all manifests against current Flux OpenAPI schemas
-git clone --depth=1 https://github.com/fluxcd/agent-skills.git /tmp/flux-agent-skills
-bash /tmp/flux-agent-skills/skills/gitops-repo-audit/scripts/validate.sh -d .
+# Validate manifests and overlays using the bundled audit helper
+audit_dir='<absolute path to bundled examples/fluxcd/repo-audit>'
+bash "$audit_dir/scripts/validate.sh" -d .
 
 # Check Flux component health
 flux check

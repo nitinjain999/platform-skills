@@ -117,6 +117,9 @@ bash tests/trivy-script.sh
 echo "Running Kingfisher hook tests..."
 bash tests/kingfisher-hook.sh
 
+echo "Running bundled Flux audit tests..."
+bash tests/fluxcd-audit.sh
+
 echo "Running AWS profile generation checks..."
 bash tests/aws-profile-generation.sh
 
