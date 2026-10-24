@@ -5,6 +5,20 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.45.9] - 2026-10-24
+
+### Fixed
+
+- **The Kingfisher standalone hook setup still downloaded and ran a script.** The v1.45.8 directory report listed `references/kingfisher.md` after the earlier hook and CI fixes. Standalone setup now copies the bundled `skills/kingfisher/scripts/pre-commit.sh` instead. It refuses an existing hook or configured `core.hooksPath`; the hook runs only the installed scanner and fails if it is absent. Tests cover installation, existing-hook protection, scanner arguments, working directory and exit codes.
+- **AWS profile discovery read raw credential caches and config files.** The skill and reference now use profile names and an allowlist of non-secret configuration fields, with STS for authentication checks. They do not read caches or export credentials to calculate TTL. Without an expiration timestamp shared separately from credentials, TTL is explicitly `unknown`; an authenticated profile is not assumed to have more than 30 minutes left. MCP configuration parsing returns only AWS profile and region metadata.
+- **The GitOps credential search printed matching secrets.** Its security-review search now lists file names only, and follow-up findings must redact values.
+
+### Review notes
+
+- **The other seven download-and-run warnings in the v1.45.8 report do not run downloaded code.** `dora` queries or posts metrics and dashboards; `linux` and the router skill use HTTP diagnostics; `preflight` describes a prohibition; `notify-slack` and the composite-actions reference post webhook/API payloads. The token-optimizer script has no downloader and never evaluates command text from its payload. These are retained.
+- **Credential warnings still need reviewer assessment.** The listed cloud, Kubernetes, GitHub, registry, monitoring and CI examples use selected CLI sessions, service-specific variables, secret references or caller inputs. Documentation and secret-scanning patterns also match the report's heuristic. The manifest has no hook or MCP server that reads or transmits credentials. This audit does not establish that these uses qualify for the directory's vendor exception, or guarantee that a rescan clears its hold. Adding sensitive `userConfig` placeholders to skill text would not fix authentication: Claude Code substitutes only non-sensitive values there. The plugin README now explains this limitation and the authentication boundary.
+- **The icon needs no change.** The report accepted the well-formed PNG and passed validation and the security scan. Publication remains subject to the directory review. The generated plugin folder is rebuilt in the release PR, as usual.
+
 ## [1.45.8] - 2026-10-19
 
 Fixes the installed triage skill, which could not find its helper, and stops the kingfisher guide from running downloaded code in hooks and CI.

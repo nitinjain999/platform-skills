@@ -409,8 +409,8 @@ grep -rn "kind: Secret" . --include="*.yaml" | while read m; do
   grep -q "sops:" "$f" || grep -q "ENC\[" "$f" || echo "UNENCRYPTED: $f"
 done
 
-# Hardcoded credentials
-grep -rn -e "password:" -e "token:" -e "apiKey:" -e "_SECRET=" -e "ACCESS_KEY=" --include="*.yaml" .
+# Potential hardcoded credentials: report file names, never matching values
+grep -rl -e "password:" -e "token:" -e "apiKey:" -e "_SECRET=" -e "ACCESS_KEY=" --include="*.yaml" .
 
 # Insecure sources
 grep -rn "insecure: true" . --include="*.yaml"
@@ -429,6 +429,8 @@ grep -rn "kind: ImageUpdateAutomation" . --include="*.yaml" -A20 | grep "branch:
 ```
 
 Checklist: no plain Secrets in Git, SOPS/ESO in use, Workload Identity for cloud registries, Cosign on OCIRepository, per-tenant `serviceAccountName`, image automation pushes to staging branch not main.
+
+Treat credential matches as candidates. Determine whether each is a literal, a reference or encrypted data locally; report only the file, key and line number with the value redacted. Never copy matching credential values into tool output or the report.
 
 ---
 

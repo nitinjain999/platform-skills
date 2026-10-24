@@ -101,14 +101,15 @@ pip index versions awslabs.eks-mcp-server 2>/dev/null | head -1
 
 ## 4. Profile Type Detection
 
-Read `~/.aws/config` and classify each `[profile name]` block:
+List profiles with `aws configure list-profiles`, then read individual non-secret settings with `aws configure get <key> --profile <profile>`. Use only the metadata allowlist in `skills/aws-profile/SKILL.md` → Credential boundary. Do not dump the config or retrieve access keys to determine the type.
 
 | Type | Detection signal | Example |
 |------|-----------------|---------|
-| SSO | `sso_start_url` present | `sso_start_url = https://myorg.awsapps.com/start` |
+| SSO | `sso_session` or `sso_start_url` present | `sso_session = platform` |
 | Assumed role | `role_arn` + `source_profile` | `role_arn = arn:aws:iam::123456789:role/PlatformEngineer` |
-| Granted | `granted_sso_*` keys or `assume` binary in PATH | `granted_sso_account_id = 123456789` |
-| Static | `aws_access_key_id` directly in profile | **Warn:** rotate to SSO |
+| Granted | `granted_sso_account_id` or `granted_sso_role_name` present | `granted_sso_account_id = 123456789` |
+| Static | User identifies the profile as static | **Warn:** rotate to SSO |
+| Unknown | No recognized metadata | Do not read a credential to classify it |
 
 **Detect Granted:**
 ```bash
@@ -157,8 +158,9 @@ aws sts get-caller-identity --profile dev-sso
 # 2. Then validate the target profile
 aws sts get-caller-identity --profile staging-assume
 
-# 3. Visualise the chain
-grep -A 5 "\[profile staging-assume\]" ~/.aws/config
+# 3. Inspect only the chain metadata; repeat for each source profile
+aws configure get source_profile --profile staging-assume
+aws configure get role_arn --profile staging-assume
 ```
 
 **Multi-hop chain example:**
@@ -174,7 +176,7 @@ If step 1 fails, fix the source profile before debugging the target.
 ```
 ⚠ Static credentials in ~/.aws/credentials are long-lived and do not expire cleanly.
   Rotate to SSO: configure IAM Identity Center and update ~/.aws/config.
-  Interim: set a short session duration in the profile.
+  A configured session duration does not expire a long-lived access key.
 ```
 
 ---
@@ -189,31 +191,14 @@ Two cache locations with different TTLs:
 | Assumed role | `~/.aws/cli/cache/*.json` | 1h default | Specific role assumption |
 | Granted | Same as SSO: `~/.aws/sso/cache/*.json` | Org-configured | No separate cache — delegates to SSO or role cache |
 
-**Parse expiry manually:**
+**Check authentication without exporting credentials:**
 ```bash
-# SSO cache — find the active token
-cat ~/.aws/sso/cache/*.json | python3 -c "
-import json, sys, datetime
-for line in sys.stdin:
-    try:
-        d = json.loads(line)
-        if 'expiresAt' in d:
-            exp = datetime.datetime.fromisoformat(d['expiresAt'].replace('Z','+00:00'))
-            ttl = exp - datetime.datetime.now(datetime.timezone.utc)
-            print(f\"Expires: {d['expiresAt']} | TTL: {ttl}\")
-    except: pass
-"
-
-# Assumed role cache
-ls -la ~/.aws/cli/cache/
-cat ~/.aws/cli/cache/*.json | python3 -c "
-import json, sys, datetime
-for d in [json.loads(l) for l in sys.stdin if l.strip()]:
-    exp = d.get('Credentials',{}).get('Expiration','')
-    if exp:
-        print(f\"Role creds expire: {exp}\")
-"
+aws sts get-caller-identity --profile prod-platform-eu
 ```
+
+The cache locations above explain the AWS CLI's storage; they are not files for the agent to read. They contain bearer tokens and role credentials. Do not read, concatenate or print them, or export credentials to calculate TTL. A successful STS call establishes authentication now, not how long it will remain valid. Calculate TTL only from a profile-specific expiration timestamp the user shares without credentials; otherwise report `unknown`. SSO session expiry and role credential expiry are different timestamps and must be labelled separately.
+
+The CLI lookup and identity commands are documented in [list-profiles](https://docs.aws.amazon.com/cli/latest/reference/configure/list-profiles.html), [configure get](https://docs.aws.amazon.com/cli/latest/reference/configure/get.html) and [GetCallerIdentity](https://docs.aws.amazon.com/cli/latest/reference/sts/get-caller-identity.html).
 
 **Traffic-light thresholds:**
 - ✓ Green: TTL > 30 minutes

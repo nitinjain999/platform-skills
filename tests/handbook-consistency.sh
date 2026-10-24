@@ -114,6 +114,9 @@ bash tests/checkov-script.sh
 echo "Running trivy script tests..."
 bash tests/trivy-script.sh
 
+echo "Running Kingfisher hook tests..."
+bash tests/kingfisher-hook.sh
+
 echo "Running ai-governance evaluator tests..."
 bash examples/ai-governance/tests/evaluate_test.sh
 

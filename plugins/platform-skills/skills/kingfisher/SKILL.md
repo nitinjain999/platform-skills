@@ -11,6 +11,8 @@ Find a leaked secret, prove whether it's still alive, see what it can reach, and
 
 Read `references/kingfisher.md` before responding. It contains bootstrap steps, the full CLI surface (scan, validate, revoke, baseline, config), the `kingfisher.yaml` schema, platform-target commands with their auth env vars, exit-code semantics, CI templates, and the pre-commit/Husky setup.
 
+Installed plugin root: `${CLAUDE_PLUGIN_ROOT}`. Use this resolved path as `plugin_root` when copying the bundled `skills/kingfisher/scripts/pre-commit.sh`; the Bash tool does not set `CLAUDE_PLUGIN_ROOT`. From a repository clone, use its root instead.
+
 **This command is interactive by default.** With no arguments, run the three-layer wizard below. Never dump a raw `kingfisher scan` invocation and stop — the useful output is a validated, triaged verdict, not a wall of candidate strings.
 
 ## Ownership boundary (enforced at the menu)

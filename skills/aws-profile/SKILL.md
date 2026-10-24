@@ -11,6 +11,12 @@ Manage AWS profiles for MCP server configurations across VS Code (GitHub Copilot
 
 Reference: `references/aws-mcp-profiles.md`
 
+## Credential boundary
+
+List profiles with `aws configure list-profiles`. Read only these non-secret settings with `aws configure get <key> --profile <profile>`: `sso_session`, `sso_start_url`, `sso_region`, `sso_account_id`, `sso_role_name`, `role_arn`, `source_profile`, `region`, `granted_sso_account_id`, `granted_sso_role_name`. A missing setting is normal. Never retrieve access keys, session tokens, raw config files or credential caches, or execute `credential_process` to inspect its output. Let the AWS CLI handle authentication for the selected profile.
+
+For TTL, use only a profile-specific expiration timestamp the user has shared without credentials. Otherwise display `unknown`; successful authentication does not establish an expiry time. Parse MCP config files locally and return only server names, paths, `AWS_PROFILE` and `AWS_REGION`, since other fields can contain secrets. Do not print entire config files or diffs of unrelated fields.
+
 ---
 
 ## Interactive Wizard (fires when no mode is provided)
@@ -31,8 +37,8 @@ Enter 1–5 or mode name:
 
 **Q2 — Mode-specific follow-up** (one question, after mode is selected):
 - **discover**: `Any filters? (e.g. --expired to show only expired, --type sso, --env prod) — or press enter to list all:`
-- **switch**: Read `~/.aws/config` and list available profiles, then ask: `Which profile should MCP servers switch to?`
-- **login**: Read `~/.aws/config` and list available profiles, then ask: `Which profile needs authentication?`
+- **switch**: List profiles with `aws configure list-profiles`, then ask: `Which profile should MCP servers switch to?`
+- **login**: List profiles with `aws configure list-profiles`, then ask: `Which profile needs authentication?`
 - **status**: no follow-up — proceed directly
 - **org-scan**: `Which management account profile has organizations:ListAccounts permission? (default: current profile):`
 
@@ -42,7 +48,7 @@ Then proceed into the relevant mode below.
 
 ## Mode: discover
 
-Parse `~/.aws/config` and output a classified profile table with credential TTL.
+List profiles and output a classified profile table with TTL where shared expiration metadata is available.
 
 ```
 aws-profile discover [--type sso|assume-role|granted|static] [--env prod|staging|dev] [--account <id>] [--chain] [--expired]
@@ -54,22 +60,21 @@ Profile               Type         Account ID    Env Tag    Permission Set    Ex
 prod-platform-eu      sso          123456789     prod       PowerUser         14:32 UTC    47m ✓
 staging-assume        assume-role  456789123     staging    -                 13:58 UTC    13m ⚠
 dev-sandbox           granted      987654321     dev        Developer         09:00 UTC    EXPIRED ✗
-security              static       890123456     -          -                 never        ⚠ rotate
+security              unknown      890123456     -          -                 unknown      unknown
 ```
+
+The timestamp examples above assume the user supplied profile-specific expiry metadata. Without it, show `unknown` in both expiry columns.
 
 **Steps:**
 
-1. Parse `~/.aws/config` — classify each `[profile name]` block by type:
-   - SSO: `sso_start_url` present
+1. Run `aws configure list-profiles`, then query only the metadata keys in Credential boundary. Classify each profile by the settings present:
+   - SSO: `sso_session` or `sso_start_url` present
    - Assumed role: `role_arn` + `source_profile`
-   - Granted: `granted_sso_*` keys or `assume` binary in PATH
-   - Static: `aws_access_key_id` directly in profile block → warn to rotate
+   - Granted: `granted_sso_account_id` or `granted_sso_role_name` present; an `assume` binary alone does not classify every profile
+   - Static: only if the user identifies it as static → warn to rotate
+   - Otherwise: `unknown`; do not retrieve a key to classify it
 
-2. Parse credential cache files for expiration timestamps. Field names differ by type:
-   - SSO (`~/.aws/sso/cache/*.json`): top-level `expiresAt`
-   - Assumed role (`~/.aws/cli/cache/*.json`): `Credentials.Expiration`
-   - Granted: no separate cache — SSO-backed profiles use `~/.aws/sso/cache/*.json` (`expiresAt`); role-chained profiles use `~/.aws/cli/cache/*.json` (`Credentials.Expiration`)
-   Apply traffic-light TTL:
+2. Calculate TTL only from shared expiration metadata for that profile. Do not read credential caches. Apply traffic-light TTL only when a timestamp is known:
    - ✓ Green: >30 min
    - ⚠ Amber: 10–30 min
    - ✗ Red: <10 min or expired
@@ -84,7 +89,7 @@ security              static       890123456     -          -                 ne
    ```
    Print: `Generated ~/.aws-profile-tags.yaml — review and correct environment tags.`
 
-4. Apply filters if flags provided.
+4. Apply filters if flags provided. For `--expired`, list confirmed expired entries and report profiles with unknown TTL separately; unknown does not mean expired or healthy.
 
 **With `--chain`** — show full role assumption chain for assumed-role profiles:
 ```
@@ -94,7 +99,7 @@ staging-assume role chain:
         └── assume → staging-platform (456789123)  ← this profile
 ```
 
-Parse the chain by following `source_profile` → `role_arn` links recursively in `~/.aws/config`.
+Follow `source_profile` → `role_arn` links recursively with the metadata lookups above.
 
 Reference: `references/aws-mcp-profiles.md` → Profile Type Detection, Credential Lifecycle
 
@@ -102,9 +107,9 @@ Reference: `references/aws-mcp-profiles.md` → Profile Type Detection, Credenti
 
 ## Mode: status
 
-Show which profile each configured MCP server uses, the credential TTL, and whether the credential method will auto-refresh.
+Show which profile each configured MCP server uses, authentication status and known credential TTL. Report refresh behaviour only when the configured method is known.
 
-**Note:** `status` reads config files and `~/.aws/sso/cache/` — it does not read the `AWS_PROFILE` shell environment variable, which is per-session and invisible to this command.
+**Note:** MCP config identifies the intended profile; it does not prove which credentials an already-running server holds. Do not inspect credential caches or assume the agent's shell environment matches the server's.
 
 ```
 aws-profile status [--watch] [--all-hosts]
@@ -114,25 +119,21 @@ aws-profile status [--watch] [--all-hosts]
 ```
 Profile in MCP configs: prod-platform-eu
   Type: SSO | Account: 123456789 | Permission: PowerUser
-  Token expires: 14:32 UTC (47 minutes) ✓
+  Authentication: valid (AWS STS check)
+  Token expires: unknown (no shared expiration metadata)
 
 MCP Servers:
-  eks-prod-eu      ~/.vscode/mcp.json          credential_process ✓   47m
-  cloudwatch       ~/.claude/settings.json      AWS_PROFILE ⚠         47m (will not auto-refresh on expiry)
-  eks-prod-us      .vscode/mcp.json            credential_process ✓   47m
-
-⚠ 'cloudwatch' uses raw AWS_PROFILE without credential_process.
-  When the token expires, this server will fail silently.
-  Fix: add credential_process to the 'prod-platform-eu' profile in ~/.aws/config.
-  See: references/aws-mcp-profiles.md → credential_process Pattern
+  eks-prod-eu      ~/.vscode/mcp.json          AWS_PROFILE   TTL unknown
+  cloudwatch      ~/.claude/settings.json     AWS_PROFILE   TTL unknown
+  eks-prod-us      .vscode/mcp.json            AWS_PROFILE   TTL unknown
 ```
 
 **Steps:**
 
-1. Scan `~/.vscode/mcp.json`, `~/.claude/settings.json`, and `.vscode/mcp.json` (if present in cwd). Extract `AWS_PROFILE` from each server's `env` block.
-2. For each unique profile found, parse TTL from `~/.aws/sso/cache/` or `~/.aws/cli/cache/`.
-3. Check whether the profile in `~/.aws/config` has `credential_process` configured. Flag servers without it as ⚠.
-4. If `--watch`: re-run every 60 seconds. Print a warning when any TTL drops below 30 minutes, and a loud alert when any TTL drops below 10 minutes.
+1. Extract only server names and the AWS profile/region fields from `~/.vscode/mcp.json`, `~/.claude/settings.json`, and `.vscode/mcp.json` (if present in cwd), using local parsing.
+2. For each unique profile, run `aws sts get-caller-identity --profile <profile>` to check authentication; report errors without treating every failure as an expired token. Report TTL from shared metadata or `unknown`.
+3. Identify SSO or role-chain settings with the allowed metadata lookups. `AWS_PROFILE` alone does not establish whether a particular server's SDK refreshes credentials; report that as unverified unless checked.
+4. If `--watch`: re-run every 60 seconds. Apply TTL warnings only to known timestamps. Report authentication failures separately.
 
 ---
 
@@ -204,7 +205,7 @@ aws-profile login <profile>
 
 **Steps:**
 
-1. Read `~/.aws/config` for `[profile <name>]`. Classify type.
+1. Query the allowed metadata keys for the selected profile. If the method is unknown, ask which authentication method the user configured instead of inspecting credentials.
 
 2. Emit and explain the auth command:
 
@@ -240,7 +241,7 @@ aws-profile login <profile>
      See: references/aws-mcp-profiles.md → Auth Flows
    ```
 
-3. After emitting the command, run `status` to confirm that the TTL for `<profile>` now shows green (>30 min). Other expired profiles in the output are unrelated to this login.
+3. After the user completes login, check the selected profile with `aws sts get-caller-identity --profile <profile>`. Report TTL as `unknown` unless the user shared an expiration timestamp; a successful STS check does not prove a green (>30 min) TTL.
 
 Reference: `references/aws-mcp-profiles.md` → Auth Flows
 
@@ -293,8 +294,8 @@ credential_process = granted credential-process --profile shared-services
 **Steps:**
 
 1. Run: `aws organizations list-accounts --profile <mgmt-profile> --output json`
-   If `--profile` is omitted, use the default profile from `~/.aws/config` (or `AWS_DEFAULT_PROFILE` if set).
-2. For each account, check if any profile in `~/.aws/config` references that account ID via `sso_account_id` or call `aws sts get-caller-identity --profile <p>` to resolve.
+   If `--profile` is omitted, let the AWS CLI use its configured credential chain.
+2. For each account, compare the allowed `sso_account_id` metadata for listed profiles or call `aws sts get-caller-identity --profile <p>` to resolve.
 3. Cross-reference `~/.aws-profile-tags.yaml` for env tags.
 4. If `--generate-profiles`: generate SSO stanzas using the `sso_start_url` and `sso_region` from an existing SSO profile as the template.
 

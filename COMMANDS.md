@@ -1746,7 +1746,7 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | node dist/in
 
 ## `/platform-skills:aws-profile`
 
-**What it does:** Discover all AWS profiles from `~/.aws/config`, check credential TTL, switch profiles across VS Code and Claude Code MCP server configs, and scan AWS Organization accounts for unconfigured entries.
+**What it does:** Discover AWS profiles through CLI metadata, check authentication with STS, switch profiles across VS Code and Claude Code MCP server configs, and scan AWS Organization accounts for unconfigured entries. Credential TTL is `unknown` unless the user shares a profile-specific expiration timestamp without credentials; the skill does not inspect credential caches.
 
 ```
 /platform-skills:aws-profile [discover|status|switch <profile>|login <profile>|org-scan] [flags]
@@ -1756,8 +1756,8 @@ echo '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}' | node dist/in
 
 | Mode | What it does |
 |------|-------------|
-| `discover` | List all profiles classified by type (SSO/assumed-role/Granted/static) with TTL and env tags |
-| `status` | Show which profile each MCP server uses and whether it will auto-refresh on expiry |
+| `discover` | Classify profiles from safe metadata, with env tags and known TTL; otherwise mark type or TTL unknown |
+| `status` | Show configured MCP profiles, current authentication and known expiry; verify refresh behaviour separately |
 | `switch` | Patch `AWS_PROFILE` in VS Code and/or Claude Code MCP configs, with prod safety guard |
 | `login` | Emit the correct auth command for the profile type (sso login / assume / role chain) |
 | `org-scan` | List all AWS Org accounts, flag those without configured profiles |
