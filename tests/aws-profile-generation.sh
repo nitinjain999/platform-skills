@@ -38,11 +38,11 @@ with tempfile.TemporaryDirectory(prefix="aws-profile-generation-") as tmp:
                 assert values.get("sso_session") == "platform"
                 session = config[f"sso-session {values['sso_session']}"]
                 assert session.get("sso_start_url") and session.get("sso_region")
-                keys = ("sso_session", "sso_account_id", "sso_role_name", "region")
+                fields = ("sso_session", "sso_account_id", "sso_role_name", "region")
             else:
                 assert not values.get("sso_session")
                 assert values.get("sso_start_url") and values.get("sso_region")
-                keys = ("sso_start_url", "sso_region", "sso_account_id", "sso_role_name", "region")
+                fields = ("sso_start_url", "sso_region", "sso_account_id", "sso_role_name", "region")
             if aws:
                 path = Path(tmp, f"{kind}.ini")
                 with path.open("w") as stream:
@@ -52,7 +52,7 @@ with tempfile.TemporaryDirectory(prefix="aws-profile-generation-") as tmp:
                     "AWS_SHARED_CREDENTIALS_FILE": os.devnull,
                     "AWS_EC2_METADATA_DISABLED": "true", "AWS_PAGER": "",
                 }
-                for key in keys:
+                for key in fields:
                     result = subprocess.run(
                         [aws, "configure", "get", key, "--profile", profile.removeprefix("profile ")],
                         env=env, text=True, capture_output=True, check=True,
