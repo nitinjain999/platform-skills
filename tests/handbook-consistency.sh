@@ -12,7 +12,7 @@ PLUGIN_VERSION="$(jq -r '.version' .claude-plugin/plugin.json)"
 MARKETPLACE_VERSION="$(jq -r '.plugins[0].version' .claude-plugin/marketplace.json)"
 CHANGELOG_VERSION="$(awk '$1 == "##" && $2 ~ /^\[[0-9]+\.[0-9]+\.[0-9]+\]$/ {gsub(/[][]/, "", $2); print $2; exit}' CHANGELOG.md)"
 
-if [[ "$SKILL_NAME" != "$MARKETPLACE_NAME" || "$SKILL_NAME" != "$PLUGIN_NAME" ]]; then
+if [[ "$SKILL_NAME" != "$MARKETPLACE_NAME" ]] || [[ "$SKILL_NAME" != "$PLUGIN_NAME" ]]; then
   echo "❌ Skill and marketplace names are out of sync"
   echo "SKILL.md: $SKILL_NAME"
   echo "marketplace root: $MARKETPLACE_NAME"
@@ -20,7 +20,7 @@ if [[ "$SKILL_NAME" != "$MARKETPLACE_NAME" || "$SKILL_NAME" != "$PLUGIN_NAME" ]]
   exit 1
 fi
 
-if [[ "$PLUGIN_VERSION" != "$MARKETPLACE_VERSION" || "$PLUGIN_VERSION" != "$CHANGELOG_VERSION" ]]; then
+if [[ "$PLUGIN_VERSION" != "$MARKETPLACE_VERSION" ]] || [[ "$PLUGIN_VERSION" != "$CHANGELOG_VERSION" ]]; then
   echo "❌ Plugin, marketplace, and changelog versions are out of sync"
   echo "plugin.json: $PLUGIN_VERSION"
   echo "marketplace.json: $MARKETPLACE_VERSION"
