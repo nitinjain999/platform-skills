@@ -6,6 +6,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")/.."
 python3 - "${1:-}" <<'PY'
 import os
 from pathlib import Path
+import re
 import shlex
 import shutil
 import subprocess
@@ -16,6 +17,7 @@ import unittest
 root = Path.cwd()
 skill_dir = Path(sys.argv[1]).resolve() if sys.argv[1] else root / "skills/kingfisher"
 guide = skill_dir / "references/kingfisher.md" if sys.argv[1] else root / "references/kingfisher.md"
+pre_commit = shutil.which("pre-commit")
 section = guide.read_text().split(
     "### Standalone hook (no `pre-commit` framework)", 1
 )[1]
@@ -93,6 +95,59 @@ fi
             with self.subTest(status=status):
                 self.env["KF_TEST_EXIT"] = str(status)
                 self.assertEqual(self.run_command([str(self.hook)]).returncode, status)
+
+    @unittest.skipUnless(pre_commit, "pre-commit is required for framework integration")
+    def test_framework_examples_preserve_scan_and_block_failures(self):
+        self.scanner()
+        self.env["PATH"] += os.pathsep + os.defpath
+        self.env["PRE_COMMIT_HOME"] = str(Path(self.temp.name) / "pre-commit-cache")
+        upstream = Path(self.temp.name) / "upstream"
+        upstream.mkdir()
+        # v2.13.0's system hook defaults: consumer args replace this whole list.
+        (upstream / ".pre-commit-hooks.yaml").write_text('''
+- id: kingfisher
+  name: kingfisher
+  entry: kingfisher
+  language: system
+  args: [scan, ., --staged, --quiet, --no-update-check]
+  pass_filenames: false
+  types: [file]
+  stages: [pre-commit]
+''')
+        self.run_command(["git", "init", "--quiet"], cwd=upstream, check=True)
+        self.run_command(["git", "add", "."], cwd=upstream, check=True)
+        self.run_command(["git", "-c", "core.hooksPath=/dev/null",
+                          "-c", "user.name=Hook test",
+                          "-c", "user.email=hook-test@example.invalid",
+                          "commit", "--quiet", "-m", "Fixture"],
+                         cwd=upstream, check=True)
+        revision = self.run_command(["git", "rev-parse", "HEAD"],
+                                    cwd=upstream, check=True).stdout.strip()
+        (self.repo / "tracked.txt").write_text("Scan this staged file.\n")
+        self.run_command(["git", "add", "tracked.txt"], check=True)
+        for document in (guide, skill_dir / "SKILL.md"):
+            snippets = [block for block in
+                        re.findall(r"```yaml\n(.*?)```", document.read_text(), re.S)
+                        if "repo: https://github.com/mongodb/kingfisher" in block]
+            self.assertEqual(len(snippets), 1, str(document))
+            config = snippets[0].replace(
+                "https://github.com/mongodb/kingfisher", upstream.as_uri()
+            ).replace("rev: v2.13.0", "rev: " + revision)
+            (self.repo / ".pre-commit-config.yaml").write_text(config)
+            for status in (0, 1, 200, 205):
+                with self.subTest(document=str(document), scanner_status=status):
+                    self.env["KF_TEST_EXIT"] = str(status)
+                    arguments = Path(self.env["KF_TEST_ARGS"])
+                    arguments.unlink(missing_ok=True)
+                    result = self.run_command(
+                        [pre_commit, "run", "kingfisher", "--all-files"]
+                    )
+                    self.assertEqual(result.returncode, 0 if status == 0 else 1,
+                                     result.stdout + result.stderr)
+                    self.assertEqual(arguments.read_text().splitlines(),
+                                     [str(self.repo.resolve()), "scan", ".",
+                                      "--staged", "--quiet", "--no-update-check",
+                                      "--redact"])
 
     def test_missing_scanner_fails(self):
         self.assertEqual(self.install_hook().returncode, 0)

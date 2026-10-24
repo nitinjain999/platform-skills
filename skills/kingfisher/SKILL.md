@@ -304,10 +304,10 @@ repos:
     rev: v2.13.0
     hooks:
       - id: kingfisher
-        args: [--redact]
+        args: [scan, ., --staged, --quiet, --no-update-check, --redact]
 ```
 
-The `kingfisher` hook runs the binary on `PATH`, so install it first (Layer 2 check). Never use `kingfisher-auto` or `kingfisher-docker`: when the hook runs, they download the binary (`latest` by default, unverified) or pull `ghcr.io/mongodb/kingfisher:latest`.
+The full `args` list is required because `pre-commit` replaces the hook's default arguments. The `kingfisher` hook runs the binary on `PATH`, so install it first (Layer 2 check). Never use `kingfisher-auto` or `kingfisher-docker`: when the hook runs, they download the binary (`latest` by default, unverified) or pull `ghcr.io/mongodb/kingfisher:latest`.
 
 State the caveat every time: a local hook cannot stop `--no-verify` or a clone that skipped hook install. It's a fast first line, not the control — the CI gate (`ci` mode) is what actually enforces this. Offer the Husky variant if the repo is Node.js-based (`references/kingfisher.md` → Pre-commit and Husky).
 

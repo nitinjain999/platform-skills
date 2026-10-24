@@ -521,10 +521,10 @@ repos:
     rev: v2.13.0
     hooks:
       - id: kingfisher          # runs the kingfisher already on PATH (see Bootstrap)
-        args: [--redact]
+        args: [scan, ., --staged, --quiet, --no-update-check, --redact]
 ```
 
-The configured hook runs `kingfisher scan . --staged --quiet --no-update-check --redact`: it snapshots the staged index into a temporary commit, diffs against `HEAD` (or an empty tree pre-first-commit), and scans only the staged delta. `--quiet` controls status/progress output; `--redact` masks finding values. Exit codes surface straight to `pre-commit`, so a `205` (live credential staged) fails the commit with no extra plumbing. Trigger it in CI without installing to `.git/hooks`:
+The full `args` list is required because `pre-commit` replaces the hook's default arguments. The configured hook runs `kingfisher scan . --staged --quiet --no-update-check --redact`: it snapshots the staged index into a temporary commit, diffs against `HEAD` (or an empty tree pre-first-commit), and scans only the staged delta. `--quiet` controls status/progress output; `--redact` masks finding values. Exit codes surface straight to `pre-commit`, so a `205` (live credential staged) fails the commit with no extra plumbing. Trigger it in CI without installing to `.git/hooks`:
 
 ```bash
 pre-commit run kingfisher --all-files
