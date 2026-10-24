@@ -49,8 +49,21 @@ class HookTests(unittest.TestCase):
         return subprocess.run(args, cwd=cwd or self.repo, env=self.env,
                               text=True, capture_output=True, check=check)
 
-    def install_hook(self):
-        return self.run_command(["bash", "-e", "-c", install])
+    def install_hook(self, cwd=None):
+        # Exercise a paste into an interactive shell. A guard must not exit the
+        # shell, and successful setup must not leave errexit/nounset enabled.
+        script = 'setup_flags=$-\nsetup_options=$SHELLOPTS\n' + install + '''
+printf 'KINGFISHER_SETUP_CONTINUED\\n'
+if [ "$setup_flags" = "$-" ] && [ "$setup_options" = "$SHELLOPTS" ]; then
+  printf 'KINGFISHER_SHELL_OPTIONS_UNCHANGED\\n'
+fi
+'''
+        result = self.run_command(
+            ["bash", "--noprofile", "--norc", "-i", "-c", script], cwd=cwd
+        )
+        self.assertIn("KINGFISHER_SETUP_CONTINUED", result.stdout)
+        self.assertIn("KINGFISHER_SHELL_OPTIONS_UNCHANGED", result.stdout)
+        return result
 
     def scanner(self):
         scanner = self.bin / "kingfisher"
@@ -86,20 +99,30 @@ class HookTests(unittest.TestCase):
 
     def test_existing_hook_is_preserved(self):
         self.hook.write_text("existing hook\n")
-        self.assertNotEqual(self.install_hook().returncode, 0)
+        result = self.install_hook()
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("Existing pre-commit hook", result.stderr)
         self.assertEqual(self.hook.read_text(), "existing hook\n")
 
     def test_dangling_hook_symlink_is_preserved(self):
         self.hook.symlink_to("missing-existing-hook")
-        self.assertNotEqual(self.install_hook().returncode, 0)
+        self.assertEqual(self.install_hook().returncode, 0)
         self.assertEqual(os.readlink(self.hook), "missing-existing-hook")
 
     def test_configured_hooks_path_is_preserved(self):
         shared = Path(self.temp.name) / "shared hooks"
         self.run_command(["git", "config", "core.hooksPath", str(shared)], check=True)
-        self.assertNotEqual(self.install_hook().returncode, 0)
+        result = self.install_hook()
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("Existing core.hooksPath", result.stderr)
         self.assertFalse(shared.exists())
         self.assertFalse(self.hook.exists())
+
+    def test_outside_repository_leaves_shell_running(self):
+        result = self.install_hook(cwd=Path(self.temp.name))
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("Run hook setup from a Git repository", result.stderr)
+        self.assertFalse((Path(self.temp.name) / "pre-commit").exists())
 
 
 unittest.main(verbosity=2)

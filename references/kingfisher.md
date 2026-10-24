@@ -536,24 +536,23 @@ Use the `kingfisher` hook: it runs the binary you installed at a pinned version.
 Copy the bundled hook from the installed plugin or a repository clone. Set `plugin_root` to the resolved path in the loaded Kingfisher skill. Install the pinned scanner first (see Bootstrap).
 
 ```bash
-set -euo pipefail
 plugin_root='<resolved plugin or repository root>'
 # A configured hooksPath may be shared across repositories or managed by Husky.
 # Use the framework integration above or below in that case.
 if git config --get core.hooksPath >/dev/null; then
   echo 'Existing core.hooksPath: use its hook manager to add Kingfisher.' >&2
-  exit 1
+elif hooks_dir="$(git rev-parse --git-path hooks 2>/dev/null)"; then
+  if [ -e "$hooks_dir/pre-commit" ] || [ -L "$hooks_dir/pre-commit" ]; then
+    echo 'Existing pre-commit hook: integrate Kingfisher without replacing it.' >&2
+  elif mkdir -p "$hooks_dir"; then
+    install -m 755 "$plugin_root/skills/kingfisher/scripts/pre-commit.sh" "$hooks_dir/pre-commit"
+  fi
+else
+  echo 'Run hook setup from a Git repository.' >&2
 fi
-hooks_dir="$(git rev-parse --git-path hooks)"
-mkdir -p "$hooks_dir"
-if [ -e "$hooks_dir/pre-commit" ] || [ -L "$hooks_dir/pre-commit" ]; then
-  echo 'Existing pre-commit hook: integrate Kingfisher without replacing it.' >&2
-  exit 1
-fi
-install -m 755 "$plugin_root/skills/kingfisher/scripts/pre-commit.sh" "$hooks_dir/pre-commit"
 ```
 
-This installs only in the current repository and refuses to replace an existing hook or use a configured `core.hooksPath`. The hook runs the scanner on `PATH` and preserves its exit code; a missing scanner fails the commit. Nothing is downloaded during setup or at commit time. To undo, remove the hook you installed, after verifying it still matches the bundled file.
+This installs only in the current repository and skips installation with a message when a hook or configured `core.hooksPath` already exists. The setup block leaves shell options unchanged and returns control to an interactive shell after a guard. The installed hook runs the scanner on `PATH` and preserves its exit code; a missing scanner fails the commit. Nothing is downloaded during setup or at commit time. To undo, remove the hook you installed, after verifying it still matches the bundled file.
 
 ### Husky (Node.js)
 

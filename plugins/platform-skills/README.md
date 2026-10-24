@@ -30,7 +30,7 @@ Configure service authentication in the selected CLI or tool before using its wo
 - `/platform-skills:ai-governance`: Generate and enforce policy gates for AI coding agents (Copilot, Claude Code) — real-time session hooks that deny protected-path edits and dangerous commands, plus a merge-time backstop for anything that bypasses them.
 - `/platform-skills:awesome-docs`: Generate, convert, and maintain animated GitHub-safe Markdown documents with animated SVG diagrams.
 - `/platform-skills:aws`: Structured guidance for AWS CloudFront distributions, WAF web ACLs, Lambda@Edge, CloudFront Functions, Firewall Manager multi-account enforcement, and IAM/IRSA patterns.
-- `/platform-skills:aws-profile`: AWS profile management for MCP servers — discover profiles across SSO, Granted, and assumed-role chains, check credential TTL, switch profiles across VS Code and Claude Code MCP configs, and scan AWS Organization accounts.
+- `/platform-skills:aws-profile`: Manage AWS profiles for MCP servers — discover SSO, Granted and role-chain profiles, check authentication with STS, switch configured profiles, and scan AWS Organization accounts.
 - `/platform-skills:azure`: Azure identity (Workload Identity, OIDC, Entra ID), resource tagging, AKS platform patterns, RBAC scoping, and production-readiness review — with Terraform generation.
 - `/platform-skills:backup-dr`: Back up and restore Kubernetes workloads with Velero, and prove recovery works.
 - `/platform-skills:chaos`: Design, run, and debug Chaos Engineering experiments on Kubernetes using Litmus Chaos v3 and Chaos Mesh v2.

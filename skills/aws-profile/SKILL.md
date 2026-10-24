@@ -1,6 +1,6 @@
 ---
 name: aws-profile
-description: AWS profile management for MCP servers — discover profiles across SSO, Granted, and assumed-role chains, check credential TTL, switch profiles across VS Code and Claude Code MCP configs, and scan AWS Organization accounts.
+description: Manage AWS profiles for MCP servers — discover SSO, Granted and role-chain profiles, check authentication with STS, switch configured profiles, and scan AWS Organization accounts. TTL is unknown unless the user shares an expiry timestamp without credentials.
 argument-hint: "[discover|status|switch <profile>|login <profile>|org-scan] [flags]"
 title: "AWS Profile Command"
 sidebar_label: "aws-profile"
@@ -15,6 +15,8 @@ Reference: `references/aws-mcp-profiles.md`
 
 List profiles with `aws configure list-profiles`. Read only these non-secret settings with `aws configure get <key> --profile <profile>`: `sso_session`, `sso_start_url`, `sso_region`, `sso_account_id`, `sso_role_name`, `role_arn`, `source_profile`, `region`, `granted_sso_account_id`, `granted_sso_role_name`. A missing setting is normal. Never retrieve access keys, session tokens, raw config files or credential caches, or execute `credential_process` to inspect its output. Let the AWS CLI handle authentication for the selected profile.
 
+The AWS CLI continues to use its native credential chain, including `credential_process`. Keep the SSO, Granted and role-chain authentication setup guidance in `references/aws-mcp-profiles.md`.
+
 For TTL, use only a profile-specific expiration timestamp the user has shared without credentials. Otherwise display `unknown`; successful authentication does not establish an expiry time. Parse MCP config files locally and return only server names, paths, `AWS_PROFILE` and `AWS_REGION`, since other fields can contain secrets. Do not print entire config files or diffs of unrelated fields.
 
 ---
@@ -26,8 +28,8 @@ When invoked with no arguments, ask before proceeding:
 **Q1 — Mode?**
 ```
 What do you need?
-  1. discover  — list all AWS profiles with type, account ID, env tag, and credential TTL
-  2. status    — show which profile each MCP server is using and whether credentials are fresh
+  1. discover  — list AWS profiles with type, account ID, env tag, and expiry when shared
+  2. status    — show configured MCP profiles and check current authentication
   3. switch    — update MCP config files to use a different profile
   4. login     — authenticate and refresh credentials for a specific profile
   5. org-scan  — list all AWS Organization accounts and cross-reference with configured profiles
