@@ -199,18 +199,18 @@ grep -rn "kind: ImagePolicy" . --include="*.yaml" -A 20 | grep -v "filterTags\|s
 
 ## Automated security scan
 
-Run the full audit using the official Flux repo audit scripts:
+Run the full audit using the scripts bundled at `examples/fluxcd/repo-audit`. Resolve `audit_dir` under the repository or Claude plugin root; a portable install carries it inside the loaded skill's directory.
 
 ```bash
-git clone --depth=1 https://github.com/fluxcd/agent-skills.git /tmp/flux-agent-skills
+audit_dir='<absolute path to bundled examples/fluxcd/repo-audit>'
 
 # Phase 2 — manifest validation (catches schema violations)
-bash /tmp/flux-agent-skills/skills/gitops-repo-audit/scripts/validate.sh -d .
+bash "$audit_dir/scripts/validate.sh" -d .
 
 # Phase 3 — deprecated API check
-bash /tmp/flux-agent-skills/skills/gitops-repo-audit/scripts/check-deprecated.sh -d .
+bash "$audit_dir/scripts/check-deprecated.sh" -d .
 
 # Phase 5 — security grep patterns (run manually from above)
 ```
 
-> The `validate.sh` script requires `yq >= 4.50`, `kustomize >= 5.8`, and `kubeconform >= 0.7`. It uses the Flux OpenAPI schemas bundled in the agent-skills repo to validate all CRDs.
+> Requires installed `flux-schema >= 0.10.0`, `kustomize` or `kubectl`, and `flux >= 2.9.0`. The validator uses the ecosystem schema catalog by default, or a repository's `.fluxschema.yml`. Its defaults skip resources whose schemas are missing; record those as coverage gaps. The bundled scripts are pinned to an upstream revision and run locally. Schema catalogs may be fetched as data. See `examples/fluxcd/repo-audit/README.md` for provenance and setup.

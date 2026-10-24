@@ -24,7 +24,7 @@ Enter 1 or 2:
 
 **Q2 — Context** (after mode selected, one at a time):
 - **debug**: `Describe the symptom or paste the flux get / kubectl output (error message, resource name, namespace):`
-- **audit**: `Provide the repo path or paste the directory listing (or run: bash $SCRIPTS/discover.sh -d . if tooling is set up):`
+- **audit**: `Provide the repo path or paste the directory listing (or run: bash "$SCRIPTS/discover.sh" -d . if tooling is set up):`
 
 Then proceed with the relevant mode below.
 
@@ -292,33 +292,36 @@ flux resume kustomization <name>
 
 Use before merging, before a release, or when onboarding an unfamiliar repo. Read-only — do not apply any changes.
 
-### Tooling setup (one-time)
+### Bundled tooling
+
+Use `examples/fluxcd/repo-audit` from the loaded installation. Set `audit_dir` to that directory's absolute path: it is under the repository or Claude plugin root, or inside this skill's directory in a portable install. No script is downloaded during an audit.
 
 ```bash
-# Check the latest tag at https://github.com/fluxcd/agent-skills/releases before cloning
-git clone --depth=1 --branch v0.2.0 https://github.com/fluxcd/agent-skills.git /tmp/flux-agent-skills
-SCRIPTS=/tmp/flux-agent-skills/skills/gitops-repo-audit/scripts
+audit_dir='<absolute path to bundled examples/fluxcd/repo-audit>'
+SCRIPTS="$audit_dir/scripts"
 ```
 
-**Prerequisites:** `awk` (discover), `yq >= 4.50` + `kustomize >= 5.8` + `kubeconform >= 0.7` (validate), `flux` CLI (check-deprecated).
+**Prerequisites:** installed `flux-schema >= 0.10.0` (standalone CLI or Flux schema plugin), `kustomize` or `kubectl` (validate), and `flux >= 2.9.0` (check-deprecated). See the bundled audit README for provenance and tool setup.
 
 Verify versions before proceeding:
 ```bash
-yq --version && kustomize version && kubeconform -v && flux --version
+flux-schema version   # or: flux schema version, if installed as a plugin
+kubectl version --client   # or: kustomize version
+flux version --client
 ```
 
-> Scripts copyright The Flux authors, Apache-2.0. Source: https://github.com/fluxcd/agent-skills
+> Scripts copyright The Flux authors, Apache-2.0, vendored from `fluxcd/agent-skills` v0.2.0 at `9b05787530a3e200a9ac031fc8a477566e0b7adc`. The bundled deprecated-API helper also preserves migration failures.
 
 ---
 
 ### Phase 1 — Discovery
 
 ```bash
-bash $SCRIPTS/discover.sh -d .
-bash $SCRIPTS/discover.sh -d . -e terraform   # exclude dirs if needed
+bash "$SCRIPTS/discover.sh" -d .
+bash "$SCRIPTS/discover.sh" -d . -e terraform   # exclude dirs if needed
 ```
 
-Outputs JSON: `fluxResources.byKind`, `kubernetesResources.byKind`, `kustomizeOverlays.byDirectory`.
+Outputs an `Inventory` JSON document with `inventory.summary`, `inventory.directories`, `inventory.resources` and `inventory.flux`.
 
 Classify the repo pattern:
 
@@ -339,20 +342,20 @@ Check for `gotk-sync.yaml` — if present, flag for Flux Operator migration.
 ### Phase 2 — Manifest Validation
 
 ```bash
-bash $SCRIPTS/validate.sh -d .
-bash $SCRIPTS/validate.sh -d . -e terraform -e helm-charts
+bash "$SCRIPTS/validate.sh" -d .
+bash "$SCRIPTS/validate.sh" -d . -e terraform -e helm-charts
 ```
 
-What it checks: YAML syntax (yq), Kubernetes manifests (kubeconform -strict + Flux OpenAPI schemas), kustomize build per overlay.
+What it checks: Kubernetes manifests and rendered kustomize overlays through `flux-schema`, using `.fluxschema.yml` when present or its ecosystem schema catalog otherwise.
 
-**Valid — not errors:** SOPS-encrypted Secrets, third-party CRDs (`skipped` in kubeconform output), `${VARIABLE}` substitution patterns, `gotk-components.yaml`.
+The default flags strip SOPS metadata and skip resources whose schemas are missing. Report skipped resources as coverage gaps. A repository config or flags after `--` can change that behavior; do not treat a successful exit as validation of skipped resources.
 
 ---
 
 ### Phase 3 — API Compliance
 
 ```bash
-bash $SCRIPTS/check-deprecated.sh -d .   # exits 1 if deprecated APIs found — CI-safe
+bash "$SCRIPTS/check-deprecated.sh" -d .   # fails for deprecated APIs or CLI errors
 grep -rn "fluxcd.controlplane.io" . --include="*.yaml" | grep "apiVersion"
 grep -rn "type: oci" . --include="*.yaml"
 ```
