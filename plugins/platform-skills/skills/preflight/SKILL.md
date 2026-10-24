@@ -394,8 +394,8 @@ If a tool isn't installed, skip execution, label affected findings `Static revie
 - All variables quoted (`"$VAR"`)
 
 **Security**
-- No `eval` with user input
-- No downloaded script piped straight into a shell: fetch it, verify its checksum, then run it
+- No dynamic evaluation of user input as shell code
+- Fetched scripts are saved, checksum-verified, then run from the saved file
 - Credentials sourced from environment or secret manager
 
 **Operational Safety**

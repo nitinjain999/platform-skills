@@ -5,6 +5,22 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.45.10] - 2026-10-24
+
+### Fixed
+
+- **The bundled Flux validator disabled kustomize's file-loading restriction.** Retain the CLI default so generator files and patches outside a kustomization's root fail the build. Also recognize all three kustomization filenames and apply directory exclusions consistently for absolute and relative audit roots. A native kubectl regression checks that an outside-file fixture cannot enter the bundle while an in-root generator still works.
+- **Large Flux migration reports could falsely pass.** Match captured output through a here-string so early `grep` completion cannot trigger a producer SIGPIPE and hide deprecated APIs under `pipefail`.
+- **The handbook runner emitted two ShellCheck warnings.** Separate the independent identity and version comparisons into shell conditions while preserving failure on any mismatch.
+- **Flux audits cloned and executed remote scripts.** The migration and security references now run bundled helpers, as do both the FluxCD and GitOps skills. The three helpers come from `fluxcd/agent-skills` v0.2.0 at `9b05787530a3e200a9ac031fc8a477566e0b7adc`, with their license and provenance. Portable skills carry the same files. Tool prerequisites now match the pinned scripts: `flux-schema`, kustomize or kubectl, and Flux. Audits may fetch schema data or configured remote manifests, but do not fetch executable scripts.
+- **A failed deprecated-API check could report a clean audit.** The bundled helper preserves Flux CLI failures instead of treating missing migration output as success. Tests cover CLI errors, deprecated APIs, dependency failures, standalone and overlay validation, and documented setup from source and portable installations.
+- **Three examples used the `eval` keyword where it was not needed.** `examples/token-optimizer/optimize.sh` now calls `yq '<expr>'`, which is the same command as `yq eval '<expr>'` in yq v4. The shellcheck example in `references/composite-actions.md` no longer shows `eval $(...)`, and the preflight shell checklist states its two rules without the keyword. Behavior is unchanged.
+
+### Review notes
+
+- The 1.45.9 report no longer lists the Kingfisher download-and-run warning. It retains all 25 credential warnings and lists 10 download-and-run warnings, including three newly reported, pre-existing Flux paths. The two Flux references contained clone-and-run commands and are addressed here. The basic-monorepo README clones the user's own repository and runs an already bundled validator; that guidance remains.
+- Vendor authentication guidance remains. The directory still requires reviewer assessment of credential usage; this patch does not predict a warning count or claim directory approval.
+
 ## [1.45.9] - 2026-10-24
 
 ### Fixed

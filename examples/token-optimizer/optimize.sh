@@ -145,7 +145,7 @@ yq_get() {
   # false as well as null, so `.enabled // ""` turns `enabled: false` into "" and
   # a real `false` is indistinguishable from a missing key.
   local out
-  out="$(yq eval "$1" "$CONFIG_FILE" 2>/dev/null)" || return 1
+  out="$(yq "$1" "$CONFIG_FILE" 2>/dev/null)" || return 1
   [[ "$out" == "null" ]] && return 1
   printf '%s' "$out"
   return 0
@@ -197,7 +197,7 @@ load_config() {
   v="$(yq_get '.max_worker_retries')"  && set_uint MAX_WORKER_RETRIES "$v" 0 10
   v="$(yq_get '.max_worker_seconds')"  && set_uint MAX_WORKER_SECONDS "$v" 1 3600
 
-  v="$(yq eval '.exempt_agent_types[]' "$CONFIG_FILE" 2>/dev/null | tr '\n' ' ')"
+  v="$(yq '.exempt_agent_types[]' "$CONFIG_FILE" 2>/dev/null | tr '\n' ' ')"
   [[ -n "${v// /}" && "$v" != "null " ]] && EXEMPT_AGENT_TYPES="$v"
 
   apply_platform_defaults

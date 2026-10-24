@@ -81,3 +81,7 @@ PY
 
 # Run the documented setup using only the rendered skill and its bundled files.
 bash tests/kingfisher-hook.sh "$OUT/platform-skills-kingfisher"
+
+# Both entry points must carry usable, self-contained audit helpers.
+bash tests/fluxcd-audit.sh "$OUT/platform-skills-fluxcd"
+bash tests/fluxcd-audit.sh "$OUT/platform-skills-gitops"
