@@ -1797,7 +1797,7 @@ FOO=$(bar); export FOO         # ✅
 
 # Suppress a specific check (last resort)
 # shellcheck disable=SC2046
-eval $(some_command)
+git add -- $(cat changed-files.txt)   # intentional word splitting: one path per line
 ```
 
 To run actionlint locally:

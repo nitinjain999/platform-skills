@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **The handbook runner emitted two ShellCheck warnings.** Separate the independent identity and version comparisons into shell conditions while preserving failure on any mismatch.
 - **Flux audits cloned and executed remote scripts.** The migration and security references now run bundled helpers, as do both the FluxCD and GitOps skills. The three helpers come from `fluxcd/agent-skills` v0.2.0 at `9b05787530a3e200a9ac031fc8a477566e0b7adc`, with their license and provenance. Portable skills carry the same files. Tool prerequisites now match the pinned scripts: `flux-schema`, kustomize or kubectl, and Flux. Audits may fetch schema data or configured remote manifests, but do not fetch executable scripts.
 - **A failed deprecated-API check could report a clean audit.** The bundled helper preserves Flux CLI failures instead of treating missing migration output as success. Tests cover CLI errors, deprecated APIs, dependency failures, standalone and overlay validation, and documented setup from source and portable installations.
+- **Three examples used the `eval` keyword where it was not needed.** `examples/token-optimizer/optimize.sh` now calls `yq '<expr>'`, which is the same command as `yq eval '<expr>'` in yq v4. The shellcheck example in `references/composite-actions.md` no longer shows `eval $(...)`, and the preflight shell checklist states its two rules without the keyword. Behavior is unchanged.
 
 ### Review notes
 
