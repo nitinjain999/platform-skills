@@ -5,6 +5,23 @@ All notable changes to Platform Skills will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.45.9] - 2026-10-24
+
+### Fixed
+
+- **The Kingfisher standalone hook setup still downloaded and ran a script.** The v1.45.8 directory report listed `references/kingfisher.md` after the earlier hook and CI fixes. Standalone setup now copies the bundled `skills/kingfisher/scripts/pre-commit.sh` instead. Its if/else guards skip an existing hook or configured `core.hooksPath` without changing shell options or exiting an interactive shell. The installed hook runs only the installed scanner and fails if it is absent. Tests cover installation, shell continuation, existing-hook protection, scanner arguments, working directory and exit codes.
+- **AWS profile discovery read raw credential caches and config files.** The skill and reference now use profile names and an allowlist of non-secret configuration fields, with STS for authentication checks. They do not read caches or export credentials to calculate TTL. Without an expiration timestamp shared separately from credentials, TTL is explicitly `unknown`; an authenticated profile is not assumed to have more than 30 minutes left. MCP configuration parsing returns only AWS profile and region metadata.
+- **The GitOps credential search printed matching secrets.** Its security-review search now lists file names only, and follow-up findings must redact values.
+- **Kingfisher hook reports were not redacted.** The bundled hook, pre-commit configuration and Husky example now pass `--redact`; `--quiet` only controls status/progress output. The pre-commit examples specify the full argument list because a consumer's `args` replaces the upstream defaults, including `scan`. Portable rendering now includes each skill's tracked `scripts/` files, and standalone setup locates the hook relative to the loaded Kingfisher skill. Tests exercise setup from both the source and rendered skill; with pre-commit installed, they also run both YAML examples against a local hook fixture to check scanner arguments and failure blocking.
+- **Session-based SSO profile generation required legacy fields.** `org-scan --generate-profiles` now reuses an existing `sso_session` reference. Legacy templates still copy their individual start URL and SSO region. Offline configuration checks cover both forms.
+
+### Review notes
+
+- **The other seven download-and-run warnings in the v1.45.8 report do not run downloaded code.** `dora` queries or posts metrics and dashboards; `linux` and the router skill use HTTP diagnostics; `preflight` describes a prohibition; `notify-slack` and the composite-actions reference post webhook/API payloads. The token-optimizer script has no downloader and never evaluates command text from its payload. These are retained.
+- **Credential warnings still need reviewer assessment.** The listed cloud, Kubernetes, GitHub, registry, monitoring and CI examples use selected CLI sessions, service-specific variables, secret references or caller inputs. Documentation and secret-scanning patterns also match the report's heuristic. The manifest has no hook or MCP server that reads or transmits credentials. This audit does not establish that these uses qualify for the directory's vendor exception, or guarantee that a rescan clears its hold. Adding sensitive `userConfig` placeholders to skill text would not fix authentication: Claude Code substitutes only non-sensitive values there. The plugin README now explains this limitation and the authentication boundary.
+- **The AWS TTL restriction is a deliberate data-exposure tradeoff.** Vendor authentication guidance remains: SSO, Granted, role chains and `credential_process` still work through the AWS CLI. The skill's description and wizard now say it checks authentication and uses an expiry timestamp only when the user shares one. Credential/cache path names remain in explanatory guidance. Without matched lines or a new directory scan, we cannot tell whether the scanner keys on those strings or the removed reads, and predict no finding-count reduction.
+- **The icon needs no change.** The report accepted the well-formed PNG and passed validation and the security scan. Publication remains subject to the directory review. The generated plugin folder is rebuilt in the release PR, as usual.
+
 ## [1.45.8] - 2026-10-19
 
 Fixes the installed triage skill, which could not find its helper, and stops the kingfisher guide from running downloaded code in hooks and CI.

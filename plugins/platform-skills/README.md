@@ -15,7 +15,7 @@ The plugin is skills, reference guides and examples. It has no hooks and no MCP 
 
 - **Commands go through Claude Code's Bash tool**, so your permission settings apply to each one. Skills run the CLIs you already use, such as `kubectl`, `helm`, `flux`, `terraform`, `gh`, `aws` and `az`, against the context, profile or account you have selected.
 - **`triage` runs a bundled helper**, `examples/triage/scripts/triage_helper.py`, with your `python3`.
-- **Credentials stay with their own service.** The plugin never derives, prints or stores a token. A tool that needs one, such as `zizmor` or `trivy` for private GitHub repositories, reads the variable you exported for it. Where a workflow calls an API directly, such as Dynatrace or Datadog, it sends the key you exported for that service to that service only.
+- **Authentication uses the service you select.** CLIs use their configured profile or session; tools such as `zizmor` and `trivy` can use a service-specific variable you exported. Direct API examples use a key you supplied for that service. Skills must not extract Claude Code login credentials, read raw credential caches, or print secret values into the conversation. AWS profile checks use configuration metadata and STS; TTL is `unknown` unless you share an expiration timestamp without credentials.
 - **Pull request comments are posted only when you run the workflow.** `triage` and `pr-review` reply and resolve review threads with `gh`, as the account you are signed in with.
 - **Installs happen only on request.** Workflows that install a tool, such as the Kubescape CLI or a Helm chart, do it when you ask, through commands you approve. Nothing is downloaded when the plugin loads.
 
@@ -23,12 +23,14 @@ The plugin is skills, reference guides and examples. It has no hooks and no MCP 
 
 All settings are optional and none is secret: the GitOps engine (`flux`, `argocd` or `none`), the primary cloud, your AWS CLI profile naming pattern, the tag keys every resource must carry, and your GitHub organisation. Skills use them to choose defaults for examples and printed commands.
 
+Configure service authentication in the selected CLI or tool before using its workflow. Do not put a secret in these settings: Claude Code substitutes only non-sensitive `userConfig` values into skill text; sensitive values are available to configured server and hook processes instead. See the [plugin configuration reference](https://code.claude.com/docs/en/plugins/manifest-reference#reference-a-saved-value). This plugin has no server or hook process to receive a sensitive option.
+
 ## Commands
 
 - `/platform-skills:ai-governance`: Generate and enforce policy gates for AI coding agents (Copilot, Claude Code) — real-time session hooks that deny protected-path edits and dangerous commands, plus a merge-time backstop for anything that bypasses them.
 - `/platform-skills:awesome-docs`: Generate, convert, and maintain animated GitHub-safe Markdown documents with animated SVG diagrams.
 - `/platform-skills:aws`: Structured guidance for AWS CloudFront distributions, WAF web ACLs, Lambda@Edge, CloudFront Functions, Firewall Manager multi-account enforcement, and IAM/IRSA patterns.
-- `/platform-skills:aws-profile`: AWS profile management for MCP servers — discover profiles across SSO, Granted, and assumed-role chains, check credential TTL, switch profiles across VS Code and Claude Code MCP configs, and scan AWS Organization accounts.
+- `/platform-skills:aws-profile`: Manage AWS profiles for MCP servers — discover SSO, Granted and role-chain profiles, check authentication with STS, switch configured profiles, and scan AWS Organization accounts.
 - `/platform-skills:azure`: Azure identity (Workload Identity, OIDC, Entra ID), resource tagging, AKS platform patterns, RBAC scoping, and production-readiness review — with Terraform generation.
 - `/platform-skills:backup-dr`: Back up and restore Kubernetes workloads with Velero, and prove recovery works.
 - `/platform-skills:chaos`: Design, run, and debug Chaos Engineering experiments on Kubernetes using Litmus Chaos v3 and Chaos Mesh v2.
