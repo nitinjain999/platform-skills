@@ -58,7 +58,7 @@ jobs:
       - name: Install cosign
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
         with:
-          cosign-release: v3.1.3
+          cosign-release: v3.1.4
 
       - name: Install Kubescape (signature-verified)
         run: |
@@ -192,7 +192,7 @@ jobs:
         if: >-
           always() && hashFiles('kubescape-results.sarif') != '' &&
           (github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository)
-        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
         with:
           sarif_file: kubescape-results.sarif
           category: kubescape

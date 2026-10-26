@@ -72,7 +72,7 @@ jobs:
       - name: Run tflint
         uses: terraform-linters/setup-tflint@6ffdbaa3be476b3431f7275c26966ef32ff60337  # v6.3.2
         with:
-          tflint_version: v0.64.0
+          tflint_version: v0.65.0
 
       - name: Initialize tflint
         run: tflint --init
@@ -85,7 +85,7 @@ jobs:
 
       - name: Run Checkov
         id: checkov
-        uses: bridgecrewio/checkov-action@6f26dc90000b74feb589a906cdfae540f5119895  # v12.3134.0
+        uses: bridgecrewio/checkov-action@c3e106d5f8f4253a6de5110efb41a080f83db294  # v12.3135.0
         with:
           directory: terraform/
           framework: terraform
@@ -101,7 +101,7 @@ jobs:
           output: 'trivy-results.sarif'
 
       - name: Upload Trivy results
-        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee  # v4
+        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370  # v4
         if: always()
         with:
           sarif_file: 'trivy-results.sarif'
