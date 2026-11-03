@@ -9,7 +9,7 @@ spec:
   chart:
     spec:
       chart: velero
-      version: '12.2.1'  # Velero 1.18.2. Pinned; upgrade is an explicit PR
+      version: '12.2.3'  # Velero 1.18.2. Pinned; upgrade is an explicit PR
       sourceRef:
         kind: HelmRepository
         name: vmware-tanzu
