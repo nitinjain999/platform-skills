@@ -43,7 +43,7 @@ jobs:
       # renovate: datasource=github-releases depName=kubescape/kubescape extractVersion=^v(?<version>.*)$
       KUBESCAPE_VERSION: "4.0.16"   # CLI release; the cosign identity below is derived from it
       # renovate: datasource=github-releases depName=kubescape/regolibrary
-      CONTROLS_VERSION: "v2.0.38"   # regolibrary release; pin it so results only change when you bump it
+      CONTROLS_VERSION: "v2.0.39"   # regolibrary release; pin it so results only change when you bump it
       FRAMEWORKS: "nsa,mitre"       # kubescape list frameworks; EKS → cis-eks-t1.8.0, AKS → cis-aks-t1.8.0, GKE → cis-gke-v1.9.0
       SCAN_PATH: "k8s"              # directory with manifests, Helm charts or kustomization.yaml
       EXCEPTIONS: ".kubescape/exceptions.json"
