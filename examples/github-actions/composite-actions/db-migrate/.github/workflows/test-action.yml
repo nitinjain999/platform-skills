@@ -81,7 +81,7 @@ jobs:
     if: ${{ vars.TEST_DATABASE_AVAILABLE == 'true' }}
     services:
       postgres:
-        image: postgres:18@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
+        image: postgres:18@sha256:3a4264520e121176619f54ff867d12774bc81e95e7b84db58d63bccdb6144b81
         env:
           POSTGRES_USER: testuser
           POSTGRES_PASSWORD: testpass
