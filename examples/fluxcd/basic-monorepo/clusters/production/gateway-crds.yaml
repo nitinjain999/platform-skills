@@ -51,7 +51,7 @@ spec:
   interval: 12h
   url: oci://docker.io/envoyproxy/gateway-helm
   ref:
-    tag: v1.9.2  # Pinned. Must match the controller version
+    tag: 1.9.3  # Pinned. Must match the controller version
   layerSelector:
     mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
     operation: extract
