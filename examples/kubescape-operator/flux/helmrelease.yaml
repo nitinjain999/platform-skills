@@ -72,7 +72,7 @@ spec:
         # "framework 'C-0042' not found" (fixed in v4.0.14, kubescape#3768).
         # Keep this in step with the CLI version used in CI (Renovate groups them).
         # renovate: datasource=docker depName=quay.io/kubescape/kubescape
-        tag: v4.0.16
+        tag: v4.0.17
 
     alertCRD:
       installDefault: true         # installs Rules/default-rules and the all-rules-all-pods binding
