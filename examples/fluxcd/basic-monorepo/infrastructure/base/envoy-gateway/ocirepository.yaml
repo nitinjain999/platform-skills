@@ -10,7 +10,7 @@ spec:
   interval: 12h
   url: oci://docker.io/envoyproxy/gateway-helm
   ref:
-    tag: v1.9.2  # Pinned. Upgrade is an explicit PR
+    tag: 1.9.3  # Pinned. Upgrade is an explicit PR
   layerSelector:
     mediaType: application/vnd.cncf.helm.chart.content.v1.tar+gzip
     operation: copy
