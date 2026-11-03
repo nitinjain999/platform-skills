@@ -33,7 +33,7 @@ jobs:
         uses: fluxcd/flux2/action@3fa784edd773d56630bb9f62645e08f70c2cff0a  # v2.10.0
         with:
           # renovate: datasource=github-releases depName=fluxcd/flux2 extractVersion=^v(?<version>.*)$
-          version: '2.9.6'
+          version: '2.10.0'
 
       - name: Validate Flux manifests
         run: |
