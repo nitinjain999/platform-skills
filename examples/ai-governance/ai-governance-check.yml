@@ -34,8 +34,8 @@ jobs:
       - name: Install yq
         env:
           # renovate: datasource=github-release-attachments depName=mikefarah/yq
-          YQ_VERSION: v4.54.1
-          YQ_SHA256: 8e34fc298390875de416e6a4afcb8cabeceb25d9aa8506c1a2f9353cf702ea5f
+          YQ_VERSION: v4.54.2
+          YQ_SHA256: 44c7759059b4910827a0059a2757b22001e59360cdecdb2ef8dedc4b6c7e9f32
         run: |
           # Installed unconditionally rather than behind a `command -v yq`
           # guard: a governance gate must not silently change behaviour when
